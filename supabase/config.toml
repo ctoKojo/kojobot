@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.grade-quiz]
 verify_jwt = false
+
+[functions.reschedule-sessions]
+verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = false
