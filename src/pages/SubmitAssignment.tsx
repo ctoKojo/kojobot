@@ -22,6 +22,7 @@ interface Assignment {
   max_score: number | null;
   attachment_url: string | null;
   attachment_type: string | null;
+  group_id: string | null;
 }
 
 interface Submission {
@@ -159,6 +160,46 @@ export default function SubmitAssignment() {
           .insert([payload]);
 
         if (error) throw error;
+
+        // Send notification to instructor
+        try {
+          // Get instructor id from assignment's group
+          if (assignment.group_id) {
+            const { data: groupData } = await supabase
+              .from('groups')
+              .select('instructor_id')
+              .eq('id', assignment.group_id)
+              .single();
+
+            if (groupData?.instructor_id) {
+              // Get student name
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('full_name, full_name_ar')
+                .eq('user_id', user.id)
+                .single();
+
+              const studentName = profileData?.full_name || 'Student';
+              const studentNameAr = profileData?.full_name_ar || 'طالب';
+              const assignmentTitle = assignment.title;
+              const assignmentTitleAr = assignment.title_ar;
+
+              await supabase.from('notifications').insert({
+                user_id: groupData.instructor_id,
+                title: `New Assignment Submission`,
+                title_ar: `تسليم واجب جديد`,
+                message: `${studentName} has submitted "${assignmentTitle}"`,
+                message_ar: `${studentNameAr} قام بتسليم "${assignmentTitleAr}"`,
+                type: 'info',
+                category: 'assignment',
+                action_url: `/assignment-submissions/${assignment.id}`,
+              });
+            }
+          }
+        } catch (notifError) {
+          console.error('Error sending notification:', notifError);
+          // Don't fail the submission if notification fails
+        }
       }
 
       toast({

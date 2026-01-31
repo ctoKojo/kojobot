@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, ClipboardList, Upload, Eye, FileText, Image, Video, X } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, ClipboardList, Upload, Eye, FileText, Image, Video, X, CheckCircle } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,6 +72,7 @@ export default function AssignmentsPage() {
   const navigate = useNavigate();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [studentSubmissions, setStudentSubmissions] = useState<Map<string, { status: string; score: number | null }>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -102,11 +103,31 @@ export default function AssignmentsPage() {
 
       setAssignments(assignmentsRes.data || []);
       setGroups(groupsRes.data || []);
+
+      // Fetch student submissions if role is student
+      if (role === 'student' && user) {
+        const { data: submissionsData } = await supabase
+          .from('assignment_submissions')
+          .select('assignment_id, status, score')
+          .eq('student_id', user.id);
+
+        if (submissionsData) {
+          const submissionsMap = new Map<string, { status: string; score: number | null }>();
+          submissionsData.forEach(sub => {
+            submissionsMap.set(sub.assignment_id, { status: sub.status, score: sub.score });
+          });
+          setStudentSubmissions(submissionsMap);
+        }
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getSubmissionStatus = (assignmentId: string) => {
+    return studentSubmissions.get(assignmentId);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -508,13 +529,35 @@ export default function AssignmentsPage() {
                       </p>
                     </div>
                     {role === 'student' ? (
-                      <Button
-                        size="sm"
-                        className="kojo-gradient flex-shrink-0"
-                        onClick={(e) => { e.stopPropagation(); navigate(`/assignment/${assignment.id}`); }}
-                      >
-                        {isRTL ? 'تسليم' : 'Submit'}
-                      </Button>
+                      (() => {
+                        const submissionStatus = getSubmissionStatus(assignment.id);
+                        if (submissionStatus) {
+                          return (
+                            <Badge 
+                              variant="outline" 
+                              className={submissionStatus.status === 'graded' 
+                                ? 'bg-green-100 text-green-800 flex-shrink-0' 
+                                : 'bg-blue-100 text-blue-800 flex-shrink-0'
+                              }
+                            >
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              {submissionStatus.status === 'graded' 
+                                ? (isRTL ? `مقيّم: ${submissionStatus.score}` : `Graded: ${submissionStatus.score}`)
+                                : (isRTL ? 'تم التسليم' : 'Submitted')
+                              }
+                            </Badge>
+                          );
+                        }
+                        return (
+                          <Button
+                            size="sm"
+                            className="kojo-gradient flex-shrink-0"
+                            onClick={(e) => { e.stopPropagation(); navigate(`/assignment/${assignment.id}`); }}
+                          >
+                            {isRTL ? 'تسليم' : 'Submit'}
+                          </Button>
+                        );
+                      })()
                     ) : (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -614,13 +657,35 @@ export default function AssignmentsPage() {
                       </TableCell>
                       <TableCell>
                         {role === 'student' ? (
-                          <Button
-                            size="sm"
-                            className="kojo-gradient"
-                            onClick={() => navigate(`/assignment/${assignment.id}`)}
-                          >
-                            {isRTL ? 'تسليم' : 'Submit'}
-                          </Button>
+                          (() => {
+                            const submissionStatus = getSubmissionStatus(assignment.id);
+                            if (submissionStatus) {
+                              return (
+                                <Badge 
+                                  variant="outline" 
+                                  className={submissionStatus.status === 'graded' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-blue-100 text-blue-800'
+                                  }
+                                >
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  {submissionStatus.status === 'graded' 
+                                    ? (isRTL ? `مقيّم: ${submissionStatus.score}` : `Graded: ${submissionStatus.score}`)
+                                    : (isRTL ? 'تم التسليم' : 'Submitted')
+                                  }
+                                </Badge>
+                              );
+                            }
+                            return (
+                              <Button
+                                size="sm"
+                                className="kojo-gradient"
+                                onClick={() => navigate(`/assignment/${assignment.id}`)}
+                              >
+                                {isRTL ? 'تسليم' : 'Submit'}
+                              </Button>
+                            );
+                          })()
                         ) : (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
