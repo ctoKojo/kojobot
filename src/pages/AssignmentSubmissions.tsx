@@ -116,6 +116,18 @@ export default function AssignmentSubmissions() {
     total: submissions.length,
     graded: submissions.filter(s => s.status === 'graded').length,
     pending: submissions.filter(s => s.status === 'submitted').length,
+    revision: submissions.filter(s => s.status === 'revision_requested').length,
+  };
+
+  const getLastModified = (submission: Submission) => {
+    // Return the most recent date between submitted_at and graded_at
+    const submittedDate = new Date(submission.submitted_at);
+    const gradedDate = submission.graded_at ? new Date(submission.graded_at) : null;
+    
+    if (gradedDate && gradedDate > submittedDate) {
+      return { date: gradedDate, isGraded: true };
+    }
+    return { date: submittedDate, isGraded: false };
   };
 
   if (loading) {
@@ -198,6 +210,10 @@ export default function AssignmentSubmissions() {
                           <CheckCircle className="w-3 h-3 mr-1" />
                           {isRTL ? 'مقيّم' : 'Graded'}
                         </Badge>
+                      ) : submission.status === 'revision_requested' ? (
+                        <Badge className="bg-orange-100 text-orange-800 text-xs flex-shrink-0">
+                          {isRTL ? 'طلب تعديل' : 'Revision'}
+                        </Badge>
                       ) : (
                         <Badge variant="outline" className="bg-yellow-100 text-yellow-800 text-xs flex-shrink-0">
                           <Clock className="w-3 h-3 mr-1" />
@@ -240,6 +256,7 @@ export default function AssignmentSubmissions() {
                 <TableRow>
                   <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
                   <TableHead>{isRTL ? 'تاريخ التسليم' : 'Submitted At'}</TableHead>
+                  <TableHead>{isRTL ? 'آخر تحديث' : 'Last Updated'}</TableHead>
                   <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
                   <TableHead>{isRTL ? 'الدرجة' : 'Score'}</TableHead>
                   <TableHead>{t.common.actions}</TableHead>
@@ -248,7 +265,7 @@ export default function AssignmentSubmissions() {
               <TableBody>
                 {submissions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <p className="text-muted-foreground">
                         {isRTL ? 'لا توجد تسليمات حتى الآن' : 'No submissions yet'}
@@ -258,6 +275,7 @@ export default function AssignmentSubmissions() {
                 ) : (
                   submissions.map((submission) => {
                     const profile = profiles.get(submission.student_id);
+                    const lastModified = getLastModified(submission);
                     return (
                       <TableRow key={submission.id}>
                         <TableCell>
@@ -275,10 +293,19 @@ export default function AssignmentSubmissions() {
                         </TableCell>
                         <TableCell>{formatDate(submission.submitted_at)}</TableCell>
                         <TableCell>
+                          <span className="text-sm">
+                            {formatDate(lastModified.date.toISOString())}
+                          </span>
+                        </TableCell>
+                        <TableCell>
                           {submission.status === 'graded' ? (
                             <Badge className="bg-green-100 text-green-800">
                               <CheckCircle className="w-3 h-3 mr-1" />
                               {isRTL ? 'تم التقييم' : 'Graded'}
+                            </Badge>
+                          ) : submission.status === 'revision_requested' ? (
+                            <Badge className="bg-orange-100 text-orange-800">
+                              {isRTL ? 'طلب تعديل' : 'Revision'}
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="bg-yellow-100 text-yellow-800">
