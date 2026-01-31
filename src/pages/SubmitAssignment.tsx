@@ -113,10 +113,10 @@ export default function SubmitAssignment() {
     setSubmitting(true);
 
     try {
-      let attachmentUrl = null;
-      let attachmentType = null;
+      let attachmentUrl = submission?.attachment_url || null;
+      let attachmentType = submission?.attachment_type || null;
 
-      // Upload file if exists
+      // Upload file if exists (new file always replaces old one)
       if (file) {
         const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}/${assignment.id}/${Date.now()}.${fileExt}`;
@@ -143,6 +143,12 @@ export default function SubmitAssignment() {
         attachment_type: attachmentType,
         status: 'submitted',
         submitted_at: new Date().toISOString(),
+        // Clear grading data on resubmission
+        score: null,
+        feedback: null,
+        feedback_ar: null,
+        graded_at: null,
+        graded_by: null,
       };
 
       if (submission) {
@@ -421,13 +427,13 @@ export default function SubmitAssignment() {
                   className="hidden"
                 />
                 
-                {file || submission?.attachment_url ? (
+                {file ? (
                   <div className="p-4 rounded-lg border bg-muted/50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      {getFileIcon(file?.type || submission?.attachment_type || null)}
+                      {getFileIcon(file.type)}
                       <div>
-                        <p className="font-medium">{file?.name || (isRTL ? 'ملف مرفق' : 'Attached file')}</p>
-                        {file && <p className="text-sm text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>}
+                        <p className="font-medium">{file.name}</p>
+                        <p className="text-sm text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                       </div>
                     </div>
                     <Button
@@ -439,6 +445,30 @@ export default function SubmitAssignment() {
                       }}
                     >
                       <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : submission?.attachment_url && !isRevisionRequested ? (
+                  <div className="p-4 rounded-lg border bg-muted/50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {getFileIcon(submission.attachment_type)}
+                      <div>
+                        <p className="font-medium">{isRTL ? 'ملف مرفق سابق' : 'Previous attached file'}</p>
+                        <a 
+                          href={submission.attachment_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          {isRTL ? 'عرض الملف' : 'View file'}
+                        </a>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {isRTL ? 'تغيير الملف' : 'Change file'}
                     </Button>
                   </div>
                 ) : (
