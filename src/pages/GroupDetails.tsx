@@ -22,6 +22,8 @@ import {
 } from '@/components/ui/table';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { RescheduleDialog } from '@/components/group/RescheduleDialog';
+import { EditSessionDialog } from '@/components/group/EditSessionDialog';
 
 interface AttendanceRecord {
   id: string;
@@ -403,6 +405,16 @@ export default function GroupDetails() {
                   </span>
                 </div>
               )}
+              
+              {/* Reschedule Button */}
+              <div className="pt-2">
+                <RescheduleDialog
+                  groupId={groupId!}
+                  scheduleDay={data.group.schedule_day}
+                  scheduleTime={data.group.schedule_time}
+                  onRescheduled={fetchGroupData}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -672,6 +684,13 @@ export default function GroupDetails() {
                              session.status === 'cancelled' ? (isRTL ? 'ملغية' : 'Cancelled') :
                              (isRTL ? 'مجدولة' : 'Scheduled')}
                           </Badge>
+                          {/* Edit Session Button - only for scheduled sessions */}
+                          {session.status === 'scheduled' && (
+                            <EditSessionDialog
+                              session={session}
+                              onUpdated={fetchGroupData}
+                            />
+                          )}
                         </div>
                       </div>
                     ))}
