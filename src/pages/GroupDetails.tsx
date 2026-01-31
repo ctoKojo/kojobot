@@ -21,6 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { RescheduleDialog } from '@/components/group/RescheduleDialog';
 import { EditSessionDialog } from '@/components/group/EditSessionDialog';
@@ -73,6 +74,7 @@ export default function GroupDetails() {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const { isRTL, language } = useLanguage();
+  const { role } = useAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<GroupData | null>(null);
 
@@ -407,15 +409,17 @@ export default function GroupDetails() {
                 </div>
               )}
               
-              {/* Reschedule Button */}
-              <div className="pt-2">
-                <RescheduleDialog
-                  groupId={groupId!}
-                  scheduleDay={data.group.schedule_day}
-                  scheduleTime={data.group.schedule_time}
-                  onRescheduled={fetchGroupData}
-                />
-              </div>
+              {/* Reschedule Button - Admin Only */}
+              {role === 'admin' && (
+                <div className="pt-2">
+                  <RescheduleDialog
+                    groupId={groupId!}
+                    scheduleDay={data.group.schedule_day}
+                    scheduleTime={data.group.schedule_time}
+                    onRescheduled={fetchGroupData}
+                  />
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -687,8 +691,8 @@ export default function GroupDetails() {
                              session.status === 'cancelled' ? (isRTL ? 'ملغية' : 'Cancelled') :
                              (isRTL ? 'مجدولة' : 'Scheduled')}
                           </Badge>
-                          {/* Edit Session Button - only for scheduled sessions */}
-                          {session.status === 'scheduled' && (
+                          {/* Edit Session Button - Admin only for scheduled sessions */}
+                          {role === 'admin' && session.status === 'scheduled' && (
                             <EditSessionDialog
                               session={session}
                               onUpdated={fetchGroupData}

@@ -540,13 +540,15 @@ export default function SessionsPage() {
                                           <Pencil className="h-4 w-4 mr-2" />
                                           {t.common.edit}
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                          onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
-                                          className="text-destructive"
-                                        >
-                                          <Trash2 className="h-4 w-4 mr-2" />
-                                          {t.common.delete}
-                                        </DropdownMenuItem>
+                                        {role === 'admin' && (
+                                          <DropdownMenuItem
+                                            onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
+                                            className="text-destructive"
+                                          >
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            {t.common.delete}
+                                          </DropdownMenuItem>
+                                        )}
                                       </DropdownMenuContent>
                                     </DropdownMenu>
                                   </div>
