@@ -142,7 +142,41 @@ export default function GroupsPage() {
 
   useEffect(() => {
     fetchData();
+    
+    // Subscribe to real-time changes on group_students
+    const channel = supabase
+      .channel('group-students-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'group_students',
+        },
+        () => {
+          // Refresh student counts when group_students changes
+          refreshStudentCounts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const refreshStudentCounts = async () => {
+    const { data } = await supabase
+      .from('group_students')
+      .select('group_id')
+      .eq('is_active', true);
+    
+    const counts: GroupStudentCount = {};
+    (data || []).forEach((gs) => {
+      counts[gs.group_id] = (counts[gs.group_id] || 0) + 1;
+    });
+    setGroupStudentCounts(counts);
+  };
 
   const fetchData = async () => {
     try {
@@ -652,11 +686,23 @@ export default function GroupsPage() {
                 const isAtLimit = selectedStudentIds.length >= maxStudents;
 
                 if (eligibleStudents.length === 0) {
+                  const groupTypeName = isRTL 
+                    ? getGroupTypeInfo(selectedGroup?.group_type || 'kojo_squad').labelAr
+                    : getGroupTypeInfo(selectedGroup?.group_type || 'kojo_squad').label;
+                  const ageGroupName = selectedGroup?.age_group_id 
+                    ? getAgeGroupName(selectedGroup.age_group_id)
+                    : null;
+                  
                   return (
-                    <div className="text-center py-8 text-muted-foreground">
-                      {isRTL 
-                        ? `لا يوجد طلاب مشتركين في باقة ${getGroupTypeInfo(selectedGroup?.group_type || 'kojo_squad').labelAr}`
-                        : `No students subscribed to ${getGroupTypeInfo(selectedGroup?.group_type || 'kojo_squad').label}`}
+                    <div className="text-center py-8 text-muted-foreground space-y-2">
+                      <p className="font-medium">
+                        {isRTL ? 'لا يوجد طلاب مطابقين' : 'No matching students found'}
+                      </p>
+                      <p className="text-sm">
+                        {isRTL 
+                          ? `يجب أن يكون الطالب مشتركاً في باقة "${groupTypeName}"${ageGroupName ? ` وفي الفئة العمرية "${ageGroupName}"` : ''}`
+                          : `Student must be subscribed to "${groupTypeName}"${ageGroupName ? ` and in age group "${ageGroupName}"` : ''}`}
+                      </p>
                     </div>
                   );
                 }
