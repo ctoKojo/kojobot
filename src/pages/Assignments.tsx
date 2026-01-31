@@ -532,13 +532,28 @@ export default function AssignmentsPage() {
                       (() => {
                         const submissionStatus = getSubmissionStatus(assignment.id);
                         if (submissionStatus) {
+                          // Check if revision requested - show Submit button again
+                          if (submissionStatus.status === 'revision_requested') {
+                            return (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-orange-500 text-orange-600 flex-shrink-0"
+                                onClick={(e) => { e.stopPropagation(); navigate(`/assignment/${assignment.id}`); }}
+                              >
+                                {isRTL ? 'إعادة التسليم' : 'Resubmit'}
+                              </Button>
+                            );
+                          }
                           return (
                             <Badge 
                               variant="outline" 
-                              className={submissionStatus.status === 'graded' 
-                                ? 'bg-green-100 text-green-800 flex-shrink-0' 
-                                : 'bg-blue-100 text-blue-800 flex-shrink-0'
-                              }
+                              className={`cursor-pointer hover:opacity-80 flex-shrink-0 ${
+                                submissionStatus.status === 'graded' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}
+                              onClick={(e) => { e.stopPropagation(); navigate(`/assignment/${assignment.id}`); }}
                             >
                               <CheckCircle className="w-3 h-3 mr-1" />
                               {submissionStatus.status === 'graded' 
@@ -660,13 +675,28 @@ export default function AssignmentsPage() {
                           (() => {
                             const submissionStatus = getSubmissionStatus(assignment.id);
                             if (submissionStatus) {
+                              // Check if revision requested - show Resubmit button
+                              if (submissionStatus.status === 'revision_requested') {
+                                return (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-orange-500 text-orange-600"
+                                    onClick={() => navigate(`/assignment/${assignment.id}`)}
+                                  >
+                                    {isRTL ? 'إعادة التسليم' : 'Resubmit'}
+                                  </Button>
+                                );
+                              }
                               return (
                                 <Badge 
                                   variant="outline" 
-                                  className={submissionStatus.status === 'graded' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-blue-100 text-blue-800'
-                                  }
+                                  className={`cursor-pointer hover:opacity-80 ${
+                                    submissionStatus.status === 'graded' 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : 'bg-blue-100 text-blue-800'
+                                  }`}
+                                  onClick={() => navigate(`/assignment/${assignment.id}`)}
                                 >
                                   <CheckCircle className="w-3 h-3 mr-1" />
                                   {submissionStatus.status === 'graded' 

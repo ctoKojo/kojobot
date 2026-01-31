@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, FileText, Image, Video, X, CheckCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, Image, Video, X, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -232,6 +232,8 @@ export default function SubmitAssignment() {
 
   const isOverdue = assignment ? new Date(assignment.due_date) < new Date() : false;
   const isGraded = submission?.status === 'graded';
+  const isRevisionRequested = submission?.status === 'revision_requested';
+  const canSubmit = !isGraded || isRevisionRequested;
 
   const getFileIcon = (type: string | null) => {
     if (!type) return <FileText className="w-8 h-8" />;
@@ -348,14 +350,48 @@ export default function SubmitAssignment() {
           </Card>
         )}
 
+        {/* Revision Requested Alert */}
+        {isRevisionRequested && (
+          <Card className="border-orange-200 bg-orange-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-800">
+                <AlertTriangle className="w-5 h-5" />
+                {isRTL ? 'مطلوب إعادة التسليم' : 'Revision Requested'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-orange-700">
+                {isRTL 
+                  ? 'طلب المعلم إعادة تسليم هذا الواجب. يرجى مراجعة الملاحظات وإعادة تسليم عملك.'
+                  : 'Your instructor has requested a revision for this assignment. Please review the feedback and resubmit your work.'}
+              </p>
+              {(submission?.feedback || submission?.feedback_ar) && (
+                <div className="mt-4 p-4 rounded-lg bg-white border border-orange-200">
+                  <p className="text-sm font-medium text-orange-800 mb-1">
+                    {isRTL ? 'ملاحظات المدرب:' : 'Instructor Feedback:'}
+                  </p>
+                  <p className="text-gray-700">
+                    {language === 'ar' ? submission.feedback_ar : submission.feedback}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Submission Form */}
-        {!isGraded && (
+        {canSubmit && (
           <Card>
             <CardHeader>
               <CardTitle>
-                {submission ? (isRTL ? 'تعديل التسليم' : 'Edit Submission') : (isRTL ? 'تسليم الواجب' : 'Submit Assignment')}
+                {isRevisionRequested 
+                  ? (isRTL ? 'إعادة تسليم الواجب' : 'Resubmit Assignment')
+                  : submission 
+                    ? (isRTL ? 'تعديل التسليم' : 'Edit Submission') 
+                    : (isRTL ? 'تسليم الواجب' : 'Submit Assignment')
+                }
               </CardTitle>
-              {submission && (
+              {submission && !isRevisionRequested && (
                 <CardDescription>
                   {isRTL ? 'تم التسليم: ' : 'Submitted: '}{formatDate(submission.submitted_at)}
                 </CardDescription>
