@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,6 +64,7 @@ export default function SessionsPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
   const { user, role } = useAuth();
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -482,7 +484,8 @@ export default function SessionsPage() {
                   filteredSessions.map((session) => (
                     <TableRow 
                       key={session.id}
-                      className={isToday(session.session_date) ? 'bg-primary/5' : ''}
+                      className={`${isToday(session.session_date) ? 'bg-primary/5' : ''} cursor-pointer hover:bg-muted/50`}
+                      onClick={() => navigate(`/attendance?session=${session.id}&group=${session.group_id}`)}
                     >
                       <TableCell className="font-medium">
                         {getGroupName(session.group_id)}
@@ -512,32 +515,45 @@ export default function SessionsPage() {
                       <TableCell>{getStatusBadge(session.status)}</TableCell>
                       {canManage && (
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                              {session.status === 'scheduled' && (
-                                <DropdownMenuItem onClick={() => handleMarkComplete(session)}>
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  {isRTL ? 'تحديد كمكتمل' : 'Mark Complete'}
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/attendance?session=${session.id}&group=${session.group_id}`);
+                              }}
+                              title={isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
+                            >
+                              <Users className="h-4 w-4 text-primary" />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                                {session.status === 'scheduled' && (
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkComplete(session); }}>
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    {isRTL ? 'تحديد كمكتمل' : 'Mark Complete'}
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(session); }}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  {t.common.edit}
                                 </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem onClick={() => handleEdit(session)}>
-                                <Pencil className="h-4 w-4 mr-2" />
-                                {t.common.edit}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDelete(session.id)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                {t.common.delete}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                <DropdownMenuItem
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  {t.common.delete}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </TableCell>
                       )}
                     </TableRow>

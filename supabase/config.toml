@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-sessions]
 verify_jwt = false
+
+[functions.session-reminders]
+verify_jwt = false

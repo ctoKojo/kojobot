@@ -1,0 +1,158 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+interface Session {
+  id: string
+  group_id: string
+  session_date: string
+  session_time: string
+  groups: {
+    name: string
+    name_ar: string
+    instructor_id: string
+  }
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    console.log('Starting session reminder check...')
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    
+    const supabase = createClient(supabaseUrl, serviceRoleKey)
+
+    // Get current time and time 1 hour from now
+    const now = new Date()
+    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000)
+    
+    const today = now.toISOString().split('T')[0]
+    const currentTime = now.toTimeString().slice(0, 5) // HH:MM format
+    const targetTime = oneHourLater.toTimeString().slice(0, 5)
+
+    console.log(`Checking sessions for ${today} between ${currentTime} and ${targetTime}`)
+
+    // Find sessions that start within the next hour
+    const { data: upcomingSessions, error: sessionsError } = await supabase
+      .from('sessions')
+      .select(`
+        id,
+        group_id,
+        session_date,
+        session_time,
+        groups (
+          name,
+          name_ar,
+          instructor_id
+        )
+      `)
+      .eq('session_date', today)
+      .eq('status', 'scheduled')
+      .gte('session_time', currentTime)
+      .lte('session_time', targetTime)
+
+    if (sessionsError) {
+      console.error('Error fetching sessions:', sessionsError)
+      throw sessionsError
+    }
+
+    console.log(`Found ${upcomingSessions?.length || 0} sessions starting soon`)
+
+    if (!upcomingSessions || upcomingSessions.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'No upcoming sessions in the next hour',
+          notificationsSent: 0 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    let notificationsSent = 0
+    const errors: string[] = []
+
+    for (const session of upcomingSessions as unknown as Session[]) {
+      const instructorId = session.groups?.instructor_id
+      
+      if (!instructorId) {
+        console.log(`No instructor found for session ${session.id}`)
+        continue
+      }
+
+      // Check if notification already sent for this session
+      const { data: existingNotification } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', instructorId)
+        .eq('action_url', `/sessions?highlight=${session.id}`)
+        .single()
+
+      if (existingNotification) {
+        console.log(`Notification already sent for session ${session.id}`)
+        continue
+      }
+
+      // Create notification for instructor
+      const groupName = session.groups?.name || 'Unknown Group'
+      const groupNameAr = session.groups?.name_ar || 'مجموعة'
+
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: instructorId,
+          title: `Session Starting Soon`,
+          title_ar: `السيشن على وشك البدء`,
+          message: `Your session with ${groupName} starts at ${session.session_time}`,
+          message_ar: `سيشن ${groupNameAr} سيبدأ الساعة ${session.session_time}`,
+          type: 'reminder',
+          category: 'session',
+          action_url: `/attendance?session=${session.id}&group=${session.group_id}`,
+        })
+
+      if (notifError) {
+        console.error(`Error creating notification for session ${session.id}:`, notifError)
+        errors.push(`Failed to notify for session ${session.id}`)
+      } else {
+        console.log(`Notification sent for session ${session.id} to instructor ${instructorId}`)
+        notificationsSent++
+      }
+    }
+
+    const result = {
+      success: true,
+      message: `Processed ${upcomingSessions.length} upcoming sessions`,
+      notificationsSent,
+      errors: errors.length > 0 ? errors : undefined,
+    }
+
+    console.log('Session reminder check complete:', result)
+
+    return new Response(
+      JSON.stringify(result),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Error in session-reminders:', error)
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: errorMessage 
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    )
+  }
+})
