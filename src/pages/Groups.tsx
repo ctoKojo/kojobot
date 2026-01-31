@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye, TrendingUp } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -100,7 +101,9 @@ interface GroupStudentCount {
 export default function GroupsPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
+  const { role } = useAuth();
   const navigate = useNavigate();
+  const isAdmin = role === 'admin';
   const [groups, setGroups] = useState<Group[]>([]);
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
@@ -530,14 +533,16 @@ export default function GroupsPage() {
             />
           </div>
 
-          <Button className="kojo-gradient" onClick={() => {
-            setEditingGroup(null);
-            resetForm();
-            setIsDialogOpen(true);
-          }}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t.groups.addGroup}
-          </Button>
+          {isAdmin && (
+            <Button className="kojo-gradient" onClick={() => {
+              setEditingGroup(null);
+              resetForm();
+              setIsDialogOpen(true);
+            }}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t.groups.addGroup}
+            </Button>
+          )}
         </div>
 
         {/* Dialog */}
@@ -861,7 +866,11 @@ export default function GroupsPage() {
                     const progressPercent = Math.round((progress.completed / progress.total) * 100);
                     
                     return (
-                      <TableRow key={group.id}>
+                      <TableRow 
+                        key={group.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => navigate(`/group/${group.id}`)}
+                      >
                         <TableCell className="font-medium">
                           {language === 'ar' ? group.name_ar : group.name}
                         </TableCell>
@@ -900,47 +909,58 @@ export default function GroupsPage() {
                             {getDayName(group.schedule_day)} - {formatTime12Hour(group.schedule_time, isRTL)}
                           </Badge>
                         </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleManageStudents(group)}
-                            title={isRTL ? 'إدارة الطلاب' : 'Manage Students'}
-                          >
-                            <Users className="h-4 w-4" />
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                              <DropdownMenuItem onClick={() => navigate(`/group/${group.id}`)}>
-                                <Eye className="h-4 w-4 mr-2" />
-                                {isRTL ? 'عرض التفاصيل' : 'View Details'}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEdit(group)}>
-                                <Pencil className="h-4 w-4 mr-2" />
-                                {t.common.edit}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleManageStudents(group)}>
-                                <Users className="h-4 w-4 mr-2" />
-                                {isRTL ? 'إدارة الطلاب' : 'Manage Students'}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleDelete(group.id)}
-                                className="text-destructive"
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          {isAdmin ? (
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleManageStudents(group)}
+                                title={isRTL ? 'إدارة الطلاب' : 'Manage Students'}
                               >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                {t.common.delete}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                                <Users className="h-4 w-4" />
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                                  <DropdownMenuItem onClick={() => navigate(`/group/${group.id}`)}>
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    {isRTL ? 'عرض التفاصيل' : 'View Details'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleEdit(group)}>
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    {t.common.edit}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleManageStudents(group)}>
+                                    <Users className="h-4 w-4 mr-2" />
+                                    {isRTL ? 'إدارة الطلاب' : 'Manage Students'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => handleDelete(group.id)}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    {t.common.delete}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => navigate(`/group/${group.id}`)}
+                              title={isRTL ? 'عرض التفاصيل' : 'View Details'}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
                     );
                   })
                 )}

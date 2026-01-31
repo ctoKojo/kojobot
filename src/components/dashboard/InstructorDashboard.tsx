@@ -53,18 +53,23 @@ export function InstructorDashboard() {
         studentCount = count || 0;
       }
 
-      // Get upcoming sessions
-      const today = new Date().toISOString().split('T')[0];
+      // Get today and tomorrow's sessions only
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const todayStr = today.toISOString().split('T')[0];
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      
       let upcomingSessions: any[] = [];
       if (groupIds.length > 0) {
         const { data } = await supabase
           .from('sessions')
           .select('*, groups(name, name_ar)')
           .in('group_id', groupIds)
-          .gte('session_date', today)
+          .in('session_date', [todayStr, tomorrowStr])
           .eq('status', 'scheduled')
           .order('session_date')
-          .limit(5);
+          .order('session_time');
         upcomingSessions = data || [];
       }
 
@@ -148,15 +153,15 @@ export function InstructorDashboard() {
         </Card>
       </div>
 
-      {/* Upcoming Sessions */}
+      {/* Today & Tomorrow Sessions */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
-            {isRTL ? 'السيشنات القادمة' : 'Upcoming Sessions'}
+            {isRTL ? 'سيشنات اليوم وبكرة' : "Today & Tomorrow's Sessions"}
           </CardTitle>
           <CardDescription>
-            {isRTL ? 'جدول السيشنات القادمة' : 'Your upcoming session schedule'}
+            {isRTL ? 'السيشنات المجدولة لليوم والغد' : 'Sessions scheduled for today and tomorrow'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -168,26 +173,34 @@ export function InstructorDashboard() {
             </p>
           ) : (
             <div className="space-y-3">
-              {stats.upcomingSessions.map((session: any) => (
-                <div 
-                  key={session.id} 
-                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/attendance?session=${session.id}&group=${session.group_id}`)}
-                >
-                  <div>
-                    <p className="font-medium">
-                      {language === 'ar' ? session.groups?.name_ar : session.groups?.name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {session.topic_ar && language === 'ar' ? session.topic_ar : session.topic || '-'}
-                    </p>
+              {stats.upcomingSessions.map((session: any) => {
+                const today = new Date().toISOString().split('T')[0];
+                const isToday = session.session_date === today;
+                
+                return (
+                  <div 
+                    key={session.id} 
+                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/attendance?session=${session.id}&group=${session.group_id}`)}
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {language === 'ar' ? session.groups?.name_ar : session.groups?.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {isRTL ? `سيشن ${session.session_number || '-'}` : `Session ${session.session_number || '-'}`}
+                        {session.topic && ` - ${language === 'ar' && session.topic_ar ? session.topic_ar : session.topic}`}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={isToday ? 'default' : 'outline'} className={isToday ? 'kojo-gradient' : ''}>
+                        {isToday ? (isRTL ? 'اليوم' : 'Today') : (isRTL ? 'بكرة' : 'Tomorrow')}
+                      </Badge>
+                      <p className="text-sm text-muted-foreground mt-1">{formatTime12Hour(session.session_time, isRTL)}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <Badge variant="outline">{session.session_date}</Badge>
-                    <p className="text-sm text-muted-foreground mt-1">{formatTime12Hour(session.session_time, isRTL)}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
