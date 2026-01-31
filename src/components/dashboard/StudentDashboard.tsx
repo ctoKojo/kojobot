@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen } from 'lucide-react';
+import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -53,7 +53,7 @@ export function StudentDashboard() {
       // Get student's group - use maybeSingle to avoid 406 when no group exists
       const { data: groupStudentData } = await supabase
         .from('group_students')
-        .select('group_id, groups(id, name, name_ar, schedule_day, schedule_time, instructor_id)')
+        .select('group_id, groups(id, name, name_ar, schedule_day, schedule_time, instructor_id, attendance_mode, session_link)')
         .eq('student_id', user?.id)
         .eq('is_active', true)
         .maybeSingle();
@@ -131,7 +131,7 @@ export function StudentDashboard() {
       if (groupStudent?.group_id) {
         const { data } = await supabase
           .from('sessions')
-          .select('*, groups(name, name_ar)')
+          .select('*, groups(name, name_ar, attendance_mode, session_link)')
           .eq('group_id', groupStudent.group_id)
           .gte('session_date', today)
           .eq('status', 'scheduled')
@@ -217,6 +217,19 @@ export function StudentDashboard() {
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">
                   {stats.groupInfo.schedule_day} - {formatTime12Hour(stats.groupInfo.schedule_time, isRTL)}
                 </p>
+                {/* Session Link for Online Groups */}
+                {stats.groupInfo.attendance_mode === 'online' && stats.groupInfo.session_link && (
+                  <Button 
+                    size="sm" 
+                    className="mt-2 w-full bg-green-600 hover:bg-green-700"
+                    asChild
+                  >
+                    <a href={stats.groupInfo.session_link} target="_blank" rel="noopener noreferrer">
+                      <Video className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                      {isRTL ? 'انضم للجلسة' : 'Join Session'}
+                    </a>
+                  </Button>
+                )}
               </>
             ) : (
               <p className="text-muted-foreground text-sm">{isRTL ? 'غير مسجل' : 'Not enrolled'}</p>
@@ -313,9 +326,23 @@ export function StudentDashboard() {
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <Badge variant="outline">{session.session_date}</Badge>
-                    <p className="text-sm text-muted-foreground mt-1">{formatTime12Hour(session.session_time, isRTL)}</p>
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <Badge variant="outline">{session.session_date}</Badge>
+                      <p className="text-sm text-muted-foreground mt-1">{formatTime12Hour(session.session_time, isRTL)}</p>
+                    </div>
+                    {/* Join Session Button for Online Groups */}
+                    {session.groups?.attendance_mode === 'online' && session.groups?.session_link && (
+                      <Button 
+                        size="sm" 
+                        className="bg-green-600 hover:bg-green-700"
+                        asChild
+                      >
+                        <a href={session.groups.session_link} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
