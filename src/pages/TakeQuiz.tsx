@@ -54,6 +54,7 @@ export default function TakeQuiz() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<{ score: number; maxScore: number; percentage: number; passed: boolean } | null>(null);
+  const [gradeResults, setGradeResults] = useState<Record<string, { correct: boolean; correctAnswer: string }>>({});
 
   useEffect(() => {
     if (assignmentId) fetchQuizData();
@@ -87,14 +88,20 @@ export default function TakeQuiz() {
       setAssignment(assignmentData);
       setTimeLeft((assignmentData.quizzes?.duration_minutes || 30) * 60);
 
+      // Use secure view that excludes correct_answer - answers are fetched separately after submission
       const { data: questionsData, error: questionsError } = await supabase
-        .from('quiz_questions')
+        .from('quiz_questions_student_view')
         .select('*')
         .eq('quiz_id', assignmentData.quiz_id)
         .order('order_index');
 
       if (questionsError) throw questionsError;
-      setQuestions(questionsData || []);
+      // Add empty correct_answer since view doesn't include it
+      const questionsWithPlaceholder = (questionsData || []).map(q => ({
+        ...q,
+        correct_answer: '' // Will be calculated server-side or fetched after submission
+      }));
+      setQuestions(questionsWithPlaceholder);
     } catch (error) {
       console.error('Error fetching quiz:', error);
       toast({
@@ -116,40 +123,27 @@ export default function TakeQuiz() {
     setSubmitting(true);
 
     try {
-      // Calculate score - compare answer index with correct answer text
-      let score = 0;
-      let maxScore = 0;
-
-      questions.forEach((q) => {
-        maxScore += q.points;
-        const optionsData = q.options as { options: { text: string; text_ar: string }[] } | null;
-        const optionsList = optionsData?.options || [];
-        const selectedIdx = parseInt(answers[q.id] || '-1');
-        const selectedOption = optionsList[selectedIdx];
-        // Check if selected option's text matches correct_answer
-        if (selectedOption && selectedOption.text === q.correct_answer) {
-          score += q.points;
+      // Use edge function for secure grading (correct answers are server-side only)
+      const { data, error } = await supabase.functions.invoke('grade-quiz', {
+        body: {
+          quiz_assignment_id: assignment.id,
+          answers: answers
         }
       });
 
-      const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-      const passed = percentage >= (assignment.quizzes?.passing_score || 60);
-
-      // Save submission
-      const { error } = await supabase.from('quiz_submissions').insert([{
-        quiz_assignment_id: assignment.id,
-        student_id: user.id,
-        answers: answers,
-        score,
-        max_score: maxScore,
-        percentage,
-        status: 'submitted',
-        submitted_at: new Date().toISOString(),
-      }]);
-
       if (error) throw error;
 
-      setResult({ score, maxScore, percentage, passed });
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to grade quiz');
+      }
+
+      setResult({
+        score: data.score,
+        maxScore: data.maxScore,
+        percentage: data.percentage,
+        passed: data.passed
+      });
+      setGradeResults(data.results || {});
       setSubmitted(true);
 
       toast({
@@ -217,31 +211,19 @@ export default function TakeQuiz() {
             <div className="grid grid-cols-2 gap-4 text-center">
               <div className="p-4 rounded-lg bg-green-50 border border-green-200">
                 <div className="text-2xl font-bold text-green-600">
-                  {questions.filter(q => {
-                    const optionsData = q.options as { options: { text: string; text_ar: string }[] } | null;
-                    const optionsList = optionsData?.options || [];
-                    const selectedIdx = parseInt(answers[q.id] || '-1');
-                    const selectedOption = optionsList[selectedIdx];
-                    return selectedOption && selectedOption.text === q.correct_answer;
-                  }).length}
+                  {Object.values(gradeResults).filter(r => r.correct).length}
                 </div>
                 <p className="text-sm text-green-700">{isRTL ? 'إجابات صحيحة' : 'Correct'}</p>
               </div>
               <div className="p-4 rounded-lg bg-red-50 border border-red-200">
                 <div className="text-2xl font-bold text-red-600">
-                  {questions.filter(q => {
-                    const optionsData = q.options as { options: { text: string; text_ar: string }[] } | null;
-                    const optionsList = optionsData?.options || [];
-                    const selectedIdx = parseInt(answers[q.id] || '-1');
-                    const selectedOption = optionsList[selectedIdx];
-                    return !selectedOption || selectedOption.text !== q.correct_answer;
-                  }).length}
+                  {Object.values(gradeResults).filter(r => !r.correct).length}
                 </div>
                 <p className="text-sm text-red-700">{isRTL ? 'إجابات خاطئة' : 'Wrong'}</p>
               </div>
             </div>
 
-            {/* Show correct answers */}
+            {/* Show correct answers - using server-provided results */}
             <div className="space-y-4 mt-6">
               <h3 className="font-semibold">{isRTL ? 'مراجعة الإجابات' : 'Review Answers'}</h3>
               {questions.map((q, idx) => {
@@ -249,8 +231,10 @@ export default function TakeQuiz() {
                 const optionsList = optionsData?.options || [];
                 const userAnswerIdx = answers[q.id] ? parseInt(answers[q.id]) : -1;
                 const selectedOption = optionsList[userAnswerIdx];
-                const isCorrect = selectedOption && selectedOption.text === q.correct_answer;
-                const correctAnswerIdx = optionsList.findIndex(opt => opt.text === q.correct_answer);
+                const questionResult = gradeResults[q.id];
+                const isCorrect = questionResult?.correct || false;
+                const correctAnswerText = questionResult?.correctAnswer || '';
+                const correctAnswerIdx = optionsList.findIndex(opt => opt.text === correctAnswerText);
                 
                 return (
                   <div key={q.id} className={`p-4 rounded-lg border ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
