@@ -100,23 +100,23 @@ export function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (
           <Card 
             key={stat.title} 
             className={`hover:shadow-lg transition-shadow ${stat.onClick ? 'cursor-pointer' : ''}`}
             onClick={stat.onClick}
           >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground line-clamp-2">
                 {stat.title}
               </CardTitle>
-              <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+              <div className={`p-1.5 sm:p-2 rounded-lg ${stat.bgColor} flex-shrink-0`}>
+                <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
+            <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+              <div className="text-2xl sm:text-3xl font-bold">
                 {loading ? '...' : stat.value}
               </div>
             </CardContent>
@@ -143,38 +143,38 @@ export function AdminDashboard() {
       )}
 
       {/* Quick Actions */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/students')}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GraduationCap className="h-5 w-5 text-primary" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               {t.students.addStudent}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               {isRTL ? 'إضافة طالب جديد للنظام' : 'Add a new student to the system'}
             </CardDescription>
           </CardHeader>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/instructors')}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-secondary" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
               {t.instructors.addInstructor}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               {isRTL ? 'إضافة مدرب جديد' : 'Add a new instructor'}
             </CardDescription>
           </CardHeader>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/groups')}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-green-600" />
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow sm:col-span-2 md:col-span-1" onClick={() => navigate('/groups')}>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
               {t.groups.addGroup}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               {isRTL ? 'إنشاء مجموعة جديدة' : 'Create a new group'}
             </CardDescription>
           </CardHeader>
