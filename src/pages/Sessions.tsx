@@ -48,6 +48,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatTime12Hour } from '@/lib/timeUtils';
+import { logUpdate, logDelete } from '@/lib/activityLogger';
 
 interface Session {
   id: string;
@@ -177,6 +178,15 @@ export default function SessionsPage() {
 
       if (error) throw error;
       
+      // Log activity
+      await logUpdate('session', editingSession.id, {
+        session_number: editingSession.session_number,
+        changes: {
+          topic: formData.topic,
+          status: formData.status,
+        }
+      });
+      
       toast({
         title: t.common.success,
         description: isRTL ? 'تم تحديث السيشن' : 'Session updated successfully',
@@ -204,6 +214,13 @@ export default function SessionsPage() {
 
       if (error) throw error;
       
+      // Log activity
+      await logUpdate('session', session.id, {
+        session_number: session.session_number,
+        action: 'marked_complete',
+        previous_status: session.status,
+      });
+      
       toast({
         title: t.common.success,
         description: isRTL ? 'تم تحديث حالة السيشن' : 'Session marked as completed',
@@ -216,9 +233,20 @@ export default function SessionsPage() {
   };
 
   const handleDelete = async (id: string) => {
+    // Find session info before deleting for logging
+    const sessionToDelete = sessions.find(s => s.id === id);
+    
     try {
       const { error } = await supabase.from('sessions').delete().eq('id', id);
       if (error) throw error;
+      
+      // Log activity
+      await logDelete('session', id, {
+        session_number: sessionToDelete?.session_number,
+        session_date: sessionToDelete?.session_date,
+        group_id: sessionToDelete?.group_id,
+      });
+      
       toast({
         title: t.common.success,
         description: isRTL ? 'تم حذف السيشن' : 'Session deleted successfully',
@@ -423,32 +451,32 @@ export default function SessionsPage() {
                   value={group.id}
                   className="border rounded-lg bg-card overflow-hidden"
                 >
-                  <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 [&[data-state=open]]:bg-muted/30">
-                    <div className="flex items-center gap-4 flex-1">
+                  <AccordionTrigger className="px-3 sm:px-4 py-3 hover:no-underline hover:bg-muted/50 [&[data-state=open]]:bg-muted/30">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-1 w-full">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <FolderOpen className="h-5 w-5 text-primary" />
+                        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <FolderOpen className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                         </div>
-                        <div className="text-left">
-                          <h3 className="font-semibold">
+                        <div className="text-left min-w-0">
+                          <h3 className="font-semibold text-sm sm:text-base truncate">
                             {language === 'ar' ? group.name_ar : group.name}
                           </h3>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             {group.schedule_day} - {formatTime12Hour(group.schedule_time, isRTL)}
                           </p>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-3 mr-4">
+                      <div className="flex items-center gap-2 flex-wrap ml-11 sm:ml-0 sm:mr-4">
                         {stats.todaySession && (
-                          <Badge variant="default" className="kojo-gradient">
-                            {isRTL ? 'سيشن اليوم' : 'Today'}
+                          <Badge variant="default" className="kojo-gradient text-xs">
+                            {isRTL ? 'اليوم' : 'Today'}
                           </Badge>
                         )}
-                        <Badge variant="outline">
-                          {stats.completed}/{stats.total} {isRTL ? 'مكتمل' : 'completed'}
+                        <Badge variant="outline" className="text-xs">
+                          {stats.completed}/{stats.total}
                         </Badge>
-                        <Badge variant="secondary">
+                        <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
                           {groupSessions.length} {isRTL ? 'سيشن' : 'sessions'}
                         </Badge>
                       </div>
@@ -456,109 +484,197 @@ export default function SessionsPage() {
                   </AccordionTrigger>
                   
                   <AccordionContent className="px-0 pb-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[100px]">#</TableHead>
-                          <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
-                          <TableHead>{isRTL ? 'الوقت' : 'Time'}</TableHead>
-                          <TableHead>{isRTL ? 'الموضوع' : 'Topic'}</TableHead>
-                          <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                          {canManage && <TableHead className="w-[100px]">{t.common.actions}</TableHead>}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {groupSessions.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                              {isRTL ? 'لا توجد سيشنات مطابقة' : 'No matching sessions'}
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          groupSessions.map((session) => (
-                            <TableRow 
-                              key={session.id}
-                              className={`${isToday(session.session_date) ? 'bg-primary/5' : ''} cursor-pointer hover:bg-muted/50`}
-                              onClick={() => navigate(`/attendance?session=${session.id}&group=${session.group_id}`)}
-                            >
-                              <TableCell>
-                                <Badge variant="outline" className="font-mono">
-                                  {isRTL ? `سيشن ${session.session_number}` : `Session ${session.session_number}`}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {session.session_date}
+                    {/* Mobile Card View */}
+                    <div className="block md:hidden divide-y">
+                      {groupSessions.length === 0 ? (
+                        <div className="text-center py-6 text-muted-foreground">
+                          {isRTL ? 'لا توجد سيشنات مطابقة' : 'No matching sessions'}
+                        </div>
+                      ) : (
+                        groupSessions.map((session) => (
+                          <div 
+                            key={session.id}
+                            className={`p-3 ${isToday(session.session_date) ? 'bg-primary/5' : ''} cursor-pointer hover:bg-muted/50`}
+                            onClick={() => navigate(`/attendance?session=${session.id}&group=${session.group_id}`)}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="space-y-1.5 min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant="outline" className="font-mono text-xs">
+                                    {isRTL ? `سيشن ${session.session_number}` : `#${session.session_number}`}
+                                  </Badge>
+                                  {getStatusBadge(session.status)}
                                   {isToday(session.session_date) && (
                                     <Badge variant="secondary" className="text-xs">
                                       {isRTL ? 'اليوم' : 'Today'}
                                     </Badge>
                                   )}
                                 </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  {formatTime12Hour(session.session_time, isRTL)}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {language === 'ar' 
-                                  ? (session.topic_ar || session.topic || '-')
-                                  : (session.topic || session.topic_ar || '-')
-                                }
-                              </TableCell>
-                              <TableCell>{getStatusBadge(session.status)}</TableCell>
+                                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {session.session_date}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {formatTime12Hour(session.session_time, isRTL)}
+                                  </span>
+                                </div>
+                                {(session.topic || session.topic_ar) && (
+                                  <p className="text-sm truncate">
+                                    {language === 'ar' 
+                                      ? (session.topic_ar || session.topic)
+                                      : (session.topic || session.topic_ar)
+                                    }
+                                  </p>
+                                )}
+                              </div>
                               {canManage && (
-                                <TableCell>
-                                  <div className="flex items-center gap-1">
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/attendance?session=${session.id}&group=${session.group_id}`);
-                                      }}
-                                      title={isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
-                                    >
-                                      <Users className="h-4 w-4 text-primary" />
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                      <MoreHorizontal className="h-4 w-4" />
                                     </Button>
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
-                                          <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                                        {session.status === 'scheduled' && (
-                                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkComplete(session); }}>
-                                            <CheckCircle className="h-4 w-4 mr-2" />
-                                            {isRTL ? 'تحديد كمكتمل' : 'Mark Complete'}
-                                          </DropdownMenuItem>
-                                        )}
-                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(session); }}>
-                                          <Pencil className="h-4 w-4 mr-2" />
-                                          {t.common.edit}
-                                        </DropdownMenuItem>
-                                        {role === 'admin' && (
-                                          <DropdownMenuItem
-                                            onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
-                                            className="text-destructive"
-                                          >
-                                            <Trash2 className="h-4 w-4 mr-2" />
-                                            {t.common.delete}
-                                          </DropdownMenuItem>
-                                        )}
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/attendance?session=${session.id}&group=${session.group_id}`); }}>
+                                      <Users className="h-4 w-4 mr-2" />
+                                      {isRTL ? 'تسجيل الحضور' : 'Attendance'}
+                                    </DropdownMenuItem>
+                                    {session.status === 'scheduled' && (
+                                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkComplete(session); }}>
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        {isRTL ? 'تحديد كمكتمل' : 'Mark Complete'}
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(session); }}>
+                                      <Pencil className="h-4 w-4 mr-2" />
+                                      {t.common.edit}
+                                    </DropdownMenuItem>
+                                    {role === 'admin' && (
+                                      <DropdownMenuItem
+                                        onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
+                                        className="text-destructive"
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        {t.common.delete}
+                                      </DropdownMenuItem>
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[100px]">#</TableHead>
+                            <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
+                            <TableHead>{isRTL ? 'الوقت' : 'Time'}</TableHead>
+                            <TableHead>{isRTL ? 'الموضوع' : 'Topic'}</TableHead>
+                            <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                            {canManage && <TableHead className="w-[100px]">{t.common.actions}</TableHead>}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {groupSessions.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                                {isRTL ? 'لا توجد سيشنات مطابقة' : 'No matching sessions'}
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            groupSessions.map((session) => (
+                              <TableRow 
+                                key={session.id}
+                                className={`${isToday(session.session_date) ? 'bg-primary/5' : ''} cursor-pointer hover:bg-muted/50`}
+                                onClick={() => navigate(`/attendance?session=${session.id}&group=${session.group_id}`)}
+                              >
+                                <TableCell>
+                                  <Badge variant="outline" className="font-mono">
+                                    {isRTL ? `سيشن ${session.session_number}` : `Session ${session.session_number}`}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    {session.session_date}
+                                    {isToday(session.session_date) && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {isRTL ? 'اليوم' : 'Today'}
+                                      </Badge>
+                                    )}
                                   </div>
                                 </TableCell>
-                              )}
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
+                                <TableCell>
+                                  <Badge variant="outline">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    {formatTime12Hour(session.session_time, isRTL)}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {language === 'ar' 
+                                    ? (session.topic_ar || session.topic || '-')
+                                    : (session.topic || session.topic_ar || '-')
+                                  }
+                                </TableCell>
+                                <TableCell>{getStatusBadge(session.status)}</TableCell>
+                                {canManage && (
+                                  <TableCell>
+                                    <div className="flex items-center gap-1">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigate(`/attendance?session=${session.id}&group=${session.group_id}`);
+                                        }}
+                                        title={isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
+                                      >
+                                        <Users className="h-4 w-4 text-primary" />
+                                      </Button>
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                                          {session.status === 'scheduled' && (
+                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkComplete(session); }}>
+                                              <CheckCircle className="h-4 w-4 mr-2" />
+                                              {isRTL ? 'تحديد كمكتمل' : 'Mark Complete'}
+                                            </DropdownMenuItem>
+                                          )}
+                                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(session); }}>
+                                            <Pencil className="h-4 w-4 mr-2" />
+                                            {t.common.edit}
+                                          </DropdownMenuItem>
+                                          {role === 'admin' && (
+                                            <DropdownMenuItem
+                                              onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
+                                              className="text-destructive"
+                                            >
+                                              <Trash2 className="h-4 w-4 mr-2" />
+                                              {t.common.delete}
+                                            </DropdownMenuItem>
+                                          )}
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
+                                  </TableCell>
+                                )}
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </AccordionContent>
                 </AccordionItem>
               );

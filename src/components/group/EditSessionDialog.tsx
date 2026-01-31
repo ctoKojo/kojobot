@@ -23,6 +23,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { notificationService } from '@/lib/notificationService';
+import { logUpdate } from '@/lib/activityLogger';
 
 interface EditSessionDialogProps {
   session: {
@@ -50,6 +51,7 @@ export function EditSessionDialog({ session, groupId, onUpdated }: EditSessionDi
     try {
       const dateChanged = sessionDate !== session.session_date;
       const timeChanged = sessionTime !== session.session_time;
+      const statusChanged = status !== session.status;
       
       const { error } = await supabase
         .from('sessions')
@@ -62,6 +64,16 @@ export function EditSessionDialog({ session, groupId, onUpdated }: EditSessionDi
         .eq('id', session.id);
 
       if (error) throw error;
+
+      // Log activity
+      await logUpdate('session', session.id, {
+        session_number: session.session_number,
+        changes: {
+          date: dateChanged ? { from: session.session_date, to: sessionDate } : undefined,
+          time: timeChanged ? { from: session.session_time, to: sessionTime } : undefined,
+          status: statusChanged ? { from: session.status, to: status } : undefined,
+        }
+      });
 
       // If date or time changed, notify students
       if (dateChanged || timeChanged) {
