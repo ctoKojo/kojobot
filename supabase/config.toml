@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.session-reminders]
 verify_jwt = false
+
+[functions.delete-users]
+verify_jwt = false
+
+[functions.grade-quiz]
+verify_jwt = false
