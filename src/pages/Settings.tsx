@@ -2,6 +2,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -36,12 +37,17 @@ export default function SettingsPage() {
         {/* Notifications Settings */}
         <Card>
           <CardHeader>
-            <CardTitle>{t.notifications.title}</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle>{t.notifications.title}</CardTitle>
+              <Badge variant="secondary" className="text-xs">
+                {isRTL ? 'قريباً' : 'Coming Soon'}
+              </Badge>
+            </div>
             <CardDescription>
               {isRTL ? 'إعدادات الإشعارات' : 'Notification preferences'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 opacity-60">
             <div className="flex items-center justify-between">
               <div>
                 <Label className="text-base">
@@ -51,7 +57,7 @@ export default function SettingsPage() {
                   {isRTL ? 'تلقي إشعارات عند إسناد كويزات جديدة' : 'Get notified when new quizzes are assigned'}
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch defaultChecked disabled />
             </div>
             <div className="flex items-center justify-between">
               <div>
@@ -62,7 +68,7 @@ export default function SettingsPage() {
                   {isRTL ? 'تلقي إشعارات عند إضافة واجبات جديدة' : 'Get notified when new assignments are added'}
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch defaultChecked disabled />
             </div>
             <div className="flex items-center justify-between">
               <div>
@@ -73,7 +79,7 @@ export default function SettingsPage() {
                   {isRTL ? 'تذكيرات قبل انتهاء مواعيد التسليم' : 'Reminders before submission deadlines'}
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch defaultChecked disabled />
             </div>
           </CardContent>
         </Card>

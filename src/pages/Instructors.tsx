@@ -452,27 +452,29 @@ export default function InstructorsPage() {
                         ) : '-'}
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                            <DropdownMenuItem onClick={() => navigate(`/instructor/${instructor.user_id}`)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              {isRTL ? 'عرض الملف' : 'View Profile'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => navigate(`/instructor-schedule/${instructor.user_id}`)}>
-                              <CalendarDays className="h-4 w-4 mr-2" />
-                              {isRTL ? 'جدول العمل' : 'View Schedule'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(instructor)}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              {t.common.edit}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                              <DropdownMenuItem onClick={() => navigate(`/instructor/${instructor.user_id}`)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                {isRTL ? 'عرض الملف' : 'View Profile'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate(`/instructor-schedule/${instructor.user_id}`)}>
+                                <CalendarDays className="h-4 w-4 mr-2" />
+                                {isRTL ? 'جدول العمل' : 'View Schedule'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(instructor)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                {t.common.edit}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
