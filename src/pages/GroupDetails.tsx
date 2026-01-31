@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Users, Calendar, Clock, User, BookOpen, 
   FileText, ArrowLeft, CheckCircle, XCircle, AlertCircle,
-  TrendingUp, Target
+  TrendingUp, Target, Video, Copy, ExternalLink
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -75,8 +76,19 @@ export default function GroupDetails() {
   const navigate = useNavigate();
   const { isRTL, language } = useLanguage();
   const { role } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<GroupData | null>(null);
+
+  const handleCopyLink = () => {
+    if (data?.group?.session_link) {
+      navigator.clipboard.writeText(data.group.session_link);
+      toast({
+        title: isRTL ? 'تم النسخ' : 'Copied',
+        description: isRTL ? 'تم نسخ الرابط' : 'Link copied to clipboard',
+      });
+    }
+  };
 
   useEffect(() => {
     if (groupId) fetchGroupData();
@@ -313,6 +325,11 @@ export default function GroupDetails() {
                   <Badge variant="secondary">
                     {getGroupTypeName(data.group.group_type)}
                   </Badge>
+                  <Badge variant={data.group.attendance_mode === 'online' ? 'default' : 'outline'} className={data.group.attendance_mode === 'online' ? 'bg-green-600' : ''}>
+                    {data.group.attendance_mode === 'online' 
+                      ? (isRTL ? 'أونلاين' : 'Online')
+                      : (isRTL ? 'حضوري' : 'Offline')}
+                  </Badge>
                   {data.group.age_groups && (
                     <Badge variant="outline">
                       {language === 'ar' ? data.group.age_groups.name_ar : data.group.age_groups.name}
@@ -361,6 +378,37 @@ export default function GroupDetails() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Session Link Card - for online groups */}
+        {data.group.attendance_mode === 'online' && data.group.session_link && (
+          <Card className="border-green-500/20 bg-gradient-to-r from-green-500/5 to-transparent">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Video className="h-5 w-5 text-green-600" />
+                {isRTL ? 'رابط الجلسة' : 'Session Link'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                <div className="flex-1 p-3 bg-muted rounded-lg font-mono text-sm break-all">
+                  {data.group.session_link}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    {isRTL ? 'نسخ' : 'Copy'}
+                  </Button>
+                  <Button size="sm" className="bg-green-600 hover:bg-green-700" asChild>
+                    <a href={data.group.session_link} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      {isRTL ? 'انضم للجلسة' : 'Join Session'}
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Level Progress Card */}
         <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
