@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, UserCheck, UserX, Clock, AlertCircle, Calendar, ChevronLeft, ChevronRight, Save } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -61,12 +62,16 @@ export default function AttendancePage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
   const { user, role } = useAuth();
+  const [searchParams] = useSearchParams();
+  const urlSessionId = searchParams.get('session');
+  const urlGroupId = searchParams.get('group');
+  
   const [groups, setGroups] = useState<Group[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<string>('');
-  const [selectedSession, setSelectedSession] = useState<string>('');
+  const [selectedGroup, setSelectedGroup] = useState<string>(urlGroupId || '');
+  const [selectedSession, setSelectedSession] = useState<string>(urlSessionId || '');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
