@@ -4,6 +4,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { LanguageToggle } from '@/components/LanguageToggle';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function SettingsPage() {
@@ -30,6 +31,17 @@ export default function SettingsPage() {
                 </p>
               </div>
               <LanguageToggle />
+            </div>
+            
+            {/* Theme */}
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base">{isRTL ? 'المظهر' : 'Theme'}</Label>
+                <p className="text-sm text-muted-foreground">
+                  {isRTL ? 'اختر الوضع الفاتح أو الداكن' : 'Choose light or dark mode'}
+                </p>
+              </div>
+              <ThemeToggle />
             </div>
           </CardContent>
         </Card>
