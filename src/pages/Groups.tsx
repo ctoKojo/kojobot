@@ -782,6 +782,7 @@ export default function GroupsPage() {
                 <TableRow>
                   <TableHead>{t.groups.groupName}</TableHead>
                   <TableHead>{isRTL ? 'النوع' : 'Type'}</TableHead>
+                  <TableHead>{t.students.ageGroup}</TableHead>
                   <TableHead>{isRTL ? 'الطلاب' : 'Students'}</TableHead>
                   <TableHead>{t.groups.instructor}</TableHead>
                   <TableHead>{t.groups.schedule}</TableHead>
@@ -791,13 +792,13 @@ export default function GroupsPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredGroups.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       {isRTL ? 'لا توجد مجموعات' : 'No groups found'}
                     </TableCell>
                   </TableRow>
@@ -816,6 +817,9 @@ export default function GroupsPage() {
                           <Badge variant="secondary">
                             {language === 'ar' ? typeInfo.labelAr : typeInfo.label}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {getAgeGroupName(group.age_group_id)}
                         </TableCell>
                         <TableCell>
                           <Badge variant={isAtLimit ? 'destructive' : 'outline'}>
