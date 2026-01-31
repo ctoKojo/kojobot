@@ -13,6 +13,7 @@ interface InstructorStats {
   studentCount: number;
   upcomingSessions: any[];
   pendingAssignments: number;
+  pendingSubmissions: number;
 }
 
 export function InstructorDashboard() {
@@ -24,6 +25,7 @@ export function InstructorDashboard() {
     studentCount: 0,
     upcomingSessions: [],
     pendingAssignments: 0,
+    pendingSubmissions: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -73,17 +75,35 @@ export function InstructorDashboard() {
         upcomingSessions = data || [];
       }
 
-      // Get pending assignments
+      // Get pending submissions (assignments waiting to be graded)
       const { count: pendingCount } = await supabase
         .from('assignment_submissions')
         .select('id', { count: 'exact' })
         .eq('status', 'submitted');
+
+      // Get instructor's assignment IDs and count pending submissions
+      const { data: instructorAssignments } = await supabase
+        .from('assignments')
+        .select('id')
+        .eq('assigned_by', user?.id);
+      
+      let pendingSubmissionsCount = 0;
+      if (instructorAssignments && instructorAssignments.length > 0) {
+        const assignmentIds = instructorAssignments.map(a => a.id);
+        const { count: submissionsCount } = await supabase
+          .from('assignment_submissions')
+          .select('id', { count: 'exact' })
+          .in('assignment_id', assignmentIds)
+          .eq('status', 'submitted');
+        pendingSubmissionsCount = submissionsCount || 0;
+      }
 
       setStats({
         groupCount: groups?.length || 0,
         studentCount,
         upcomingSessions,
         pendingAssignments: pendingCount || 0,
+        pendingSubmissions: pendingSubmissionsCount,
       });
     } catch (error) {
       console.error('Error fetching instructor stats:', error);
@@ -141,14 +161,14 @@ export function InstructorDashboard() {
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/assignments')}>
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground line-clamp-2">
-              {isRTL ? 'تسليمات بانتظار' : 'Pending'}
+              {isRTL ? 'تسليمات بانتظار' : 'Pending Submissions'}
             </CardTitle>
             <div className="p-1.5 sm:p-2 rounded-lg bg-orange-100">
               <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
             </div>
           </CardHeader>
           <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-            <div className="text-2xl sm:text-3xl font-bold">{loading ? '...' : stats.pendingAssignments}</div>
+            <div className="text-2xl sm:text-3xl font-bold">{loading ? '...' : stats.pendingSubmissions}</div>
           </CardContent>
         </Card>
       </div>
