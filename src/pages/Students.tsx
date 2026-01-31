@@ -142,7 +142,10 @@ export default function StudentsPage() {
     }
   };
 
+  const [saving, setSaving] = useState(false);
+
   const handleSubmit = async () => {
+    setSaving(true);
     try {
       if (editingStudent) {
         // Update existing student profile
@@ -164,29 +167,53 @@ export default function StudentsPage() {
           description: isRTL ? 'تم تحديث بيانات الطالب' : 'Student updated successfully',
         });
       } else {
-        // Create new student - this requires admin API in production
-        // For now, we'll show a message
-        toast({
-          title: t.common.info,
-          description: isRTL 
-            ? 'لإنشاء طالب جديد، استخدم Cloud Dashboard' 
-            : 'To create a new student, use the Cloud Dashboard',
+        // Create new student via edge function
+        if (!formData.email || !formData.password || !formData.full_name) {
+          toast({
+            variant: 'destructive',
+            title: t.common.error,
+            description: isRTL ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields',
+          });
+          setSaving(false);
+          return;
+        }
+
+        const { data, error } = await supabase.functions.invoke('create-user', {
+          body: {
+            email: formData.email,
+            password: formData.password,
+            full_name: formData.full_name,
+            full_name_ar: formData.full_name_ar || undefined,
+            phone: formData.phone || undefined,
+            role: 'student',
+            date_of_birth: formData.date_of_birth || undefined,
+            age_group_id: formData.age_group_id || undefined,
+            level_id: formData.level_id || undefined,
+          }
         });
-        setIsDialogOpen(false);
-        return;
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        toast({
+          title: t.common.success,
+          description: isRTL ? 'تم إنشاء الطالب بنجاح' : 'Student created successfully',
+        });
       }
 
       setIsDialogOpen(false);
       setEditingStudent(null);
       resetForm();
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving student:', error);
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: isRTL ? 'فشل في حفظ بيانات الطالب' : 'Failed to save student',
+        description: error.message || (isRTL ? 'فشل في حفظ بيانات الطالب' : 'Failed to save student'),
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -367,11 +394,11 @@ export default function StudentsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
                 {t.common.cancel}
               </Button>
-              <Button className="kojo-gradient" onClick={handleSubmit}>
-                {t.common.save}
+              <Button className="kojo-gradient" onClick={handleSubmit} disabled={saving}>
+                {saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : t.common.save}
               </Button>
             </DialogFooter>
           </DialogContent>

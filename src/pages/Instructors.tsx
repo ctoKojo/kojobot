@@ -101,7 +101,10 @@ export default function InstructorsPage() {
     }
   };
 
+  const [saving, setSaving] = useState(false);
+
   const handleSubmit = async () => {
+    setSaving(true);
     try {
       if (editingInstructor) {
         const { error } = await supabase
@@ -121,27 +124,52 @@ export default function InstructorsPage() {
           description: isRTL ? 'تم تحديث بيانات المدرب' : 'Instructor updated successfully',
         });
       } else {
-        toast({
-          title: t.common.info,
-          description: isRTL 
-            ? 'لإنشاء مدرب جديد، استخدم Cloud Dashboard' 
-            : 'To create a new instructor, use the Cloud Dashboard',
+        // Create new instructor via edge function
+        if (!formData.email || !formData.password || !formData.full_name) {
+          toast({
+            variant: 'destructive',
+            title: t.common.error,
+            description: isRTL ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields',
+          });
+          setSaving(false);
+          return;
+        }
+
+        const { data, error } = await supabase.functions.invoke('create-user', {
+          body: {
+            email: formData.email,
+            password: formData.password,
+            full_name: formData.full_name,
+            full_name_ar: formData.full_name_ar || undefined,
+            phone: formData.phone || undefined,
+            role: 'instructor',
+            specialization: formData.specialization || undefined,
+            specialization_ar: formData.specialization_ar || undefined,
+          }
         });
-        setIsDialogOpen(false);
-        return;
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        toast({
+          title: t.common.success,
+          description: isRTL ? 'تم إنشاء المدرب بنجاح' : 'Instructor created successfully',
+        });
       }
 
       setIsDialogOpen(false);
       setEditingInstructor(null);
       resetForm();
       fetchInstructors();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving instructor:', error);
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: isRTL ? 'فشل في حفظ بيانات المدرب' : 'Failed to save instructor',
+        description: error.message || (isRTL ? 'فشل في حفظ بيانات المدرب' : 'Failed to save instructor'),
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -282,11 +310,11 @@ export default function InstructorsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
                 {t.common.cancel}
               </Button>
-              <Button className="kojo-gradient" onClick={handleSubmit}>
-                {t.common.save}
+              <Button className="kojo-gradient" onClick={handleSubmit} disabled={saving}>
+                {saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : t.common.save}
               </Button>
             </DialogFooter>
           </DialogContent>
