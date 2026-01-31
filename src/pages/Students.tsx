@@ -42,6 +42,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+type SubscriptionType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
+
 interface Student {
   id: string;
   user_id: string;
@@ -53,6 +55,7 @@ interface Student {
   age_group_id: string | null;
   level_id: string | null;
   date_of_birth: string | null;
+  subscription_type: SubscriptionType | null;
 }
 
 interface AgeGroup {
@@ -88,7 +91,14 @@ export default function StudentsPage() {
     age_group_id: '',
     level_id: '',
     password: '',
+    subscription_type: '' as SubscriptionType | '',
   });
+
+  const subscriptionTypes: { value: SubscriptionType; label: string; labelAr: string }[] = [
+    { value: 'kojo_squad', label: 'Kojo Squad', labelAr: 'كوجو سكواد' },
+    { value: 'kojo_core', label: 'Kojo Core', labelAr: 'كوجو كور' },
+    { value: 'kojo_x', label: 'Kojo X', labelAr: 'كوجو اكس' },
+  ];
 
   useEffect(() => {
     fetchData();
@@ -160,6 +170,7 @@ export default function StudentsPage() {
             date_of_birth: formData.date_of_birth || null,
             age_group_id: formData.age_group_id || null,
             level_id: formData.level_id || null,
+            subscription_type: formData.subscription_type || null,
           })
           .eq('id', editingStudent.id);
 
@@ -170,11 +181,11 @@ export default function StudentsPage() {
         });
       } else {
         // Create new student via edge function
-        if (!formData.email || !formData.password || !formData.full_name) {
+        if (!formData.email || !formData.password || !formData.full_name || !formData.subscription_type) {
           toast({
             variant: 'destructive',
             title: t.common.error,
-            description: isRTL ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields',
+            description: isRTL ? 'يرجى ملء جميع الحقول المطلوبة بما فيها نوع الاشتراك' : 'Please fill all required fields including subscription type',
           });
           setSaving(false);
           return;
@@ -191,6 +202,7 @@ export default function StudentsPage() {
             date_of_birth: formData.date_of_birth || undefined,
             age_group_id: formData.age_group_id || undefined,
             level_id: formData.level_id || undefined,
+            subscription_type: formData.subscription_type || undefined,
           }
         });
 
@@ -229,6 +241,7 @@ export default function StudentsPage() {
       age_group_id: '',
       level_id: '',
       password: '',
+      subscription_type: '',
     });
   };
 
@@ -243,6 +256,7 @@ export default function StudentsPage() {
       age_group_id: student.age_group_id || '',
       level_id: student.level_id || '',
       password: '',
+      subscription_type: student.subscription_type || '',
     });
     setIsDialogOpen(true);
   };
@@ -263,6 +277,12 @@ export default function StudentsPage() {
     if (!id) return '-';
     const level = levels.find((l) => l.id === id);
     return level ? (language === 'ar' ? level.name_ar : level.name) : '-';
+  };
+
+  const getSubscriptionTypeName = (type: SubscriptionType | null) => {
+    if (!type) return '-';
+    const found = subscriptionTypes.find((t) => t.value === type);
+    return found ? (language === 'ar' ? found.labelAr : found.label) : '-';
   };
 
   return (
@@ -394,6 +414,24 @@ export default function StudentsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid gap-2">
+                <Label>{isRTL ? 'نوع الاشتراك' : 'Subscription Type'} *</Label>
+                <Select
+                  value={formData.subscription_type}
+                  onValueChange={(value) => setFormData({ ...formData, subscription_type: value as SubscriptionType })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={isRTL ? 'اختر نوع الاشتراك' : 'Select subscription type'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subscriptionTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {language === 'ar' ? type.labelAr : type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
@@ -414,7 +452,7 @@ export default function StudentsPage() {
                 <TableRow>
                   <TableHead>{t.students.fullName}</TableHead>
                   <TableHead>{t.auth.email}</TableHead>
-                  <TableHead>{t.students.ageGroup}</TableHead>
+                  <TableHead>{isRTL ? 'الاشتراك' : 'Subscription'}</TableHead>
                   <TableHead>{t.students.level}</TableHead>
                   <TableHead className="w-[100px]">{t.common.actions}</TableHead>
                 </TableRow>
@@ -451,7 +489,11 @@ export default function StudentsPage() {
                         </div>
                       </TableCell>
                       <TableCell>{student.email}</TableCell>
-                      <TableCell>{getAgeGroupName(student.age_group_id)}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">
+                          {getSubscriptionTypeName(student.subscription_type)}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{getLevelName(student.level_id)}</TableCell>
                       <TableCell>
                         <DropdownMenu>

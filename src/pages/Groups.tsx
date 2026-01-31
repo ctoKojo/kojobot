@@ -41,6 +41,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+type GroupType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
+
 interface Group {
   id: string;
   name: string;
@@ -52,6 +54,7 @@ interface Group {
   schedule_time: string;
   duration_minutes: number;
   is_active: boolean;
+  group_type: GroupType;
 }
 
 interface AgeGroup {
@@ -76,6 +79,7 @@ interface Student {
   user_id: string;
   full_name: string;
   full_name_ar: string | null;
+  subscription_type: GroupType | null;
 }
 
 interface GroupStudent {
@@ -83,6 +87,10 @@ interface GroupStudent {
   student_id: string;
   group_id: string;
   is_active: boolean;
+}
+
+interface GroupStudentCount {
+  [groupId: string]: number;
 }
 
 export default function GroupsPage() {
@@ -111,7 +119,15 @@ export default function GroupsPage() {
     schedule_day: '',
     schedule_time: '',
     duration_minutes: 60,
+    group_type: 'kojo_squad' as GroupType,
   });
+  const [groupStudentCounts, setGroupStudentCounts] = useState<GroupStudentCount>({});
+
+  const groupTypes: { value: GroupType; label: string; labelAr: string; maxStudents: number }[] = [
+    { value: 'kojo_squad', label: 'Kojo Squad', labelAr: 'كوجو سكواد', maxStudents: 8 },
+    { value: 'kojo_core', label: 'Kojo Core', labelAr: 'كوجو كور', maxStudents: 3 },
+    { value: 'kojo_x', label: 'Kojo X', labelAr: 'كوجو اكس', maxStudents: 1 },
+  ];
 
   const days = [
     { en: 'Sunday', ar: 'الأحد' },
@@ -129,17 +145,25 @@ export default function GroupsPage() {
 
   const fetchData = async () => {
     try {
-      const [groupsRes, ageGroupsRes, levelsRes, instructorRolesRes, studentRolesRes] = await Promise.all([
+      const [groupsRes, ageGroupsRes, levelsRes, instructorRolesRes, studentRolesRes, groupStudentsRes] = await Promise.all([
         supabase.from('groups').select('*').order('name'),
         supabase.from('age_groups').select('id, name, name_ar').eq('is_active', true),
         supabase.from('levels').select('id, name, name_ar').eq('is_active', true),
         supabase.from('user_roles').select('user_id').eq('role', 'instructor'),
         supabase.from('user_roles').select('user_id').eq('role', 'student'),
+        supabase.from('group_students').select('group_id').eq('is_active', true),
       ]);
 
       setGroups(groupsRes.data || []);
       setAgeGroups(ageGroupsRes.data || []);
       setLevels(levelsRes.data || []);
+
+      // Calculate student counts per group
+      const counts: GroupStudentCount = {};
+      (groupStudentsRes.data || []).forEach((gs) => {
+        counts[gs.group_id] = (counts[gs.group_id] || 0) + 1;
+      });
+      setGroupStudentCounts(counts);
 
       // Fetch instructor profiles
       const instructorIds = instructorRolesRes.data?.map((r) => r.user_id) || [];
@@ -151,14 +175,14 @@ export default function GroupsPage() {
         setInstructors(profilesData || []);
       }
 
-      // Fetch student profiles
+      // Fetch student profiles with subscription_type
       const studentIds = studentRolesRes.data?.map((r) => r.user_id) || [];
       if (studentIds.length > 0) {
         const { data: studentProfilesData } = await supabase
           .from('profiles')
-          .select('user_id, full_name, full_name_ar')
+          .select('user_id, full_name, full_name_ar, subscription_type')
           .in('user_id', studentIds);
-        setAllStudents(studentProfilesData || []);
+        setAllStudents((studentProfilesData || []) as Student[]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -274,6 +298,7 @@ export default function GroupsPage() {
         schedule_day: formData.schedule_day,
         schedule_time: formData.schedule_time,
         duration_minutes: formData.duration_minutes,
+        group_type: formData.group_type,
       };
 
       if (editingGroup) {
@@ -323,6 +348,7 @@ export default function GroupsPage() {
       schedule_day: '',
       schedule_time: '',
       duration_minutes: 60,
+      group_type: 'kojo_squad',
     });
   };
 
@@ -337,6 +363,7 @@ export default function GroupsPage() {
       schedule_day: group.schedule_day,
       schedule_time: group.schedule_time,
       duration_minutes: group.duration_minutes,
+      group_type: group.group_type || 'kojo_squad',
     });
     setIsDialogOpen(true);
   };
@@ -388,6 +415,18 @@ export default function GroupsPage() {
   const getDayName = (day: string) => {
     const found = days.find((d) => d.en === day);
     return found ? (language === 'ar' ? found.ar : found.en) : day;
+  };
+
+  const getGroupTypeInfo = (type: GroupType) => {
+    return groupTypes.find(gt => gt.value === type) || groupTypes[0];
+  };
+
+  const getMaxStudents = (type: GroupType) => {
+    return getGroupTypeInfo(type).maxStudents;
+  };
+
+  const getEligibleStudents = (groupType: GroupType) => {
+    return allStudents.filter(student => student.subscription_type === groupType);
   };
 
   return (
@@ -538,6 +577,24 @@ export default function GroupsPage() {
                   onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 60 })}
                 />
               </div>
+              <div className="grid gap-2">
+                <Label>{isRTL ? 'نوع المجموعة' : 'Group Type'}</Label>
+                <Select
+                  value={formData.group_type}
+                  onValueChange={(value) => setFormData({ ...formData, group_type: value as GroupType })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={isRTL ? 'اختر النوع' : 'Select type'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groupTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {language === 'ar' ? type.labelAr : type.label} ({isRTL ? `حد أقصى ${type.maxStudents} طالب` : `max ${type.maxStudents} students`})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -560,47 +617,89 @@ export default function GroupsPage() {
               </DialogTitle>
               <DialogDescription>
                 {selectedGroup && (
-                  <span className="font-medium">
-                    {language === 'ar' ? selectedGroup.name_ar : selectedGroup.name}
-                  </span>
+                  <div className="space-y-1">
+                    <span className="font-medium block">
+                      {language === 'ar' ? selectedGroup.name_ar : selectedGroup.name}
+                    </span>
+                    <span className="text-xs">
+                      {(() => {
+                        const typeInfo = getGroupTypeInfo(selectedGroup.group_type);
+                        const currentCount = groupStudentCounts[selectedGroup.id] || 0;
+                        return isRTL 
+                          ? `${typeInfo.labelAr} - ${currentCount}/${typeInfo.maxStudents} طالب`
+                          : `${typeInfo.label} - ${currentCount}/${typeInfo.maxStudents} students`;
+                      })()}
+                    </span>
+                  </div>
                 )}
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               {studentsLoading ? (
                 <div className="text-center py-8">{t.common.loading}</div>
-              ) : allStudents.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  {isRTL ? 'لا يوجد طلاب في النظام' : 'No students in the system'}
-                </div>
-              ) : (
-                <ScrollArea className="h-[300px] pr-4">
-                  <div className="space-y-2">
-                    {allStudents.map((student) => (
-                      <div
-                        key={student.user_id}
-                        className="flex items-center space-x-3 rtl:space-x-reverse p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
-                        onClick={() => handleStudentToggle(student.user_id)}
-                      >
-                        <Checkbox
-                          checked={selectedStudentIds.includes(student.user_id)}
-                          onCheckedChange={() => handleStudentToggle(student.user_id)}
-                        />
-                        <span className="flex-1">
-                          {language === 'ar' && student.full_name_ar 
-                            ? student.full_name_ar 
-                            : student.full_name}
-                        </span>
-                        {selectedStudentIds.includes(student.user_id) && (
-                          <Badge variant="secondary" className="text-xs">
-                            {isRTL ? 'مضاف' : 'Added'}
-                          </Badge>
-                        )}
+              ) : (() => {
+                const eligibleStudents = selectedGroup ? getEligibleStudents(selectedGroup.group_type) : [];
+                const maxStudents = selectedGroup ? getMaxStudents(selectedGroup.group_type) : 0;
+                const isAtLimit = selectedStudentIds.length >= maxStudents;
+
+                if (eligibleStudents.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-muted-foreground">
+                      {isRTL 
+                        ? `لا يوجد طلاب مشتركين في باقة ${getGroupTypeInfo(selectedGroup?.group_type || 'kojo_squad').labelAr}`
+                        : `No students subscribed to ${getGroupTypeInfo(selectedGroup?.group_type || 'kojo_squad').label}`}
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    <ScrollArea className="h-[300px] pr-4">
+                      <div className="space-y-2">
+                        {eligibleStudents.map((student) => {
+                          const isSelected = selectedStudentIds.includes(student.user_id);
+                          const isDisabled = !isSelected && isAtLimit;
+                          
+                          return (
+                            <div
+                              key={student.user_id}
+                              className={`flex items-center space-x-3 rtl:space-x-reverse p-3 rounded-lg border ${
+                                isDisabled 
+                                  ? 'opacity-50 cursor-not-allowed' 
+                                  : 'hover:bg-muted/50 cursor-pointer'
+                              }`}
+                              onClick={() => !isDisabled && handleStudentToggle(student.user_id)}
+                            >
+                              <Checkbox
+                                checked={isSelected}
+                                disabled={isDisabled}
+                                onCheckedChange={() => !isDisabled && handleStudentToggle(student.user_id)}
+                              />
+                              <span className="flex-1">
+                                {language === 'ar' && student.full_name_ar 
+                                  ? student.full_name_ar 
+                                  : student.full_name}
+                              </span>
+                              {isSelected && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {isRTL ? 'مضاف' : 'Added'}
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
+                    </ScrollArea>
+                    {isAtLimit && (
+                      <div className="mt-2 p-2 bg-destructive/10 text-destructive text-sm rounded">
+                        {isRTL 
+                          ? `تم الوصول للحد الأقصى (${maxStudents} طالب)`
+                          : `Maximum limit reached (${maxStudents} students)`}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               <div className="mt-4 pt-4 border-t">
                 <p className="text-sm text-muted-foreground">
                   {isRTL 
@@ -627,38 +726,53 @@ export default function GroupsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t.groups.groupName}</TableHead>
+                  <TableHead>{isRTL ? 'النوع' : 'Type'}</TableHead>
+                  <TableHead>{isRTL ? 'الطلاب' : 'Students'}</TableHead>
                   <TableHead>{t.groups.instructor}</TableHead>
                   <TableHead>{t.groups.schedule}</TableHead>
-                  <TableHead>{t.students.level}</TableHead>
                   <TableHead className="w-[120px]">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredGroups.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       {isRTL ? 'لا توجد مجموعات' : 'No groups found'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredGroups.map((group) => (
-                    <TableRow key={group.id}>
-                      <TableCell className="font-medium">
-                        {language === 'ar' ? group.name_ar : group.name}
-                      </TableCell>
-                      <TableCell>{getInstructorName(group.instructor_id)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {getDayName(group.schedule_day)} - {group.schedule_time}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{getLevelName(group.level_id)}</TableCell>
+                  filteredGroups.map((group) => {
+                    const typeInfo = getGroupTypeInfo(group.group_type);
+                    const currentCount = groupStudentCounts[group.id] || 0;
+                    const isAtLimit = currentCount >= typeInfo.maxStudents;
+                    
+                    return (
+                      <TableRow key={group.id}>
+                        <TableCell className="font-medium">
+                          {language === 'ar' ? group.name_ar : group.name}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {language === 'ar' ? typeInfo.labelAr : typeInfo.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={isAtLimit ? 'destructive' : 'outline'}>
+                            {currentCount}/{typeInfo.maxStudents}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{getInstructorName(group.instructor_id)}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {getDayName(group.schedule_day)} - {group.schedule_time}
+                          </Badge>
+                        </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Button
@@ -696,7 +810,8 @@ export default function GroupsPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
