@@ -22,6 +22,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { notificationService } from '@/lib/notificationService';
 
 interface EditSessionDialogProps {
   session: {
@@ -30,11 +31,13 @@ interface EditSessionDialogProps {
     session_time: string;
     status: string;
     session_number: number | null;
+    group_id?: string;
   };
+  groupId?: string;
   onUpdated: () => void;
 }
 
-export function EditSessionDialog({ session, onUpdated }: EditSessionDialogProps) {
+export function EditSessionDialog({ session, groupId, onUpdated }: EditSessionDialogProps) {
   const { isRTL } = useLanguage();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -45,6 +48,9 @@ export function EditSessionDialog({ session, onUpdated }: EditSessionDialogProps
   const handleSave = async () => {
     setLoading(true);
     try {
+      const dateChanged = sessionDate !== session.session_date;
+      const timeChanged = sessionTime !== session.session_time;
+      
       const { error } = await supabase
         .from('sessions')
         .update({
@@ -56,6 +62,46 @@ export function EditSessionDialog({ session, onUpdated }: EditSessionDialogProps
         .eq('id', session.id);
 
       if (error) throw error;
+
+      // If date or time changed, notify students
+      if (dateChanged || timeChanged) {
+        const gId = groupId || session.group_id;
+        if (gId) {
+          // Get group info for notification
+          const { data: group } = await supabase
+            .from('groups')
+            .select('name, name_ar')
+            .eq('id', gId)
+            .single();
+
+          if (group) {
+            // Get all active students in this group
+            const { data: groupStudents } = await supabase
+              .from('group_students')
+              .select('student_id')
+              .eq('group_id', gId)
+              .eq('is_active', true);
+
+            if (groupStudents && groupStudents.length > 0) {
+              const sessionName = `Session ${session.session_number}`;
+              const sessionNameAr = `سيشن ${session.session_number}`;
+              
+              const notifications = groupStudents.map(gs => ({
+                user_id: gs.student_id,
+                title: 'Session Rescheduled',
+                title_ar: 'تم تغيير موعد السيشن',
+                message: `${sessionName} for "${group.name}" has been moved to ${sessionDate} at ${sessionTime}`,
+                message_ar: `${sessionNameAr} لمجموعة "${group.name_ar}" تم نقلها إلى ${sessionDate} الساعة ${sessionTime}`,
+                type: 'warning',
+                category: 'session',
+                action_url: `/groups/${gId}`
+              }));
+
+              await supabase.from('notifications').insert(notifications);
+            }
+          }
+        }
+      }
 
       toast.success(isRTL ? 'تم تحديث الجلسة' : 'Session updated');
       onUpdated();
@@ -78,7 +124,7 @@ export function EditSessionDialog({ session, onUpdated }: EditSessionDialogProps
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {isRTL ? `تعديل الجلسة #${session.session_number}` : `Edit Session #${session.session_number}`}
+            {isRTL ? `تعديل سيشن ${session.session_number}` : `Edit Session ${session.session_number}`}
           </DialogTitle>
           <DialogDescription>
             {isRTL ? 'تعديل تاريخ ووقت وحالة الجلسة' : 'Edit session date, time, and status'}

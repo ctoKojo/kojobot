@@ -595,8 +595,8 @@ export default function GroupDetails() {
                       {sessionsWithAttendance.map((session) => (
                         <TableRow key={session.id}>
                           <TableCell>
-                            <Badge variant="outline">
-                              #{session.session_number || '-'}
+                            <Badge variant="outline" className="min-w-[80px] justify-center">
+                              {isRTL ? `سيشن ${session.session_number || '-'}` : `Session ${session.session_number || '-'}`}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -656,12 +656,14 @@ export default function GroupDetails() {
                     {sessionsWithAttendance.map((session) => (
                       <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border">
                         <div className="flex items-center gap-3">
-                          <Badge variant="outline" className="font-mono">
-                            #{session.session_number || '-'}
+                          <Badge variant="outline" className="font-mono min-w-[80px] justify-center">
+                            {isRTL ? `سيشن ${session.session_number || '-'}` : `Session ${session.session_number || '-'}`}
                           </Badge>
                           <div>
                             <p className="font-medium">
-                              {language === 'ar' ? session.topic_ar || session.topic : session.topic || (isRTL ? 'جلسة' : 'Session')}
+                              {language === 'ar' 
+                                ? session.topic_ar || session.topic || `الجلسة رقم ${session.session_number}` 
+                                : session.topic || `Session ${session.session_number}`}
                             </p>
                             <p className="text-sm text-muted-foreground">
                               {formatDate(session.session_date)} - {session.session_time}
