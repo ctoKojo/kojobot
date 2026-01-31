@@ -7,6 +7,7 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { NotificationBell } from '@/components/NotificationBell';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -26,6 +27,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const { t, isRTL } = useLanguage();
   const { user, role, signOut } = useAuth();
+  const { profile } = useProfile();
   const navigate = useNavigate();
 
   const getRoleLabel = () => {
@@ -42,9 +44,10 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
     navigate('/auth');
   };
 
-  const userInitials = user?.user_metadata?.full_name
-    ? user.user_metadata.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
-    : user?.email?.slice(0, 2).toUpperCase() || 'U';
+  const displayName = profile?.full_name || user?.user_metadata?.full_name || user?.email;
+  const userInitials = displayName
+    ? displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'U';
 
   return (
     <SidebarProvider>
@@ -73,7 +76,10 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || ''} />
+                      <AvatarImage 
+                        src={profile?.avatar_url || ''} 
+                        alt={displayName || ''} 
+                      />
                       <AvatarFallback className="kojo-gradient text-white">
                         {userInitials}
                       </AvatarFallback>
@@ -83,7 +89,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                 <DropdownMenuContent className="w-56" align={isRTL ? 'start' : 'end'}>
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium">{user?.user_metadata?.full_name || user?.email}</p>
+                      <p className="text-sm font-medium">{displayName}</p>
                       <p className="text-xs text-muted-foreground">{user?.email}</p>
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium kojo-gradient text-white w-fit mt-1">
                         {getRoleLabel()}

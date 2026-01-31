@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,70 +8,33 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { User, Mail, Phone, Calendar, Save, ArrowLeft, Camera, Loader2 } from 'lucide-react';
 
-interface ProfileData {
-  id: string;
-  full_name: string;
-  full_name_ar: string | null;
-  email: string;
-  phone: string | null;
-  avatar_url: string | null;
-  date_of_birth: string | null;
-  specialization: string | null;
-  specialization_ar: string | null;
-}
-
 export default function Profile() {
   const { isRTL } = useLanguage();
   const { user, role } = useAuth();
+  const { profile, loading, updateProfile } = useProfile();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [formData, setFormData] = useState({
     full_name: '',
     full_name_ar: '',
     phone: '',
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-    }
-  }, [user]);
-
-  const fetchProfile = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (error) throw error;
-
-      setProfile(data);
-      setFormData({
-        full_name: data.full_name || '',
-        full_name_ar: data.full_name_ar || '',
-        phone: data.phone || '',
-      });
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      toast({
-        title: isRTL ? 'خطأ' : 'Error',
-        description: isRTL ? 'فشل في تحميل الملف الشخصي' : 'Failed to load profile',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Sync form data when profile loads
+  if (profile && !formData.full_name && profile.full_name) {
+    setFormData({
+      full_name: profile.full_name || '',
+      full_name_ar: profile.full_name_ar || '',
+      phone: profile.phone || '',
+    });
+  }
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -134,16 +97,10 @@ export default function Profile() {
 
       const avatarUrl = urlData.publicUrl;
 
-      // Update profile with new avatar URL
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: avatarUrl })
-        .eq('id', profile.id);
+      // Update profile with new avatar URL - this will trigger realtime update
+      const { error } = await updateProfile({ avatar_url: avatarUrl });
 
-      if (updateError) throw updateError;
-
-      // Update local state
-      setProfile({ ...profile, avatar_url: avatarUrl });
+      if (error) throw error;
 
       toast({
         title: isRTL ? 'تم التحديث' : 'Updated',
@@ -170,14 +127,11 @@ export default function Profile() {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          full_name: formData.full_name,
-          full_name_ar: formData.full_name_ar || null,
-          phone: formData.phone || null,
-        })
-        .eq('id', profile.id);
+      const { error } = await updateProfile({
+        full_name: formData.full_name,
+        full_name_ar: formData.full_name_ar || null,
+        phone: formData.phone || null,
+      });
 
       if (error) throw error;
 
