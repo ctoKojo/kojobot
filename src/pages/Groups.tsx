@@ -80,6 +80,7 @@ interface Student {
   full_name: string;
   full_name_ar: string | null;
   subscription_type: GroupType | null;
+  age_group_id: string | null;
 }
 
 interface GroupStudent {
@@ -175,12 +176,12 @@ export default function GroupsPage() {
         setInstructors(profilesData || []);
       }
 
-      // Fetch student profiles with subscription_type
+      // Fetch student profiles with subscription_type and age_group_id
       const studentIds = studentRolesRes.data?.map((r) => r.user_id) || [];
       if (studentIds.length > 0) {
         const { data: studentProfilesData } = await supabase
           .from('profiles')
-          .select('user_id, full_name, full_name_ar, subscription_type')
+          .select('user_id, full_name, full_name_ar, subscription_type, age_group_id')
           .in('user_id', studentIds);
         setAllStudents((studentProfilesData || []) as Student[]);
       }
@@ -425,8 +426,16 @@ export default function GroupsPage() {
     return getGroupTypeInfo(type).maxStudents;
   };
 
-  const getEligibleStudents = (groupType: GroupType) => {
-    return allStudents.filter(student => student.subscription_type === groupType);
+  const getEligibleStudents = (groupType: GroupType, groupAgeGroupId: string | null) => {
+    return allStudents.filter(student => {
+      // Must match subscription type
+      if (student.subscription_type !== groupType) return false;
+      
+      // If group has age_group_id, student must match it
+      if (groupAgeGroupId && student.age_group_id !== groupAgeGroupId) return false;
+      
+      return true;
+    });
   };
 
   return (
@@ -638,7 +647,7 @@ export default function GroupsPage() {
               {studentsLoading ? (
                 <div className="text-center py-8">{t.common.loading}</div>
               ) : (() => {
-                const eligibleStudents = selectedGroup ? getEligibleStudents(selectedGroup.group_type) : [];
+                const eligibleStudents = selectedGroup ? getEligibleStudents(selectedGroup.group_type, selectedGroup.age_group_id) : [];
                 const maxStudents = selectedGroup ? getMaxStudents(selectedGroup.group_type) : 0;
                 const isAtLimit = selectedStudentIds.length >= maxStudents;
 
