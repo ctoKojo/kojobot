@@ -113,24 +113,24 @@ export default function NotificationsPage() {
     <DashboardLayout title={t.notifications.title}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Bell className="h-6 w-6 text-primary" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Bell className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             <div>
-              <h2 className="text-lg font-semibold">
+              <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                {isRTL ? 'الإشعارات' : 'Notifications'}
                 {unreadCount > 0 && (
-                  <Badge variant="destructive" className="mr-2">
+                  <Badge variant="destructive" className="text-xs">
                     {unreadCount}
                   </Badge>
                 )}
-                {isRTL ? 'الإشعارات' : 'Notifications'}
               </h2>
             </div>
           </div>
           {unreadCount > 0 && (
-            <Button variant="outline" onClick={markAllAsRead}>
+            <Button variant="outline" onClick={markAllAsRead} size="sm" className="w-full sm:w-auto">
               <CheckCheck className="h-4 w-4 mr-2" />
-              {t.notifications.markAllAsRead}
+              <span className="text-sm">{t.notifications.markAllAsRead}</span>
             </Button>
           )}
         </div>

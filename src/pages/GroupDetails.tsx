@@ -425,58 +425,58 @@ export default function GroupDetails() {
         </Card>
 
         {/* Quick Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-100">
-                  <Users className="h-5 w-5 text-blue-600" />
+            <CardContent className="pt-4 md:pt-6 px-3 md:px-6">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-1.5 md:p-2 rounded-lg bg-blue-100">
+                  <Users className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{data.students.length}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'الطلاب' : 'Students'}</p>
+                  <p className="text-xl md:text-2xl font-bold">{data.students.length}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">{isRTL ? 'الطلاب' : 'Students'}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-100">
-                  <Calendar className="h-5 w-5 text-green-600" />
+            <CardContent className="pt-4 md:pt-6 px-3 md:px-6">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-1.5 md:p-2 rounded-lg bg-green-100">
+                  <Calendar className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{data.sessions.length}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'الجلسات' : 'Sessions'}</p>
+                  <p className="text-xl md:text-2xl font-bold">{data.sessions.length}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">{isRTL ? 'الجلسات' : 'Sessions'}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-100">
-                  <BookOpen className="h-5 w-5 text-purple-600" />
+            <CardContent className="pt-4 md:pt-6 px-3 md:px-6">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-1.5 md:p-2 rounded-lg bg-purple-100">
+                  <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{data.quizAssignments.length}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'الكويزات' : 'Quizzes'}</p>
+                  <p className="text-xl md:text-2xl font-bold">{data.quizAssignments.length}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">{isRTL ? 'الكويزات' : 'Quizzes'}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-100">
-                  <FileText className="h-5 w-5 text-orange-600" />
+            <CardContent className="pt-4 md:pt-6 px-3 md:px-6">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-1.5 md:p-2 rounded-lg bg-orange-100">
+                  <FileText className="h-4 w-4 md:h-5 md:w-5 text-orange-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{data.assignments.length}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'الواجبات' : 'Assignments'}</p>
+                  <p className="text-xl md:text-2xl font-bold">{data.assignments.length}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">{isRTL ? 'الواجبات' : 'Assignments'}</p>
                 </div>
               </div>
             </CardContent>
@@ -485,12 +485,17 @@ export default function GroupDetails() {
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="students" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="students">{isRTL ? 'الطلاب' : 'Students'}</TabsTrigger>
-            <TabsTrigger value="attendance">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
-            <TabsTrigger value="sessions">{isRTL ? 'الجلسات' : 'Sessions'}</TabsTrigger>
-            <TabsTrigger value="quizzes">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
-            <TabsTrigger value="assignments">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 h-auto">
+            <TabsTrigger value="students" className="text-xs md:text-sm py-2">{isRTL ? 'الطلاب' : 'Students'}</TabsTrigger>
+            <TabsTrigger value="attendance" className="text-xs md:text-sm py-2">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
+            <TabsTrigger value="sessions" className="text-xs md:text-sm py-2">{isRTL ? 'الجلسات' : 'Sessions'}</TabsTrigger>
+            <TabsTrigger value="quizzes" className="text-xs md:text-sm py-2 hidden md:flex">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
+            <TabsTrigger value="assignments" className="text-xs md:text-sm py-2 hidden md:flex">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
+          </TabsList>
+          {/* Mobile-only additional tabs */}
+          <TabsList className="grid w-full grid-cols-2 md:hidden mt-2 h-auto">
+            <TabsTrigger value="quizzes" className="text-xs py-2">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
+            <TabsTrigger value="assignments" className="text-xs py-2">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
           </TabsList>
 
           {/* Students Tab with Attendance Stats */}
@@ -511,60 +516,104 @@ export default function GroupDetails() {
                     {isRTL ? 'لا يوجد طلاب' : 'No students in this group'}
                   </p>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                        <TableHead className="text-center">{isRTL ? 'حضر' : 'Present'}</TableHead>
-                        <TableHead className="text-center">{isRTL ? 'غاب' : 'Absent'}</TableHead>
-                        <TableHead className="text-center">{isRTL ? 'تأخر' : 'Late'}</TableHead>
-                        <TableHead className="text-center">{isRTL ? 'معدل الحضور' : 'Rate'}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                  <>
+                    {/* Mobile Cards View */}
+                    <div className="block md:hidden space-y-3">
                       {studentStats.map((student) => (
-                        <TableRow 
+                        <div 
                           key={student.user_id}
-                          className="cursor-pointer hover:bg-muted/50"
+                          className="p-3 rounded-lg border cursor-pointer hover:bg-muted/50"
                           onClick={() => navigate(`/student/${student.user_id}`)}
                         >
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={student.avatar_url || undefined} />
-                                <AvatarFallback>{student.full_name?.charAt(0)}</AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium">
+                          <div className="flex items-center gap-3 mb-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={student.avatar_url || undefined} />
+                              <AvatarFallback>{student.full_name?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">
                                 {language === 'ar' ? student.full_name_ar || student.full_name : student.full_name}
-                              </span>
+                              </p>
                             </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-green-50 text-green-700">
-                              {student.present}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-red-50 text-red-700">
-                              {student.absent}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
-                              {student.late}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
                             <Badge 
                               variant={student.attendanceRate >= 80 ? 'default' : student.attendanceRate >= 50 ? 'secondary' : 'destructive'}
                             >
                               {student.attendanceRate}%
                             </Badge>
-                          </TableCell>
-                        </TableRow>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="p-2 rounded bg-green-50">
+                              <p className="text-lg font-bold text-green-700">{student.present}</p>
+                              <p className="text-xs text-green-600">{isRTL ? 'حضر' : 'Present'}</p>
+                            </div>
+                            <div className="p-2 rounded bg-red-50">
+                              <p className="text-lg font-bold text-red-700">{student.absent}</p>
+                              <p className="text-xs text-red-600">{isRTL ? 'غاب' : 'Absent'}</p>
+                            </div>
+                            <div className="p-2 rounded bg-yellow-50">
+                              <p className="text-lg font-bold text-yellow-700">{student.late}</p>
+                              <p className="text-xs text-yellow-600">{isRTL ? 'تأخر' : 'Late'}</p>
+                            </div>
+                          </div>
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </div>
+                    {/* Desktop Table View */}
+                    <Table className="hidden md:table">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                          <TableHead className="text-center">{isRTL ? 'حضر' : 'Present'}</TableHead>
+                          <TableHead className="text-center">{isRTL ? 'غاب' : 'Absent'}</TableHead>
+                          <TableHead className="text-center">{isRTL ? 'تأخر' : 'Late'}</TableHead>
+                          <TableHead className="text-center">{isRTL ? 'معدل الحضور' : 'Rate'}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {studentStats.map((student) => (
+                          <TableRow 
+                            key={student.user_id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => navigate(`/student/${student.user_id}`)}
+                          >
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarImage src={student.avatar_url || undefined} />
+                                  <AvatarFallback>{student.full_name?.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">
+                                  {language === 'ar' ? student.full_name_ar || student.full_name : student.full_name}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="bg-green-50 text-green-700">
+                                {student.present}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="bg-red-50 text-red-700">
+                                {student.absent}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                                {student.late}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge 
+                                variant={student.attendanceRate >= 80 ? 'default' : student.attendanceRate >= 50 ? 'secondary' : 'destructive'}
+                              >
+                                {student.attendanceRate}%
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </>
                 )}
               </CardContent>
             </Card>

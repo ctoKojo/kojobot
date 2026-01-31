@@ -147,25 +147,93 @@ export default function AssignmentSubmissions() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-4 rounded-lg bg-muted">
-                <div className="text-2xl font-bold">{stats.total}</div>
-                <p className="text-sm text-muted-foreground">{isRTL ? 'إجمالي التسليمات' : 'Total Submissions'}</p>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
+              <div className="p-2 sm:p-4 rounded-lg bg-muted">
+                <div className="text-lg sm:text-2xl font-bold">{stats.total}</div>
+                <p className="text-xs sm:text-sm text-muted-foreground">{isRTL ? 'الإجمالي' : 'Total'}</p>
               </div>
-              <div className="p-4 rounded-lg bg-green-100">
-                <div className="text-2xl font-bold text-green-800">{stats.graded}</div>
-                <p className="text-sm text-green-700">{isRTL ? 'تم التقييم' : 'Graded'}</p>
+              <div className="p-2 sm:p-4 rounded-lg bg-green-100">
+                <div className="text-lg sm:text-2xl font-bold text-green-800">{stats.graded}</div>
+                <p className="text-xs sm:text-sm text-green-700">{isRTL ? 'تم التقييم' : 'Graded'}</p>
               </div>
-              <div className="p-4 rounded-lg bg-yellow-100">
-                <div className="text-2xl font-bold text-yellow-800">{stats.pending}</div>
-                <p className="text-sm text-yellow-700">{isRTL ? 'في انتظار التقييم' : 'Pending'}</p>
+              <div className="p-2 sm:p-4 rounded-lg bg-yellow-100">
+                <div className="text-lg sm:text-2xl font-bold text-yellow-800">{stats.pending}</div>
+                <p className="text-xs sm:text-sm text-yellow-700">{isRTL ? 'في الانتظار' : 'Pending'}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Submissions Table */}
-        <Card>
+        {/* Mobile Cards View */}
+        <div className="block md:hidden space-y-3">
+          {submissions.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  {isRTL ? 'لا توجد تسليمات حتى الآن' : 'No submissions yet'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            submissions.map((submission) => {
+              const profile = profiles.get(submission.student_id);
+              return (
+                <Card key={submission.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">
+                            {language === 'ar' ? profile?.full_name_ar : profile?.full_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">{profile?.email}</p>
+                        </div>
+                      </div>
+                      {submission.status === 'graded' ? (
+                        <Badge className="bg-green-100 text-green-800 text-xs flex-shrink-0">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          {isRTL ? 'مقيّم' : 'Graded'}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-yellow-100 text-yellow-800 text-xs flex-shrink-0">
+                          <Clock className="w-3 h-3 mr-1" />
+                          {isRTL ? 'انتظار' : 'Pending'}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                      <div className="text-sm">
+                        <p className="text-xs text-muted-foreground">{formatDate(submission.submitted_at)}</p>
+                        {submission.score !== null && (
+                          <p className="font-medium mt-1">
+                            {submission.score} / {assignment?.max_score}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={submission.status === 'graded' ? 'outline' : 'default'}
+                        className={submission.status !== 'graded' ? 'kojo-gradient' : ''}
+                        onClick={() => navigate(`/grade-assignment/${submission.id}`)}
+                      >
+                        {submission.status === 'graded' 
+                          ? (isRTL ? 'عرض' : 'View') 
+                          : (isRTL ? 'تقييم' : 'Grade')}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <Table>
               <TableHeader>

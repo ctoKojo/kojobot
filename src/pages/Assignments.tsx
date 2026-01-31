@@ -351,8 +351,89 @@ export default function AssignmentsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Table */}
-        <Card>
+        {/* Mobile Cards View */}
+        <div className="block md:hidden space-y-3">
+          {loading ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                {t.common.loading}
+              </CardContent>
+            </Card>
+          ) : filteredAssignments.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  {isRTL ? 'لا توجد اساينمنتات' : 'No assignments found'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredAssignments.map((assignment) => (
+              <Card 
+                key={assignment.id} 
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => navigate(`/assignment-submissions/${assignment.id}`)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">
+                        {language === 'ar' ? assignment.title_ar : assignment.title}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {getGroupName(assignment.group_id)}
+                      </p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="flex-shrink-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/assignment-submissions/${assignment.id}`); }}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          {isRTL ? 'عرض التسليمات' : 'View Submissions'}
+                        </DropdownMenuItem>
+                        {canManage && (
+                          <>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(assignment); }}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              {t.common.edit}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => { e.stopPropagation(); handleDelete(assignment.id); }}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {t.common.delete}
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="flex items-center justify-between mt-3">
+                    <p className="text-xs text-muted-foreground">{formatDate(assignment.due_date)}</p>
+                    {isOverdue(assignment.due_date) ? (
+                      <Badge variant="destructive" className="text-xs">
+                        {isRTL ? 'منتهي' : 'Overdue'}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-green-100 text-green-800 text-xs">
+                        {isRTL ? 'نشط' : 'Active'}
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <Table>
               <TableHeader>
