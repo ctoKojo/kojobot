@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import kojobotIcon from '@/assets/kojobot-icon.png';
 
 interface KojobotLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -8,55 +9,32 @@ interface KojobotLogoProps {
 
 const sizeClasses = {
   sm: 'w-8 h-8',
-  md: 'w-12 h-12',
-  lg: 'w-16 h-16',
-  xl: 'w-24 h-24',
+  md: 'w-10 h-10',
+  lg: 'w-14 h-14',
+  xl: 'w-20 h-20',
 };
 
 const textSizeClasses = {
-  sm: 'text-lg',
-  md: 'text-2xl',
-  lg: 'text-3xl',
-  xl: 'text-4xl',
+  sm: 'text-base',
+  md: 'text-xl',
+  lg: 'text-2xl',
+  xl: 'text-3xl',
 };
 
 export function KojobotLogo({ size = 'md', className, showText = true }: KojobotLogoProps) {
   return (
-    <div className={cn('flex items-center gap-3', className)}>
-      {/* Logo Icon - Robot with gradient */}
-      <div className={cn(
-        'relative rounded-xl kojo-gradient flex items-center justify-center shadow-lg',
-        sizeClasses[size]
-      )}>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          className="w-2/3 h-2/3 text-white"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          {/* Robot head */}
-          <rect x="5" y="6" width="14" height="12" rx="2" />
-          {/* Eyes */}
-          <circle cx="9" cy="11" r="1.5" fill="currentColor" />
-          <circle cx="15" cy="11" r="1.5" fill="currentColor" />
-          {/* Mouth */}
-          <path d="M9 15h6" />
-          {/* Antenna */}
-          <line x1="12" y1="6" x2="12" y2="3" />
-          <circle cx="12" cy="2" r="1" fill="currentColor" />
-          {/* Ears */}
-          <rect x="3" y="9" width="2" height="4" rx="1" />
-          <rect x="19" y="9" width="2" height="4" rx="1" />
-        </svg>
-      </div>
+    <div className={cn('flex items-center gap-2', className)}>
+      {/* Logo Icon */}
+      <img 
+        src={kojobotIcon} 
+        alt="Kojobot" 
+        className={cn('rounded-xl shadow-md object-contain', sizeClasses[size])}
+      />
       
       {/* Logo Text */}
       {showText && (
         <span className={cn(
-          'font-bold kojo-gradient-text',
+          'font-bold bg-gradient-to-r from-[#61BAE2] to-[#6455F0] bg-clip-text text-transparent',
           textSizeClasses[size]
         )}>
           Kojobot
