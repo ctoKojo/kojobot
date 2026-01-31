@@ -109,6 +109,42 @@ export default function InstructorSchedulePage() {
     setEditDialogOpen(true);
   };
 
+  const DAY_NAMES_AR: Record<string, string> = {
+    Sunday: 'الأحد',
+    Monday: 'الإثنين',
+    Tuesday: 'الثلاثاء',
+    Wednesday: 'الأربعاء',
+    Thursday: 'الخميس',
+    Friday: 'الجمعة',
+    Saturday: 'السبت',
+  };
+
+  const sendScheduleNotification = async (dayOfWeek: string, isWorkingDay: boolean) => {
+    if (!targetInstructorId || role !== 'admin') return;
+
+    try {
+      const dayNameAr = DAY_NAMES_AR[dayOfWeek] || dayOfWeek;
+      const statusEn = isWorkingDay ? 'working day' : 'day off';
+      const statusAr = isWorkingDay ? 'يوم عمل' : 'يوم إجازة';
+
+      await supabase.functions.invoke('send-notification', {
+        body: {
+          user_id: targetInstructorId,
+          title: 'Schedule Updated',
+          title_ar: 'تحديث جدول العمل',
+          message: `Your ${dayOfWeek} schedule has been updated to ${statusEn} by the admin.`,
+          message_ar: `تم تحديث جدول يوم ${dayNameAr} إلى ${statusAr} من قبل المدير.`,
+          type: 'info',
+          category: 'schedule',
+          action_url: '/instructor-schedule',
+        },
+      });
+      console.log('Schedule notification sent to instructor');
+    } catch (error) {
+      console.error('Failed to send schedule notification:', error);
+    }
+  };
+
   const handleSaveSchedule = async (data: {
     day_of_week: string;
     is_working_day: boolean;
@@ -150,6 +186,9 @@ export default function InstructorSchedulePage() {
 
         if (error) throw error;
       }
+
+      // Send notification to instructor
+      await sendScheduleNotification(data.day_of_week, data.is_working_day);
 
       toast({
         title: t.common.success,
