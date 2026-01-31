@@ -41,6 +41,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { formatTime12Hour } from '@/lib/timeUtils';
 
 interface Session {
   id: string;
@@ -349,7 +350,7 @@ export default function SessionsPage() {
                           <p className="font-semibold">{getGroupName(session.group_id)}</p>
                           <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
                             <Clock className="h-3 w-3" />
-                            {session.session_time}
+                            {formatTime12Hour(session.session_time, isRTL)}
                           </p>
                           {(session.topic || session.topic_ar) && (
                             <p className="text-sm mt-2">
@@ -503,7 +504,7 @@ export default function SessionsPage() {
                       <TableCell>
                         <Badge variant="outline">
                           <Clock className="h-3 w-3 mr-1" />
-                          {session.session_time}
+                          {formatTime12Hour(session.session_time, isRTL)}
                         </Badge>
                       </TableCell>
                       <TableCell>

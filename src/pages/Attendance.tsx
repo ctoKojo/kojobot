@@ -27,6 +27,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { formatTime12Hour } from '@/lib/timeUtils';
 
 interface Group {
   id: string;
@@ -262,7 +263,7 @@ export default function AttendancePage() {
   const getSelectedSessionInfo = () => {
     const session = sessions.find(s => s.id === selectedSession);
     if (!session) return null;
-    return `${session.session_date} - ${session.session_time}`;
+    return `${session.session_date} - ${formatTime12Hour(session.session_time, isRTL)}`;
   };
 
   const canManage = role === 'admin' || role === 'instructor';
@@ -297,7 +298,7 @@ export default function AttendancePage() {
               <SelectContent>
                 {sessions.map((session) => (
                   <SelectItem key={session.id} value={session.id}>
-                    {session.session_date} - {session.session_time}
+                    {session.session_date} - {formatTime12Hour(session.session_time, isRTL)}
                   </SelectItem>
                 ))}
               </SelectContent>

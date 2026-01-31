@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { formatTime12Hour } from '@/lib/timeUtils';
 
 interface StudentStats {
   groupInfo: any;
@@ -214,7 +215,7 @@ export function StudentDashboard() {
                   {language === 'ar' ? stats.groupInfo.name_ar : stats.groupInfo.name}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {stats.groupInfo.schedule_day} - {stats.groupInfo.schedule_time}
+                  {stats.groupInfo.schedule_day} - {formatTime12Hour(stats.groupInfo.schedule_time, isRTL)}
                 </p>
               </>
             ) : (
@@ -314,7 +315,7 @@ export function StudentDashboard() {
                   </div>
                   <div className="text-right">
                     <Badge variant="outline">{session.session_date}</Badge>
-                    <p className="text-sm text-muted-foreground mt-1">{session.session_time}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{formatTime12Hour(session.session_time, isRTL)}</p>
                   </div>
                 </div>
               ))}
