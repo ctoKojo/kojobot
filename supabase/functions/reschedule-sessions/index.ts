@@ -5,107 +5,94 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Map day names to day numbers (0 = Sunday)
-const dayMap: Record<string, number> = {
-  'Sunday': 0,
-  'Monday': 1,
-  'Tuesday': 2,
-  'Wednesday': 3,
-  'Thursday': 4,
-  'Friday': 5,
-  'Saturday': 6,
+interface Session {
+  id: string
+  session_number: number
+  session_date: string
+  session_time: string
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, serviceRoleKey)
-
     const { group_id } = await req.json()
-
+    
     if (!group_id) {
       return new Response(
-        JSON.stringify({ success: false, error: 'group_id is required' }),
+        JSON.stringify({ error: 'group_id is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`Rescheduling sessions for group: ${group_id}`)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    
+    const supabase = createClient(supabaseUrl, serviceRoleKey)
 
-    // Get group details
+    // Get group info
     const { data: group, error: groupError } = await supabase
       .from('groups')
-      .select('id, schedule_day, schedule_time, duration_minutes')
+      .select('id, name, name_ar, schedule_day, schedule_time, duration_minutes')
       .eq('id', group_id)
       .single()
 
     if (groupError || !group) {
-      console.error('Error fetching group:', groupError)
       return new Response(
-        JSON.stringify({ success: false, error: 'Group not found' }),
+        JSON.stringify({ error: 'Group not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Get target day number
-    const targetDay = dayMap[group.schedule_day]
-    if (targetDay === undefined) {
-      return new Response(
-        JSON.stringify({ success: false, error: `Invalid schedule_day: ${group.schedule_day}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // Day name to number mapping
+    const dayMap: Record<string, number> = {
+      'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
+      'Thursday': 4, 'Friday': 5, 'Saturday': 6
     }
-
-    // Calculate the next occurrence of the target day
-    const today = new Date()
-    let startDate = new Date(today)
+    
+    const targetDay = dayMap[group.schedule_day]
+    
+    // Find next occurrence of target day
+    let startDate = new Date()
+    startDate.setHours(0, 0, 0, 0)
     while (startDate.getDay() !== targetDay) {
       startDate.setDate(startDate.getDate() + 1)
     }
 
-    // Get all future scheduled sessions ordered by session_number
-    const { data: sessions, error: sessionsError } = await supabase
+    // Get future scheduled sessions
+    const today = new Date().toISOString().split('T')[0]
+    const { data: futureSessions, error: sessionsError } = await supabase
       .from('sessions')
-      .select('id, session_number')
+      .select('id, session_number, session_date, session_time')
       .eq('group_id', group_id)
       .eq('status', 'scheduled')
-      .gte('session_date', today.toISOString().split('T')[0])
+      .gte('session_date', today)
       .order('session_number', { ascending: true })
 
     if (sessionsError) {
-      console.error('Error fetching sessions:', sessionsError)
-      return new Response(
-        JSON.stringify({ success: false, error: 'Failed to fetch sessions' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      throw sessionsError
     }
 
-    if (!sessions || sessions.length === 0) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'No future scheduled sessions to reschedule',
-          updated: 0 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    console.log(`Found ${sessions.length} sessions to reschedule`)
-
-    // Update each session with new date based on its position
     let updatedCount = 0
-    for (let i = 0; i < sessions.length; i++) {
-      const session = sessions[i]
+    const changedSessions: { session_number: number, old_date: string, new_date: string }[] = []
+
+    // Update each session
+    for (const session of (futureSessions as Session[] || [])) {
+      const weekOffset = (session.session_number - 1) * 7
       const newDate = new Date(startDate)
-      newDate.setDate(startDate.getDate() + (i * 7))
+      newDate.setDate(newDate.getDate() + weekOffset)
       const newDateStr = newDate.toISOString().split('T')[0]
+
+      // Track if date changed
+      if (session.session_date !== newDateStr || session.session_time !== group.schedule_time) {
+        changedSessions.push({
+          session_number: session.session_number,
+          old_date: session.session_date,
+          new_date: newDateStr
+        })
+      }
 
       const { error: updateError } = await supabase
         .from('sessions')
@@ -117,35 +104,52 @@ Deno.serve(async (req) => {
         })
         .eq('id', session.id)
 
-      if (updateError) {
-        console.error(`Error updating session ${session.id}:`, updateError)
-      } else {
-        console.log(`Updated session #${session.session_number} to ${newDateStr}`)
+      if (!updateError) {
         updatedCount++
       }
     }
 
-    const result = {
-      success: true,
-      message: `Rescheduled ${updatedCount} sessions starting from ${startDate.toISOString().split('T')[0]}`,
-      updated: updatedCount,
-      startDate: startDate.toISOString().split('T')[0],
-      scheduleDay: group.schedule_day,
-      scheduleTime: group.schedule_time
+    // If sessions were changed, notify students in the group
+    if (changedSessions.length > 0) {
+      // Get all active students in this group
+      const { data: groupStudents } = await supabase
+        .from('group_students')
+        .select('student_id')
+        .eq('group_id', group_id)
+        .eq('is_active', true)
+
+      if (groupStudents && groupStudents.length > 0) {
+        const notifications = groupStudents.map(gs => ({
+          user_id: gs.student_id,
+          title: 'Session Schedule Updated',
+          title_ar: 'تم تحديث مواعيد السيشنات',
+          message: `The schedule for "${group.name}" has been updated. ${changedSessions.length} session(s) have new dates.`,
+          message_ar: `تم تحديث جدول مجموعة "${group.name_ar}". تم تغيير مواعيد ${changedSessions.length} سيشن.`,
+          type: 'info',
+          category: 'session',
+          action_url: `/groups/${group_id}`
+        }))
+
+        await supabase.from('notifications').insert(notifications)
+        console.log(`Sent notifications to ${groupStudents.length} students about schedule change`)
+      }
     }
 
-    console.log('Reschedule complete:', result)
-
     return new Response(
-      JSON.stringify(result),
+      JSON.stringify({ 
+        success: true, 
+        updated: updatedCount,
+        changes: changedSessions,
+        message: `Rescheduled ${updatedCount} sessions` 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Error in reschedule-sessions:', error)
+    console.error('Error:', error)
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
