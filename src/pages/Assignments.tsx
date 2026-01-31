@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, ClipboardList, Upload, Eye } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, ClipboardList, Upload, Eye, FileText, Image, Video, X } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,6 +85,9 @@ export default function AssignmentsPage() {
     due_date: '',
     max_score: 100,
   });
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchData();
@@ -106,10 +109,55 @@ export default function AssignmentsPage() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      if (selectedFile.size > 50 * 1024 * 1024) {
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: isRTL ? 'حجم الملف يجب أن يكون أقل من 50MB' : 'File size must be less than 50MB',
+        });
+        return;
+      }
+      setFile(selectedFile);
+    }
+  };
+
+  const getFileIcon = (type: string | null) => {
+    if (!type) return <FileText className="w-6 h-6" />;
+    if (type.startsWith('image')) return <Image className="w-6 h-6" />;
+    if (type.startsWith('video')) return <Video className="w-6 h-6" />;
+    return <FileText className="w-6 h-6" />;
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
+    setUploading(true);
 
     try {
+      let attachmentUrl = editingAssignment?.attachment_url || null;
+      let attachmentType = editingAssignment?.attachment_type || null;
+
+      // Upload file if exists
+      if (file) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `instructor/${user.id}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('assignments')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('assignments')
+          .getPublicUrl(fileName);
+
+        attachmentUrl = urlData.publicUrl;
+        attachmentType = file.type.split('/')[0];
+      }
+
       const payload = {
         title: formData.title,
         title_ar: formData.title_ar,
@@ -119,6 +167,8 @@ export default function AssignmentsPage() {
         due_date: formData.due_date,
         max_score: formData.max_score,
         assigned_by: user.id,
+        attachment_url: attachmentUrl,
+        attachment_type: attachmentType,
       };
 
       if (editingAssignment) {
@@ -138,6 +188,24 @@ export default function AssignmentsPage() {
           .insert([payload]);
 
         if (error) throw error;
+        
+        // Send notification to group students
+        if (formData.group_id) {
+          const dueDate = new Date(formData.due_date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US');
+          await supabase.functions.invoke('send-notification', {
+            body: {
+              group_id: formData.group_id,
+              title: 'New Assignment',
+              title_ar: 'واجب جديد',
+              message: `You have a new assignment: "${formData.title}" - Due: ${dueDate}`,
+              message_ar: `لديك واجب جديد: "${formData.title_ar}" - موعد التسليم: ${dueDate}`,
+              type: 'info',
+              category: 'assignment',
+              action_url: '/assignments',
+            },
+          });
+        }
+        
         toast({
           title: t.common.success,
           description: isRTL ? 'تم إضافة الاساينمنت' : 'Assignment added successfully',
@@ -155,6 +223,8 @@ export default function AssignmentsPage() {
         title: t.common.error,
         description: isRTL ? 'فشل في حفظ الاساينمنت' : 'Failed to save assignment',
       });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -168,6 +238,8 @@ export default function AssignmentsPage() {
       due_date: '',
       max_score: 100,
     });
+    setFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleEdit = (assignment: Assignment) => {
@@ -339,13 +411,63 @@ export default function AssignmentsPage() {
                   />
                 </div>
               </div>
+
+              {/* File Upload Section */}
+              <div className="grid gap-2">
+                <Label>{isRTL ? 'رفع ملف (صورة، PDF، فيديو)' : 'Upload File (Image, PDF, Video)'}</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileChange}
+                  accept="image/*,video/*,application/pdf,.doc,.docx,.ppt,.pptx"
+                  className="hidden"
+                />
+                
+                {file || editingAssignment?.attachment_url ? (
+                  <div className="p-3 rounded-lg border bg-muted/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {getFileIcon(file?.type || editingAssignment?.attachment_type || null)}
+                      <div>
+                        <p className="text-sm font-medium truncate max-w-[200px]">
+                          {file?.name || (isRTL ? 'ملف مرفق' : 'Attached file')}
+                        </p>
+                        {file && <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setFile(null);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-4 rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 cursor-pointer transition-colors text-center"
+                  >
+                    <Upload className="w-6 h-6 mx-auto text-muted-foreground" />
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {isRTL ? 'اضغط لرفع ملف' : 'Click to upload'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {isRTL ? 'صور، فيديو، PDF (حد أقصى 50MB)' : 'Images, Video, PDF (Max 50MB)'}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                 {t.common.cancel}
               </Button>
-              <Button className="kojo-gradient" onClick={handleSubmit}>
-                {t.common.save}
+              <Button className="kojo-gradient" onClick={handleSubmit} disabled={uploading}>
+                {uploading ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : t.common.save}
               </Button>
             </DialogFooter>
           </DialogContent>
