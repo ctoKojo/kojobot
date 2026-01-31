@@ -12,7 +12,7 @@ interface CreateUserRequest {
   full_name: string
   full_name_ar?: string
   phone?: string
-  role: 'student' | 'instructor'
+  role: 'admin' | 'student' | 'instructor'
   // Student-specific fields
   date_of_birth?: string
   age_group_id?: string
@@ -29,57 +29,83 @@ serve(async (req) => {
   }
 
   try {
-    // Verify authentication
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      console.error('Missing or invalid authorization header')
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Create Supabase client with user's token to verify they're an admin
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
+    // Create admin client with service role key
+    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     })
 
-    // Verify the user's token and get their role
-    const token = authHeader.replace('Bearer ', '')
-    const { data: claimsData, error: claimsError } = await userSupabase.auth.getClaims(token)
-    
-    if (claimsError || !claimsData?.claims) {
-      console.error('Failed to verify token:', claimsError)
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const userId = claimsData.claims.sub as string
-
-    // Check if user is admin
-    const { data: roleData, error: roleError } = await userSupabase
+    // Check if this is the first user (bootstrap mode)
+    const { count: userCount, error: countError } = await adminSupabase
       .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .single()
+      .select('*', { count: 'exact', head: true })
 
-    if (roleError || roleData?.role !== 'admin') {
-      console.error('User is not an admin:', roleError)
-      return new Response(
-        JSON.stringify({ error: 'Only admins can create users' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    const isBootstrapMode = !countError && userCount === 0
+    console.log('Bootstrap mode:', isBootstrapMode, 'User count:', userCount)
+
+    // If not bootstrap mode, verify authentication
+    if (!isBootstrapMode) {
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader?.startsWith('Bearer ')) {
+        console.error('Missing or invalid authorization header')
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Create Supabase client with user's token to verify they're an admin
+      const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      })
+
+      // Verify the user's token and get their role
+      const token = authHeader.replace('Bearer ', '')
+      const { data: claimsData, error: claimsError } = await userSupabase.auth.getClaims(token)
+      
+      if (claimsError || !claimsData?.claims) {
+        console.error('Failed to verify token:', claimsError)
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const userId = claimsData.claims.sub as string
+
+      // Check if user is admin
+      const { data: roleData, error: roleError } = await userSupabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single()
+
+      if (roleError || roleData?.role !== 'admin') {
+        console.error('User is not an admin:', roleError)
+        return new Response(
+          JSON.stringify({ error: 'Only admins can create users' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
     }
 
     // Parse request body
     const body: CreateUserRequest = await req.json()
     console.log('Creating user with role:', body.role)
+
+    // In bootstrap mode, only allow creating admin
+    if (isBootstrapMode && body.role !== 'admin') {
+      return new Response(
+        JSON.stringify({ error: 'First user must be an admin' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Validate required fields
     if (!body.email || !body.password || !body.full_name || !body.role) {
@@ -95,14 +121,6 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
-    // Create admin client with service role key
-    const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
 
     // Create user in auth.users
     const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
@@ -181,14 +199,24 @@ serve(async (req) => {
 
     console.log('Assigned role:', body.role, 'to user:', newUserId)
 
-    // Log activity
-    await adminSupabase.from('activity_logs').insert({
-      user_id: userId,
-      action: 'create',
-      entity_type: body.role,
-      entity_id: newUserId,
-      details: { email: body.email, full_name: body.full_name }
-    })
+    // Log activity (skip in bootstrap mode as there's no requesting user)
+    if (!isBootstrapMode) {
+      const authHeader = req.headers.get('Authorization')!
+      const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      })
+      const token = authHeader.replace('Bearer ', '')
+      const { data: claimsData } = await userSupabase.auth.getClaims(token)
+      const requestingUserId = claimsData?.claims?.sub as string
+
+      await adminSupabase.from('activity_logs').insert({
+        user_id: requestingUserId,
+        action: 'create',
+        entity_type: body.role,
+        entity_id: newUserId,
+        details: { email: body.email, full_name: body.full_name }
+      })
+    }
 
     return new Response(
       JSON.stringify({ 
