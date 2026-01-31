@@ -276,6 +276,7 @@ export type Database = {
           age_group_id: string | null
           created_at: string
           duration_minutes: number
+          group_type: Database["public"]["Enums"]["group_type"]
           id: string
           instructor_id: string
           is_active: boolean | null
@@ -290,6 +291,7 @@ export type Database = {
           age_group_id?: string | null
           created_at?: string
           duration_minutes?: number
+          group_type?: Database["public"]["Enums"]["group_type"]
           id?: string
           instructor_id: string
           is_active?: boolean | null
@@ -304,6 +306,7 @@ export type Database = {
           age_group_id?: string | null
           created_at?: string
           duration_minutes?: number
+          group_type?: Database["public"]["Enums"]["group_type"]
           id?: string
           instructor_id?: string
           is_active?: boolean | null
@@ -431,6 +434,9 @@ export type Database = {
           phone: string | null
           specialization: string | null
           specialization_ar: string | null
+          subscription_type:
+            | Database["public"]["Enums"]["subscription_type"]
+            | null
           updated_at: string
           user_id: string
         }
@@ -447,6 +453,9 @@ export type Database = {
           phone?: string | null
           specialization?: string | null
           specialization_ar?: string | null
+          subscription_type?:
+            | Database["public"]["Enums"]["subscription_type"]
+            | null
           updated_at?: string
           user_id: string
         }
@@ -463,6 +472,9 @@ export type Database = {
           phone?: string | null
           specialization?: string | null
           specialization_ar?: string | null
+          subscription_type?:
+            | Database["public"]["Enums"]["subscription_type"]
+            | null
           updated_at?: string
           user_id?: string
         }
@@ -845,6 +857,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_group_max_students: {
+        Args: { g_type: Database["public"]["Enums"]["group_type"] }
+        Returns: number
+      }
+      get_group_student_count: { Args: { g_id: string }; Returns: number }
       get_instructor_group_ids: {
         Args: { _instructor_id: string }
         Returns: string[]
@@ -867,6 +884,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "instructor" | "student"
+      group_type: "kojo_squad" | "kojo_core" | "kojo_x"
+      subscription_type: "kojo_squad" | "kojo_core" | "kojo_x"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -995,6 +1014,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "instructor", "student"],
+      group_type: ["kojo_squad", "kojo_core", "kojo_x"],
+      subscription_type: ["kojo_squad", "kojo_core", "kojo_x"],
     },
   },
 } as const

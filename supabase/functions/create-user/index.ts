@@ -17,6 +17,7 @@ interface CreateUserRequest {
   date_of_birth?: string
   age_group_id?: string
   level_id?: string
+  subscription_type?: 'kojo_squad' | 'kojo_core' | 'kojo_x'
   // Instructor-specific fields
   specialization?: string
   specialization_ar?: string
@@ -157,6 +158,7 @@ serve(async (req) => {
       profileData.date_of_birth = body.date_of_birth || null
       profileData.age_group_id = body.age_group_id || null
       profileData.level_id = body.level_id || null
+      profileData.subscription_type = body.subscription_type || null
     } else if (body.role === 'instructor') {
       profileData.specialization = body.specialization || null
       profileData.specialization_ar = body.specialization_ar || null
