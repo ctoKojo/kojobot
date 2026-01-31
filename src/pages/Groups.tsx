@@ -934,6 +934,14 @@ export default function GroupsPage() {
                           <Badge variant="secondary" className="text-xs">
                             {language === 'ar' ? typeInfo.labelAr : typeInfo.label}
                           </Badge>
+                          <Badge 
+                            variant={group.attendance_mode === 'online' ? 'default' : 'outline'} 
+                            className={`text-xs ${group.attendance_mode === 'online' ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
+                          >
+                            {group.attendance_mode === 'online' 
+                              ? (isRTL ? 'أونلاين' : 'Online')
+                              : (isRTL ? 'حضوري' : 'Offline')}
+                          </Badge>
                         </div>
                         
                         <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
@@ -1019,6 +1027,7 @@ export default function GroupsPage() {
                 <TableRow>
                   <TableHead>{t.groups.groupName}</TableHead>
                   <TableHead>{isRTL ? 'النوع' : 'Type'}</TableHead>
+                  <TableHead>{isRTL ? 'نوع الحضور' : 'Attendance'}</TableHead>
                   <TableHead>{t.students.ageGroup}</TableHead>
                   <TableHead>{t.students.level}</TableHead>
                   <TableHead>{isRTL ? 'التقدم' : 'Progress'}</TableHead>
@@ -1031,13 +1040,13 @@ export default function GroupsPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8">
+                    <TableCell colSpan={10} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredGroups.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       {isRTL ? 'لا توجد مجموعات' : 'No groups found'}
                     </TableCell>
                   </TableRow>
@@ -1061,6 +1070,16 @@ export default function GroupsPage() {
                         <TableCell>
                           <Badge variant="secondary">
                             {language === 'ar' ? typeInfo.labelAr : typeInfo.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={group.attendance_mode === 'online' ? 'default' : 'outline'}
+                            className={group.attendance_mode === 'online' ? 'bg-blue-500 hover:bg-blue-600' : ''}
+                          >
+                            {group.attendance_mode === 'online' 
+                              ? (isRTL ? 'أونلاين' : 'Online')
+                              : (isRTL ? 'حضوري' : 'Offline')}
                           </Badge>
                         </TableCell>
                         <TableCell>
