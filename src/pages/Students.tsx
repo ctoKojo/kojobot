@@ -547,6 +547,12 @@ export default function StudentsPage() {
                     <Badge variant="secondary" className="text-xs">
                       {getSubscriptionTypeName(student.subscription_type)}
                     </Badge>
+                    <Badge 
+                      variant={student.attendance_mode === 'online' ? 'default' : 'outline'} 
+                      className={`text-xs ${student.attendance_mode === 'online' ? 'bg-blue-500 hover:bg-blue-600' : ''}`}
+                    >
+                      {getAttendanceModeName(student.attendance_mode)}
+                    </Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -565,19 +571,20 @@ export default function StudentsPage() {
                   <TableHead>{t.students.ageGroup}</TableHead>
                   <TableHead>{t.students.level}</TableHead>
                   <TableHead>{isRTL ? 'الاشتراك' : 'Subscription'}</TableHead>
+                  <TableHead>{isRTL ? 'نوع الحضور' : 'Attendance'}</TableHead>
                   <TableHead className="w-[100px]">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredStudents.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       {isRTL ? 'لا يوجد طلاب' : 'No students found'}
                     </TableCell>
                   </TableRow>
@@ -605,6 +612,14 @@ export default function StudentsPage() {
                       <TableCell>
                         <Badge variant="secondary">
                           {getSubscriptionTypeName(student.subscription_type)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={student.attendance_mode === 'online' ? 'default' : 'outline'}
+                          className={student.attendance_mode === 'online' ? 'bg-blue-500 hover:bg-blue-600' : ''}
+                        >
+                          {getAttendanceModeName(student.attendance_mode)}
                         </Badge>
                       </TableCell>
                       <TableCell>
