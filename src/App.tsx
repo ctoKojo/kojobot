@@ -31,6 +31,7 @@ import StudentProfile from "./pages/StudentProfile";
 import InstructorProfile from "./pages/InstructorProfile";
 import GroupDetails from "./pages/GroupDetails";
 import Profile from "./pages/Profile";
+import InstructorSchedule from "./pages/InstructorSchedule";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,7 @@ const App = () => (
               <Route path="/instructor/:instructorId" element={<ProtectedRoute allowedRoles={['admin']}><InstructorProfile /></ProtectedRoute>} />
               <Route path="/group/:groupId" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><GroupDetails /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/instructor-schedule/:instructorId?" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><InstructorSchedule /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

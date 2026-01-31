@@ -13,6 +13,7 @@ import {
   Bell,
   FileQuestion,
   LogOut,
+  CalendarDays,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -54,6 +55,7 @@ export function AppSidebar() {
     { title: t.nav.instructors, url: '/instructors', icon: Users, roles: ['admin'] },
     { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['admin', 'instructor'] },
     { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin', 'instructor'] },
+    { title: isRTL ? 'جدول العمل' : 'My Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['instructor'] },
   ];
 
   const educationNavItems: NavItem[] = [
