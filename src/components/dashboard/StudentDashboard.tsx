@@ -179,16 +179,16 @@ export function StudentDashboard() {
       {/* Welcome Banner */}
       {stats.profile && (
         <Card className="kojo-gradient text-white">
-          <CardContent className="py-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
-                <GraduationCap className="w-8 h-8" />
+          <CardContent className="py-4 sm:py-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8" />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg sm:text-2xl font-bold truncate">
                   {isRTL ? 'مرحباً' : 'Welcome'}, {language === 'ar' ? stats.profile.full_name_ar : stats.profile.full_name}!
                 </h2>
-                <p className="opacity-90">
+                <p className="opacity-90 text-sm sm:text-base truncate">
                   {stats.profile.levels && (language === 'ar' ? stats.profile.levels.name_ar : stats.profile.levels.name)}
                   {stats.profile.age_groups && ` • ${language === 'ar' ? stats.profile.age_groups.name_ar : stats.profile.age_groups.name}`}
                 </p>
@@ -199,43 +199,43 @@ export function StudentDashboard() {
       )}
 
       {/* Profile Summary */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4">
         {/* Group Info */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               {isRTL ? 'المجموعة' : 'My Group'}
             </CardTitle>
-            <Calendar className="h-5 w-5 text-primary" />
+            <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             {stats.groupInfo ? (
               <>
-                <div className="text-lg font-bold">
+                <div className="text-sm sm:text-lg font-bold truncate">
                   {language === 'ar' ? stats.groupInfo.name_ar : stats.groupInfo.name}
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">
                   {stats.groupInfo.schedule_day} - {formatTime12Hour(stats.groupInfo.schedule_time, isRTL)}
                 </p>
               </>
             ) : (
-              <p className="text-muted-foreground">{isRTL ? 'غير مسجل' : 'Not enrolled'}</p>
+              <p className="text-muted-foreground text-sm">{isRTL ? 'غير مسجل' : 'Not enrolled'}</p>
             )}
           </CardContent>
         </Card>
 
         {/* Attendance */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              {isRTL ? 'نسبة الحضور' : 'Attendance Rate'}
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+              {isRTL ? 'الحضور' : 'Attendance'}
             </CardTitle>
-            <CheckCircle className="h-5 w-5 text-green-600" />
+            <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{attendanceRate}%</div>
-            <Progress value={attendanceRate} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+            <div className="text-2xl sm:text-3xl font-bold">{attendanceRate}%</div>
+            <Progress value={attendanceRate} className="mt-2 h-2" />
+            <p className="text-xs text-muted-foreground mt-1 hidden sm:block">
               {stats.attendanceStats.present} / {stats.attendanceStats.total} {isRTL ? 'سيشن' : 'sessions'}
             </p>
           </CardContent>
@@ -243,14 +243,14 @@ export function StudentDashboard() {
 
         {/* Warnings */}
         <Card className={stats.warnings > 0 ? 'border-warning' : ''}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               {isRTL ? 'الإنذارات' : 'Warnings'}
             </CardTitle>
-            <AlertTriangle className={`h-5 w-5 ${stats.warnings > 0 ? 'text-warning' : 'text-muted-foreground'}`} />
+            <AlertTriangle className={`h-4 w-4 sm:h-5 sm:w-5 ${stats.warnings > 0 ? 'text-warning' : 'text-muted-foreground'}`} />
           </CardHeader>
-          <CardContent>
-            <div className={`text-3xl font-bold ${stats.warnings > 0 ? 'text-warning' : ''}`}>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+            <div className={`text-2xl sm:text-3xl font-bold ${stats.warnings > 0 ? 'text-warning' : ''}`}>
               {loading ? '...' : stats.warnings}
             </div>
           </CardContent>
@@ -258,30 +258,30 @@ export function StudentDashboard() {
 
         {/* Subscription */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               {isRTL ? 'الاشتراك' : 'Subscription'}
             </CardTitle>
-            <GraduationCap className="h-5 w-5 text-blue-600" />
+            <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             {stats.subscription ? (
               <>
-                <Badge variant="outline" className="bg-green-100 text-green-800">
+                <Badge variant="outline" className="bg-green-100 text-green-800 text-xs">
                   {isRTL ? 'نشط' : 'Active'}
                 </Badge>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1 hidden sm:block">
                   {isRTL ? 'ينتهي: ' : 'Expires: '}
                   {formatDate(stats.subscription.end_date)}
                 </p>
                 {daysUntil(stats.subscription.end_date) <= 7 && (
-                  <Badge variant="destructive" className="mt-2">
-                    {isRTL ? `متبقي ${daysUntil(stats.subscription.end_date)} يوم` : `${daysUntil(stats.subscription.end_date)} days left`}
+                  <Badge variant="destructive" className="mt-2 text-xs">
+                    {isRTL ? `${daysUntil(stats.subscription.end_date)} يوم` : `${daysUntil(stats.subscription.end_date)} days`}
                   </Badge>
                 )}
               </>
             ) : (
-              <Badge variant="destructive">{isRTL ? 'غير مشترك' : 'No subscription'}</Badge>
+              <Badge variant="destructive" className="text-xs">{isRTL ? 'غير مشترك' : 'None'}</Badge>
             )}
           </CardContent>
         </Card>
@@ -325,35 +325,35 @@ export function StudentDashboard() {
       )}
 
       {/* Pending Tasks */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
         {/* Pending Quizzes */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileQuestion className="h-5 w-5 text-primary" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <FileQuestion className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               {isRTL ? 'كويزات بانتظارك' : 'Pending Quizzes'}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             {stats.pendingQuizzes.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">
+              <p className="text-muted-foreground text-center py-4 text-sm">
                 {isRTL ? 'لا توجد كويزات حالياً' : 'No pending quizzes'}
               </p>
             ) : (
               <div className="space-y-3">
                 {stats.pendingQuizzes.map((quiz: any) => (
-                  <div key={quiz.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50">
-                    <div>
-                      <p className="font-medium">
+                  <div key={quiz.id} className="flex items-center justify-between p-2 sm:p-3 rounded-lg border hover:bg-muted/50">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm sm:text-base truncate">
                         {language === 'ar' ? quiz.quizzes?.title_ar : quiz.quizzes?.title}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {quiz.quizzes?.duration_minutes} {isRTL ? 'دقيقة' : 'min'}
                       </p>
                     </div>
-                    <Button size="sm" className="kojo-gradient" onClick={() => navigate(`/quiz/${quiz.id}`)}>
-                      <Play className="w-4 h-4 mr-1" />
-                      {isRTL ? 'ابدأ' : 'Start'}
+                    <Button size="sm" className="kojo-gradient ml-2 flex-shrink-0" onClick={() => navigate(`/quiz/${quiz.id}`)}>
+                      <Play className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                      <span className="hidden sm:inline">{isRTL ? 'ابدأ' : 'Start'}</span>
                     </Button>
                   </div>
                 ))}
@@ -364,31 +364,31 @@ export function StudentDashboard() {
 
         {/* Pending Assignments */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-secondary" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
               {isRTL ? 'اساينمنتات بانتظارك' : 'Pending Assignments'}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             {stats.pendingAssignments.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">
+              <p className="text-muted-foreground text-center py-4 text-sm">
                 {isRTL ? 'لا توجد اساينمنتات حالياً' : 'No pending assignments'}
               </p>
             ) : (
               <div className="space-y-3">
                 {stats.pendingAssignments.map((assignment: any) => (
-                  <div key={assignment.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50">
-                    <div>
-                      <p className="font-medium">
+                  <div key={assignment.id} className="flex items-center justify-between p-2 sm:p-3 rounded-lg border hover:bg-muted/50">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm sm:text-base truncate">
                         {language === 'ar' ? assignment.title_ar : assignment.title}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {isRTL ? 'الموعد: ' : 'Due: '}{formatDate(assignment.due_date)}
                       </p>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/assignment/${assignment.id}`)}>
-                      {isRTL ? 'تسليم' : 'Submit'}
+                    <Button size="sm" variant="outline" className="ml-2 flex-shrink-0" onClick={() => navigate(`/assignment/${assignment.id}`)}>
+                      <span className="text-xs sm:text-sm">{isRTL ? 'تسليم' : 'Submit'}</span>
                     </Button>
                   </div>
                 ))}
@@ -399,26 +399,26 @@ export function StudentDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/assignments')}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-primary" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               {isRTL ? 'الواجبات' : 'My Assignments'}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               {isRTL ? 'عرض جميع الواجبات المطلوبة' : 'View all your assignments'}
             </CardDescription>
           </CardHeader>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/attendance')}>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-secondary" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
               {isRTL ? 'سجل الحضور' : 'Attendance History'}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               {isRTL ? 'عرض سجل الحضور والغياب' : 'View your attendance record'}
             </CardDescription>
           </CardHeader>
