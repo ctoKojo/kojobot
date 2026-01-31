@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -98,6 +99,7 @@ interface GroupStudentCount {
 export default function GroupsPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [groups, setGroups] = useState<Group[]>([]);
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
@@ -882,6 +884,10 @@ export default function GroupsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                              <DropdownMenuItem onClick={() => navigate(`/group/${group.id}`)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                {isRTL ? 'عرض التفاصيل' : 'View Details'}
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleEdit(group)}>
                                 <Pencil className="h-4 w-4 mr-2" />
                                 {t.common.edit}

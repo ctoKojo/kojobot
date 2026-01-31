@@ -28,6 +28,8 @@ import QuizEditor from "./pages/QuizEditor";
 import GradeAssignment from "./pages/GradeAssignment";
 import AssignmentSubmissions from "./pages/AssignmentSubmissions";
 import StudentProfile from "./pages/StudentProfile";
+import InstructorProfile from "./pages/InstructorProfile";
+import GroupDetails from "./pages/GroupDetails";
 import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
@@ -62,6 +64,8 @@ const App = () => (
               <Route path="/grade-assignment/:submissionId" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><GradeAssignment /></ProtectedRoute>} />
               <Route path="/assignment-submissions/:assignmentId" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><AssignmentSubmissions /></ProtectedRoute>} />
               <Route path="/student/:studentId" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><StudentProfile /></ProtectedRoute>} />
+              <Route path="/instructor/:instructorId" element={<ProtectedRoute allowedRoles={['admin']}><InstructorProfile /></ProtectedRoute>} />
+              <Route path="/group/:groupId" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><GroupDetails /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
