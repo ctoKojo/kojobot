@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, FileText, Image, Video, CheckCircle, Clock, Download } from 'lucide-react';
+import { ArrowLeft, User, FileText, Image, Video, CheckCircle, Clock, Download, RotateCcw } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -59,6 +59,7 @@ export default function GradeAssignment() {
   const [feedbackAr, setFeedbackAr] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [requestingRevision, setRequestingRevision] = useState(false);
 
   useEffect(() => {
     if (submissionId) fetchData();
@@ -174,6 +175,53 @@ export default function GradeAssignment() {
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRequestRevision = async () => {
+    if (!user || !submission || requestingRevision) return;
+    
+    setRequestingRevision(true);
+
+    try {
+      const { error } = await supabase
+        .from('assignment_submissions')
+        .update({
+          status: 'revision_requested',
+          feedback: feedback || null,
+          feedback_ar: feedbackAr || null,
+        })
+        .eq('id', submission.id);
+
+      if (error) throw error;
+
+      // Create notification for student
+      await supabase.from('notifications').insert({
+        user_id: submission.student_id,
+        title: 'Revision Requested',
+        title_ar: 'مطلوب إعادة التسليم',
+        message: `Your instructor has requested a revision for "${assignment?.title}". Please resubmit your work.`,
+        message_ar: `طلب المعلم إعادة تسليم الواجب "${assignment?.title_ar}". يرجى إعادة تسليم عملك.`,
+        type: 'warning',
+        category: 'assignment',
+        action_url: `/assignment/${assignment?.id}`,
+      });
+
+      toast({
+        title: t.common.success,
+        description: isRTL ? 'تم طلب إعادة التسليم من الطالب' : 'Revision requested from student',
+      });
+
+      navigate('/assignments');
+    } catch (error) {
+      console.error('Error requesting revision:', error);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: isRTL ? 'فشل في طلب إعادة التسليم' : 'Failed to request revision',
+      });
+    } finally {
+      setRequestingRevision(false);
     }
   };
 
@@ -360,14 +408,28 @@ export default function GradeAssignment() {
               />
             </div>
 
-            {/* Submit Button */}
-            <Button
-              className="w-full kojo-gradient"
-              onClick={handleGrade}
-              disabled={submitting || !score}
-            >
-              {submitting ? t.common.loading : (isRTL ? 'حفظ التقييم' : 'Save Grade')}
-            </Button>
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Request Revision Button */}
+              <Button
+                variant="outline"
+                className="flex-1 border-orange-500 text-orange-600 hover:bg-orange-50"
+                onClick={handleRequestRevision}
+                disabled={requestingRevision || submitting}
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                {requestingRevision ? t.common.loading : (isRTL ? 'طلب إعادة التسليم' : 'Request Revision')}
+              </Button>
+              
+              {/* Save Grade Button */}
+              <Button
+                className="flex-1 kojo-gradient"
+                onClick={handleGrade}
+                disabled={submitting || requestingRevision || !score}
+              >
+                {submitting ? t.common.loading : (isRTL ? 'حفظ التقييم' : 'Save Grade')}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
