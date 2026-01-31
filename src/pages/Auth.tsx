@@ -66,8 +66,13 @@ export default function Auth() {
     <div className="min-h-screen flex" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Left Side - Brand Panel */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden">
-        {/* Gradient Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#61BAE2] via-[#6455F0] to-[#5a4ad9]" />
+        {/* Gradient Background - matching brand gradient */}
+        <div 
+          className="absolute inset-0" 
+          style={{
+            background: 'linear-gradient(135deg, #4EDDEA 0%, #6878F0 25%, #6455F0 50%, #5B8DEE 75%, #4EDDEA 100%)'
+          }}
+        />
         
         {/* Animated Background Shapes */}
         <div className="absolute inset-0 overflow-hidden">
