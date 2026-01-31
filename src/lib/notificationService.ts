@@ -177,4 +177,24 @@ export const notificationService = {
       return false;
     }
   },
+
+  // Notify instructor when group is assigned
+  async notifyGroupAssigned(
+    instructorId: string,
+    groupName: string,
+    groupNameAr: string,
+    scheduleDay: string,
+    scheduleTime: string
+  ) {
+    return this.create({
+      user_id: instructorId,
+      title: 'New Group Assigned',
+      title_ar: 'مجموعة جديدة مسندة إليك',
+      message: `You have been assigned to group "${groupName}" - Schedule: ${scheduleDay} at ${scheduleTime}`,
+      message_ar: `تم إسناد مجموعة "${groupNameAr}" إليك - الموعد: ${scheduleDay} الساعة ${scheduleTime}`,
+      type: 'info',
+      category: 'group',
+      action_url: '/groups',
+    });
+  },
 };
