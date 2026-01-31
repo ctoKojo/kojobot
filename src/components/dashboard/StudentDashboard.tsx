@@ -49,21 +49,23 @@ export function StudentDashboard() {
         .eq('user_id', user?.id)
         .single();
 
-      // Get student's group
-      const { data: groupStudent } = await supabase
+      // Get student's group - use maybeSingle to avoid 406 when no group exists
+      const { data: groupStudentData } = await supabase
         .from('group_students')
         .select('group_id, groups(id, name, name_ar, schedule_day, schedule_time, instructor_id)')
         .eq('student_id', user?.id)
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
+      
+      const groupStudent = groupStudentData;
 
-      // Get subscription
+      // Get subscription - use maybeSingle to avoid 406 when no subscription exists
       const { data: subscription } = await supabase
         .from('subscriptions')
         .select('*')
         .eq('student_id', user?.id)
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
       // Get warnings count
       const { count: warningsCount } = await supabase

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, ClipboardList, Upload, Eye } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -68,6 +69,7 @@ export default function AssignmentsPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
   const { user, role } = useAuth();
+  const navigate = useNavigate();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
@@ -405,7 +407,7 @@ export default function AssignmentsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/assignment-submissions/${assignment.id}`)}>
                               <Eye className="h-4 w-4 mr-2" />
                               {isRTL ? 'عرض التسليمات' : 'View Submissions'}
                             </DropdownMenuItem>

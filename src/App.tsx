@@ -25,6 +25,8 @@ import Sessions from "./pages/Sessions";
 import TakeQuiz from "./pages/TakeQuiz";
 import SubmitAssignment from "./pages/SubmitAssignment";
 import QuizEditor from "./pages/QuizEditor";
+import GradeAssignment from "./pages/GradeAssignment";
+import AssignmentSubmissions from "./pages/AssignmentSubmissions";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +57,8 @@ const App = () => (
               <Route path="/quiz/:assignmentId" element={<ProtectedRoute allowedRoles={['student']}><TakeQuiz /></ProtectedRoute>} />
               <Route path="/assignment/:assignmentId" element={<ProtectedRoute allowedRoles={['student']}><SubmitAssignment /></ProtectedRoute>} />
               <Route path="/quiz-editor/:quizId" element={<ProtectedRoute allowedRoles={['admin']}><QuizEditor /></ProtectedRoute>} />
+              <Route path="/grade-assignment/:submissionId" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><GradeAssignment /></ProtectedRoute>} />
+              <Route path="/assignment-submissions/:assignmentId" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><AssignmentSubmissions /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
