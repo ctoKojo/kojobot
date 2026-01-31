@@ -43,6 +43,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { formatTime12Hour } from '@/lib/timeUtils';
+import { notificationService } from '@/lib/notificationService';
 
 type GroupType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
 type AttendanceMode = 'online' | 'offline';
@@ -370,6 +371,9 @@ export default function GroupsPage() {
         session_link: formData.attendance_mode === 'online' ? formData.session_link || null : null,
       };
 
+      const previousInstructorId = editingGroup?.instructor_id;
+      const isNewInstructor = !editingGroup || previousInstructorId !== formData.instructor_id;
+
       if (editingGroup) {
         const { error } = await supabase
           .from('groups')
@@ -377,6 +381,18 @@ export default function GroupsPage() {
           .eq('id', editingGroup.id);
 
         if (error) throw error;
+        
+        // Notify new instructor if changed
+        if (isNewInstructor) {
+          await notificationService.notifyGroupAssigned(
+            formData.instructor_id,
+            formData.name,
+            formData.name_ar,
+            formData.schedule_day,
+            formData.schedule_time
+          );
+        }
+        
         toast({
           title: t.common.success,
           description: isRTL ? 'تم تحديث المجموعة' : 'Group updated successfully',
@@ -387,6 +403,16 @@ export default function GroupsPage() {
           .insert([payload]);
 
         if (error) throw error;
+        
+        // Notify instructor about new group assignment
+        await notificationService.notifyGroupAssigned(
+          formData.instructor_id,
+          formData.name,
+          formData.name_ar,
+          formData.schedule_day,
+          formData.schedule_time
+        );
+        
         toast({
           title: t.common.success,
           description: isRTL ? 'تم إضافة المجموعة' : 'Group added successfully',
