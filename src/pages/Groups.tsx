@@ -827,9 +827,124 @@ export default function GroupsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Table */}
-        <Card>
-          <CardContent className="p-0">
+        {/* Mobile Card View */}
+        <div className="block lg:hidden space-y-3">
+          {loading ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                {t.common.loading}
+              </CardContent>
+            </Card>
+          ) : filteredGroups.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                {isRTL ? 'لا توجد مجموعات' : 'No groups found'}
+              </CardContent>
+            </Card>
+          ) : (
+            filteredGroups.map((group) => {
+              const typeInfo = getGroupTypeInfo(group.group_type);
+              const currentCount = groupStudentCounts[group.id] || 0;
+              const isAtLimit = currentCount >= typeInfo.maxStudents;
+              const progress = groupSessionProgress[group.id] || { completed: 0, total: 12 };
+              const progressPercent = Math.round((progress.completed / progress.total) * 100);
+              
+              return (
+                <Card 
+                  key={group.id} 
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => navigate(`/group/${group.id}`)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-2 flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold truncate">
+                            {language === 'ar' ? group.name_ar : group.name}
+                          </h3>
+                          <Badge variant="secondary" className="text-xs">
+                            {language === 'ar' ? typeInfo.labelAr : typeInfo.label}
+                          </Badge>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
+                          <span>{getInstructorName(group.instructor_id)}</span>
+                          <span>•</span>
+                          <span>{getDayName(group.schedule_day)} {formatTime12Hour(group.schedule_time, isRTL)}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <Badge variant={isAtLimit ? 'destructive' : 'outline'} className="text-xs">
+                              {currentCount}/{typeInfo.maxStudents}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 flex-1 min-w-[80px] max-w-[120px]">
+                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-primary transition-all" 
+                                style={{ width: `${progressPercent}%` }}
+                              />
+                            </div>
+                            <span className="text-xs">{progress.completed}/{progress.total}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div onClick={(e) => e.stopPropagation()}>
+                        {isAdmin ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                              <DropdownMenuItem onClick={() => navigate(`/group/${group.id}`)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                {isRTL ? 'عرض التفاصيل' : 'View Details'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(group)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                {t.common.edit}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleManageStudents(group)}>
+                                <Users className="h-4 w-4 mr-2" />
+                                {isRTL ? 'إدارة الطلاب' : 'Manage Students'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDelete(group.id)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {t.common.delete}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => navigate(`/group/${group.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <Card className="hidden lg:block">
+          <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

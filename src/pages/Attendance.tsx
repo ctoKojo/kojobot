@@ -272,11 +272,11 @@ export default function AttendancePage() {
 
   return (
     <DashboardLayout title={t.attendance.title}>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Filters */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <div className="grid gap-2">
-            <Label>{t.students.group}</Label>
+            <Label className="text-sm">{t.students.group}</Label>
             <Select value={selectedGroup} onValueChange={setSelectedGroup}>
               <SelectTrigger>
                 <SelectValue placeholder={isRTL ? 'اختر مجموعة' : 'Select group'} />
@@ -292,7 +292,7 @@ export default function AttendancePage() {
           </div>
 
           <div className="grid gap-2">
-            <Label>{isRTL ? 'السيشن' : 'Session'}</Label>
+            <Label className="text-sm">{isRTL ? 'السيشن' : 'Session'}</Label>
             <Select value={selectedSession} onValueChange={setSelectedSession}>
               <SelectTrigger>
                 <SelectValue placeholder={isRTL ? 'اختر سيشن' : 'Select session'} />
@@ -318,70 +318,135 @@ export default function AttendancePage() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
               <div className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-green-600" />
+                <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 shrink-0" />
                 <div>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xl sm:text-2xl font-bold">
                     {attendanceRecords.filter(r => r.status === 'present').length}
                   </p>
-                  <p className="text-sm text-muted-foreground">{t.attendance.present}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t.attendance.present}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
               <div className="flex items-center gap-2">
-                <UserX className="h-5 w-5 text-red-600" />
+                <UserX className="h-4 w-4 sm:h-5 sm:w-5 text-red-600 shrink-0" />
                 <div>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xl sm:text-2xl font-bold">
                     {attendanceRecords.filter(r => r.status === 'absent').length}
                   </p>
-                  <p className="text-sm text-muted-foreground">{t.attendance.absent}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t.attendance.absent}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
               <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-yellow-600" />
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 shrink-0" />
                 <div>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xl sm:text-2xl font-bold">
                     {attendanceRecords.filter(r => r.status === 'late').length}
                   </p>
-                  <p className="text-sm text-muted-foreground">{t.attendance.late}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t.attendance.late}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
               <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-blue-600" />
+                <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 shrink-0" />
                 <div>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xl sm:text-2xl font-bold">
                     {attendanceRecords.filter(r => r.status === 'excused').length}
                   </p>
-                  <p className="text-sm text-muted-foreground">{t.attendance.excused}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{t.attendance.excused}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Attendance Table */}
-        <Card>
+        {/* Attendance - Mobile Card View */}
+        <Card className="block md:hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Calendar className="h-4 w-4" />
+              {getSelectedSessionInfo() || (isRTL ? 'اختر سيشن' : 'Select a session')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 divide-y">
+            {loading ? (
+              <div className="text-center py-8">{t.common.loading}</div>
+            ) : students.length === 0 ? (
+              <div className="text-center py-8">
+                <UserCheck className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  {isRTL ? 'لا يوجد طلاب في هذه المجموعة' : 'No students in this group'}
+                </p>
+              </div>
+            ) : (
+              students.map((student) => {
+                const record = attendanceRecords.find(r => r.student_id === student.user_id);
+                const currentStatus = record?.status || 'absent';
+
+                return (
+                  <div key={student.user_id} className="p-3 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9">
+                        <AvatarImage src={student.avatar_url || ''} />
+                        <AvatarFallback className="text-sm">
+                          {(student.full_name || '?').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium text-sm">
+                        {language === 'ar' && student.full_name_ar
+                          ? student.full_name_ar
+                          : student.full_name}
+                      </span>
+                    </div>
+                    {canManage ? (
+                      <div className="grid grid-cols-4 gap-2">
+                        {(['present', 'absent', 'late', 'excused'] as const).map((status) => (
+                          <Button
+                            key={status}
+                            variant={currentStatus === status ? 'default' : 'outline'}
+                            size="sm"
+                            className={`text-xs h-8 ${currentStatus === status ? 'kojo-gradient' : ''}`}
+                            onClick={() => updateStatus(student.user_id, status)}
+                          >
+                            {status === 'present' && (isRTL ? 'حاضر' : 'P')}
+                            {status === 'absent' && (isRTL ? 'غائب' : 'A')}
+                            {status === 'late' && (isRTL ? 'متأخر' : 'L')}
+                            {status === 'excused' && (isRTL ? 'معذور' : 'E')}
+                          </Button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div>{getStatusBadge(currentStatus)}</div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Attendance - Desktop Table View */}
+        <Card className="hidden md:block">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
               {getSelectedSessionInfo() || (isRTL ? 'اختر سيشن' : 'Select a session')}
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
