@@ -116,13 +116,18 @@ export default function TakeQuiz() {
     setSubmitting(true);
 
     try {
-      // Calculate score
+      // Calculate score - compare answer index with correct answer text
       let score = 0;
       let maxScore = 0;
 
       questions.forEach((q) => {
         maxScore += q.points;
-        if (answers[q.id] === q.correct_answer) {
+        const optionsData = q.options as { options: { text: string; text_ar: string }[] } | null;
+        const optionsList = optionsData?.options || [];
+        const selectedIdx = parseInt(answers[q.id] || '-1');
+        const selectedOption = optionsList[selectedIdx];
+        // Check if selected option's text matches correct_answer
+        if (selectedOption && selectedOption.text === q.correct_answer) {
           score += q.points;
         }
       });
@@ -212,13 +217,25 @@ export default function TakeQuiz() {
             <div className="grid grid-cols-2 gap-4 text-center">
               <div className="p-4 rounded-lg bg-green-50 border border-green-200">
                 <div className="text-2xl font-bold text-green-600">
-                  {questions.filter(q => answers[q.id] === q.correct_answer).length}
+                  {questions.filter(q => {
+                    const optionsData = q.options as { options: { text: string; text_ar: string }[] } | null;
+                    const optionsList = optionsData?.options || [];
+                    const selectedIdx = parseInt(answers[q.id] || '-1');
+                    const selectedOption = optionsList[selectedIdx];
+                    return selectedOption && selectedOption.text === q.correct_answer;
+                  }).length}
                 </div>
                 <p className="text-sm text-green-700">{isRTL ? 'إجابات صحيحة' : 'Correct'}</p>
               </div>
               <div className="p-4 rounded-lg bg-red-50 border border-red-200">
                 <div className="text-2xl font-bold text-red-600">
-                  {questions.filter(q => answers[q.id] !== q.correct_answer).length}
+                  {questions.filter(q => {
+                    const optionsData = q.options as { options: { text: string; text_ar: string }[] } | null;
+                    const optionsList = optionsData?.options || [];
+                    const selectedIdx = parseInt(answers[q.id] || '-1');
+                    const selectedOption = optionsList[selectedIdx];
+                    return !selectedOption || selectedOption.text !== q.correct_answer;
+                  }).length}
                 </div>
                 <p className="text-sm text-red-700">{isRTL ? 'إجابات خاطئة' : 'Wrong'}</p>
               </div>
@@ -228,8 +245,13 @@ export default function TakeQuiz() {
             <div className="space-y-4 mt-6">
               <h3 className="font-semibold">{isRTL ? 'مراجعة الإجابات' : 'Review Answers'}</h3>
               {questions.map((q, idx) => {
-                const isCorrect = answers[q.id] === q.correct_answer;
-                const options = q.options as { en: string[]; ar: string[] } | null;
+                const optionsData = q.options as { options: { text: string; text_ar: string }[] } | null;
+                const optionsList = optionsData?.options || [];
+                const userAnswerIdx = answers[q.id] ? parseInt(answers[q.id]) : -1;
+                const selectedOption = optionsList[userAnswerIdx];
+                const isCorrect = selectedOption && selectedOption.text === q.correct_answer;
+                const correctAnswerIdx = optionsList.findIndex(opt => opt.text === q.correct_answer);
+                
                 return (
                   <div key={q.id} className={`p-4 rounded-lg border ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
                     <div className="flex items-start gap-2">
@@ -239,13 +261,15 @@ export default function TakeQuiz() {
                         <p className="text-sm mt-1">
                           <span className="text-muted-foreground">{isRTL ? 'إجابتك: ' : 'Your answer: '}</span>
                           <span className={isCorrect ? 'text-green-700' : 'text-red-700'}>
-                            {answers[q.id] ? (language === 'ar' ? options?.ar[parseInt(answers[q.id])] : options?.en[parseInt(answers[q.id])]) : (isRTL ? 'لم تجب' : 'No answer')}
+                            {userAnswerIdx >= 0 && selectedOption 
+                              ? (language === 'ar' ? selectedOption.text_ar : selectedOption.text) 
+                              : (isRTL ? 'لم تجب' : 'No answer')}
                           </span>
                         </p>
-                        {!isCorrect && (
+                        {!isCorrect && correctAnswerIdx >= 0 && optionsList[correctAnswerIdx] && (
                           <p className="text-sm text-green-700 mt-1">
                             {isRTL ? 'الإجابة الصحيحة: ' : 'Correct answer: '}
-                            {language === 'ar' ? options?.ar[parseInt(q.correct_answer)] : options?.en[parseInt(q.correct_answer)]}
+                            {language === 'ar' ? optionsList[correctAnswerIdx].text_ar : optionsList[correctAnswerIdx].text}
                           </p>
                         )}
                       </div>
@@ -299,16 +323,16 @@ export default function TakeQuiz() {
                 className="space-y-3"
               >
                 {(() => {
-                  const options = currentQuestion.options as { en: string[]; ar: string[] } | null;
-                  const optionsList = language === 'ar' ? options?.ar : options?.en;
-                  return optionsList?.map((option, idx) => (
+                  const optionsData = currentQuestion.options as { options: { text: string; text_ar: string }[] } | null;
+                  const optionsList = optionsData?.options || [];
+                  return optionsList.map((option, idx) => (
                     <div
                       key={idx}
                       className={`flex items-center space-x-3 p-4 rounded-lg border cursor-pointer transition-colors ${answers[currentQuestion.id] === idx.toString() ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
                     >
                       <RadioGroupItem value={idx.toString()} id={`option-${idx}`} />
                       <Label htmlFor={`option-${idx}`} className="flex-1 cursor-pointer">
-                        {option}
+                        {language === 'ar' ? option.text_ar : option.text}
                       </Label>
                     </div>
                   ));

@@ -81,12 +81,18 @@ export function StudentDashboard() {
       const present = attendanceData?.filter(a => a.status === 'present' || a.status === 'late').length || 0;
       const absent = attendanceData?.filter(a => a.status === 'absent').length || 0;
 
+      // Build filter for quizzes and assignments based on whether student has a group
+      const groupId = groupStudent?.group_id;
+      const quizFilter = groupId 
+        ? `student_id.eq.${user?.id},group_id.eq.${groupId}`
+        : `student_id.eq.${user?.id}`;
+
       // Get pending quiz assignments
       const { data: quizAssignments } = await supabase
         .from('quiz_assignments')
         .select('*, quizzes(title, title_ar, duration_minutes)')
         .eq('is_active', true)
-        .or(`student_id.eq.${user?.id},group_id.eq.${groupStudent?.group_id}`)
+        .or(quizFilter)
         .limit(5);
 
       // Filter out completed quizzes
@@ -103,7 +109,7 @@ export function StudentDashboard() {
         .from('assignments')
         .select('*')
         .eq('is_active', true)
-        .or(`student_id.eq.${user?.id},group_id.eq.${groupStudent?.group_id}`)
+        .or(quizFilter)
         .gte('due_date', new Date().toISOString())
         .limit(5);
 
