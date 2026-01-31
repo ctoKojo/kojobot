@@ -1,0 +1,126 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Menu, Bell } from 'lucide-react';
+import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/AppSidebar';
+import { LanguageToggle } from '@/components/LanguageToggle';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+
+interface DashboardLayoutProps {
+  children: React.ReactNode;
+  title?: string;
+}
+
+export function DashboardLayout({ children, title }: DashboardLayoutProps) {
+  const { t, isRTL } = useLanguage();
+  const { user, role, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const getRoleLabel = () => {
+    switch (role) {
+      case 'admin': return t.roles.admin;
+      case 'instructor': return t.roles.instructor;
+      case 'student': return t.roles.student;
+      default: return 'User';
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  const userInitials = user?.user_metadata?.full_name
+    ? user.user_metadata.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    : user?.email?.slice(0, 2).toUpperCase() || 'U';
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full" dir={isRTL ? 'rtl' : 'ltr'}>
+        <AppSidebar />
+        
+        <SidebarInset className="flex-1">
+          {/* Header */}
+          <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-6">
+            <SidebarTrigger className="-ml-2">
+              <Menu className="h-5 w-5" />
+            </SidebarTrigger>
+            
+            {title && (
+              <h1 className="text-xl font-semibold">{title}</h1>
+            )}
+            
+            <div className="flex-1" />
+            
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                onClick={() => navigate('/notifications')}
+              >
+                <Bell className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
+                  3
+                </span>
+              </Button>
+              
+              <LanguageToggle />
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || ''} />
+                      <AvatarFallback className="kojo-gradient text-white">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align={isRTL ? 'start' : 'end'}>
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium">{user?.user_metadata?.full_name || user?.email}</p>
+                      <p className="text-xs text-muted-foreground">{user?.email}</p>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium kojo-gradient text-white w-fit mt-1">
+                        {getRoleLabel()}
+                      </span>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    {t.nav.profile}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/settings')}>
+                    {t.nav.settings}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                    {t.auth.logout}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </header>
+          
+          {/* Main Content */}
+          <main className="flex-1 p-6">
+            {children}
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
+  );
+}

@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       age_groups: {
         Row: {
           created_at: string
@@ -46,6 +82,254 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      assignment_submissions: {
+        Row: {
+          assignment_id: string
+          attachment_type: string | null
+          attachment_url: string | null
+          content: string | null
+          feedback: string | null
+          feedback_ar: string | null
+          graded_at: string | null
+          graded_by: string | null
+          id: string
+          score: number | null
+          status: string
+          student_id: string
+          submitted_at: string
+        }
+        Insert: {
+          assignment_id: string
+          attachment_type?: string | null
+          attachment_url?: string | null
+          content?: string | null
+          feedback?: string | null
+          feedback_ar?: string | null
+          graded_at?: string | null
+          graded_by?: string | null
+          id?: string
+          score?: number | null
+          status?: string
+          student_id: string
+          submitted_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          attachment_type?: string | null
+          attachment_url?: string | null
+          content?: string | null
+          feedback?: string | null
+          feedback_ar?: string | null
+          graded_at?: string | null
+          graded_by?: string | null
+          id?: string
+          score?: number | null
+          status?: string
+          student_id?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignments: {
+        Row: {
+          assigned_by: string
+          attachment_type: string | null
+          attachment_url: string | null
+          created_at: string
+          description: string | null
+          description_ar: string | null
+          due_date: string
+          group_id: string | null
+          id: string
+          is_active: boolean | null
+          max_score: number | null
+          student_id: string | null
+          title: string
+          title_ar: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by: string
+          attachment_type?: string | null
+          attachment_url?: string | null
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          due_date: string
+          group_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_score?: number | null
+          student_id?: string | null
+          title: string
+          title_ar: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string
+          attachment_type?: string | null
+          attachment_url?: string | null
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          due_date?: string
+          group_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_score?: number | null
+          student_id?: string | null
+          title?: string
+          title_ar?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance: {
+        Row: {
+          id: string
+          notes: string | null
+          recorded_at: string
+          recorded_by: string
+          session_id: string
+          status: string
+          student_id: string
+        }
+        Insert: {
+          id?: string
+          notes?: string | null
+          recorded_at?: string
+          recorded_by: string
+          session_id: string
+          status?: string
+          student_id: string
+        }
+        Update: {
+          id?: string
+          notes?: string | null
+          recorded_at?: string
+          recorded_by?: string
+          session_id?: string
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_students: {
+        Row: {
+          group_id: string
+          id: string
+          is_active: boolean | null
+          joined_at: string
+          student_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          is_active?: boolean | null
+          joined_at?: string
+          student_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          is_active?: boolean | null
+          joined_at?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_students_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          age_group_id: string | null
+          created_at: string
+          duration_minutes: number
+          id: string
+          instructor_id: string
+          is_active: boolean | null
+          level_id: string | null
+          name: string
+          name_ar: string
+          schedule_day: string
+          schedule_time: string
+          updated_at: string
+        }
+        Insert: {
+          age_group_id?: string | null
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          instructor_id: string
+          is_active?: boolean | null
+          level_id?: string | null
+          name: string
+          name_ar: string
+          schedule_day: string
+          schedule_time: string
+          updated_at?: string
+        }
+        Update: {
+          age_group_id?: string | null
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          instructor_id?: string
+          is_active?: boolean | null
+          level_id?: string | null
+          name?: string
+          name_ar?: string
+          schedule_day?: string
+          schedule_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "groups_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       levels: {
         Row: {
@@ -91,8 +375,51 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          action_url: string | null
+          category: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          message_ar: string
+          title: string
+          title_ar: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          message_ar: string
+          title: string
+          title_ar: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          message_ar?: string
+          title?: string
+          title_ar?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          age_group_id: string | null
           avatar_url: string | null
           created_at: string
           date_of_birth: string | null
@@ -100,11 +427,15 @@ export type Database = {
           full_name: string
           full_name_ar: string | null
           id: string
+          level_id: string | null
           phone: string | null
+          specialization: string | null
+          specialization_ar: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          age_group_id?: string | null
           avatar_url?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -112,11 +443,15 @@ export type Database = {
           full_name: string
           full_name_ar?: string | null
           id?: string
+          level_id?: string | null
           phone?: string | null
+          specialization?: string | null
+          specialization_ar?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          age_group_id?: string | null
           avatar_url?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -124,9 +459,330 @@ export type Database = {
           full_name?: string
           full_name_ar?: string | null
           id?: string
+          level_id?: string | null
           phone?: string | null
+          specialization?: string | null
+          specialization_ar?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_assignments: {
+        Row: {
+          assigned_by: string
+          created_at: string
+          due_date: string | null
+          group_id: string | null
+          id: string
+          is_active: boolean | null
+          quiz_id: string
+          student_id: string | null
+        }
+        Insert: {
+          assigned_by: string
+          created_at?: string
+          due_date?: string | null
+          group_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          quiz_id: string
+          student_id?: string | null
+        }
+        Update: {
+          assigned_by?: string
+          created_at?: string
+          due_date?: string | null
+          group_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          quiz_id?: string
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_assignments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_assignments_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_questions: {
+        Row: {
+          correct_answer: string
+          created_at: string
+          id: string
+          options: Json | null
+          order_index: number
+          points: number
+          question_text: string
+          question_text_ar: string
+          question_type: string
+          quiz_id: string
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string
+          id?: string
+          options?: Json | null
+          order_index?: number
+          points?: number
+          question_text: string
+          question_text_ar: string
+          question_type?: string
+          quiz_id: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string
+          id?: string
+          options?: Json | null
+          order_index?: number
+          points?: number
+          question_text?: string
+          question_text_ar?: string
+          question_type?: string
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_questions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_submissions: {
+        Row: {
+          answers: Json
+          graded_at: string | null
+          graded_by: string | null
+          id: string
+          max_score: number | null
+          percentage: number | null
+          quiz_assignment_id: string
+          score: number | null
+          started_at: string
+          status: string
+          student_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          answers: Json
+          graded_at?: string | null
+          graded_by?: string | null
+          id?: string
+          max_score?: number | null
+          percentage?: number | null
+          quiz_assignment_id: string
+          score?: number | null
+          started_at?: string
+          status?: string
+          student_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          answers?: Json
+          graded_at?: string | null
+          graded_by?: string | null
+          id?: string
+          max_score?: number | null
+          percentage?: number | null
+          quiz_assignment_id?: string
+          score?: number | null
+          started_at?: string
+          status?: string
+          student_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_submissions_quiz_assignment_id_fkey"
+            columns: ["quiz_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quizzes: {
+        Row: {
+          age_group_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          description_ar: string | null
+          duration_minutes: number
+          id: string
+          is_active: boolean | null
+          level_id: string | null
+          passing_score: number
+          title: string
+          title_ar: string
+          updated_at: string
+        }
+        Insert: {
+          age_group_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          description_ar?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean | null
+          level_id?: string | null
+          passing_score?: number
+          title: string
+          title_ar: string
+          updated_at?: string
+        }
+        Update: {
+          age_group_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          description_ar?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean | null
+          level_id?: string | null
+          passing_score?: number
+          title?: string
+          title_ar?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quizzes_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          created_at: string
+          duration_minutes: number
+          group_id: string
+          id: string
+          notes: string | null
+          session_date: string
+          session_time: string
+          status: string
+          topic: string | null
+          topic_ar: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number
+          group_id: string
+          id?: string
+          notes?: string | null
+          session_date: string
+          session_time: string
+          status?: string
+          topic?: string | null
+          topic_ar?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number
+          group_id?: string
+          id?: string
+          notes?: string | null
+          session_date?: string
+          session_time?: string
+          status?: string
+          topic?: string | null
+          topic_ar?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          notes: string | null
+          paid_amount: number
+          remaining_amount: number | null
+          start_date: string
+          status: string
+          student_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          paid_amount?: number
+          remaining_amount?: number | null
+          start_date: string
+          status?: string
+          student_id: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          paid_amount?: number
+          remaining_amount?: number | null
+          start_date?: string
+          status?: string
+          student_id?: string
+          total_amount?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -148,6 +804,39 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      warnings: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          issued_by: string
+          reason: string
+          reason_ar: string | null
+          student_id: string
+          warning_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          issued_by: string
+          reason: string
+          reason_ar?: string | null
+          student_id: string
+          warning_type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          issued_by?: string
+          reason?: string
+          reason_ar?: string | null
+          student_id?: string
+          warning_type?: string
         }
         Relationships: []
       }
