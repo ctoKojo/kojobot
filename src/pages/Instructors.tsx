@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserPlus, Eye } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserPlus, Eye, CalendarDays } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -372,6 +372,10 @@ export default function InstructorsPage() {
                           <Eye className="h-4 w-4 mr-2" />
                           {isRTL ? 'عرض الملف' : 'View Profile'}
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/instructor-schedule/${instructor.user_id}`); }}>
+                          <CalendarDays className="h-4 w-4 mr-2" />
+                          {isRTL ? 'جدول العمل' : 'View Schedule'}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(instructor); }}>
                           <Pencil className="h-4 w-4 mr-2" />
                           {t.common.edit}
@@ -458,6 +462,10 @@ export default function InstructorsPage() {
                             <DropdownMenuItem onClick={() => navigate(`/instructor/${instructor.user_id}`)}>
                               <Eye className="h-4 w-4 mr-2" />
                               {isRTL ? 'عرض الملف' : 'View Profile'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/instructor-schedule/${instructor.user_id}`)}>
+                              <CalendarDays className="h-4 w-4 mr-2" />
+                              {isRTL ? 'جدول العمل' : 'View Schedule'}
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEdit(instructor)}>
                               <Pencil className="h-4 w-4 mr-2" />

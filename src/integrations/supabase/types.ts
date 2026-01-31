@@ -382,6 +382,45 @@ export type Database = {
           },
         ]
       }
+      instructor_schedules: {
+        Row: {
+          created_at: string
+          day_of_week: string
+          end_time: string | null
+          id: string
+          instructor_id: string
+          is_working_day: boolean
+          notes: string | null
+          notes_ar: string | null
+          start_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: string
+          end_time?: string | null
+          id?: string
+          instructor_id: string
+          is_working_day?: boolean
+          notes?: string | null
+          notes_ar?: string | null
+          start_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: string
+          end_time?: string | null
+          id?: string
+          instructor_id?: string
+          is_working_day?: boolean
+          notes?: string | null
+          notes_ar?: string | null
+          start_time?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       levels: {
         Row: {
           created_at: string
