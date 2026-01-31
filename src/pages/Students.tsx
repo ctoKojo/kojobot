@@ -453,8 +453,8 @@ export default function StudentsPage() {
                   <TableHead>{t.students.fullName}</TableHead>
                   <TableHead>{t.auth.email}</TableHead>
                   <TableHead>{t.students.ageGroup}</TableHead>
-                  <TableHead>{isRTL ? 'الاشتراك' : 'Subscription'}</TableHead>
                   <TableHead>{t.students.level}</TableHead>
+                  <TableHead>{isRTL ? 'الاشتراك' : 'Subscription'}</TableHead>
                   <TableHead className="w-[100px]">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -491,12 +491,12 @@ export default function StudentsPage() {
                       </TableCell>
                       <TableCell>{student.email}</TableCell>
                       <TableCell>{getAgeGroupName(student.age_group_id)}</TableCell>
+                      <TableCell>{getLevelName(student.level_id)}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">
                           {getSubscriptionTypeName(student.subscription_type)}
                         </Badge>
                       </TableCell>
-                      <TableCell>{getLevelName(student.level_id)}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

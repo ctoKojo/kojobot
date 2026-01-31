@@ -81,6 +81,7 @@ interface Student {
   full_name_ar: string | null;
   subscription_type: GroupType | null;
   age_group_id: string | null;
+  level_id: string | null;
 }
 
 interface GroupStudent {
@@ -108,6 +109,7 @@ export default function GroupsPage() {
   const [isStudentsDialogOpen, setIsStudentsDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [groupStudents, setGroupStudents] = useState<GroupStudent[]>([]);
+  const [allGroupStudentsData, setAllGroupStudentsData] = useState<GroupStudent[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
@@ -210,12 +212,12 @@ export default function GroupsPage() {
         setInstructors(profilesData || []);
       }
 
-      // Fetch student profiles with subscription_type and age_group_id
+      // Fetch student profiles with subscription_type, age_group_id and level_id
       const studentIds = studentRolesRes.data?.map((r) => r.user_id) || [];
       if (studentIds.length > 0) {
         const { data: studentProfilesData } = await supabase
           .from('profiles')
-          .select('user_id, full_name, full_name_ar, subscription_type, age_group_id')
+          .select('user_id, full_name, full_name_ar, subscription_type, age_group_id, level_id')
           .in('user_id', studentIds);
         setAllStudents((studentProfilesData || []) as Student[]);
       }
@@ -229,14 +231,16 @@ export default function GroupsPage() {
   const fetchGroupStudents = async (groupId: string) => {
     setStudentsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('group_students')
-        .select('*')
-        .eq('group_id', groupId);
+      // Fetch all group students to check for students in other groups
+      const [currentGroupRes, allGroupsRes] = await Promise.all([
+        supabase.from('group_students').select('*').eq('group_id', groupId),
+        supabase.from('group_students').select('*').eq('is_active', true)
+      ]);
       
-      if (error) throw error;
-      setGroupStudents(data || []);
-      setSelectedStudentIds((data || []).filter(gs => gs.is_active).map(gs => gs.student_id));
+      if (currentGroupRes.error) throw currentGroupRes.error;
+      setGroupStudents(currentGroupRes.data || []);
+      setAllGroupStudentsData(allGroupsRes.data || []);
+      setSelectedStudentIds((currentGroupRes.data || []).filter(gs => gs.is_active).map(gs => gs.student_id));
     } catch (error) {
       console.error('Error fetching group students:', error);
     } finally {
@@ -460,13 +464,33 @@ export default function GroupsPage() {
     return getGroupTypeInfo(type).maxStudents;
   };
 
-  const getEligibleStudents = (groupType: GroupType, groupAgeGroupId: string | null) => {
+  // Get all students that are already assigned to any group
+  const getStudentsInOtherGroups = (currentGroupId: string): string[] => {
+    // Get all active group_students for groups other than current
+    // We need to track this from the groupStudents we fetched for all groups
+    // For now, we'll check in real-time when opening the dialog
+    return [];
+  };
+
+  const getEligibleStudents = (groupId: string, groupType: GroupType, groupAgeGroupId: string | null, groupLevelId: string | null, allGroupStudentsData: GroupStudent[]) => {
+    // Get students already in other groups
+    const studentsInOtherGroups = allGroupStudentsData
+      .filter(gs => gs.group_id !== groupId && gs.is_active)
+      .map(gs => gs.student_id);
+
     return allStudents.filter(student => {
       // Must match subscription type
       if (student.subscription_type !== groupType) return false;
       
       // If group has age_group_id, student must match it
       if (groupAgeGroupId && student.age_group_id !== groupAgeGroupId) return false;
+      
+      // If group has level_id, student must match it
+      if (groupLevelId && student.level_id !== groupLevelId) return false;
+      
+      // Student must not be in another group (unless already in this group)
+      const isInCurrentGroup = allGroupStudentsData.some(gs => gs.group_id === groupId && gs.student_id === student.user_id && gs.is_active);
+      if (studentsInOtherGroups.includes(student.user_id) && !isInCurrentGroup) return false;
       
       return true;
     });
@@ -681,7 +705,9 @@ export default function GroupsPage() {
               {studentsLoading ? (
                 <div className="text-center py-8">{t.common.loading}</div>
               ) : (() => {
-                const eligibleStudents = selectedGroup ? getEligibleStudents(selectedGroup.group_type, selectedGroup.age_group_id) : [];
+                const eligibleStudents = selectedGroup 
+                  ? getEligibleStudents(selectedGroup.id, selectedGroup.group_type, selectedGroup.age_group_id, selectedGroup.level_id, allGroupStudentsData) 
+                  : [];
                 const maxStudents = selectedGroup ? getMaxStudents(selectedGroup.group_type) : 0;
                 const isAtLimit = selectedStudentIds.length >= maxStudents;
 
@@ -692,6 +718,9 @@ export default function GroupsPage() {
                   const ageGroupName = selectedGroup?.age_group_id 
                     ? getAgeGroupName(selectedGroup.age_group_id)
                     : null;
+                  const levelName = selectedGroup?.level_id
+                    ? getLevelName(selectedGroup.level_id)
+                    : null;
                   
                   return (
                     <div className="text-center py-8 text-muted-foreground space-y-2">
@@ -700,8 +729,8 @@ export default function GroupsPage() {
                       </p>
                       <p className="text-sm">
                         {isRTL 
-                          ? `يجب أن يكون الطالب مشتركاً في باقة "${groupTypeName}"${ageGroupName ? ` وفي الفئة العمرية "${ageGroupName}"` : ''}`
-                          : `Student must be subscribed to "${groupTypeName}"${ageGroupName ? ` and in age group "${ageGroupName}"` : ''}`}
+                          ? `يجب أن يكون الطالب مشتركاً في باقة "${groupTypeName}"${ageGroupName ? ` وفي الفئة العمرية "${ageGroupName}"` : ''}${levelName ? ` وفي المستوى "${levelName}"` : ''} وغير مضاف في مجموعة أخرى`
+                          : `Student must be subscribed to "${groupTypeName}"${ageGroupName ? ` and in age group "${ageGroupName}"` : ''}${levelName ? ` and in level "${levelName}"` : ''} and not in another group`}
                       </p>
                     </div>
                   );
@@ -783,6 +812,7 @@ export default function GroupsPage() {
                   <TableHead>{t.groups.groupName}</TableHead>
                   <TableHead>{isRTL ? 'النوع' : 'Type'}</TableHead>
                   <TableHead>{t.students.ageGroup}</TableHead>
+                  <TableHead>{t.students.level}</TableHead>
                   <TableHead>{isRTL ? 'الطلاب' : 'Students'}</TableHead>
                   <TableHead>{t.groups.instructor}</TableHead>
                   <TableHead>{t.groups.schedule}</TableHead>
@@ -792,13 +822,13 @@ export default function GroupsPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredGroups.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       {isRTL ? 'لا توجد مجموعات' : 'No groups found'}
                     </TableCell>
                   </TableRow>
@@ -820,6 +850,9 @@ export default function GroupsPage() {
                         </TableCell>
                         <TableCell>
                           {getAgeGroupName(group.age_group_id)}
+                        </TableCell>
+                        <TableCell>
+                          {getLevelName(group.level_id)}
                         </TableCell>
                         <TableCell>
                           <Badge variant={isAtLimit ? 'destructive' : 'outline'}>
