@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +35,8 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -70,6 +72,19 @@ interface Instructor {
   full_name_ar: string | null;
 }
 
+interface Student {
+  user_id: string;
+  full_name: string;
+  full_name_ar: string | null;
+}
+
+interface GroupStudent {
+  id: string;
+  student_id: string;
+  group_id: string;
+  is_active: boolean;
+}
+
 export default function GroupsPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
@@ -77,9 +92,15 @@ export default function GroupsPage() {
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isStudentsDialogOpen, setIsStudentsDialogOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [groupStudents, setGroupStudents] = useState<GroupStudent[]>([]);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -108,11 +129,12 @@ export default function GroupsPage() {
 
   const fetchData = async () => {
     try {
-      const [groupsRes, ageGroupsRes, levelsRes, instructorRolesRes] = await Promise.all([
+      const [groupsRes, ageGroupsRes, levelsRes, instructorRolesRes, studentRolesRes] = await Promise.all([
         supabase.from('groups').select('*').order('name'),
         supabase.from('age_groups').select('id, name, name_ar').eq('is_active', true),
         supabase.from('levels').select('id, name, name_ar').eq('is_active', true),
         supabase.from('user_roles').select('user_id').eq('role', 'instructor'),
+        supabase.from('user_roles').select('user_id').eq('role', 'student'),
       ]);
 
       setGroups(groupsRes.data || []);
@@ -128,11 +150,117 @@ export default function GroupsPage() {
           .in('user_id', instructorIds);
         setInstructors(profilesData || []);
       }
+
+      // Fetch student profiles
+      const studentIds = studentRolesRes.data?.map((r) => r.user_id) || [];
+      if (studentIds.length > 0) {
+        const { data: studentProfilesData } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, full_name_ar')
+          .in('user_id', studentIds);
+        setAllStudents(studentProfilesData || []);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchGroupStudents = async (groupId: string) => {
+    setStudentsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('group_students')
+        .select('*')
+        .eq('group_id', groupId);
+      
+      if (error) throw error;
+      setGroupStudents(data || []);
+      setSelectedStudentIds((data || []).filter(gs => gs.is_active).map(gs => gs.student_id));
+    } catch (error) {
+      console.error('Error fetching group students:', error);
+    } finally {
+      setStudentsLoading(false);
+    }
+  };
+
+  const handleManageStudents = (group: Group) => {
+    setSelectedGroup(group);
+    fetchGroupStudents(group.id);
+    setIsStudentsDialogOpen(true);
+  };
+
+  const handleStudentToggle = (studentId: string) => {
+    setSelectedStudentIds(prev => 
+      prev.includes(studentId) 
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleSaveStudents = async () => {
+    if (!selectedGroup) return;
+    
+    try {
+      // Get current active students in the group
+      const currentActiveIds = groupStudents.filter(gs => gs.is_active).map(gs => gs.student_id);
+      
+      // Students to add (in selectedStudentIds but not in currentActiveIds)
+      const toAdd = selectedStudentIds.filter(id => !currentActiveIds.includes(id));
+      
+      // Students to remove (in currentActiveIds but not in selectedStudentIds)
+      const toRemove = currentActiveIds.filter(id => !selectedStudentIds.includes(id));
+
+      // Add new students
+      for (const studentId of toAdd) {
+        const existing = groupStudents.find(gs => gs.student_id === studentId);
+        if (existing) {
+          // Reactivate existing record
+          await supabase
+            .from('group_students')
+            .update({ is_active: true })
+            .eq('id', existing.id);
+        } else {
+          // Create new record
+          await supabase
+            .from('group_students')
+            .insert({ group_id: selectedGroup.id, student_id: studentId });
+        }
+      }
+
+      // Deactivate removed students
+      for (const studentId of toRemove) {
+        const existing = groupStudents.find(gs => gs.student_id === studentId);
+        if (existing) {
+          await supabase
+            .from('group_students')
+            .update({ is_active: false })
+            .eq('id', existing.id);
+        }
+      }
+
+      toast({
+        title: t.common.success,
+        description: isRTL ? 'تم تحديث طلاب المجموعة' : 'Group students updated successfully',
+      });
+      
+      setIsStudentsDialogOpen(false);
+      setSelectedGroup(null);
+    } catch (error) {
+      console.error('Error saving group students:', error);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: isRTL ? 'فشل في حفظ طلاب المجموعة' : 'Failed to save group students',
+      });
+    }
+  };
+
+  const getStudentName = (studentId: string) => {
+    const student = allStudents.find(s => s.user_id === studentId);
+    if (!student) return '-';
+    return language === 'ar' && student.full_name_ar ? student.full_name_ar : student.full_name;
   };
 
   const handleSubmit = async () => {
@@ -422,6 +550,76 @@ export default function GroupsPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Students Management Dialog */}
+        <Dialog open={isStudentsDialogOpen} onOpenChange={setIsStudentsDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                {isRTL ? 'إدارة طلاب المجموعة' : 'Manage Group Students'}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedGroup && (
+                  <span className="font-medium">
+                    {language === 'ar' ? selectedGroup.name_ar : selectedGroup.name}
+                  </span>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              {studentsLoading ? (
+                <div className="text-center py-8">{t.common.loading}</div>
+              ) : allStudents.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {isRTL ? 'لا يوجد طلاب في النظام' : 'No students in the system'}
+                </div>
+              ) : (
+                <ScrollArea className="h-[300px] pr-4">
+                  <div className="space-y-2">
+                    {allStudents.map((student) => (
+                      <div
+                        key={student.user_id}
+                        className="flex items-center space-x-3 rtl:space-x-reverse p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
+                        onClick={() => handleStudentToggle(student.user_id)}
+                      >
+                        <Checkbox
+                          checked={selectedStudentIds.includes(student.user_id)}
+                          onCheckedChange={() => handleStudentToggle(student.user_id)}
+                        />
+                        <span className="flex-1">
+                          {language === 'ar' && student.full_name_ar 
+                            ? student.full_name_ar 
+                            : student.full_name}
+                        </span>
+                        {selectedStudentIds.includes(student.user_id) && (
+                          <Badge variant="secondary" className="text-xs">
+                            {isRTL ? 'مضاف' : 'Added'}
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  {isRTL 
+                    ? `${selectedStudentIds.length} طالب محدد`
+                    : `${selectedStudentIds.length} student(s) selected`}
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsStudentsDialogOpen(false)}>
+                {t.common.cancel}
+              </Button>
+              <Button className="kojo-gradient" onClick={handleSaveStudents}>
+                {t.common.save}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Table */}
         <Card>
           <CardContent className="p-0">
@@ -432,7 +630,7 @@ export default function GroupsPage() {
                   <TableHead>{t.groups.instructor}</TableHead>
                   <TableHead>{t.groups.schedule}</TableHead>
                   <TableHead>{t.students.level}</TableHead>
-                  <TableHead className="w-[100px]">{t.common.actions}</TableHead>
+                  <TableHead className="w-[120px]">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -462,26 +660,40 @@ export default function GroupsPage() {
                       </TableCell>
                       <TableCell>{getLevelName(group.level_id)}</TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                            <DropdownMenuItem onClick={() => handleEdit(group)}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              {t.common.edit}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDelete(group.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {t.common.delete}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleManageStudents(group)}
+                            title={isRTL ? 'إدارة الطلاب' : 'Manage Students'}
+                          >
+                            <Users className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                              <DropdownMenuItem onClick={() => handleEdit(group)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                {t.common.edit}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleManageStudents(group)}>
+                                <Users className="h-4 w-4 mr-2" />
+                                {isRTL ? 'إدارة الطلاب' : 'Manage Students'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDelete(group.id)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {t.common.delete}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
