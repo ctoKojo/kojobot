@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, UserPlus } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -70,6 +71,7 @@ export default function StudentsPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
@@ -459,6 +461,10 @@ export default function StudentsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                            <DropdownMenuItem onClick={() => navigate(`/student/${student.user_id}`)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              {isRTL ? 'عرض الملف' : 'View Profile'}
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEdit(student)}>
                               <Pencil className="h-4 w-4 mr-2" />
                               {t.common.edit}

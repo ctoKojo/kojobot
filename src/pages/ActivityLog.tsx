@@ -4,6 +4,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { exportActivityLogs } from '@/lib/exportUtils';
 import {
   Table,
   TableBody,
@@ -273,6 +274,10 @@ export default function ActivityLogPage() {
           <Button variant="outline" onClick={fetchLogs}>
             <RefreshCw className="h-4 w-4 mr-2" />
             {isRTL ? 'تحديث' : 'Refresh'}
+          </Button>
+          <Button variant="outline" onClick={() => exportActivityLogs(filteredLogs, users, language)}>
+            <Download className="h-4 w-4 mr-2" />
+            {isRTL ? 'تصدير' : 'Export'}
           </Button>
         </div>
 
