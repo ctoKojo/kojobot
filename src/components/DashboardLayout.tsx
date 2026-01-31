@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import kojobotLogoWhite from '@/assets/kojobot-logo-white.png';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,13 +57,20 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         
         <SidebarInset className="flex-1">
           {/* Header */}
-          <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-6">
+          <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b bg-background px-4 md:px-6">
             <SidebarTrigger className="-ml-2">
               <Menu className="h-5 w-5" />
             </SidebarTrigger>
             
+            {/* Mobile Logo - shows only on small screens */}
+            <div className="md:hidden flex items-center">
+              <div className="h-8 w-8 rounded-lg kojo-gradient flex items-center justify-center p-1">
+                <img src={kojobotLogoWhite} alt="Kojobot" className="h-full object-contain" />
+              </div>
+            </div>
+            
             {title && (
-              <h1 className="text-xl font-semibold">{title}</h1>
+              <h1 className="text-lg md:text-xl font-semibold hidden md:block">{title}</h1>
             )}
             
             <div className="flex-1" />
