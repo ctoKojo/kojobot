@@ -168,7 +168,11 @@ export function InstructorDashboard() {
           ) : (
             <div className="space-y-3">
               {stats.upcomingSessions.map((session: any) => (
-                <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                <div 
+                  key={session.id} 
+                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/attendance?session=${session.id}&group=${session.group_id}`)}
+                >
                   <div>
                     <p className="font-medium">
                       {language === 'ar' ? session.groups?.name_ar : session.groups?.name}

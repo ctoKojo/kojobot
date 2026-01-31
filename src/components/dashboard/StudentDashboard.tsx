@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle } from 'lucide-react';
+import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +16,8 @@ interface StudentStats {
   warnings: number;
   pendingQuizzes: any[];
   pendingAssignments: any[];
+  upcomingSessions: any[];
+  profile: any;
 }
 
 export function StudentDashboard() {
@@ -28,6 +31,8 @@ export function StudentDashboard() {
     warnings: 0,
     pendingQuizzes: [],
     pendingAssignments: [],
+    upcomingSessions: [],
+    profile: null,
   });
   const [loading, setLoading] = useState(true);
 
@@ -37,10 +42,17 @@ export function StudentDashboard() {
 
   const fetchStats = async () => {
     try {
+      // Get profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*, age_groups(name, name_ar), levels(name, name_ar)')
+        .eq('user_id', user?.id)
+        .single();
+
       // Get student's group
       const { data: groupStudent } = await supabase
         .from('group_students')
-        .select('group_id, groups(id, name, name_ar, schedule_day, schedule_time)')
+        .select('group_id, groups(id, name, name_ar, schedule_day, schedule_time, instructor_id)')
         .eq('student_id', user?.id)
         .eq('is_active', true)
         .single();
@@ -104,6 +116,21 @@ export function StudentDashboard() {
       const submittedIds = submittedAssignments?.map(s => s.assignment_id) || [];
       const pendingAssignments = assignments?.filter(a => !submittedIds.includes(a.id)) || [];
 
+      // Get upcoming sessions
+      const today = new Date().toISOString().split('T')[0];
+      let upcomingSessions: any[] = [];
+      if (groupStudent?.group_id) {
+        const { data } = await supabase
+          .from('sessions')
+          .select('*, groups(name, name_ar)')
+          .eq('group_id', groupStudent.group_id)
+          .gte('session_date', today)
+          .eq('status', 'scheduled')
+          .order('session_date')
+          .limit(3);
+        upcomingSessions = data || [];
+      }
+
       setStats({
         groupInfo: groupStudent?.groups,
         subscription,
@@ -111,6 +138,8 @@ export function StudentDashboard() {
         warnings: warningsCount || 0,
         pendingQuizzes,
         pendingAssignments,
+        upcomingSessions,
+        profile,
       });
     } catch (error) {
       console.error('Error fetching student stats:', error);
@@ -131,8 +160,35 @@ export function StudentDashboard() {
     });
   };
 
+  const daysUntil = (date: string) => {
+    const diff = new Date(date).getTime() - new Date().getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
+
   return (
     <div className="space-y-6">
+      {/* Welcome Banner */}
+      {stats.profile && (
+        <Card className="kojo-gradient text-white">
+          <CardContent className="py-6">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
+                <GraduationCap className="w-8 h-8" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">
+                  {isRTL ? 'مرحباً' : 'Welcome'}, {language === 'ar' ? stats.profile.full_name_ar : stats.profile.full_name}!
+                </h2>
+                <p className="opacity-90">
+                  {stats.profile.levels && (language === 'ar' ? stats.profile.levels.name_ar : stats.profile.levels.name)}
+                  {stats.profile.age_groups && ` • ${language === 'ar' ? stats.profile.age_groups.name_ar : stats.profile.age_groups.name}`}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Profile Summary */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {/* Group Info */}
@@ -209,6 +265,11 @@ export function StudentDashboard() {
                   {isRTL ? 'ينتهي: ' : 'Expires: '}
                   {formatDate(stats.subscription.end_date)}
                 </p>
+                {daysUntil(stats.subscription.end_date) <= 7 && (
+                  <Badge variant="destructive" className="mt-2">
+                    {isRTL ? `متبقي ${daysUntil(stats.subscription.end_date)} يوم` : `${daysUntil(stats.subscription.end_date)} days left`}
+                  </Badge>
+                )}
               </>
             ) : (
               <Badge variant="destructive">{isRTL ? 'غير مشترك' : 'No subscription'}</Badge>
@@ -216,6 +277,43 @@ export function StudentDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Upcoming Sessions */}
+      {stats.upcomingSessions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" />
+              {isRTL ? 'السيشنات القادمة' : 'Upcoming Sessions'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {stats.upcomingSessions.map((session: any) => (
+                <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">
+                        {language === 'ar' ? session.groups?.name_ar : session.groups?.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {session.topic_ar && language === 'ar' ? session.topic_ar : session.topic || (isRTL ? 'بدون موضوع' : 'No topic')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant="outline">{session.session_date}</Badge>
+                    <p className="text-sm text-muted-foreground mt-1">{session.session_time}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pending Tasks */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -244,9 +342,10 @@ export function StudentDashboard() {
                         {quiz.quizzes?.duration_minutes} {isRTL ? 'دقيقة' : 'min'}
                       </p>
                     </div>
-                    {quiz.due_date && (
-                      <Badge variant="outline">{formatDate(quiz.due_date)}</Badge>
-                    )}
+                    <Button size="sm" className="kojo-gradient" onClick={() => navigate(`/quiz/${quiz.id}`)}>
+                      <Play className="w-4 h-4 mr-1" />
+                      {isRTL ? 'ابدأ' : 'Start'}
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -275,10 +374,13 @@ export function StudentDashboard() {
                       <p className="font-medium">
                         {language === 'ar' ? assignment.title_ar : assignment.title}
                       </p>
+                      <p className="text-sm text-muted-foreground">
+                        {isRTL ? 'الموعد: ' : 'Due: '}{formatDate(assignment.due_date)}
+                      </p>
                     </div>
-                    <Badge variant="outline" className="bg-orange-100 text-orange-800">
-                      {formatDate(assignment.due_date)}
-                    </Badge>
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/assignment/${assignment.id}`)}>
+                      {isRTL ? 'تسليم' : 'Submit'}
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -293,10 +395,10 @@ export function StudentDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ClipboardList className="h-5 w-5 text-primary" />
-              {isRTL ? 'تسليم الواجبات' : 'Submit Assignments'}
+              {isRTL ? 'الواجبات' : 'My Assignments'}
             </CardTitle>
             <CardDescription>
-              {isRTL ? 'عرض وتسليم الواجبات المطلوبة' : 'View and submit your assignments'}
+              {isRTL ? 'عرض جميع الواجبات المطلوبة' : 'View all your assignments'}
             </CardDescription>
           </CardHeader>
         </Card>
