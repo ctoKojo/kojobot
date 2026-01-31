@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { formatTime12Hour } from '@/lib/timeUtils';
 
 interface InstructorData {
   profile: any;
@@ -283,7 +284,7 @@ export default function InstructorProfile() {
                         </div>
                         <div className="text-right">
                           <Badge variant="outline">
-                            {group.schedule_day} - {group.schedule_time}
+                            {group.schedule_day} - {formatTime12Hour(group.schedule_time, isRTL)}
                           </Badge>
                         </div>
                       </div>
@@ -322,7 +323,7 @@ export default function InstructorProfile() {
                         </div>
                         <div className="text-right">
                           <p className="font-medium">{formatDate(session.session_date)}</p>
-                          <p className="text-sm text-muted-foreground">{session.session_time}</p>
+                          <p className="text-sm text-muted-foreground">{formatTime12Hour(session.session_time, isRTL)}</p>
                         </div>
                       </div>
                     ))}

@@ -13,6 +13,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { formatTime12Hour } from '@/lib/timeUtils';
 
 interface RescheduleDialogProps {
   groupId: string;
@@ -104,7 +105,7 @@ export function RescheduleDialog({
             </p>
             <div className="flex gap-4 font-medium">
               <span>{getDayName(scheduleDay)}</span>
-              <span>{scheduleTime}</span>
+              <span>{formatTime12Hour(scheduleTime, isRTL)}</span>
             </div>
           </div>
           

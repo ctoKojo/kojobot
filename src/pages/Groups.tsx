@@ -41,6 +41,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { formatTime12Hour } from '@/lib/timeUtils';
 
 type GroupType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
 
@@ -896,7 +897,7 @@ export default function GroupsPage() {
                         <TableCell>{getInstructorName(group.instructor_id)}</TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {getDayName(group.schedule_day)} - {group.schedule_time}
+                            {getDayName(group.schedule_day)} - {formatTime12Hour(group.schedule_time, isRTL)}
                           </Badge>
                         </TableCell>
                       <TableCell>

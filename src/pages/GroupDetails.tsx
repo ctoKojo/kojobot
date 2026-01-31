@@ -24,6 +24,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { RescheduleDialog } from '@/components/group/RescheduleDialog';
 import { EditSessionDialog } from '@/components/group/EditSessionDialog';
+import { formatTime12Hour } from '@/lib/timeUtils';
 
 interface AttendanceRecord {
   id: string;
@@ -328,7 +329,7 @@ export default function GroupDetails() {
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {data.group.schedule_time}
+                    {formatTime12Hour(data.group.schedule_time, isRTL)}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
@@ -602,7 +603,7 @@ export default function GroupDetails() {
                           <TableCell>
                             <div>
                               <p className="font-medium">{formatDate(session.session_date)}</p>
-                              <p className="text-xs text-muted-foreground">{session.session_time}</p>
+                              <p className="text-xs text-muted-foreground">{formatTime12Hour(session.session_time, isRTL)}</p>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -666,7 +667,7 @@ export default function GroupDetails() {
                                 : session.topic || `Session ${session.session_number}`}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              {formatDate(session.session_date)} - {session.session_time}
+                              {formatDate(session.session_date)} - {formatTime12Hour(session.session_time, isRTL)}
                             </p>
                           </div>
                         </div>
