@@ -322,8 +322,80 @@ export default function InstructorsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Table */}
-        <Card>
+        {/* Mobile Cards View */}
+        <div className="block md:hidden space-y-3">
+          {loading ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                {t.common.loading}
+              </CardContent>
+            </Card>
+          ) : filteredInstructors.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                {isRTL ? 'لا يوجد مدربين' : 'No instructors found'}
+              </CardContent>
+            </Card>
+          ) : (
+            filteredInstructors.map((instructor) => (
+              <Card 
+                key={instructor.id} 
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => navigate(`/instructor/${instructor.user_id}`)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <Avatar className="h-10 w-10 flex-shrink-0">
+                        <AvatarImage src={instructor.avatar_url || undefined} />
+                        <AvatarFallback className="text-xs">
+                          {instructor.full_name.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">
+                          {language === 'ar' && instructor.full_name_ar 
+                            ? instructor.full_name_ar 
+                            : instructor.full_name}
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate">{instructor.email}</p>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="flex-shrink-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/instructor/${instructor.user_id}`); }}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          {isRTL ? 'عرض الملف' : 'View Profile'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(instructor); }}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          {t.common.edit}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  {instructor.specialization && (
+                    <div className="mt-3">
+                      <Badge variant="secondary" className="text-xs">
+                        {language === 'ar' && instructor.specialization_ar 
+                          ? instructor.specialization_ar 
+                          : instructor.specialization}
+                      </Badge>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <Table>
               <TableHeader>

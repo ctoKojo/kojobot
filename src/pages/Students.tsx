@@ -444,8 +444,82 @@ export default function StudentsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Table */}
-        <Card>
+        {/* Mobile Cards View */}
+        <div className="block lg:hidden space-y-3">
+          {loading ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                {t.common.loading}
+              </CardContent>
+            </Card>
+          ) : filteredStudents.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                {isRTL ? 'لا يوجد طلاب' : 'No students found'}
+              </CardContent>
+            </Card>
+          ) : (
+            filteredStudents.map((student) => (
+              <Card 
+                key={student.id} 
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => navigate(`/student/${student.user_id}`)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <Avatar className="h-10 w-10 flex-shrink-0">
+                        <AvatarImage src={student.avatar_url || undefined} />
+                        <AvatarFallback className="text-xs">
+                          {student.full_name.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">
+                          {language === 'ar' && student.full_name_ar 
+                            ? student.full_name_ar 
+                            : student.full_name}
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate">{student.email}</p>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="flex-shrink-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/student/${student.user_id}`); }}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          {isRTL ? 'عرض الملف' : 'View Profile'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(student); }}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          {t.common.edit}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <Badge variant="outline" className="text-xs">
+                      {getAgeGroupName(student.age_group_id)}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {getLevelName(student.level_id)}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {getSubscriptionTypeName(student.subscription_type)}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <Card className="hidden lg:block">
           <CardContent className="p-0">
             <Table>
               <TableHeader>

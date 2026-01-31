@@ -458,8 +458,88 @@ export default function QuizzesPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Table */}
-        <Card>
+        {/* Mobile Cards View */}
+        <div className="block md:hidden space-y-3">
+          {loading ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                {t.common.loading}
+              </CardContent>
+            </Card>
+          ) : filteredQuizzes.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <FileQuestion className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  {isRTL ? 'لا توجد كويزات' : 'No quizzes found'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredQuizzes.map((quiz) => (
+              <Card key={quiz.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">
+                        {language === 'ar' ? quiz.title_ar : quiz.title}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {getLevelName(quiz.level_id)}
+                      </p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="flex-shrink-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                        <DropdownMenuItem onClick={() => {
+                          setAssigningQuiz(quiz);
+                          setIsAssignDialogOpen(true);
+                        }}>
+                          <Users className="h-4 w-4 mr-2" />
+                          {t.quizzes.assignQuiz}
+                        </DropdownMenuItem>
+                        {role === 'admin' && (
+                          <>
+                            <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
+                              <ListChecks className="h-4 w-4 mr-2" />
+                              {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEdit(quiz)}>
+                              <Pencil className="h-4 w-4 mr-2" />
+                              {t.common.edit}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(quiz.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {t.common.delete}
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <Badge variant="outline" className="text-xs">
+                      {quiz.duration_minutes} {isRTL ? 'دقيقة' : 'min'}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {quiz.passing_score}% {isRTL ? 'للنجاح' : 'to pass'}
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <Table>
               <TableHeader>
