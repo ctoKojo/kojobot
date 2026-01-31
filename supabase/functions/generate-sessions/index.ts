@@ -12,6 +12,7 @@ interface Group {
   schedule_time: string
   duration_minutes: number
   is_active: boolean
+  level_id: string | null
 }
 
 // Map day names to day numbers (0 = Sunday)
@@ -24,6 +25,8 @@ const dayMap: Record<string, number> = {
   'Friday': 5,
   'Saturday': 6,
 }
+
+const SESSIONS_PER_LEVEL = 12
 
 function getNextDateForDay(dayName: string, weeksAhead: number = 0): string {
   const targetDay = dayMap[dayName]
@@ -68,7 +71,7 @@ Deno.serve(async (req) => {
     // Get all active groups
     const { data: groups, error: groupsError } = await supabase
       .from('groups')
-      .select('id, name, schedule_day, schedule_time, duration_minutes, is_active')
+      .select('id, name, schedule_day, schedule_time, duration_minutes, is_active, level_id')
       .eq('is_active', true)
 
     if (groupsError) {
@@ -91,6 +94,7 @@ Deno.serve(async (req) => {
 
     let createdCount = 0
     let skippedCount = 0
+    let levelCompleteCount = 0
     const errors: string[] = []
 
     // Generate sessions for next 4 weeks
@@ -99,7 +103,37 @@ Deno.serve(async (req) => {
     for (const group of groups as Group[]) {
       console.log(`Processing group: ${group.name} (${group.schedule_day} at ${group.schedule_time})`)
       
-      for (let week = 0; week < weeksToGenerate; week++) {
+      // Get the highest session number for this group
+      const { data: lastSession, error: lastSessionError } = await supabase
+        .from('sessions')
+        .select('session_number')
+        .eq('group_id', group.id)
+        .not('session_number', 'is', null)
+        .order('session_number', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (lastSessionError) {
+        console.error(`Error fetching last session for ${group.name}:`, lastSessionError)
+      }
+
+      const currentMaxSessionNumber = lastSession?.session_number || 0
+      console.log(`Group ${group.name} current max session number: ${currentMaxSessionNumber}`)
+
+      // Check if level is complete (reached 12 sessions)
+      if (currentMaxSessionNumber >= SESSIONS_PER_LEVEL) {
+        console.log(`Level complete for ${group.name} (${currentMaxSessionNumber}/${SESSIONS_PER_LEVEL} sessions)`)
+        levelCompleteCount++
+        continue
+      }
+
+      // Calculate how many more sessions we can create
+      const remainingSessions = SESSIONS_PER_LEVEL - currentMaxSessionNumber
+      const sessionsToCreate = Math.min(weeksToGenerate, remainingSessions)
+
+      let nextSessionNumber = currentMaxSessionNumber
+
+      for (let week = 0; week < sessionsToCreate; week++) {
         const sessionDate = getNextDateForDay(group.schedule_day, week)
         
         if (!sessionDate) {
@@ -114,7 +148,7 @@ Deno.serve(async (req) => {
           .select('id')
           .eq('group_id', group.id)
           .eq('session_date', sessionDate)
-          .single()
+          .maybeSingle()
 
         if (existingSession) {
           console.log(`Session already exists for ${group.name} on ${sessionDate}`)
@@ -122,7 +156,16 @@ Deno.serve(async (req) => {
           continue
         }
 
-        // Create new session
+        // Increment session number for new session
+        nextSessionNumber++
+
+        // Double check we don't exceed the limit
+        if (nextSessionNumber > SESSIONS_PER_LEVEL) {
+          console.log(`Level limit reached for ${group.name}, stopping session generation`)
+          break
+        }
+
+        // Create new session with session_number
         const { error: insertError } = await supabase
           .from('sessions')
           .insert({
@@ -131,13 +174,14 @@ Deno.serve(async (req) => {
             session_time: group.schedule_time,
             duration_minutes: group.duration_minutes,
             status: 'scheduled',
+            session_number: nextSessionNumber,
           })
 
         if (insertError) {
           console.error(`Error creating session for ${group.name}:`, insertError)
           errors.push(`Failed to create session for ${group.name} on ${sessionDate}`)
         } else {
-          console.log(`Created session for ${group.name} on ${sessionDate}`)
+          console.log(`Created session #${nextSessionNumber} for ${group.name} on ${sessionDate}`)
           createdCount++
         }
       }
@@ -148,6 +192,8 @@ Deno.serve(async (req) => {
       message: `Generated sessions for ${groups.length} groups`,
       created: createdCount,
       skipped: skippedCount,
+      levelComplete: levelCompleteCount,
+      sessionsPerLevel: SESSIONS_PER_LEVEL,
       errors: errors.length > 0 ? errors : undefined,
     }
 

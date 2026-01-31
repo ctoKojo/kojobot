@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye, TrendingUp } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -182,15 +182,19 @@ export default function GroupsPage() {
     setGroupStudentCounts(counts);
   };
 
+  // Group session progress state
+  const [groupSessionProgress, setGroupSessionProgress] = useState<{ [groupId: string]: { completed: number; total: number } }>({});
+
   const fetchData = async () => {
     try {
-      const [groupsRes, ageGroupsRes, levelsRes, instructorRolesRes, studentRolesRes, groupStudentsRes] = await Promise.all([
+      const [groupsRes, ageGroupsRes, levelsRes, instructorRolesRes, studentRolesRes, groupStudentsRes, sessionsRes] = await Promise.all([
         supabase.from('groups').select('*').order('name'),
         supabase.from('age_groups').select('id, name, name_ar').eq('is_active', true),
         supabase.from('levels').select('id, name, name_ar').eq('is_active', true),
         supabase.from('user_roles').select('user_id').eq('role', 'instructor'),
         supabase.from('user_roles').select('user_id').eq('role', 'student'),
         supabase.from('group_students').select('group_id').eq('is_active', true),
+        supabase.from('sessions').select('group_id, session_number, status'),
       ]);
 
       setGroups(groupsRes.data || []);
@@ -203,6 +207,18 @@ export default function GroupsPage() {
         counts[gs.group_id] = (counts[gs.group_id] || 0) + 1;
       });
       setGroupStudentCounts(counts);
+
+      // Calculate session progress per group
+      const sessionProgress: { [groupId: string]: { completed: number; total: number } } = {};
+      (sessionsRes.data || []).forEach((session: any) => {
+        if (!sessionProgress[session.group_id]) {
+          sessionProgress[session.group_id] = { completed: 0, total: 12 };
+        }
+        if (session.status === 'completed') {
+          sessionProgress[session.group_id].completed++;
+        }
+      });
+      setGroupSessionProgress(sessionProgress);
 
       // Fetch instructor profiles
       const instructorIds = instructorRolesRes.data?.map((r) => r.user_id) || [];
@@ -815,6 +831,7 @@ export default function GroupsPage() {
                   <TableHead>{isRTL ? 'النوع' : 'Type'}</TableHead>
                   <TableHead>{t.students.ageGroup}</TableHead>
                   <TableHead>{t.students.level}</TableHead>
+                  <TableHead>{isRTL ? 'التقدم' : 'Progress'}</TableHead>
                   <TableHead>{isRTL ? 'الطلاب' : 'Students'}</TableHead>
                   <TableHead>{t.groups.instructor}</TableHead>
                   <TableHead>{t.groups.schedule}</TableHead>
@@ -824,13 +841,13 @@ export default function GroupsPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
+                    <TableCell colSpan={9} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredGroups.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       {isRTL ? 'لا توجد مجموعات' : 'No groups found'}
                     </TableCell>
                   </TableRow>
@@ -839,6 +856,8 @@ export default function GroupsPage() {
                     const typeInfo = getGroupTypeInfo(group.group_type);
                     const currentCount = groupStudentCounts[group.id] || 0;
                     const isAtLimit = currentCount >= typeInfo.maxStudents;
+                    const progress = groupSessionProgress[group.id] || { completed: 0, total: 12 };
+                    const progressPercent = Math.round((progress.completed / progress.total) * 100);
                     
                     return (
                       <TableRow key={group.id}>
@@ -855,6 +874,19 @@ export default function GroupsPage() {
                         </TableCell>
                         <TableCell>
                           {getLevelName(group.level_id)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 min-w-[100px]">
+                            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-primary transition-all" 
+                                style={{ width: `${progressPercent}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {progress.completed}/{progress.total}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={isAtLimit ? 'destructive' : 'outline'}>

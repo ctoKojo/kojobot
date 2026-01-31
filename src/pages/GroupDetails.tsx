@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Users, Calendar, Clock, User, BookOpen, 
-  FileText, ArrowLeft, CheckCircle, XCircle, AlertCircle
+  FileText, ArrowLeft, CheckCircle, XCircle, AlertCircle,
+  TrendingUp, Target
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +12,47 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+
+interface AttendanceRecord {
+  id: string;
+  student_id: string;
+  session_id: string;
+  status: string;
+}
+
+interface StudentAttendanceStats {
+  user_id: string;
+  full_name: string;
+  full_name_ar: string | null;
+  avatar_url: string | null;
+  present: number;
+  absent: number;
+  late: number;
+  attendanceRate: number;
+}
+
+interface SessionWithAttendance {
+  id: string;
+  session_date: string;
+  session_time: string;
+  status: string;
+  topic: string | null;
+  topic_ar: string | null;
+  session_number: number | null;
+  presentCount: number;
+  absentCount: number;
+  lateCount: number;
+}
 
 interface GroupData {
   group: any;
@@ -21,7 +61,10 @@ interface GroupData {
   sessions: any[];
   assignments: any[];
   quizAssignments: any[];
+  attendance: AttendanceRecord[];
 }
+
+const SESSIONS_PER_LEVEL = 12;
 
 export default function GroupDetails() {
   const { groupId } = useParams();
@@ -67,13 +110,23 @@ export default function GroupDetails() {
         students = studentsData || [];
       }
 
-      // Fetch sessions
+      // Fetch ALL sessions (not limited) for level tracking
       const { data: sessions } = await supabase
         .from('sessions')
         .select('*')
         .eq('group_id', groupId)
-        .order('session_date', { ascending: false })
-        .limit(20);
+        .order('session_number', { ascending: true, nullsFirst: false });
+
+      // Fetch attendance for all sessions
+      const sessionIds = sessions?.map(s => s.id) || [];
+      let attendance: AttendanceRecord[] = [];
+      if (sessionIds.length > 0) {
+        const { data: attendanceData } = await supabase
+          .from('attendance')
+          .select('*')
+          .in('session_id', sessionIds);
+        attendance = attendanceData || [];
+      }
 
       // Fetch assignments for this group
       const { data: assignments } = await supabase
@@ -96,6 +149,7 @@ export default function GroupDetails() {
         sessions: sessions || [],
         assignments: assignments || [],
         quizAssignments: quizAssignments || [],
+        attendance,
       });
     } catch (error) {
       console.error('Error fetching group data:', error);
@@ -134,11 +188,72 @@ export default function GroupDetails() {
     return language === 'ar' ? types[type]?.ar || type : types[type]?.en || type;
   };
 
-  const getSessionStats = () => {
-    const total = data?.sessions.length || 0;
-    const completed = data?.sessions.filter(s => s.status === 'completed').length || 0;
-    const scheduled = data?.sessions.filter(s => s.status === 'scheduled').length || 0;
-    return { total, completed, scheduled };
+  // Level Progress calculations
+  const getLevelProgress = () => {
+    const sessions = data?.sessions || [];
+    const completed = sessions.filter(s => s.status === 'completed').length;
+    const total = SESSIONS_PER_LEVEL;
+    const currentMax = Math.max(...sessions.map(s => s.session_number || 0), 0);
+    const remaining = total - completed;
+    const percentage = Math.round((completed / total) * 100);
+    
+    return {
+      completed,
+      total,
+      currentMax,
+      remaining,
+      percentage,
+      isComplete: completed >= total,
+    };
+  };
+
+  // Calculate attendance stats for each student
+  const getStudentAttendanceStats = (): StudentAttendanceStats[] => {
+    if (!data) return [];
+    
+    const { students, sessions, attendance } = data;
+    const completedSessionIds = sessions
+      .filter(s => s.status === 'completed')
+      .map(s => s.id);
+    
+    return students.map(student => {
+      const studentAttendance = attendance.filter(a => 
+        a.student_id === student.user_id && 
+        completedSessionIds.includes(a.session_id)
+      );
+      
+      const present = studentAttendance.filter(a => a.status === 'present').length;
+      const absent = studentAttendance.filter(a => a.status === 'absent').length;
+      const late = studentAttendance.filter(a => a.status === 'late').length;
+      const totalRecorded = present + absent + late;
+      const attendanceRate = totalRecorded > 0 ? Math.round((present / totalRecorded) * 100) : 0;
+      
+      return {
+        user_id: student.user_id,
+        full_name: student.full_name,
+        full_name_ar: student.full_name_ar,
+        avatar_url: student.avatar_url,
+        present,
+        absent,
+        late,
+        attendanceRate,
+      };
+    });
+  };
+
+  // Get sessions with attendance counts
+  const getSessionsWithAttendance = (): SessionWithAttendance[] => {
+    if (!data) return [];
+    
+    return data.sessions.map(session => {
+      const sessionAttendance = data.attendance.filter(a => a.session_id === session.id);
+      return {
+        ...session,
+        presentCount: sessionAttendance.filter(a => a.status === 'present').length,
+        absentCount: sessionAttendance.filter(a => a.status === 'absent').length,
+        lateCount: sessionAttendance.filter(a => a.status === 'late').length,
+      };
+    }).sort((a, b) => (b.session_number || 0) - (a.session_number || 0));
   };
 
   if (loading) {
@@ -165,7 +280,9 @@ export default function GroupDetails() {
     );
   }
 
-  const sessionStats = getSessionStats();
+  const levelProgress = getLevelProgress();
+  const studentStats = getStudentAttendanceStats();
+  const sessionsWithAttendance = getSessionsWithAttendance();
 
   return (
     <DashboardLayout title={isRTL ? 'تفاصيل المجموعة' : 'Group Details'}>
@@ -240,6 +357,56 @@ export default function GroupDetails() {
           </CardContent>
         </Card>
 
+        {/* Level Progress Card */}
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Target className="h-5 w-5 text-primary" />
+              {isRTL ? 'تقدم المستوى' : 'Level Progress'}
+              {data.group.levels && (
+                <Badge variant="secondary" className="ml-2">
+                  {language === 'ar' ? data.group.levels.name_ar : data.group.levels.name}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  {isRTL ? 'الجلسات المكتملة' : 'Completed Sessions'}
+                </span>
+                <span className="font-bold text-lg">
+                  {levelProgress.completed}/{levelProgress.total}
+                </span>
+              </div>
+              <Progress value={levelProgress.percentage} className="h-3" />
+              <div className="grid grid-cols-3 gap-4 pt-2">
+                <div className="text-center p-3 rounded-lg bg-background border">
+                  <p className="text-2xl font-bold text-green-600">{levelProgress.completed}</p>
+                  <p className="text-xs text-muted-foreground">{isRTL ? 'مكتمل' : 'Completed'}</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-background border">
+                  <p className="text-2xl font-bold text-blue-600">{levelProgress.currentMax}</p>
+                  <p className="text-xs text-muted-foreground">{isRTL ? 'السيشن الحالي' : 'Current'}</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-background border">
+                  <p className="text-2xl font-bold text-orange-600">{levelProgress.remaining}</p>
+                  <p className="text-xs text-muted-foreground">{isRTL ? 'متبقي' : 'Remaining'}</p>
+                </div>
+              </div>
+              {levelProgress.isComplete && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-100 text-green-800">
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="font-medium">
+                    {isRTL ? 'تم إكمال المستوى!' : 'Level Complete!'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Quick Stats */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
@@ -263,7 +430,7 @@ export default function GroupDetails() {
                   <Calendar className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{sessionStats.total}</p>
+                  <p className="text-2xl font-bold">{data.sessions.length}</p>
                   <p className="text-sm text-muted-foreground">{isRTL ? 'الجلسات' : 'Sessions'}</p>
                 </div>
               </div>
@@ -301,20 +468,21 @@ export default function GroupDetails() {
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="students" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="students">{isRTL ? 'الطلاب' : 'Students'}</TabsTrigger>
+            <TabsTrigger value="attendance">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
             <TabsTrigger value="sessions">{isRTL ? 'الجلسات' : 'Sessions'}</TabsTrigger>
             <TabsTrigger value="quizzes">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
             <TabsTrigger value="assignments">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
           </TabsList>
 
-          {/* Students Tab */}
+          {/* Students Tab with Attendance Stats */}
           <TabsContent value="students">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  {isRTL ? 'طلاب المجموعة' : 'Group Students'}
+                  {isRTL ? 'طلاب المجموعة وإحصائيات الحضور' : 'Group Students & Attendance Stats'}
                 </CardTitle>
                 <CardDescription>
                   {data.students.length} {isRTL ? 'طالب' : 'student(s)'}
@@ -326,28 +494,129 @@ export default function GroupDetails() {
                     {isRTL ? 'لا يوجد طلاب' : 'No students in this group'}
                   </p>
                 ) : (
-                  <div className="space-y-2">
-                    {data.students.map((student: any) => (
-                      <div 
-                        key={student.id} 
-                        className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
-                        onClick={() => navigate(`/student/${student.user_id}`)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={student.avatar_url} />
-                            <AvatarFallback>{student.full_name?.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">
-                              {language === 'ar' ? student.full_name_ar || student.full_name : student.full_name}
-                            </p>
-                            <p className="text-sm text-muted-foreground">{student.email}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'حضر' : 'Present'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'غاب' : 'Absent'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'تأخر' : 'Late'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'معدل الحضور' : 'Rate'}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {studentStats.map((student) => (
+                        <TableRow 
+                          key={student.user_id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/student/${student.user_id}`)}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={student.avatar_url || undefined} />
+                                <AvatarFallback>{student.full_name?.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">
+                                {language === 'ar' ? student.full_name_ar || student.full_name : student.full_name}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-green-50 text-green-700">
+                              {student.present}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-red-50 text-red-700">
+                              {student.absent}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                              {student.late}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge 
+                              variant={student.attendanceRate >= 80 ? 'default' : student.attendanceRate >= 50 ? 'secondary' : 'destructive'}
+                            >
+                              {student.attendanceRate}%
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Attendance Summary Tab */}
+          <TabsContent value="attendance">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  {isRTL ? 'ملخص الحضور لكل جلسة' : 'Attendance per Session'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {sessionsWithAttendance.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    {isRTL ? 'لا توجد جلسات' : 'No sessions yet'}
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>#</TableHead>
+                        <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
+                        <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'حضر' : 'Present'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'غاب' : 'Absent'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'تأخر' : 'Late'}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sessionsWithAttendance.map((session) => (
+                        <TableRow key={session.id}>
+                          <TableCell>
+                            <Badge variant="outline">
+                              #{session.session_number || '-'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{formatDate(session.session_date)}</p>
+                              <p className="text-xs text-muted-foreground">{session.session_time}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={
+                              session.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              session.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              'bg-blue-100 text-blue-800'
+                            }>
+                              {session.status === 'completed' ? (isRTL ? 'مكتملة' : 'Completed') :
+                               session.status === 'cancelled' ? (isRTL ? 'ملغية' : 'Cancelled') :
+                               (isRTL ? 'مجدولة' : 'Scheduled')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="text-green-600 font-medium">{session.presentCount}</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="text-red-600 font-medium">{session.absentCount}</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="text-yellow-600 font-medium">{session.lateCount}</span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 )}
               </CardContent>
             </Card>
@@ -362,7 +631,7 @@ export default function GroupDetails() {
                   {isRTL ? 'الجلسات' : 'Sessions'}
                 </CardTitle>
                 <CardDescription>
-                  {sessionStats.completed} {isRTL ? 'مكتملة' : 'completed'}, {sessionStats.scheduled} {isRTL ? 'مجدولة' : 'scheduled'}
+                  {levelProgress.completed} {isRTL ? 'مكتملة' : 'completed'} / {levelProgress.total} {isRTL ? 'جلسة' : 'sessions'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -372,25 +641,38 @@ export default function GroupDetails() {
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {data.sessions.map((session: any) => (
+                    {sessionsWithAttendance.map((session) => (
                       <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border">
-                        <div>
-                          <p className="font-medium">
-                            {language === 'ar' ? session.topic_ar || session.topic : session.topic || (isRTL ? 'جلسة' : 'Session')}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatDate(session.session_date)} - {session.session_time}
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className="font-mono">
+                            #{session.session_number || '-'}
+                          </Badge>
+                          <div>
+                            <p className="font-medium">
+                              {language === 'ar' ? session.topic_ar || session.topic : session.topic || (isRTL ? 'جلسة' : 'Session')}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatDate(session.session_date)} - {session.session_time}
+                            </p>
+                          </div>
                         </div>
-                        <Badge className={
-                          session.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          session.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                          'bg-blue-100 text-blue-800'
-                        }>
-                          {session.status === 'completed' ? (isRTL ? 'مكتملة' : 'Completed') :
-                           session.status === 'cancelled' ? (isRTL ? 'ملغية' : 'Cancelled') :
-                           (isRTL ? 'مجدولة' : 'Scheduled')}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          {session.status === 'completed' && (
+                            <div className="flex gap-1 text-xs">
+                              <span className="text-green-600">{session.presentCount}✓</span>
+                              <span className="text-red-600">{session.absentCount}✗</span>
+                            </div>
+                          )}
+                          <Badge className={
+                            session.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            session.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            'bg-blue-100 text-blue-800'
+                          }>
+                            {session.status === 'completed' ? (isRTL ? 'مكتملة' : 'Completed') :
+                             session.status === 'cancelled' ? (isRTL ? 'ملغية' : 'Cancelled') :
+                             (isRTL ? 'مجدولة' : 'Scheduled')}
+                          </Badge>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -427,7 +709,7 @@ export default function GroupDetails() {
                           </p>
                         </div>
                         <Badge variant={qa.is_active ? 'default' : 'secondary'}>
-                          {qa.is_active ? (isRTL ? 'نشط' : 'Active') : (isRTL ? 'منتهي' : 'Closed')}
+                          {qa.is_active ? (isRTL ? 'نشط' : 'Active') : (isRTL ? 'غير نشط' : 'Inactive')}
                         </Badge>
                       </div>
                     ))}
@@ -454,11 +736,7 @@ export default function GroupDetails() {
                 ) : (
                   <div className="space-y-2">
                     {data.assignments.map((assignment: any) => (
-                      <div 
-                        key={assignment.id} 
-                        className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
-                        onClick={() => navigate(`/assignment-submissions/${assignment.id}`)}
-                      >
+                      <div key={assignment.id} className="flex items-center justify-between p-3 rounded-lg border">
                         <div>
                           <p className="font-medium">
                             {language === 'ar' ? assignment.title_ar : assignment.title}
@@ -468,7 +746,7 @@ export default function GroupDetails() {
                           </p>
                         </div>
                         <Badge variant={assignment.is_active ? 'default' : 'secondary'}>
-                          {assignment.is_active ? (isRTL ? 'نشط' : 'Active') : (isRTL ? 'منتهي' : 'Closed')}
+                          {assignment.is_active ? (isRTL ? 'نشط' : 'Active') : (isRTL ? 'غير نشط' : 'Inactive')}
                         </Badge>
                       </div>
                     ))}

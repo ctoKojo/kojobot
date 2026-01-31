@@ -239,6 +239,54 @@ export type Database = {
           },
         ]
       }
+      group_level_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_session: number | null
+          group_id: string
+          id: string
+          level_id: string
+          started_at: string | null
+          total_sessions: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_session?: number | null
+          group_id: string
+          id?: string
+          level_id: string
+          started_at?: string | null
+          total_sessions?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_session?: number | null
+          group_id?: string
+          id?: string
+          level_id?: string
+          started_at?: string | null
+          total_sessions?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_level_progress_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_level_progress_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_students: {
         Row: {
           group_id: string
@@ -714,6 +762,7 @@ export type Database = {
           id: string
           notes: string | null
           session_date: string
+          session_number: number | null
           session_time: string
           status: string
           topic: string | null
@@ -727,6 +776,7 @@ export type Database = {
           id?: string
           notes?: string | null
           session_date: string
+          session_number?: number | null
           session_time: string
           status?: string
           topic?: string | null
@@ -740,6 +790,7 @@ export type Database = {
           id?: string
           notes?: string | null
           session_date?: string
+          session_number?: number | null
           session_time?: string
           status?: string
           topic?: string | null
