@@ -507,34 +507,44 @@ export default function AssignmentsPage() {
                         {getGroupName(assignment.group_id)}
                       </p>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="flex-shrink-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/assignment-submissions/${assignment.id}`); }}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          {isRTL ? 'عرض التسليمات' : 'View Submissions'}
-                        </DropdownMenuItem>
-                        {canManage && (
-                          <>
-                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(assignment); }}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              {t.common.edit}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={(e) => { e.stopPropagation(); handleDelete(assignment.id); }}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {t.common.delete}
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {role === 'student' ? (
+                      <Button
+                        size="sm"
+                        className="kojo-gradient flex-shrink-0"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/assignment/${assignment.id}`); }}
+                      >
+                        {isRTL ? 'تسليم' : 'Submit'}
+                      </Button>
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="flex-shrink-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/assignment-submissions/${assignment.id}`); }}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            {isRTL ? 'عرض التسليمات' : 'View Submissions'}
+                          </DropdownMenuItem>
+                          {canManage && (
+                            <>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(assignment); }}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                {t.common.edit}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); handleDelete(assignment.id); }}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {t.common.delete}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                   <div className="flex items-center justify-between mt-3">
                     <p className="text-xs text-muted-foreground">{formatDate(assignment.due_date)}</p>
@@ -603,34 +613,44 @@ export default function AssignmentsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                            <DropdownMenuItem onClick={() => navigate(`/assignment-submissions/${assignment.id}`)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              {isRTL ? 'عرض التسليمات' : 'View Submissions'}
-                            </DropdownMenuItem>
-                            {canManage && (
-                              <>
-                                <DropdownMenuItem onClick={() => handleEdit(assignment)}>
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  {t.common.edit}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(assignment.id)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  {t.common.delete}
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {role === 'student' ? (
+                          <Button
+                            size="sm"
+                            className="kojo-gradient"
+                            onClick={() => navigate(`/assignment/${assignment.id}`)}
+                          >
+                            {isRTL ? 'تسليم' : 'Submit'}
+                          </Button>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                              <DropdownMenuItem onClick={() => navigate(`/assignment-submissions/${assignment.id}`)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                {isRTL ? 'عرض التسليمات' : 'View Submissions'}
+                              </DropdownMenuItem>
+                              {canManage && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleEdit(assignment)}>
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    {t.common.edit}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDelete(assignment.id)}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    {t.common.delete}
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
