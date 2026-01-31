@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users, ChevronDown, FolderOpen } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -53,12 +59,15 @@ interface Session {
   topic_ar: string | null;
   status: string;
   notes: string | null;
+  session_number: number | null;
 }
 
 interface Group {
   id: string;
   name: string;
   name_ar: string;
+  schedule_day: string;
+  schedule_time: string;
 }
 
 export default function SessionsPage() {
@@ -71,7 +80,6 @@ export default function SessionsPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
@@ -88,7 +96,7 @@ export default function SessionsPage() {
 
   const fetchData = async () => {
     try {
-      let groupsQuery = supabase.from('groups').select('id, name, name_ar').eq('is_active', true);
+      let groupsQuery = supabase.from('groups').select('id, name, name_ar, schedule_day, schedule_time').eq('is_active', true);
       
       if (role === 'instructor' && user) {
         groupsQuery = groupsQuery.eq('instructor_id', user.id);
@@ -97,7 +105,7 @@ export default function SessionsPage() {
       const { data: groupsData } = await groupsQuery;
       setGroups(groupsData || []);
 
-      let sessionsQuery = supabase.from('sessions').select('*').order('session_date', { ascending: true });
+      let sessionsQuery = supabase.from('sessions').select('*').order('session_number', { ascending: true });
 
       if (role === 'instructor' && user && groupsData) {
         const groupIds = groupsData.map(g => g.id);
@@ -226,16 +234,11 @@ export default function SessionsPage() {
     }
   };
 
-  const getGroupName = (id: string) => {
-    const group = groups.find((g) => g.id === id);
-    return group ? (language === 'ar' ? group.name_ar : group.name) : '-';
-  };
-
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      scheduled: 'bg-blue-100 text-blue-800',
-      completed: 'bg-green-100 text-green-800',
-      cancelled: 'bg-red-100 text-red-800',
+      scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
     };
 
     const labels: Record<string, { en: string; ar: string }> = {
@@ -256,28 +259,36 @@ export default function SessionsPage() {
     return dateStr === today;
   };
 
-  const isPast = (dateStr: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    return dateStr < today;
+  // Filter sessions based on search and status
+  const getFilteredSessionsForGroup = (groupId: string) => {
+    return sessions.filter((session) => {
+      if (session.group_id !== groupId) return false;
+      
+      const matchesSearch = 
+        session.topic?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        session.topic_ar?.includes(searchQuery) ||
+        session.session_date.includes(searchQuery);
+      const matchesStatus = statusFilter === 'all' || session.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
   };
 
-  const filteredSessions = sessions.filter((session) => {
-    const matchesSearch = 
-      session.topic?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      session.topic_ar?.includes(searchQuery) ||
-      session.session_date.includes(searchQuery) ||
-      getGroupName(session.group_id).toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesGroup = selectedGroup === 'all' || session.group_id === selectedGroup;
-    const matchesStatus = statusFilter === 'all' || session.status === statusFilter;
-    return matchesSearch && matchesGroup && matchesStatus;
-  });
-
-  // Separate today's sessions
-  const todaySessions = filteredSessions.filter(s => isToday(s.session_date));
-  const upcomingSessions = filteredSessions.filter(s => !isToday(s.session_date) && !isPast(s.session_date));
-  const pastSessions = filteredSessions.filter(s => isPast(s.session_date));
+  // Get session stats for a group
+  const getGroupStats = (groupId: string) => {
+    const groupSessions = sessions.filter(s => s.group_id === groupId);
+    const completed = groupSessions.filter(s => s.status === 'completed').length;
+    const total = groupSessions.length;
+    const todaySession = groupSessions.find(s => isToday(s.session_date));
+    return { completed, total, todaySession };
+  };
 
   const canManage = role === 'admin' || role === 'instructor';
+
+  // Get groups that have sessions matching the filter
+  const filteredGroups = groups.filter(group => {
+    const groupSessions = getFilteredSessionsForGroup(group.id);
+    return groupSessions.length > 0 || (searchQuery === '' && statusFilter === 'all');
+  });
 
   return (
     <DashboardLayout title={t.groups.sessions}>
@@ -294,19 +305,6 @@ export default function SessionsPage() {
                 className="pl-10"
               />
             </div>
-            <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder={isRTL ? 'كل المجموعات' : 'All Groups'} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{isRTL ? 'كل المجموعات' : 'All Groups'}</SelectItem>
-                {groups.map((group) => (
-                  <SelectItem key={group.id} value={group.id}>
-                    {language === 'ar' ? group.name_ar : group.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder={isRTL ? 'كل الحالات' : 'All Status'} />
@@ -331,54 +329,6 @@ export default function SessionsPage() {
             </Button>
           )}
         </div>
-
-        {/* Today's Sessions */}
-        {todaySessions.length > 0 && (
-          <Card className="border-primary/50 bg-primary/5">
-            <CardContent className="pt-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
-                {isRTL ? 'سيشنات اليوم' : "Today's Sessions"}
-                <Badge variant="secondary">{todaySessions.length}</Badge>
-              </h3>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                {todaySessions.map((session) => (
-                  <Card key={session.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-semibold">{getGroupName(session.group_id)}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                            <Clock className="h-3 w-3" />
-                            {formatTime12Hour(session.session_time, isRTL)}
-                          </p>
-                          {(session.topic || session.topic_ar) && (
-                            <p className="text-sm mt-2">
-                              {language === 'ar' ? session.topic_ar : session.topic}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-2 items-end">
-                          {getStatusBadge(session.status)}
-                          {session.status === 'scheduled' && canManage && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleMarkComplete(session)}
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              {isRTL ? 'اكتمل' : 'Complete'}
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -445,125 +395,174 @@ export default function SessionsPage() {
           </DialogContent>
         </Dialog>
 
-        {/* All Sessions Table */}
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t.students.group}</TableHead>
-                  <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
-                  <TableHead>{isRTL ? 'الوقت' : 'Time'}</TableHead>
-                  <TableHead>{isRTL ? 'الموضوع' : 'Topic'}</TableHead>
-                  <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                  {canManage && <TableHead className="w-[100px]">{t.common.actions}</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      {t.common.loading}
-                    </TableCell>
-                  </TableRow>
-                ) : filteredSessions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground mb-4">
-                        {isRTL ? 'لا توجد سيشنات' : 'No sessions found'}
-                      </p>
-                      {role === 'admin' && (
-                        <Button onClick={generateSessions} disabled={generating}>
-                          <RefreshCw className={`h-4 w-4 mr-2 ${generating ? 'animate-spin' : ''}`} />
-                          {isRTL ? 'توليد السيشنات' : 'Generate Sessions'}
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredSessions.map((session) => (
-                    <TableRow 
-                      key={session.id}
-                      className={`${isToday(session.session_date) ? 'bg-primary/5' : ''} cursor-pointer hover:bg-muted/50`}
-                      onClick={() => navigate(`/attendance?session=${session.id}&group=${session.group_id}`)}
-                    >
-                      <TableCell className="font-medium">
-                        {getGroupName(session.group_id)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {session.session_date}
-                          {isToday(session.session_date) && (
-                            <Badge variant="secondary" className="text-xs">
-                              {isRTL ? 'اليوم' : 'Today'}
-                            </Badge>
-                          )}
+        {/* Groups Accordion */}
+        {loading ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              {t.common.loading}
+            </CardContent>
+          </Card>
+        ) : filteredGroups.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-4">
+                {isRTL ? 'لا توجد مجموعات' : 'No groups found'}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Accordion type="multiple" className="space-y-3">
+            {filteredGroups.map((group) => {
+              const groupSessions = getFilteredSessionsForGroup(group.id);
+              const stats = getGroupStats(group.id);
+              
+              return (
+                <AccordionItem 
+                  key={group.id} 
+                  value={group.id}
+                  className="border rounded-lg bg-card overflow-hidden"
+                >
+                  <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 [&[data-state=open]]:bg-muted/30">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <FolderOpen className="h-5 w-5 text-primary" />
                         </div>
-                      </TableCell>
-                      <TableCell>
+                        <div className="text-left">
+                          <h3 className="font-semibold">
+                            {language === 'ar' ? group.name_ar : group.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {group.schedule_day} - {formatTime12Hour(group.schedule_time, isRTL)}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 mr-4">
+                        {stats.todaySession && (
+                          <Badge variant="default" className="kojo-gradient">
+                            {isRTL ? 'سيشن اليوم' : 'Today'}
+                          </Badge>
+                        )}
                         <Badge variant="outline">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {formatTime12Hour(session.session_time, isRTL)}
+                          {stats.completed}/{stats.total} {isRTL ? 'مكتمل' : 'completed'}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {language === 'ar' 
-                          ? (session.topic_ar || session.topic || '-')
-                          : (session.topic || session.topic_ar || '-')
-                        }
-                      </TableCell>
-                      <TableCell>{getStatusBadge(session.status)}</TableCell>
-                      {canManage && (
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/attendance?session=${session.id}&group=${session.group_id}`);
-                              }}
-                              title={isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
+                        <Badge variant="secondary">
+                          {groupSessions.length} {isRTL ? 'سيشن' : 'sessions'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  
+                  <AccordionContent className="px-0 pb-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[100px]">#</TableHead>
+                          <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
+                          <TableHead>{isRTL ? 'الوقت' : 'Time'}</TableHead>
+                          <TableHead>{isRTL ? 'الموضوع' : 'Topic'}</TableHead>
+                          <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                          {canManage && <TableHead className="w-[100px]">{t.common.actions}</TableHead>}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {groupSessions.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                              {isRTL ? 'لا توجد سيشنات مطابقة' : 'No matching sessions'}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          groupSessions.map((session) => (
+                            <TableRow 
+                              key={session.id}
+                              className={`${isToday(session.session_date) ? 'bg-primary/5' : ''} cursor-pointer hover:bg-muted/50`}
+                              onClick={() => navigate(`/attendance?session=${session.id}&group=${session.group_id}`)}
                             >
-                              <Users className="h-4 w-4 text-primary" />
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                                {session.status === 'scheduled' && (
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkComplete(session); }}>
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    {isRTL ? 'تحديد كمكتمل' : 'Mark Complete'}
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(session); }}>
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  {t.common.edit}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  {t.common.delete}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                              <TableCell>
+                                <Badge variant="outline" className="font-mono">
+                                  {isRTL ? `سيشن ${session.session_number}` : `Session ${session.session_number}`}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {session.session_date}
+                                  {isToday(session.session_date) && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {isRTL ? 'اليوم' : 'Today'}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  {formatTime12Hour(session.session_time, isRTL)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {language === 'ar' 
+                                  ? (session.topic_ar || session.topic || '-')
+                                  : (session.topic || session.topic_ar || '-')
+                                }
+                              </TableCell>
+                              <TableCell>{getStatusBadge(session.status)}</TableCell>
+                              {canManage && (
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/attendance?session=${session.id}&group=${session.group_id}`);
+                                      }}
+                                      title={isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
+                                    >
+                                      <Users className="h-4 w-4 text-primary" />
+                                    </Button>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                                          <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                                        {session.status === 'scheduled' && (
+                                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkComplete(session); }}>
+                                            <CheckCircle className="h-4 w-4 mr-2" />
+                                            {isRTL ? 'تحديد كمكتمل' : 'Mark Complete'}
+                                          </DropdownMenuItem>
+                                        )}
+                                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(session); }}>
+                                          <Pencil className="h-4 w-4 mr-2" />
+                                          {t.common.edit}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
+                                          className="text-destructive"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          {t.common.delete}
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                </TableCell>
+                              )}
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        )}
       </div>
     </DashboardLayout>
   );
