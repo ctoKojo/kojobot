@@ -452,6 +452,7 @@ export default function StudentsPage() {
                 <TableRow>
                   <TableHead>{t.students.fullName}</TableHead>
                   <TableHead>{t.auth.email}</TableHead>
+                  <TableHead>{t.students.ageGroup}</TableHead>
                   <TableHead>{isRTL ? 'الاشتراك' : 'Subscription'}</TableHead>
                   <TableHead>{t.students.level}</TableHead>
                   <TableHead className="w-[100px]">{t.common.actions}</TableHead>
@@ -460,13 +461,13 @@ export default function StudentsPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredStudents.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       {isRTL ? 'لا يوجد طلاب' : 'No students found'}
                     </TableCell>
                   </TableRow>
@@ -489,6 +490,7 @@ export default function StudentsPage() {
                         </div>
                       </TableCell>
                       <TableCell>{student.email}</TableCell>
+                      <TableCell>{getAgeGroupName(student.age_group_id)}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">
                           {getSubscriptionTypeName(student.subscription_type)}
