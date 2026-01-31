@@ -18,6 +18,10 @@ import Notifications from "./pages/Notifications";
 import ActivityLog from "./pages/ActivityLog";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import Quizzes from "./pages/Quizzes";
+import Assignments from "./pages/Assignments";
+import Attendance from "./pages/Attendance";
+import Sessions from "./pages/Sessions";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +40,10 @@ const App = () => (
               <Route path="/students" element={<ProtectedRoute allowedRoles={['admin']}><Students /></ProtectedRoute>} />
               <Route path="/instructors" element={<ProtectedRoute allowedRoles={['admin']}><Instructors /></ProtectedRoute>} />
               <Route path="/groups" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Groups /></ProtectedRoute>} />
+              <Route path="/quizzes" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Quizzes /></ProtectedRoute>} />
+              <Route path="/assignments" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student']}><Assignments /></ProtectedRoute>} />
+              <Route path="/attendance" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student']}><Attendance /></ProtectedRoute>} />
+              <Route path="/sessions" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Sessions /></ProtectedRoute>} />
               <Route path="/age-groups" element={<ProtectedRoute allowedRoles={['admin']}><AgeGroups /></ProtectedRoute>} />
               <Route path="/levels" element={<ProtectedRoute allowedRoles={['admin']}><Levels /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />

@@ -53,6 +53,7 @@ export function AppSidebar() {
     { title: t.nav.students, url: '/students', icon: GraduationCap, roles: ['admin'] },
     { title: t.nav.instructors, url: '/instructors', icon: Users, roles: ['admin'] },
     { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['admin', 'instructor'] },
+    { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin', 'instructor'] },
   ];
 
   const educationNavItems: NavItem[] = [

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { logLogin, logLogout } from '@/lib/activityLogger';
 
 type AppRole = 'admin' | 'instructor' | 'student';
 
@@ -87,6 +88,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       email,
       password,
     });
+    
+    if (!error) {
+      // Log successful login
+      setTimeout(() => logLogin(), 100);
+    }
+    
     return { error };
   };
 
@@ -108,6 +115,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signOut = async () => {
+    await logLogout();
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
