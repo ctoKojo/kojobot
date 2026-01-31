@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, FileQuestion, Play, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, FileQuestion, Play, Users, ListChecks } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,6 +78,7 @@ export default function QuizzesPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
   const { user, role } = useAuth();
+  const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
@@ -515,6 +517,10 @@ export default function QuizzesPage() {
                             </DropdownMenuItem>
                             {role === 'admin' && (
                               <>
+                                <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
+                                  <ListChecks className="h-4 w-4 mr-2" />
+                                  {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleEdit(quiz)}>
                                   <Pencil className="h-4 w-4 mr-2" />
                                   {t.common.edit}
