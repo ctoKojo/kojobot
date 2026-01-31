@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserPlus, Eye } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,7 @@ interface Instructor {
 export default function InstructorsPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -381,6 +383,10 @@ export default function InstructorsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                            <DropdownMenuItem onClick={() => navigate(`/instructor/${instructor.user_id}`)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              {isRTL ? 'عرض الملف' : 'View Profile'}
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEdit(instructor)}>
                               <Pencil className="h-4 w-4 mr-2" />
                               {t.common.edit}
