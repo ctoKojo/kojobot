@@ -66,7 +66,7 @@ export function AppSidebar() {
     { title: t.nav.ageGroups, url: '/age-groups', icon: Layers, roles: ['admin'] },
     { title: t.nav.levels, url: '/levels', icon: BookOpen, roles: ['admin'] },
     { title: t.nav.activityLog, url: '/activity-log', icon: Activity, roles: ['admin'] },
-    { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['admin', 'instructor', 'student'] },
+    { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['admin', 'student'] },
     { title: t.nav.settings, url: '/settings', icon: Settings, roles: ['admin'] },
   ];
 

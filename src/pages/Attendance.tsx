@@ -42,6 +42,7 @@ interface Session {
   session_date: string;
   session_time: string;
   status: string;
+  session_number: number | null;
 }
 
 interface Student {
@@ -263,7 +264,8 @@ export default function AttendancePage() {
   const getSelectedSessionInfo = () => {
     const session = sessions.find(s => s.id === selectedSession);
     if (!session) return null;
-    return `${session.session_date} - ${formatTime12Hour(session.session_time, isRTL)}`;
+    const sessionName = isRTL ? `سيشن ${session.session_number || '-'}` : `Session ${session.session_number || '-'}`;
+    return `${sessionName} - ${session.session_date} - ${formatTime12Hour(session.session_time, isRTL)}`;
   };
 
   const canManage = role === 'admin' || role === 'instructor';
@@ -290,7 +292,7 @@ export default function AttendancePage() {
           </div>
 
           <div className="grid gap-2">
-            <Label>{t.attendance.sessionDate}</Label>
+            <Label>{isRTL ? 'السيشن' : 'Session'}</Label>
             <Select value={selectedSession} onValueChange={setSelectedSession}>
               <SelectTrigger>
                 <SelectValue placeholder={isRTL ? 'اختر سيشن' : 'Select session'} />
@@ -298,7 +300,7 @@ export default function AttendancePage() {
               <SelectContent>
                 {sessions.map((session) => (
                   <SelectItem key={session.id} value={session.id}>
-                    {session.session_date} - {formatTime12Hour(session.session_time, isRTL)}
+                    {isRTL ? `سيشن ${session.session_number || '-'}` : `Session ${session.session_number || '-'}`} ({session.session_date})
                   </SelectItem>
                 ))}
               </SelectContent>
