@@ -43,6 +43,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 type SubscriptionType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
+type AttendanceMode = 'online' | 'offline';
 
 interface Student {
   id: string;
@@ -56,6 +57,7 @@ interface Student {
   level_id: string | null;
   date_of_birth: string | null;
   subscription_type: SubscriptionType | null;
+  attendance_mode: AttendanceMode | null;
 }
 
 interface AgeGroup {
@@ -92,12 +94,18 @@ export default function StudentsPage() {
     level_id: '',
     password: '',
     subscription_type: '' as SubscriptionType | '',
+    attendance_mode: 'offline' as AttendanceMode,
   });
 
   const subscriptionTypes: { value: SubscriptionType; label: string; labelAr: string }[] = [
     { value: 'kojo_squad', label: 'Kojo Squad', labelAr: 'كوجو سكواد' },
     { value: 'kojo_core', label: 'Kojo Core', labelAr: 'كوجو كور' },
     { value: 'kojo_x', label: 'Kojo X', labelAr: 'كوجو اكس' },
+  ];
+
+  const attendanceModes: { value: AttendanceMode; label: string; labelAr: string }[] = [
+    { value: 'online', label: 'Online', labelAr: 'أونلاين' },
+    { value: 'offline', label: 'Offline (In-Person)', labelAr: 'حضوري' },
   ];
 
   useEffect(() => {
@@ -123,7 +131,7 @@ export default function StudentsPage() {
           .in('user_id', studentUserIds);
 
         if (profilesError) throw profilesError;
-        setStudents(profilesData || []);
+        setStudents((profilesData || []) as Student[]);
       } else {
         setStudents([]);
       }
@@ -171,6 +179,7 @@ export default function StudentsPage() {
             age_group_id: formData.age_group_id || null,
             level_id: formData.level_id || null,
             subscription_type: formData.subscription_type || null,
+            attendance_mode: formData.attendance_mode,
           })
           .eq('id', editingStudent.id);
 
@@ -203,6 +212,7 @@ export default function StudentsPage() {
             age_group_id: formData.age_group_id || undefined,
             level_id: formData.level_id || undefined,
             subscription_type: formData.subscription_type || undefined,
+            attendance_mode: formData.attendance_mode,
           }
         });
 
@@ -242,6 +252,7 @@ export default function StudentsPage() {
       level_id: '',
       password: '',
       subscription_type: '',
+      attendance_mode: 'offline',
     });
   };
 
@@ -257,6 +268,7 @@ export default function StudentsPage() {
       level_id: student.level_id || '',
       password: '',
       subscription_type: student.subscription_type || '',
+      attendance_mode: student.attendance_mode || 'offline',
     });
     setIsDialogOpen(true);
   };
@@ -282,6 +294,12 @@ export default function StudentsPage() {
   const getSubscriptionTypeName = (type: SubscriptionType | null) => {
     if (!type) return '-';
     const found = subscriptionTypes.find((t) => t.value === type);
+    return found ? (language === 'ar' ? found.labelAr : found.label) : '-';
+  };
+
+  const getAttendanceModeName = (mode: AttendanceMode | null) => {
+    if (!mode) return language === 'ar' ? 'حضوري' : 'Offline';
+    const found = attendanceModes.find((m) => m.value === mode);
     return found ? (language === 'ar' ? found.labelAr : found.label) : '-';
   };
 
@@ -427,6 +445,24 @@ export default function StudentsPage() {
                     {subscriptionTypes.map((type) => (
                       <SelectItem key={type.value} value={type.value}>
                         {language === 'ar' ? type.labelAr : type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>{isRTL ? 'نوع الحضور' : 'Attendance Mode'} *</Label>
+                <Select
+                  value={formData.attendance_mode}
+                  onValueChange={(value) => setFormData({ ...formData, attendance_mode: value as AttendanceMode })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={isRTL ? 'اختر نوع الحضور' : 'Select attendance mode'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {attendanceModes.map((mode) => (
+                      <SelectItem key={mode.value} value={mode.value}>
+                        {language === 'ar' ? mode.labelAr : mode.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

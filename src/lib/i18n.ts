@@ -115,6 +115,13 @@ interface Translations {
     instructor: string;
     studentCount: string;
     sessions: string;
+    attendanceMode: string;
+    online: string;
+    offline: string;
+    sessionLink: string;
+    copyLink: string;
+    joinSession: string;
+    linkCopied: string;
   };
   ageGroups: {
     title: string;
@@ -339,6 +346,13 @@ export const translations: Record<Language, Translations> = {
       instructor: 'Instructor',
       studentCount: 'Student Count',
       sessions: 'Sessions',
+      attendanceMode: 'Attendance Mode',
+      online: 'Online',
+      offline: 'Offline (In-Person)',
+      sessionLink: 'Session Link',
+      copyLink: 'Copy Link',
+      joinSession: 'Join Session',
+      linkCopied: 'Link copied to clipboard',
     },
 
     // Age Groups
@@ -578,6 +592,13 @@ export const translations: Record<Language, Translations> = {
       instructor: 'المدرب',
       studentCount: 'عدد الطلاب',
       sessions: 'الجلسات',
+      attendanceMode: 'نوع الحضور',
+      online: 'أونلاين',
+      offline: 'حضوري',
+      sessionLink: 'رابط الجلسة',
+      copyLink: 'نسخ الرابط',
+      joinSession: 'انضم للجلسة',
+      linkCopied: 'تم نسخ الرابط',
     },
 
     // Age Groups

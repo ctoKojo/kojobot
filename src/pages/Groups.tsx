@@ -45,6 +45,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatTime12Hour } from '@/lib/timeUtils';
 
 type GroupType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
+type AttendanceMode = 'online' | 'offline';
 
 interface Group {
   id: string;
@@ -58,6 +59,8 @@ interface Group {
   duration_minutes: number;
   is_active: boolean;
   group_type: GroupType;
+  attendance_mode: AttendanceMode | null;
+  session_link: string | null;
 }
 
 interface AgeGroup {
@@ -85,6 +88,7 @@ interface Student {
   subscription_type: GroupType | null;
   age_group_id: string | null;
   level_id: string | null;
+  attendance_mode: AttendanceMode | null;
 }
 
 interface GroupStudent {
@@ -129,6 +133,8 @@ export default function GroupsPage() {
     schedule_time: '',
     duration_minutes: 60,
     group_type: 'kojo_squad' as GroupType,
+    attendance_mode: 'offline' as AttendanceMode,
+    session_link: '',
   });
   const [groupStudentCounts, setGroupStudentCounts] = useState<GroupStudentCount>({});
 
@@ -201,7 +207,7 @@ export default function GroupsPage() {
         supabase.from('sessions').select('group_id, session_number, status'),
       ]);
 
-      setGroups(groupsRes.data || []);
+      setGroups((groupsRes.data || []) as Group[]);
       setAgeGroups(ageGroupsRes.data || []);
       setLevels(levelsRes.data || []);
 
@@ -239,7 +245,7 @@ export default function GroupsPage() {
       if (studentIds.length > 0) {
         const { data: studentProfilesData } = await supabase
           .from('profiles')
-          .select('user_id, full_name, full_name_ar, subscription_type, age_group_id, level_id')
+          .select('user_id, full_name, full_name_ar, subscription_type, age_group_id, level_id, attendance_mode')
           .in('user_id', studentIds);
         setAllStudents((studentProfilesData || []) as Student[]);
       }
@@ -360,6 +366,8 @@ export default function GroupsPage() {
         schedule_time: formData.schedule_time,
         duration_minutes: formData.duration_minutes,
         group_type: formData.group_type,
+        attendance_mode: formData.attendance_mode,
+        session_link: formData.attendance_mode === 'online' ? formData.session_link || null : null,
       };
 
       if (editingGroup) {
@@ -410,6 +418,8 @@ export default function GroupsPage() {
       schedule_time: '',
       duration_minutes: 60,
       group_type: 'kojo_squad',
+      attendance_mode: 'offline',
+      session_link: '',
     });
   };
 
@@ -425,6 +435,8 @@ export default function GroupsPage() {
       schedule_time: group.schedule_time,
       duration_minutes: group.duration_minutes,
       group_type: group.group_type || 'kojo_squad',
+      attendance_mode: group.attendance_mode || 'offline',
+      session_link: group.session_link || '',
     });
     setIsDialogOpen(true);
   };
@@ -494,7 +506,7 @@ export default function GroupsPage() {
     return [];
   };
 
-  const getEligibleStudents = (groupId: string, groupType: GroupType, groupAgeGroupId: string | null, groupLevelId: string | null, allGroupStudentsData: GroupStudent[]) => {
+  const getEligibleStudents = (groupId: string, groupType: GroupType, groupAgeGroupId: string | null, groupLevelId: string | null, groupAttendanceMode: AttendanceMode | null, allGroupStudentsData: GroupStudent[]) => {
     // Get students already in other groups
     const studentsInOtherGroups = allGroupStudentsData
       .filter(gs => gs.group_id !== groupId && gs.is_active)
@@ -509,6 +521,11 @@ export default function GroupsPage() {
       
       // If group has level_id, student must match it
       if (groupLevelId && student.level_id !== groupLevelId) return false;
+      
+      // Must match attendance mode (online/offline)
+      const studentMode = student.attendance_mode || 'offline';
+      const groupMode = groupAttendanceMode || 'offline';
+      if (studentMode !== groupMode) return false;
       
       // Student must not be in another group (unless already in this group)
       const isInCurrentGroup = allGroupStudentsData.some(gs => gs.group_id === groupId && gs.student_id === student.user_id && gs.is_active);
@@ -686,6 +703,32 @@ export default function GroupsPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid gap-2">
+                <Label>{t.groups.attendanceMode}</Label>
+                <Select
+                  value={formData.attendance_mode}
+                  onValueChange={(value) => setFormData({ ...formData, attendance_mode: value as AttendanceMode })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={isRTL ? 'اختر نوع الحضور' : 'Select attendance mode'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="offline">{t.groups.offline}</SelectItem>
+                    <SelectItem value="online">{t.groups.online}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.attendance_mode === 'online' && (
+                <div className="grid gap-2">
+                  <Label>{t.groups.sessionLink}</Label>
+                  <Input
+                    value={formData.session_link}
+                    onChange={(e) => setFormData({ ...formData, session_link: e.target.value })}
+                    placeholder="https://meet.google.com/..."
+                    dir="ltr"
+                  />
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -730,7 +773,7 @@ export default function GroupsPage() {
                 <div className="text-center py-8">{t.common.loading}</div>
               ) : (() => {
                 const eligibleStudents = selectedGroup 
-                  ? getEligibleStudents(selectedGroup.id, selectedGroup.group_type, selectedGroup.age_group_id, selectedGroup.level_id, allGroupStudentsData) 
+                  ? getEligibleStudents(selectedGroup.id, selectedGroup.group_type, selectedGroup.age_group_id, selectedGroup.level_id, selectedGroup.attendance_mode, allGroupStudentsData) 
                   : [];
                 const maxStudents = selectedGroup ? getMaxStudents(selectedGroup.group_type) : 0;
                 const isAtLimit = selectedStudentIds.length >= maxStudents;

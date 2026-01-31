@@ -322,6 +322,7 @@ export type Database = {
       groups: {
         Row: {
           age_group_id: string | null
+          attendance_mode: string | null
           created_at: string
           duration_minutes: number
           group_type: Database["public"]["Enums"]["group_type"]
@@ -333,10 +334,12 @@ export type Database = {
           name_ar: string
           schedule_day: string
           schedule_time: string
+          session_link: string | null
           updated_at: string
         }
         Insert: {
           age_group_id?: string | null
+          attendance_mode?: string | null
           created_at?: string
           duration_minutes?: number
           group_type?: Database["public"]["Enums"]["group_type"]
@@ -348,10 +351,12 @@ export type Database = {
           name_ar: string
           schedule_day: string
           schedule_time: string
+          session_link?: string | null
           updated_at?: string
         }
         Update: {
           age_group_id?: string | null
+          attendance_mode?: string | null
           created_at?: string
           duration_minutes?: number
           group_type?: Database["public"]["Enums"]["group_type"]
@@ -363,6 +368,7 @@ export type Database = {
           name_ar?: string
           schedule_day?: string
           schedule_time?: string
+          session_link?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -510,6 +516,7 @@ export type Database = {
       profiles: {
         Row: {
           age_group_id: string | null
+          attendance_mode: string | null
           avatar_url: string | null
           created_at: string
           date_of_birth: string | null
@@ -529,6 +536,7 @@ export type Database = {
         }
         Insert: {
           age_group_id?: string | null
+          attendance_mode?: string | null
           avatar_url?: string | null
           created_at?: string
           date_of_birth?: string | null
@@ -548,6 +556,7 @@ export type Database = {
         }
         Update: {
           age_group_id?: string | null
+          attendance_mode?: string | null
           avatar_url?: string | null
           created_at?: string
           date_of_birth?: string | null
