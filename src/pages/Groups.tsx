@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye, TrendingUp, CalendarIcon } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye, TrendingUp, CalendarIcon, Snowflake, Play, Pause } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -50,9 +50,11 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { formatTime12Hour } from '@/lib/timeUtils';
 import { notificationService } from '@/lib/notificationService';
+import { logCreate, logUpdate, logDelete, logFreeze, logActivate } from '@/lib/activityLogger';
 
 type GroupType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
 type AttendanceMode = 'online' | 'offline';
+type GroupStatus = 'active' | 'pending' | 'frozen';
 
 interface Group {
   id: string;
@@ -68,6 +70,7 @@ interface Group {
   group_type: GroupType;
   attendance_mode: AttendanceMode | null;
   session_link: string | null;
+  status: GroupStatus;
 }
 
 interface AgeGroup {
@@ -490,8 +493,12 @@ export default function GroupsPage() {
 
   const handleDelete = async (id: string) => {
     try {
+      const group = groups.find(g => g.id === id);
       const { error } = await supabase.from('groups').delete().eq('id', id);
       if (error) throw error;
+      
+      await logDelete('group', id, { name: group?.name });
+      
       toast({
         title: t.common.success,
         description: isRTL ? 'تم حذف المجموعة' : 'Group deleted successfully',
@@ -504,6 +511,62 @@ export default function GroupsPage() {
         title: t.common.error,
         description: isRTL ? 'فشل في حذف المجموعة' : 'Failed to delete group',
       });
+    }
+  };
+
+  const handleChangeStatus = async (groupId: string, newStatus: GroupStatus) => {
+    try {
+      const group = groups.find(g => g.id === groupId);
+      const { error } = await supabase
+        .from('groups')
+        .update({ status: newStatus })
+        .eq('id', groupId);
+      
+      if (error) throw error;
+      
+      // Log the status change
+      if (newStatus === 'frozen') {
+        await logFreeze('group', groupId, { name: group?.name, status: newStatus });
+      } else if (newStatus === 'active') {
+        await logActivate('group', groupId, { name: group?.name, status: newStatus });
+      } else {
+        await logUpdate('group', groupId, { name: group?.name, status: newStatus });
+      }
+      
+      const statusLabels: Record<GroupStatus, { en: string; ar: string }> = {
+        active: { en: 'activated', ar: 'تم تفعيل' },
+        pending: { en: 'set to pending', ar: 'تم تعليق' },
+        frozen: { en: 'frozen', ar: 'تم تجميد' },
+      };
+      
+      toast({
+        title: t.common.success,
+        description: isRTL 
+          ? `${statusLabels[newStatus].ar} المجموعة بنجاح`
+          : `Group ${statusLabels[newStatus].en} successfully`,
+      });
+      
+      fetchData();
+    } catch (error) {
+      console.error('Error changing group status:', error);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: isRTL ? 'فشل في تغيير حالة المجموعة' : 'Failed to change group status',
+      });
+    }
+  };
+
+  const getStatusBadge = (status: GroupStatus) => {
+    switch (status) {
+      case 'active':
+        return { className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', label: isRTL ? 'نشط' : 'Active' };
+      case 'pending':
+        return { className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', label: isRTL ? 'معلق' : 'Pending' };
+      case 'frozen':
+        return { className: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400', label: isRTL ? 'مجمد' : 'Frozen' };
+      default:
+        return { className: '', label: status };
     }
   };
 
@@ -1076,6 +1139,12 @@ export default function GroupsPage() {
                               ? (isRTL ? 'أونلاين' : 'Online')
                               : (isRTL ? 'حضوري' : 'Offline')}
                           </Badge>
+                          {/* Status Badge */}
+                          {group.status && group.status !== 'active' && (
+                            <Badge className={`text-xs ${getStatusBadge(group.status).className}`}>
+                              {getStatusBadge(group.status).label}
+                            </Badge>
+                          )}
                         </div>
                         
                         <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
@@ -1125,6 +1194,25 @@ export default function GroupsPage() {
                                 <Users className="h-4 w-4 mr-2" />
                                 {isRTL ? 'إدارة الطلاب' : 'Manage Students'}
                               </DropdownMenuItem>
+                              {/* Status Change Options */}
+                              {group.status !== 'active' && (
+                                <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'active')}>
+                                  <Play className="h-4 w-4 mr-2 text-green-600" />
+                                  {isRTL ? 'تفعيل' : 'Activate'}
+                                </DropdownMenuItem>
+                              )}
+                              {group.status !== 'pending' && (
+                                <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'pending')}>
+                                  <Pause className="h-4 w-4 mr-2 text-yellow-600" />
+                                  {isRTL ? 'تعليق' : 'Set Pending'}
+                                </DropdownMenuItem>
+                              )}
+                              {group.status !== 'frozen' && (
+                                <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'frozen')}>
+                                  <Snowflake className="h-4 w-4 mr-2 text-sky-600" />
+                                  {isRTL ? 'تجميد' : 'Freeze'}
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem 
                                 onClick={() => handleDelete(group.id)}
                                 className="text-destructive"
@@ -1161,6 +1249,7 @@ export default function GroupsPage() {
                 <TableRow>
                   <TableHead>{t.groups.groupName}</TableHead>
                   <TableHead>{isRTL ? 'النوع' : 'Type'}</TableHead>
+                  <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
                   <TableHead>{isRTL ? 'نوع الحضور' : 'Attendance'}</TableHead>
                   <TableHead>{t.students.ageGroup}</TableHead>
                   <TableHead>{t.students.level}</TableHead>
@@ -1204,6 +1293,11 @@ export default function GroupsPage() {
                         <TableCell>
                           <Badge variant="secondary">
                             {language === 'ar' ? typeInfo.labelAr : typeInfo.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusBadge(group.status || 'active').className}>
+                            {getStatusBadge(group.status || 'active').label}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -1276,6 +1370,25 @@ export default function GroupsPage() {
                                     <Users className="h-4 w-4 mr-2" />
                                     {isRTL ? 'إدارة الطلاب' : 'Manage Students'}
                                   </DropdownMenuItem>
+                                  {/* Status Change Options */}
+                                  {group.status !== 'active' && (
+                                    <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'active')}>
+                                      <Play className="h-4 w-4 mr-2 text-green-600" />
+                                      {isRTL ? 'تفعيل' : 'Activate'}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {group.status !== 'pending' && (
+                                    <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'pending')}>
+                                      <Pause className="h-4 w-4 mr-2 text-yellow-600" />
+                                      {isRTL ? 'تعليق' : 'Set Pending'}
+                                    </DropdownMenuItem>
+                                  )}
+                                  {group.status !== 'frozen' && (
+                                    <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'frozen')}>
+                                      <Snowflake className="h-4 w-4 mr-2 text-sky-600" />
+                                      {isRTL ? 'تجميد' : 'Freeze'}
+                                    </DropdownMenuItem>
+                                  )}
                                   <DropdownMenuItem 
                                     onClick={() => handleDelete(group.id)}
                                     className="text-destructive"

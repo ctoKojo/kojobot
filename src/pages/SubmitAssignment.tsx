@@ -11,6 +11,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { logSubmit, logView } from '@/lib/activityLogger';
 
 interface Assignment {
   id: string;
@@ -207,6 +208,12 @@ export default function SubmitAssignment() {
           // Don't fail the submission if notification fails
         }
       }
+
+      // Log assignment submission
+      await logSubmit('assignment_submission', assignment.id, { 
+        assignment_title: assignment.title,
+        has_attachment: !!attachmentUrl 
+      });
 
       toast({
         title: t.common.success,

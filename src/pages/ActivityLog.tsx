@@ -90,16 +90,23 @@ export default function ActivityLogPage() {
 
   const getActionBadge = (action: string) => {
     const colors: Record<string, string> = {
-      login: 'bg-green-100 text-green-800 border-green-200',
-      logout: 'bg-gray-100 text-gray-800 border-gray-200',
-      create: 'bg-blue-100 text-blue-800 border-blue-200',
-      update: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      delete: 'bg-red-100 text-red-800 border-red-200',
-      view: 'bg-purple-100 text-purple-800 border-purple-200',
-      assign: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      submit: 'bg-teal-100 text-teal-800 border-teal-200',
+      login: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400',
+      logout: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-400',
+      create: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400',
+      update: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400',
+      delete: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400',
+      view: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400',
+      assign: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400',
+      submit: 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-900/30 dark:text-teal-400',
+      start: 'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-400',
+      complete: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400',
+      grade: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400',
+      freeze: 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/30 dark:text-sky-400',
+      unfreeze: 'bg-lime-100 text-lime-800 border-lime-200 dark:bg-lime-900/30 dark:text-lime-400',
+      activate: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400',
+      deactivate: 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400',
     };
-    return colors[action] || 'bg-gray-100 text-gray-800 border-gray-200';
+    return colors[action] || 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-400';
   };
 
   const getActionLabel = (action: string) => {
@@ -112,6 +119,13 @@ export default function ActivityLogPage() {
       view: { en: 'View', ar: 'عرض' },
       assign: { en: 'Assign', ar: 'إسناد' },
       submit: { en: 'Submit', ar: 'تسليم' },
+      start: { en: 'Start', ar: 'بدء' },
+      complete: { en: 'Complete', ar: 'إكمال' },
+      grade: { en: 'Grade', ar: 'تقييم' },
+      freeze: { en: 'Freeze', ar: 'تجميد' },
+      unfreeze: { en: 'Unfreeze', ar: 'إلغاء تجميد' },
+      activate: { en: 'Activate', ar: 'تفعيل' },
+      deactivate: { en: 'Deactivate', ar: 'إلغاء تفعيل' },
     };
     return labels[action]?.[language] || action;
   };
@@ -124,11 +138,16 @@ export default function ActivityLogPage() {
       group: { en: 'Group', ar: 'مجموعة' },
       session: { en: 'Session', ar: 'سيشن' },
       quiz: { en: 'Quiz', ar: 'كويز' },
-      assignment: { en: 'Assignment', ar: 'اساينمنت' },
+      quiz_submission: { en: 'Quiz Result', ar: 'نتيجة كويز' },
+      assignment: { en: 'Assignment', ar: 'واجب' },
+      assignment_submission: { en: 'Assignment Submission', ar: 'تسليم واجب' },
       attendance: { en: 'Attendance', ar: 'حضور' },
       subscription: { en: 'Subscription', ar: 'اشتراك' },
       age_group: { en: 'Age Group', ar: 'فئة عمرية' },
       level: { en: 'Level', ar: 'مستوى' },
+      notification: { en: 'Notification', ar: 'إشعار' },
+      warning: { en: 'Warning', ar: 'إنذار' },
+      profile: { en: 'Profile', ar: 'ملف شخصي' },
     };
     return labels[entity]?.[language] || entity;
   };
