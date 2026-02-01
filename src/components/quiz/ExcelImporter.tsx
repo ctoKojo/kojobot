@@ -38,8 +38,8 @@ export function ExcelImporter({ onImport, existingQuestionsCount, isRTL }: Excel
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleDownloadTemplate = () => {
-    generateExcelTemplate();
+  const handleDownloadTemplate = async () => {
+    await generateExcelTemplate();
     toast({
       title: isRTL ? 'تم التحميل' : 'Downloaded',
       description: isRTL ? 'تم تحميل قالب Excel' : 'Excel template downloaded',
