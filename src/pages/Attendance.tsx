@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, UserCheck, UserX, Clock, AlertCircle, Calendar, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { Search, UserCheck, UserX, Clock, AlertCircle, Calendar, ChevronLeft, ChevronRight, Save, Snowflake } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -34,6 +35,7 @@ interface Group {
   name: string;
   name_ar: string;
   instructor_id: string;
+  status: string;
 }
 
 interface Session {
@@ -95,7 +97,7 @@ export default function AttendancePage() {
 
   const fetchGroups = async () => {
     try {
-      let query = supabase.from('groups').select('id, name, name_ar, instructor_id').eq('is_active', true);
+      let query = supabase.from('groups').select('id, name, name_ar, instructor_id, status').eq('is_active', true);
       
       // Instructors only see their groups
       if (role === 'instructor' && user) {
@@ -267,12 +269,29 @@ export default function AttendancePage() {
     const sessionName = isRTL ? `سيشن ${session.session_number || '-'}` : `Session ${session.session_number || '-'}`;
     return `${sessionName} - ${session.session_date} - ${formatTime12Hour(session.session_time, isRTL)}`;
   };
-
-  const canManage = role === 'admin' || role === 'instructor';
+  // Check if selected group is frozen
+  const selectedGroupData = groups.find(g => g.id === selectedGroup);
+  const isGroupFrozen = selectedGroupData?.status === 'frozen';
+  const canManage = (role === 'admin' || (role === 'instructor' && !isGroupFrozen));
 
   return (
     <DashboardLayout title={t.attendance.title}>
       <div className="space-y-4 sm:space-y-6">
+        {/* Frozen Group Alert */}
+        {isGroupFrozen && role !== 'admin' && (
+          <Alert className="border-sky-300 bg-sky-50 dark:bg-sky-950/30">
+            <Snowflake className="h-5 w-5 text-sky-600" />
+            <AlertTitle className="text-sky-800 dark:text-sky-300">
+              {isRTL ? 'هذه المجموعة مجمدة' : 'This Group is Frozen'}
+            </AlertTitle>
+            <AlertDescription className="text-sky-700 dark:text-sky-400">
+              {isRTL 
+                ? 'لا يمكن تسجيل الحضور لهذه المجموعة. يمكنك فقط عرض البيانات السابقة.'
+                : 'Attendance cannot be recorded for this group. You can only view historical data.'}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Filters */}
         <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <div className="grid gap-2">
@@ -284,7 +303,12 @@ export default function AttendancePage() {
               <SelectContent>
                 {groups.map((group) => (
                   <SelectItem key={group.id} value={group.id}>
-                    {language === 'ar' ? group.name_ar : group.name}
+                    <span className="flex items-center gap-2">
+                      {language === 'ar' ? group.name_ar : group.name}
+                      {group.status === 'frozen' && (
+                        <Snowflake className="h-3 w-3 text-sky-500" />
+                      )}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

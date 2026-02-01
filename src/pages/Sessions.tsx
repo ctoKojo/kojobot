@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users, ChevronDown, FolderOpen } from 'lucide-react';
+import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users, ChevronDown, FolderOpen, Snowflake } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +69,7 @@ interface Group {
   name_ar: string;
   schedule_day: string;
   schedule_time: string;
+  status: string;
 }
 
 export default function SessionsPage() {
@@ -97,7 +98,7 @@ export default function SessionsPage() {
 
   const fetchData = async () => {
     try {
-      let groupsQuery = supabase.from('groups').select('id, name, name_ar, schedule_day, schedule_time').eq('is_active', true);
+      let groupsQuery = supabase.from('groups').select('id, name, name_ar, schedule_day, schedule_time, status').eq('is_active', true);
       
       if (role === 'instructor' && user) {
         groupsQuery = groupsQuery.eq('instructor_id', user.id);
@@ -309,6 +310,12 @@ export default function SessionsPage() {
     const todaySession = groupSessions.find(s => isToday(s.session_date));
     return { completed, total, todaySession };
   };
+  // Check if a group allows management (not frozen for non-admin)
+  const canManageGroup = (group: Group) => {
+    if (role === 'admin') return true;
+    if (role === 'instructor' && group.status !== 'frozen') return true;
+    return false;
+  };
 
   const canManage = role === 'admin' || role === 'instructor';
 
@@ -468,6 +475,12 @@ export default function SessionsPage() {
                       </div>
                       
                       <div className="flex items-center gap-2 flex-wrap ml-11 sm:ml-0 sm:mr-4">
+                        {group.status === 'frozen' && (
+                          <Badge className="bg-sky-500 text-white text-xs">
+                            <Snowflake className="h-3 w-3 mr-1" />
+                            {isRTL ? 'مجمدة' : 'Frozen'}
+                          </Badge>
+                        )}
                         {stats.todaySession && (
                           <Badge variant="default" className="kojo-gradient text-xs">
                             {isRTL ? 'اليوم' : 'Today'}
@@ -529,7 +542,7 @@ export default function SessionsPage() {
                                   </p>
                                 )}
                               </div>
-                              {canManage && (
+                              {canManageGroup(group) && (
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -579,7 +592,7 @@ export default function SessionsPage() {
                             <TableHead>{isRTL ? 'الوقت' : 'Time'}</TableHead>
                             <TableHead>{isRTL ? 'الموضوع' : 'Topic'}</TableHead>
                             <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                            {canManage && <TableHead className="w-[100px]">{t.common.actions}</TableHead>}
+                            {canManageGroup(group) && <TableHead className="w-[100px]">{t.common.actions}</TableHead>}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -624,7 +637,7 @@ export default function SessionsPage() {
                                   }
                                 </TableCell>
                                 <TableCell>{getStatusBadge(session.status)}</TableCell>
-                                {canManage && (
+                                {canManageGroup(group) && (
                                   <TableCell>
                                     <div className="flex items-center gap-1">
                                       <Button 
