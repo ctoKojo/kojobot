@@ -69,6 +69,33 @@ serve(async (req) => {
       )
     }
 
+    // Time-based validation
+    const now = new Date().getTime()
+    const duration = assignment.quizzes?.duration_minutes || 30
+    const durationMs = duration * 60 * 1000
+    const gracePeriodMs = 60 * 1000 // 1 minute grace period for submission
+
+    if (assignment.start_time) {
+      const startTime = new Date(assignment.start_time).getTime()
+      
+      // Check if quiz hasn't started yet
+      if (now < startTime) {
+        return new Response(
+          JSON.stringify({ error: 'Quiz has not started yet' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      // Check if quiz time window has passed (with grace period for submission)
+      const quizEndTime = startTime + durationMs + gracePeriodMs
+      if (now > quizEndTime) {
+        return new Response(
+          JSON.stringify({ error: 'Quiz time has expired' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
     // Verify the student is allowed to take this quiz
     const isDirectAssignment = assignment.student_id === userId
     let isGroupAssignment = false

@@ -26,6 +26,7 @@ interface Question {
 interface QuizAssignment {
   id: string;
   quiz_id: string;
+  start_time: string | null;
   due_date: string | null;
   quizzes: {
     id: string;
@@ -55,6 +56,7 @@ export default function TakeQuiz() {
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<{ score: number; maxScore: number; percentage: number; passed: boolean } | null>(null);
   const [gradeResults, setGradeResults] = useState<Record<string, { correct: boolean; correctAnswer: string }>>({});
+  const [quizStatus, setQuizStatus] = useState<'loading' | 'not_started' | 'expired' | 'available'>('loading');
 
   useEffect(() => {
     if (assignmentId) fetchQuizData();
@@ -86,7 +88,43 @@ export default function TakeQuiz() {
 
       if (assignmentError) throw assignmentError;
       setAssignment(assignmentData);
-      setTimeLeft((assignmentData.quizzes?.duration_minutes || 30) * 60);
+      
+      // Calculate quiz status and remaining time based on start_time
+      const now = new Date().getTime();
+      const duration = assignmentData.quizzes?.duration_minutes || 30;
+      const durationMs = duration * 60 * 1000;
+      
+      if (assignmentData.start_time) {
+        const startTime = new Date(assignmentData.start_time).getTime();
+        
+        // Quiz hasn't started yet
+        if (now < startTime) {
+          setQuizStatus('not_started');
+          setTimeLeft(duration * 60); // Full duration
+          setLoading(false);
+          return;
+        }
+        
+        // Calculate remaining time from start_time
+        const elapsed = now - startTime;
+        const remainingMs = durationMs - elapsed;
+        
+        // Quiz time window has expired
+        if (remainingMs <= 0) {
+          setQuizStatus('expired');
+          setTimeLeft(0);
+          setLoading(false);
+          return;
+        }
+        
+        // Quiz is available, set remaining time
+        setTimeLeft(Math.floor(remainingMs / 1000));
+        setQuizStatus('available');
+      } else {
+        // No start_time set, use full duration
+        setTimeLeft(duration * 60);
+        setQuizStatus('available');
+      }
 
       // Use secure view that excludes correct_answer - answers are fetched separately after submission
       const { data: questionsData, error: questionsError } = await supabase
@@ -168,6 +206,16 @@ export default function TakeQuiz() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatDateTime = (date: string) => {
+    return new Date(date).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   const currentQuestion = questions[currentIndex];
   const progress = ((currentIndex + 1) / questions.length) * 100;
 
@@ -177,6 +225,79 @@ export default function TakeQuiz() {
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">{t.common.loading}</p>
         </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show message if quiz hasn't started yet
+  if (quizStatus === 'not_started' && assignment?.start_time) {
+    return (
+      <DashboardLayout title={isRTL ? 'حل الكويز' : 'Take Quiz'}>
+        <Card className="max-w-md mx-auto">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
+              <Clock className="w-10 h-10 text-blue-600" />
+            </div>
+            <CardTitle className="mt-4">
+              {isRTL ? 'الكويز لم يبدأ بعد' : 'Quiz Not Started Yet'}
+            </CardTitle>
+            <CardDescription>
+              {language === 'ar' ? assignment?.quizzes?.title_ar : assignment?.quizzes?.title}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="p-4 rounded-lg bg-muted text-center">
+              <p className="text-sm text-muted-foreground mb-2">
+                {isRTL ? 'الكويز يبدأ في:' : 'Quiz starts at:'}
+              </p>
+              <p className="text-2xl font-bold text-primary">
+                {formatDateTime(assignment.start_time)}
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+              <AlertTriangle className="w-4 h-4" />
+              <p className="text-sm">
+                {isRTL ? 'عُد في الموعد المحدد لبدء الكويز' : 'Come back at the scheduled time to start'}
+              </p>
+            </div>
+            <Button className="w-full" variant="outline" onClick={() => navigate('/my-quizzes')}>
+              {isRTL ? 'العودة لقائمة الكويزات' : 'Back to My Quizzes'}
+            </Button>
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
+  // Show message if quiz time has expired
+  if (quizStatus === 'expired') {
+    return (
+      <DashboardLayout title={isRTL ? 'حل الكويز' : 'Take Quiz'}>
+        <Card className="max-w-md mx-auto">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
+              <XCircle className="w-10 h-10 text-red-600" />
+            </div>
+            <CardTitle className="mt-4">
+              {isRTL ? 'انتهى وقت الكويز' : 'Quiz Time Expired'}
+            </CardTitle>
+            <CardDescription>
+              {language === 'ar' ? assignment?.quizzes?.title_ar : assignment?.quizzes?.title}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="p-4 rounded-lg bg-red-50 text-center">
+              <p className="text-sm text-red-700">
+                {isRTL 
+                  ? 'للأسف انتهت المدة المحددة لهذا الكويز ولم يعد بإمكانك حله.'
+                  : 'Unfortunately, the time window for this quiz has passed and you can no longer take it.'}
+              </p>
+            </div>
+            <Button className="w-full" variant="outline" onClick={() => navigate('/my-quizzes')}>
+              {isRTL ? 'العودة لقائمة الكويزات' : 'Back to My Quizzes'}
+            </Button>
+          </CardContent>
+        </Card>
       </DashboardLayout>
     );
   }

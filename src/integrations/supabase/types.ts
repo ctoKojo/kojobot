@@ -606,6 +606,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           quiz_id: string
+          start_time: string | null
           student_id: string | null
         }
         Insert: {
@@ -616,6 +617,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           quiz_id: string
+          start_time?: string | null
           student_id?: string | null
         }
         Update: {
@@ -626,6 +628,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           quiz_id?: string
+          start_time?: string | null
           student_id?: string | null
         }
         Relationships: [

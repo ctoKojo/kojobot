@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface QuizAssignment {
   id: string;
   quiz_id: string;
+  start_time: string | null;
   due_date: string | null;
   created_at: string;
   quizzes: {
@@ -58,7 +59,7 @@ export default function MyQuizzes() {
         .from('quiz_assignments')
         .select('*, quizzes(id, title, title_ar, description, description_ar, duration_minutes)')
         .eq('is_active', true)
-        .order('created_at', { ascending: false });
+        .order('start_time', { ascending: true });
 
       if (groupIds.length > 0) {
         query = query.or(`student_id.eq.${user?.id},group_id.in.(${groupIds.join(',')})`);
@@ -99,6 +100,60 @@ export default function MyQuizzes() {
     });
   };
 
+  const formatDateTime = (date: string) => {
+    return new Date(date).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getQuizStatus = (quiz: QuizAssignment) => {
+    const now = new Date().getTime();
+    const startTime = quiz.start_time ? new Date(quiz.start_time).getTime() : null;
+    const dueDate = quiz.due_date ? new Date(quiz.due_date).getTime() : null;
+    const duration = quiz.quizzes?.duration_minutes || 30;
+    
+    // If no start_time is set, quiz is available immediately
+    if (!startTime) {
+      if (dueDate && now > dueDate) {
+        return 'expired';
+      }
+      return 'available';
+    }
+    
+    // Quiz hasn't started yet
+    if (now < startTime) {
+      return 'not_started';
+    }
+    
+    // Calculate when quiz time window ends (start_time + duration)
+    const quizEndTime = startTime + (duration * 60 * 1000);
+    
+    // Quiz time window has passed
+    if (now > quizEndTime) {
+      return 'expired';
+    }
+    
+    // Quiz is available
+    return 'available';
+  };
+
+  const getRemainingTime = (quiz: QuizAssignment) => {
+    const now = new Date().getTime();
+    const startTime = quiz.start_time ? new Date(quiz.start_time).getTime() : now;
+    const duration = quiz.quizzes?.duration_minutes || 30;
+    const durationMs = duration * 60 * 1000;
+    
+    const elapsed = now - startTime;
+    const remaining = durationMs - elapsed;
+    
+    if (remaining <= 0) return 0;
+    return Math.floor(remaining / 60000); // Return in minutes
+  };
+
   const pendingQuizzes = quizzes.filter(q => !q.submission);
   const completedQuizzes = quizzes.filter(q => q.submission);
 
@@ -134,39 +189,94 @@ export default function MyQuizzes() {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {pendingQuizzes.map((quiz) => (
-                <Card key={quiz.id} className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      {language === 'ar' ? quiz.quizzes?.title_ar : quiz.quizzes?.title}
-                    </CardTitle>
-                    <CardDescription>
-                      {language === 'ar' ? quiz.quizzes?.description_ar : quiz.quizzes?.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {quiz.quizzes?.duration_minutes} {isRTL ? 'دقيقة' : 'min'}
-                      </span>
-                      {quiz.due_date && (
+              {pendingQuizzes.map((quiz) => {
+                const status = getQuizStatus(quiz);
+                const remainingMinutes = getRemainingTime(quiz);
+                const isExpired = status === 'expired';
+                const isNotStarted = status === 'not_started';
+                const isAvailable = status === 'available';
+                
+                return (
+                  <Card key={quiz.id} className={`hover:shadow-md transition-shadow ${isExpired ? 'opacity-60' : ''}`}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-lg">
+                            {language === 'ar' ? quiz.quizzes?.title_ar : quiz.quizzes?.title}
+                          </CardTitle>
+                          <CardDescription>
+                            {language === 'ar' ? quiz.quizzes?.description_ar : quiz.quizzes?.description}
+                          </CardDescription>
+                        </div>
+                        {isNotStarted && (
+                          <Badge variant="secondary" className="shrink-0">
+                            {isRTL ? 'لم يبدأ' : 'Not Started'}
+                          </Badge>
+                        )}
+                        {isExpired && (
+                          <Badge variant="destructive" className="shrink-0">
+                            {isRTL ? 'انتهى الوقت' : 'Expired'}
+                          </Badge>
+                        )}
+                        {isAvailable && remainingMinutes < quiz.quizzes?.duration_minutes && (
+                          <Badge variant="outline" className="shrink-0 text-orange-600 border-orange-300">
+                            {isRTL ? `متبقي ${remainingMinutes} د` : `${remainingMinutes}m left`}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex flex-col gap-2 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {formatDate(quiz.due_date)}
+                          <Clock className="w-4 h-4" />
+                          {quiz.quizzes?.duration_minutes} {isRTL ? 'دقيقة' : 'min'}
                         </span>
+                        {quiz.start_time && (
+                          <span className="flex items-center gap-1">
+                            <Play className="w-4 h-4" />
+                            {isRTL ? 'يبدأ: ' : 'Starts: '}{formatDateTime(quiz.start_time)}
+                          </span>
+                        )}
+                        {quiz.due_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {isRTL ? 'ينتهي: ' : 'Due: '}{formatDateTime(quiz.due_date)}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {isNotStarted && quiz.start_time && (
+                        <div className="p-3 rounded-lg bg-muted text-center">
+                          <p className="text-sm font-medium">
+                            {isRTL ? 'الكويز يبدأ في:' : 'Quiz starts at:'}
+                          </p>
+                          <p className="text-lg font-bold text-primary">
+                            {formatDateTime(quiz.start_time)}
+                          </p>
+                        </div>
                       )}
-                    </div>
-                    <Button
-                      className="w-full kojo-gradient"
-                      onClick={() => navigate(`/quiz/${quiz.id}`)}
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      {isRTL ? 'ابدأ الكويز' : 'Start Quiz'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                      
+                      {isExpired ? (
+                        <Button className="w-full" variant="secondary" disabled>
+                          {isRTL ? 'انتهى وقت الكويز' : 'Quiz Time Expired'}
+                        </Button>
+                      ) : isNotStarted ? (
+                        <Button className="w-full" variant="secondary" disabled>
+                          {isRTL ? 'الكويز لم يبدأ بعد' : 'Quiz Not Started Yet'}
+                        </Button>
+                      ) : (
+                        <Button
+                          className="w-full kojo-gradient"
+                          onClick={() => navigate(`/quiz/${quiz.id}`)}
+                        >
+                          <Play className="w-4 h-4 mr-2" />
+                          {isRTL ? 'ابدأ الكويز' : 'Start Quiz'}
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
