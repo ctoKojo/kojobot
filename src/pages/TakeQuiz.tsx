@@ -475,12 +475,16 @@ export default function TakeQuiz() {
                   return optionsList.map((optionText, idx) => (
                     <div
                       key={idx}
-                      className={`flex items-center space-x-3 p-4 rounded-lg border cursor-pointer transition-colors ${answers[currentQuestion.id] === idx.toString() ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
+                      onClick={() => handleAnswerChange(currentQuestion.id, idx.toString())}
+                      className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${answers[currentQuestion.id] === idx.toString() ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
                     >
-                      <RadioGroupItem value={idx.toString()} id={`option-${idx}`} />
-                      <Label htmlFor={`option-${idx}`} className="flex-1 cursor-pointer">
+                      <RadioGroupItem value={idx.toString()} id={`option-${idx}`} className="pointer-events-none" />
+                      <span className="flex-1">
                         {optionText || `Option ${idx + 1}`}
-                      </Label>
+                      </span>
+                      {answers[currentQuestion.id] === idx.toString() && (
+                        <span className="text-xs text-primary font-medium">✓</span>
+                      )}
                     </div>
                   ));
                 })()}
