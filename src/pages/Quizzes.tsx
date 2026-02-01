@@ -102,6 +102,7 @@ export default function QuizzesPage() {
   });
   const [assignData, setAssignData] = useState({
     group_id: '',
+    start_time: '',
     due_date: '',
   });
 
@@ -189,6 +190,7 @@ export default function QuizzesPage() {
       const { error } = await supabase.from('quiz_assignments').insert([{
         quiz_id: assigningQuiz.id,
         group_id: assignData.group_id || null,
+        start_time: assignData.start_time || null,
         due_date: assignData.due_date || null,
         assigned_by: user.id,
       }]);
@@ -219,7 +221,7 @@ export default function QuizzesPage() {
 
       setIsAssignDialogOpen(false);
       setAssigningQuiz(null);
-      setAssignData({ group_id: '', due_date: '' });
+      setAssignData({ group_id: '', start_time: '', due_date: '' });
     } catch (error) {
       console.error('Error assigning quiz:', error);
       toast({
@@ -467,12 +469,26 @@ export default function QuizzesPage() {
                 </Select>
               </div>
               <div className="grid gap-2">
+                <Label>{isRTL ? 'وقت البداية' : 'Start Time'}</Label>
+                <Input
+                  type="datetime-local"
+                  value={assignData.start_time}
+                  onChange={(e) => setAssignData({ ...assignData, start_time: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {isRTL ? 'متى يُسمح للطلاب ببدء الكويز' : 'When students can start taking the quiz'}
+                </p>
+              </div>
+              <div className="grid gap-2">
                 <Label>{t.quizzes.dueDate}</Label>
                 <Input
                   type="datetime-local"
                   value={assignData.due_date}
                   onChange={(e) => setAssignData({ ...assignData, due_date: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  {isRTL ? 'الموعد النهائي لتسليم الكويز' : 'Deadline for quiz submission'}
+                </p>
               </div>
             </div>
             <DialogFooter>
