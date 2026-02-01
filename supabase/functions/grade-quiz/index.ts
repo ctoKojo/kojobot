@@ -110,12 +110,21 @@ serve(async (req) => {
 
     for (const question of questions) {
       maxScore += question.points
-      const optionsData = question.options as { options: { text: string; text_ar: string }[] } | null
-      const optionsList = optionsData?.options || []
+      const optionsData = question.options as any
+      let optionsList: string[] = []
+      
+      // Support both new format { en: [...], ar: [...] } and old format { options: [...] }
+      if (optionsData?.en && Array.isArray(optionsData.en)) {
+        optionsList = optionsData.en
+      } else if (optionsData?.options && Array.isArray(optionsData.options)) {
+        optionsList = optionsData.options.map((opt: any) => opt.text)
+      }
+      
       const selectedIdx = parseInt(answers[question.id] || '-1')
       const selectedOption = optionsList[selectedIdx]
       
-      const isCorrect = selectedOption && selectedOption.text === question.correct_answer
+      // For new format, correct_answer is the option text itself
+      const isCorrect = selectedOption && selectedOption === question.correct_answer
       if (isCorrect) {
         score += question.points
       }

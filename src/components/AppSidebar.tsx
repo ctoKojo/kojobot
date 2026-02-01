@@ -60,6 +60,7 @@ export function AppSidebar() {
 
   const educationNavItems: NavItem[] = [
     { title: t.nav.questionBank, url: '/quizzes', icon: FileQuestion, roles: ['admin', 'instructor'] },
+    { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileQuestion, roles: ['student'] },
     { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['admin', 'instructor', 'student'] },
     { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['admin', 'instructor', 'student'] },
   ];

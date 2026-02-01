@@ -34,6 +34,7 @@ import InstructorProfile from "./pages/InstructorProfile";
 import GroupDetails from "./pages/GroupDetails";
 import Profile from "./pages/Profile";
 import InstructorSchedule from "./pages/InstructorSchedule";
+import MyQuizzes from "./pages/MyQuizzes";
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
@@ -70,6 +71,7 @@ const App = () => (
                 <Route path="/activity-log" element={<ProtectedRoute allowedRoles={['admin']}><ActivityLog /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
                 <Route path="/quiz/:assignmentId" element={<ProtectedRoute allowedRoles={['student']}><TakeQuiz /></ProtectedRoute>} />
+                <Route path="/my-quizzes" element={<ProtectedRoute allowedRoles={['student']}><MyQuizzes /></ProtectedRoute>} />
                 <Route path="/assignment/:assignmentId" element={<ProtectedRoute allowedRoles={['student']}><SubmitAssignment /></ProtectedRoute>} />
                 <Route path="/quiz-editor/:quizId" element={<ProtectedRoute allowedRoles={['admin']}><QuizEditor /></ProtectedRoute>} />
                 <Route path="/grade-assignment/:submissionId" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><GradeAssignment /></ProtectedRoute>} />

@@ -227,14 +227,26 @@ export default function TakeQuiz() {
             <div className="space-y-4 mt-6">
               <h3 className="font-semibold">{isRTL ? 'مراجعة الإجابات' : 'Review Answers'}</h3>
               {questions.map((q, idx) => {
-                const optionsData = q.options as { options: { text: string; text_ar: string }[] } | null;
-                const optionsList = optionsData?.options || [];
+                // Support both formats
+                const optionsData = q.options as any;
+                let optionsList: string[] = [];
+                
+                if (optionsData?.en && Array.isArray(optionsData.en)) {
+                  optionsList = language === 'ar' && optionsData.ar ? optionsData.ar : optionsData.en;
+                } else if (optionsData?.options && Array.isArray(optionsData.options)) {
+                  optionsList = optionsData.options.map((opt: any) => 
+                    language === 'ar' ? opt.text_ar : opt.text
+                  );
+                }
+                
                 const userAnswerIdx = answers[q.id] ? parseInt(answers[q.id]) : -1;
-                const selectedOption = optionsList[userAnswerIdx];
+                const selectedOptionText = optionsList[userAnswerIdx] || null;
                 const questionResult = gradeResults[q.id];
                 const isCorrect = questionResult?.correct || false;
                 const correctAnswerText = questionResult?.correctAnswer || '';
-                const correctAnswerIdx = optionsList.findIndex(opt => opt.text === correctAnswerText);
+                
+                // Find correct answer index - for new format it's stored as the option text directly
+                const correctAnswerIdx = optionsList.findIndex(opt => opt === correctAnswerText);
                 
                 return (
                   <div key={q.id} className={`p-4 rounded-lg border ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
@@ -245,15 +257,13 @@ export default function TakeQuiz() {
                         <p className="text-sm mt-1">
                           <span className="text-muted-foreground">{isRTL ? 'إجابتك: ' : 'Your answer: '}</span>
                           <span className={isCorrect ? 'text-green-700' : 'text-red-700'}>
-                            {userAnswerIdx >= 0 && selectedOption 
-                              ? (language === 'ar' ? selectedOption.text_ar : selectedOption.text) 
-                              : (isRTL ? 'لم تجب' : 'No answer')}
+                            {selectedOptionText || (isRTL ? 'لم تجب' : 'No answer')}
                           </span>
                         </p>
                         {!isCorrect && correctAnswerIdx >= 0 && optionsList[correctAnswerIdx] && (
                           <p className="text-sm text-green-700 mt-1">
                             {isRTL ? 'الإجابة الصحيحة: ' : 'Correct answer: '}
-                            {language === 'ar' ? optionsList[correctAnswerIdx].text_ar : optionsList[correctAnswerIdx].text}
+                            {optionsList[correctAnswerIdx]}
                           </p>
                         )}
                       </div>
@@ -307,16 +317,28 @@ export default function TakeQuiz() {
                 className="space-y-3"
               >
                 {(() => {
-                  const optionsData = currentQuestion.options as { options: { text: string; text_ar: string }[] } | null;
-                  const optionsList = optionsData?.options || [];
-                  return optionsList.map((option, idx) => (
+                  // Support both old format { options: [...] } and new format { en: [...], ar: [...] }
+                  const optionsData = currentQuestion.options as any;
+                  let optionsList: string[] = [];
+                  
+                  if (optionsData?.en && Array.isArray(optionsData.en)) {
+                    // New simplified format
+                    optionsList = language === 'ar' && optionsData.ar ? optionsData.ar : optionsData.en;
+                  } else if (optionsData?.options && Array.isArray(optionsData.options)) {
+                    // Old format with nested objects
+                    optionsList = optionsData.options.map((opt: any) => 
+                      language === 'ar' ? opt.text_ar : opt.text
+                    );
+                  }
+                  
+                  return optionsList.map((optionText, idx) => (
                     <div
                       key={idx}
                       className={`flex items-center space-x-3 p-4 rounded-lg border cursor-pointer transition-colors ${answers[currentQuestion.id] === idx.toString() ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'}`}
                     >
                       <RadioGroupItem value={idx.toString()} id={`option-${idx}`} />
                       <Label htmlFor={`option-${idx}`} className="flex-1 cursor-pointer">
-                        {language === 'ar' ? option.text_ar : option.text}
+                        {optionText || `Option ${idx + 1}`}
                       </Label>
                     </div>
                   ));
