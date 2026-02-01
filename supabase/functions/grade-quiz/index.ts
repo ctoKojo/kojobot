@@ -165,6 +165,49 @@ serve(async (req) => {
 
     console.log(`Quiz graded for user ${userId}: ${score}/${maxScore} (${percentage}%)`)
 
+    // Notify admins if student failed
+    if (!passed) {
+      try {
+        // Get student name
+        const { data: studentProfile } = await adminSupabase
+          .from('profiles')
+          .select('full_name, full_name_ar')
+          .eq('user_id', userId)
+          .single()
+
+        // Get quiz info
+        const quizTitle = assignment.quizzes?.title || 'Quiz'
+        const quizTitleAr = assignment.quizzes?.title_ar || 'كويز'
+        const studentName = studentProfile?.full_name || 'Student'
+        const studentNameAr = studentProfile?.full_name_ar || 'طالب'
+
+        // Get all admin user IDs
+        const { data: admins } = await adminSupabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'admin')
+
+        if (admins && admins.length > 0) {
+          const notifications = admins.map(admin => ({
+            user_id: admin.user_id,
+            title: 'Student Failed Quiz',
+            title_ar: 'طالب رسب في الكويز',
+            message: `${studentName} failed "${quizTitle}" with ${percentage}%`,
+            message_ar: `${studentNameAr} رسب في "${quizTitleAr}" بنسبة ${percentage}%`,
+            type: 'warning',
+            category: 'quiz',
+            action_url: '/quiz-reports',
+          }))
+
+          await adminSupabase.from('notifications').insert(notifications)
+          console.log(`Notified ${admins.length} admins about failed quiz`)
+        }
+      } catch (notifyError) {
+        console.error('Error notifying admins:', notifyError)
+        // Don't fail the grading if notification fails
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
