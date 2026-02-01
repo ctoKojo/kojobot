@@ -11,7 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
-import kojobotLogoWhite from '@/assets/kojobot-logo-white.png';
+// Use public path for LCP image (discoverable from initial HTML)
+const kojobotLogoWhite = '/kojobot-logo-white.png';
 import kojobotIcon from '@/assets/kojobot-icon-optimized.webp';
 const loginSchema = z.object({
   email: z.string().email(),
