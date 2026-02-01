@@ -105,14 +105,26 @@ export default function QuizzesPage() {
   const [assignData, setAssignData] = useState({
     group_id: '',
     start_time: '',
-    due_date: '',
   });
 
-  // Time validation for quiz assignments
-  const timeValidationError = useMemo(() => {
-    const result = validateTimeRange(assignData.start_time, assignData.due_date);
-    return getLocalizedError(result, isRTL);
-  }, [assignData.start_time, assignData.due_date, isRTL]);
+  // Calculate end time automatically based on quiz duration
+  const calculatedEndTime = useMemo(() => {
+    if (!assignData.start_time || !assigningQuiz) return '';
+    const startDate = new Date(assignData.start_time);
+    const endDate = new Date(startDate.getTime() + (assigningQuiz.duration_minutes * 60 * 1000));
+    return endDate.toISOString().slice(0, 16);
+  }, [assignData.start_time, assigningQuiz]);
+
+  // Validation: start time must be in the future
+  const startTimeError = useMemo(() => {
+    if (!assignData.start_time) return null;
+    const startDate = new Date(assignData.start_time);
+    const now = new Date();
+    if (startDate <= now) {
+      return isRTL ? 'وقت البداية يجب أن يكون في المستقبل' : 'Start time must be in the future';
+    }
+    return null;
+  }, [assignData.start_time, isRTL]);
 
   useEffect(() => {
     fetchData();
@@ -194,12 +206,22 @@ export default function QuizzesPage() {
   const handleAssign = async () => {
     if (!user || !assigningQuiz) return;
 
-    // Validate time range
-    if (timeValidationError) {
+    // Validate start time
+    if (startTimeError) {
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: timeValidationError,
+        description: startTimeError,
+      });
+      return;
+    }
+
+    // Require start time
+    if (!assignData.start_time) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: isRTL ? 'يجب تحديد وقت البداية' : 'Start time is required',
       });
       return;
     }
@@ -209,7 +231,7 @@ export default function QuizzesPage() {
         quiz_id: assigningQuiz.id,
         group_id: assignData.group_id || null,
         start_time: assignData.start_time || null,
-        due_date: assignData.due_date || null,
+        due_date: calculatedEndTime || null, // Auto-calculated end time
         assigned_by: user.id,
       }]);
 
@@ -217,16 +239,16 @@ export default function QuizzesPage() {
 
       // Send notifications to students in the group
       if (assignData.group_id) {
-        const formattedDueDate = assignData.due_date 
-          ? new Date(assignData.due_date).toLocaleDateString() 
+        const formattedEndTime = calculatedEndTime 
+          ? new Date(calculatedEndTime).toLocaleString() 
           : undefined;
 
         await notificationService.notifyGroupStudents(
           assignData.group_id,
           'New Quiz Assigned',
           'كويز جديد',
-          `You have been assigned a new quiz: "${assigningQuiz.title}"${formattedDueDate ? ` - Due: ${formattedDueDate}` : ''}`,
-          `تم إسناد كويز جديد لك: "${assigningQuiz.title_ar}"${formattedDueDate ? ` - الموعد: ${formattedDueDate}` : ''}`,
+          `You have been assigned a new quiz: "${assigningQuiz.title}"${formattedEndTime ? ` - Ends: ${formattedEndTime}` : ''}`,
+          `تم إسناد كويز جديد لك: "${assigningQuiz.title_ar}"${formattedEndTime ? ` - ينتهي: ${formattedEndTime}` : ''}`,
           'info',
           'quiz'
         );
@@ -239,7 +261,7 @@ export default function QuizzesPage() {
 
       setIsAssignDialogOpen(false);
       setAssigningQuiz(null);
-      setAssignData({ group_id: '', start_time: '', due_date: '' });
+      setAssignData({ group_id: '', start_time: '' });
     } catch (error) {
       console.error('Error assigning quiz:', error);
       toast({
@@ -487,39 +509,52 @@ export default function QuizzesPage() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label className={cn(timeValidationError && 'text-destructive')}>
-                  {isRTL ? 'وقت البداية' : 'Start Time'}
+                <Label className={cn(startTimeError && 'text-destructive')}>
+                  {isRTL ? 'وقت البداية' : 'Start Time'} <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   type="datetime-local"
                   value={assignData.start_time}
                   onChange={(e) => setAssignData({ ...assignData, start_time: e.target.value })}
-                  className={cn(timeValidationError && 'border-destructive focus-visible:ring-destructive')}
+                  className={cn(startTimeError && 'border-destructive focus-visible:ring-destructive')}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {isRTL ? 'متى يُسمح للطلاب ببدء الكويز' : 'When students can start taking the quiz'}
+                  {isRTL ? 'متى يبدأ العد التنازلي للكويز' : 'When the quiz countdown starts'}
                 </p>
-              </div>
-              <div className="grid gap-2">
-                <Label className={cn(timeValidationError && 'text-destructive')}>
-                  {t.quizzes.dueDate}
-                </Label>
-                <Input
-                  type="datetime-local"
-                  value={assignData.due_date}
-                  onChange={(e) => setAssignData({ ...assignData, due_date: e.target.value })}
-                  className={cn(timeValidationError && 'border-destructive focus-visible:ring-destructive')}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {isRTL ? 'الموعد النهائي لتسليم الكويز' : 'Deadline for quiz submission'}
-                </p>
-                {timeValidationError && (
+                {startTimeError && (
                   <p className="text-sm text-destructive flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
-                    {timeValidationError}
+                    {startTimeError}
                   </p>
                 )}
               </div>
+              
+              {/* Auto-calculated end time display */}
+              {assignData.start_time && assigningQuiz && (
+                <div className="p-4 rounded-lg bg-muted/50 border space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {isRTL ? 'مدة الكويز:' : 'Quiz Duration:'}
+                    </span>
+                    <span className="font-medium">
+                      {assigningQuiz.duration_minutes} {isRTL ? 'دقيقة' : 'minutes'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {isRTL ? 'ينتهي تلقائياً:' : 'Auto-ends at:'}
+                    </span>
+                    <span className="font-medium text-primary">
+                      {new Date(calculatedEndTime).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {isRTL 
+                      ? '⏰ الوقت يبدأ من موعد البداية - إذا دخل الطالب متأخراً، يُخصم الوقت المنقضي'
+                      : '⏰ Timer starts from scheduled time - late entries get reduced time'}
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
@@ -528,7 +563,7 @@ export default function QuizzesPage() {
               <Button 
                 className="kojo-gradient" 
                 onClick={handleAssign}
-                disabled={!!timeValidationError}
+                disabled={!!startTimeError || !assignData.start_time || !assignData.group_id}
               >
                 {t.quizzes.assignQuiz}
               </Button>
