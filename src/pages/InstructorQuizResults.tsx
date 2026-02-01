@@ -308,8 +308,13 @@ export default function InstructorQuizResultsPage() {
   const formatDateTime = (dateStr: string | null) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      dateStyle: 'short',
-      timeStyle: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Africa/Cairo', // Use Egypt timezone for consistency
     });
   };
 
