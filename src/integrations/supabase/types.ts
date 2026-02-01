@@ -335,6 +335,7 @@ export type Database = {
           schedule_day: string
           schedule_time: string
           session_link: string | null
+          start_date: string | null
           updated_at: string
         }
         Insert: {
@@ -352,6 +353,7 @@ export type Database = {
           schedule_day: string
           schedule_time: string
           session_link?: string | null
+          start_date?: string | null
           updated_at?: string
         }
         Update: {
@@ -369,6 +371,7 @@ export type Database = {
           schedule_day?: string
           schedule_time?: string
           session_link?: string | null
+          start_date?: string | null
           updated_at?: string
         }
         Relationships: [
