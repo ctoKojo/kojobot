@@ -137,22 +137,38 @@ export function DraggableQuestionCard({
             value={question.correct_answer}
             onValueChange={(value) => onUpdate({ correct_answer: value })}
           >
-            {[0, 1, 2, 3].map((optIndex) => (
-              <div key={optIndex} className="flex items-center gap-3 p-3 rounded-lg border">
-                <RadioGroupItem value={optIndex.toString()} id={`q${index}-opt${optIndex}`} />
-                <Input
-                  value={question.options[optIndex] || ''}
-                  onChange={(e) => onUpdateOption(optIndex, e.target.value)}
-                  placeholder={isRTL ? `الخيار ${optIndex + 1}` : `Option ${optIndex + 1}`}
-                  className="flex-1"
-                />
-                {question.correct_answer === optIndex.toString() && (
-                  <span className="text-xs text-primary font-medium">
-                    {isRTL ? '✓ صحيح' : '✓ Correct'}
-                  </span>
-                )}
-              </div>
-            ))}
+            {[0, 1, 2, 3].map((optIndex) => {
+              const isSelected = question.correct_answer === optIndex.toString();
+              return (
+                <div
+                  key={optIndex}
+                  onClick={() => onUpdate({ correct_answer: optIndex.toString() })}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                    isSelected
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'hover:border-muted-foreground/50 hover:bg-muted/30'
+                  }`}
+                >
+                  <RadioGroupItem 
+                    value={optIndex.toString()} 
+                    id={`q${index}-opt${optIndex}`}
+                    className="pointer-events-none"
+                  />
+                  <Input
+                    value={question.options[optIndex] || ''}
+                    onChange={(e) => onUpdateOption(optIndex, e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder={isRTL ? `الخيار ${optIndex + 1}` : `Option ${optIndex + 1}`}
+                    className="flex-1"
+                  />
+                  {isSelected && (
+                    <span className="text-xs text-primary font-medium whitespace-nowrap">
+                      {isRTL ? '✓ صحيح' : '✓ Correct'}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </RadioGroup>
         </div>
       </CardContent>
