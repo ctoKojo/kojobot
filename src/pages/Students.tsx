@@ -745,7 +745,7 @@ export default function StudentsPage() {
                   <TableHead>{t.students.level}</TableHead>
                   <TableHead>{isRTL ? 'الاشتراك' : 'Subscription'}</TableHead>
                   <TableHead>{isRTL ? 'نوع الحضور' : 'Attendance'}</TableHead>
-                  <TableHead className="w-[60px]"></TableHead>
+                  <TableHead className="w-[100px]">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
