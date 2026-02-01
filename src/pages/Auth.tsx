@@ -157,7 +157,7 @@ export default function Auth() {
 
         {/* Mobile Header - Logo and tagline */}
         <div className="lg:hidden relative z-10 pt-12 pb-6 px-6 text-center">
-          <img src={kojobotLogoWhite} alt="Kojobot" className="h-14 mx-auto mb-4 drop-shadow-lg animate-fade-in object-cover" />
+          <img src={kojobotLogoWhite} alt="Kojobot" className="h-20 mx-auto mb-4 drop-shadow-lg animate-fade-in object-cover" />
           
         </div>
 
