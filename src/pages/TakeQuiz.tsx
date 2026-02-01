@@ -12,6 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { logStart, logSubmit, logComplete } from '@/lib/activityLogger';
 
 interface Question {
   id: string;
@@ -162,6 +163,12 @@ export default function TakeQuiz() {
     setSubmitting(true);
 
     try {
+      // Log quiz start if first submission
+      await logStart('quiz_submission', assignment.id, { 
+        quiz_title: assignment.quizzes.title,
+        quiz_id: assignment.quiz_id 
+      });
+
       // Use edge function for secure grading (correct answers are server-side only)
       const { data, error } = await supabase.functions.invoke('grade-quiz', {
         body: {
@@ -184,6 +191,15 @@ export default function TakeQuiz() {
       });
       setGradeResults(data.results || {});
       setSubmitted(true);
+
+      // Log quiz completion with results
+      await logComplete('quiz_submission', assignment.id, { 
+        quiz_title: assignment.quizzes.title,
+        score: data.score,
+        maxScore: data.maxScore,
+        percentage: data.percentage,
+        passed: data.passed
+      });
 
       toast({
         title: t.common.success,

@@ -337,6 +337,7 @@ export type Database = {
           session_link: string | null
           start_date: string | null
           starting_session_number: number | null
+          status: string
           updated_at: string
         }
         Insert: {
@@ -356,6 +357,7 @@ export type Database = {
           session_link?: string | null
           start_date?: string | null
           starting_session_number?: number | null
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -375,6 +377,7 @@ export type Database = {
           session_link?: string | null
           start_date?: string | null
           starting_session_number?: number | null
+          status?: string
           updated_at?: string
         }
         Relationships: [
