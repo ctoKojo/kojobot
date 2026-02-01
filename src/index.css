@@ -118,6 +118,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: 'Poppins', sans-serif;
   }
 
   /* RTL Support with Cairo font for Arabic */
