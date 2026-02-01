@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, Clock, Users, ClipboardList, FileQuestion, AlertTriangle } from 'lucide-react';
+import { Calendar, GraduationCap, Clock, Users, ClipboardList, FileQuestion, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
@@ -252,14 +252,14 @@ export function InstructorDashboard() {
           </CardHeader>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow sm:col-span-2 md:col-span-1" onClick={() => navigate('/assignments')}>
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow sm:col-span-2 md:col-span-1" onClick={() => navigate('/instructor-quiz-results')}>
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-              {isRTL ? 'إنشاء اساينمنت' : 'Create Assignment'}
+              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+              {isRTL ? 'نتائج الكويزات' : 'Quiz Results'}
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              {isRTL ? 'أضف اساينمنت جديد لطلابك' : 'Add a new assignment for your students'}
+              {isRTL ? 'شاهد نتائج الطلاب في الكويزات' : 'View student quiz results and performance'}
             </CardDescription>
           </CardHeader>
         </Card>
