@@ -361,7 +361,7 @@ export default function QuizzesPage() {
               </Button>
             )}
 
-            {(role === 'admin' || role === 'instructor') && (
+            {role === 'admin' && (
               <Button className="kojo-gradient" onClick={() => {
                 setEditingQuiz(null);
                 resetForm();
@@ -632,13 +632,11 @@ export default function QuizzesPage() {
                           {t.quizzes.assignQuiz}
                         </DropdownMenuItem>
                         {role === 'admin' && (
-                          <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
-                            <ListChecks className="h-4 w-4 mr-2" />
-                            {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
-                          </DropdownMenuItem>
-                        )}
-                        {(role === 'admin' || role === 'instructor') && (
                           <>
+                            <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
+                              <ListChecks className="h-4 w-4 mr-2" />
+                              {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEdit(quiz)}>
                               <Pencil className="h-4 w-4 mr-2" />
                               {t.common.edit}
@@ -727,13 +725,11 @@ export default function QuizzesPage() {
                               {t.quizzes.assignQuiz}
                             </DropdownMenuItem>
                             {role === 'admin' && (
-                              <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
-                                <ListChecks className="h-4 w-4 mr-2" />
-                                {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
-                              </DropdownMenuItem>
-                            )}
-                            {(role === 'admin' || role === 'instructor') && (
                               <>
+                                <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
+                                  <ListChecks className="h-4 w-4 mr-2" />
+                                  {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleEdit(quiz)}>
                                   <Pencil className="h-4 w-4 mr-2" />
                                   {t.common.edit}
