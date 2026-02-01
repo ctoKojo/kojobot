@@ -7,11 +7,11 @@ interface KojobotLogoProps {
   showText?: boolean;
 }
 
-const sizeClasses = {
-  sm: 'w-8 h-8',
-  md: 'w-10 h-10',
-  lg: 'w-14 h-14',
-  xl: 'w-20 h-20',
+const sizeConfig = {
+  sm: { classes: 'w-8 h-8', width: 32, height: 32 },
+  md: { classes: 'w-10 h-10', width: 40, height: 40 },
+  lg: { classes: 'w-14 h-14', width: 56, height: 56 },
+  xl: { classes: 'w-20 h-20', width: 80, height: 80 },
 };
 
 const textSizeClasses = {
@@ -22,13 +22,16 @@ const textSizeClasses = {
 };
 
 export function KojobotLogo({ size = 'md', className, showText = true }: KojobotLogoProps) {
+  const config = sizeConfig[size];
   return (
     <div className={cn('flex items-center gap-2', className)}>
       {/* Logo Icon */}
       <img 
         src={kojobotIcon} 
         alt="Kojobot" 
-        className={cn('rounded-xl shadow-md object-contain', sizeClasses[size])}
+        width={config.width}
+        height={config.height}
+        className={cn('rounded-xl shadow-md object-contain', config.classes)}
       />
       
       {/* Logo Text */}
