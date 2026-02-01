@@ -240,26 +240,14 @@ export function InstructorDashboard() {
           </CardHeader>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/quizzes')}>
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow sm:col-span-2 md:col-span-1" onClick={() => navigate('/my-instructor-quizzes')}>
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <FileQuestion className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
-              {isRTL ? 'إسناد كويز' : 'Assign Quiz'}
+              {isRTL ? 'كويزات المجموعات' : 'Group Quizzes'}
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              {isRTL ? 'اختر كويز وأسنده لمجموعة' : 'Select and assign a quiz to a group'}
-            </CardDescription>
-          </CardHeader>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow sm:col-span-2 md:col-span-1" onClick={() => navigate('/instructor-quiz-results')}>
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
-              {isRTL ? 'نتائج الكويزات' : 'Quiz Results'}
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              {isRTL ? 'شاهد نتائج الطلاب في الكويزات' : 'View student quiz results and performance'}
+              {isRTL ? 'أسند كويزات وشاهد نتائج الطلاب' : 'Assign quizzes and view student results'}
             </CardDescription>
           </CardHeader>
         </Card>
