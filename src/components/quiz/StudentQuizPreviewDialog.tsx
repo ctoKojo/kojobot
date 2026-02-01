@@ -37,10 +37,8 @@ interface QuizQuestion {
   image_url?: string | null;
 }
 
-interface SubmissionAnswer {
-  questionId: string;
-  answer: string;
-}
+// Answers can be either object format { questionId: answer } or array format [{ questionId, answer }]
+type AnswersData = Record<string, string | number> | Array<{ questionId: string; answer: string }>;
 
 export function StudentQuizPreviewDialog({
   submissionId,
@@ -54,7 +52,7 @@ export function StudentQuizPreviewDialog({
   const { isRTL, language } = useLanguage();
   const [open, setOpen] = useState(false);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [answers, setAnswers] = useState<SubmissionAnswer[]>([]);
+  const [answers, setAnswers] = useState<AnswersData>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -94,7 +92,7 @@ export function StudentQuizPreviewDialog({
       if (qError) throw qError;
 
       setQuestions((questionsData || []) as QuizQuestion[]);
-      setAnswers((submission.answers as unknown as SubmissionAnswer[]) || []);
+      setAnswers((submission.answers as AnswersData) || {});
     } catch (error) {
       console.error('Error fetching submission details:', error);
     } finally {
@@ -102,9 +100,18 @@ export function StudentQuizPreviewDialog({
     }
   };
 
-  const getStudentAnswer = (questionId: string) => {
-    const answer = answers.find(a => a.questionId === questionId);
-    return answer?.answer || '';
+  const getStudentAnswer = (questionId: string): string => {
+    // Handle object format { questionId: answer }
+    if (answers && typeof answers === 'object' && !Array.isArray(answers)) {
+      const answer = answers[questionId];
+      return answer !== undefined ? String(answer) : '';
+    }
+    // Handle array format [{ questionId, answer }]
+    if (Array.isArray(answers)) {
+      const found = answers.find(a => a.questionId === questionId);
+      return found?.answer || '';
+    }
+    return '';
   };
 
   const isCorrect = (question: QuizQuestion) => {
