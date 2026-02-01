@@ -88,10 +88,10 @@ export default function AttendancePage() {
   }, [selectedGroup]);
 
   useEffect(() => {
-    if (selectedSession) {
+    if (selectedSession && students.length > 0) {
       fetchAttendance();
     }
-  }, [selectedSession]);
+  }, [selectedSession, students]);
 
   const fetchGroups = async () => {
     try {
