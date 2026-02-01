@@ -102,21 +102,27 @@ export default function MyQuizzes() {
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+  const formatDate = (dateStr: string) => {
+    // Parse the date and format in local timezone
+    const date = new Date(dateStr);
+    return date.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
+      timeZone: 'Africa/Cairo', // Use Egypt timezone for consistency
     });
   };
 
-  const formatDateTime = (date: string) => {
-    return new Date(date).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
+  const formatDateTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      hour12: true,
+      timeZone: 'Africa/Cairo', // Use Egypt timezone for consistency
     });
   };
 

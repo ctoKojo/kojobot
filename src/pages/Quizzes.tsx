@@ -545,7 +545,15 @@ export default function QuizzesPage() {
                       {isRTL ? 'ينتهي تلقائياً:' : 'Auto-ends at:'}
                     </span>
                     <span className="font-medium text-primary">
-                      {new Date(calculatedEndTime).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US')}
+                      {new Date(calculatedEndTime).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true,
+                        timeZone: 'Africa/Cairo',
+                      })}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
