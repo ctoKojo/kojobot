@@ -108,11 +108,19 @@ export default function QuizzesPage() {
   });
 
   // Calculate end time automatically based on quiz duration
+  // Convert local datetime to proper ISO string for database
+  const getISOString = (localDateTime: string) => {
+    if (!localDateTime) return '';
+    // datetime-local gives us local time, we need to convert to ISO
+    const date = new Date(localDateTime);
+    return date.toISOString();
+  };
+
   const calculatedEndTime = useMemo(() => {
     if (!assignData.start_time || !assigningQuiz) return '';
     const startDate = new Date(assignData.start_time);
     const endDate = new Date(startDate.getTime() + (assigningQuiz.duration_minutes * 60 * 1000));
-    return endDate.toISOString().slice(0, 16);
+    return endDate.toISOString();
   }, [assignData.start_time, assigningQuiz]);
 
   // Validation: start time must be in the future
@@ -230,7 +238,7 @@ export default function QuizzesPage() {
       const { error } = await supabase.from('quiz_assignments').insert([{
         quiz_id: assigningQuiz.id,
         group_id: assignData.group_id || null,
-        start_time: assignData.start_time || null,
+        start_time: getISOString(assignData.start_time) || null,
         due_date: calculatedEndTime || null, // Auto-calculated end time
         assigned_by: user.id,
       }]);
