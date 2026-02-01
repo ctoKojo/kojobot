@@ -174,11 +174,13 @@ export default function MyInstructorQuizzes() {
   const fetchGroups = async () => {
     if (!user) return;
     try {
+      // Only fetch active groups that are NOT frozen
       const { data, error } = await supabase
         .from('groups')
-        .select('id, name, name_ar')
+        .select('id, name, name_ar, status')
         .eq('instructor_id', user.id)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .neq('status', 'frozen'); // Exclude frozen groups from assignment
 
       if (error) throw error;
       setGroups(data || []);

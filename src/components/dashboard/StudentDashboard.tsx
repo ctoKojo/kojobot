@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink } from 'lucide-react';
+import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -10,8 +10,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { formatTime12Hour } from '@/lib/timeUtils';
 
+interface GroupInfo {
+  id: string;
+  name: string;
+  name_ar: string;
+  schedule_day: string;
+  schedule_time: string;
+  instructor_id: string;
+  attendance_mode: string | null;
+  session_link: string | null;
+  status: string;
+}
+
 interface StudentStats {
-  groupInfo: any;
+  groupInfo: GroupInfo | null;
   subscription: any;
   attendanceStats: { present: number; absent: number; total: number };
   warnings: number;
@@ -53,7 +65,7 @@ export function StudentDashboard() {
       // Get student's group - use maybeSingle to avoid 406 when no group exists
       const { data: groupStudentData } = await supabase
         .from('group_students')
-        .select('group_id, groups(id, name, name_ar, schedule_day, schedule_time, instructor_id, attendance_mode, session_link)')
+        .select('group_id, groups(id, name, name_ar, schedule_day, schedule_time, instructor_id, attendance_mode, session_link, status)')
         .eq('student_id', user?.id)
         .eq('is_active', true)
         .maybeSingle();
@@ -176,6 +188,29 @@ export function StudentDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Frozen Group Alert */}
+      {stats.groupInfo?.status === 'frozen' && (
+        <Card className="border-sky-300 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-800">
+          <CardContent className="py-4 sm:py-6">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-sky-100 dark:bg-sky-900/50 flex items-center justify-center flex-shrink-0">
+                <Snowflake className="w-6 h-6 sm:w-8 sm:h-8 text-sky-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg sm:text-xl font-bold text-sky-800 dark:text-sky-300">
+                  {isRTL ? 'مجموعتك مجمدة حالياً' : 'Your group is currently frozen'}
+                </h2>
+                <p className="text-sm sm:text-base text-sky-700 dark:text-sky-400">
+                  {isRTL 
+                    ? 'لن تتمكن من استلام كويزات أو واجبات جديدة. تواصل مع الإدارة لمزيد من المعلومات.'
+                    : 'You will not receive new quizzes or assignments. Contact administration for more information.'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Welcome Banner */}
       {stats.profile && (
         <Card className="kojo-gradient text-white">

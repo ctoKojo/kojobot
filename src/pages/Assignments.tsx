@@ -98,7 +98,8 @@ export default function AssignmentsPage() {
     try {
       const [assignmentsRes, groupsRes] = await Promise.all([
         supabase.from('assignments').select('*').order('created_at', { ascending: false }),
-        supabase.from('groups').select('id, name, name_ar').eq('is_active', true),
+        // Only fetch active groups that are NOT frozen for assignment
+        supabase.from('groups').select('id, name, name_ar, status').eq('is_active', true).neq('status', 'frozen'),
       ]);
 
       setAssignments(assignmentsRes.data || []);
