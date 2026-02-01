@@ -1,10 +1,28 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -13,15 +31,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { toast } from '@/hooks/use-toast';
 import { 
   FileQuestion, 
   Users, 
@@ -30,9 +42,29 @@ import {
   Eye, 
   CheckCircle, 
   XCircle,
-  AlertTriangle,
-  ChevronRight
+  ChevronRight,
+  Send,
+  Trash2,
+  BookOpen
 } from 'lucide-react';
+
+interface Quiz {
+  id: string;
+  title: string;
+  title_ar: string;
+  description: string | null;
+  description_ar: string | null;
+  duration_minutes: number;
+  passing_score: number;
+  level?: { name: string; name_ar: string } | null;
+  age_group?: { name: string; name_ar: string } | null;
+}
+
+interface Group {
+  id: string;
+  name: string;
+  name_ar: string;
+}
 
 interface AssignedQuiz {
   id: string;
@@ -68,45 +100,101 @@ interface StudentResult {
 interface QuestionDetail {
   question_text: string;
   question_text_ar: string;
-  options: string[] | { en: string[]; ar: string[] };
+  options: string[];
   correct_answer: string;
   student_answer: string | null;
   is_correct: boolean;
   points: number;
 }
 
-export default function InstructorQuizResultsPage() {
+export default function MyInstructorQuizzes() {
   const { isRTL, language } = useLanguage();
   const { user } = useAuth();
-  const navigate = useNavigate();
+  
+  // Available quizzes tab
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [loadingQuizzes, setLoadingQuizzes] = useState(true);
+  
+  // Assignment dialog
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  
+  // My assignments tab
   const [assignedQuizzes, setAssignedQuizzes] = useState<AssignedQuiz[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedQuiz, setSelectedQuiz] = useState<AssignedQuiz | null>(null);
+  const [loadingAssignments, setLoadingAssignments] = useState(true);
+  
+  // Results dialog
+  const [selectedAssignment, setSelectedAssignment] = useState<AssignedQuiz | null>(null);
   const [studentResults, setStudentResults] = useState<StudentResult[]>([]);
-  const [allGroupStudents, setAllGroupStudents] = useState<{ id: string; name: string; name_ar: string }[]>([]);
   const [loadingResults, setLoadingResults] = useState(false);
+  
+  // Student answers dialog
   const [selectedStudent, setSelectedStudent] = useState<StudentResult | null>(null);
   const [questionDetails, setQuestionDetails] = useState<QuestionDetail[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
-    if (user) fetchAssignedQuizzes();
+    if (user) {
+      fetchQuizzes();
+      fetchGroups();
+      fetchAssignedQuizzes();
+    }
   }, [user]);
+
+  const fetchQuizzes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('quizzes')
+        .select(`
+          id, title, title_ar, description, description_ar, 
+          duration_minutes, passing_score,
+          levels:level_id(name, name_ar),
+          age_groups:age_group_id(name, name_ar)
+        `)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setQuizzes(data?.map(q => ({
+        ...q,
+        level: q.levels,
+        age_group: q.age_groups,
+      })) || []);
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+    } finally {
+      setLoadingQuizzes(false);
+    }
+  };
+
+  const fetchGroups = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('groups')
+        .select('id, name, name_ar')
+        .eq('instructor_id', user.id)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setGroups(data || []);
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+    }
+  };
 
   const fetchAssignedQuizzes = async () => {
     if (!user) return;
     
     try {
-      // Get quizzes assigned by this instructor
       const { data: assignments, error } = await supabase
         .from('quiz_assignments')
         .select(`
-          id,
-          quiz_id,
-          group_id,
-          start_time,
-          due_date,
-          created_at,
+          id, quiz_id, group_id, start_time, due_date, created_at,
           quizzes(id, title, title_ar, duration_minutes, passing_score),
           groups(id, name, name_ar)
         `)
@@ -116,7 +204,6 @@ export default function InstructorQuizResultsPage() {
 
       if (error) throw error;
 
-      // For each assignment, get stats
       const enrichedQuizzes: AssignedQuiz[] = [];
 
       for (const assignment of assignments || []) {
@@ -125,14 +212,12 @@ export default function InstructorQuizResultsPage() {
         const quiz = assignment.quizzes as any;
         const group = assignment.groups as any;
 
-        // Get total students in group
         const { count: totalStudents } = await supabase
           .from('group_students')
           .select('id', { count: 'exact' })
           .eq('group_id', assignment.group_id)
           .eq('is_active', true);
 
-        // Get submissions for this assignment
         const { data: submissions } = await supabase
           .from('quiz_submissions')
           .select('id, score, max_score, percentage, status')
@@ -171,16 +256,98 @@ export default function InstructorQuizResultsPage() {
     } catch (error) {
       console.error('Error fetching assigned quizzes:', error);
     } finally {
-      setLoading(false);
+      setLoadingAssignments(false);
+    }
+  };
+
+  const openAssignDialog = (quiz: Quiz) => {
+    setSelectedQuiz(quiz);
+    setSelectedGroupId('');
+    setStartTime('');
+    setAssignDialogOpen(true);
+  };
+
+  const getISOString = (localDateTime: string) => {
+    if (!localDateTime) return null;
+    const date = new Date(localDateTime);
+    return date.toISOString();
+  };
+
+  const handleAssignQuiz = async () => {
+    if (!selectedQuiz || !selectedGroupId || !startTime || !user) return;
+    
+    setAssigning(true);
+    try {
+      const startTimeISO = getISOString(startTime);
+      
+      // Calculate due_date based on quiz duration
+      const startDate = new Date(startTime);
+      const dueDate = new Date(startDate.getTime() + selectedQuiz.duration_minutes * 60 * 1000);
+
+      const { error } = await supabase
+        .from('quiz_assignments')
+        .insert({
+          quiz_id: selectedQuiz.id,
+          group_id: selectedGroupId,
+          assigned_by: user.id,
+          start_time: startTimeISO,
+          due_date: dueDate.toISOString(),
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: isRTL ? 'تم الإسناد بنجاح' : 'Quiz Assigned',
+        description: isRTL ? 'تم إسناد الكويز للمجموعة بنجاح' : 'The quiz has been assigned to the group',
+      });
+
+      setAssignDialogOpen(false);
+      fetchAssignedQuizzes();
+    } catch (error: any) {
+      console.error('Error assigning quiz:', error);
+      toast({
+        title: isRTL ? 'خطأ' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleDeleteAssignment = async (assignmentId: string) => {
+    if (!confirm(isRTL ? 'هل أنت متأكد من حذف هذا الإسناد؟' : 'Are you sure you want to delete this assignment?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('quiz_assignments')
+        .update({ is_active: false })
+        .eq('id', assignmentId);
+
+      if (error) throw error;
+
+      toast({
+        title: isRTL ? 'تم الحذف' : 'Deleted',
+        description: isRTL ? 'تم حذف الإسناد بنجاح' : 'Assignment deleted successfully',
+      });
+
+      fetchAssignedQuizzes();
+    } catch (error: any) {
+      toast({
+        title: isRTL ? 'خطأ' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
     }
   };
 
   const handleViewDetails = async (quiz: AssignedQuiz) => {
-    setSelectedQuiz(quiz);
+    setSelectedAssignment(quiz);
     setLoadingResults(true);
 
     try {
-      // Get all students in the group
       const { data: groupStudents } = await supabase
         .from('group_students')
         .select('student_id')
@@ -189,25 +356,16 @@ export default function InstructorQuizResultsPage() {
 
       const studentIds = groupStudents?.map(gs => gs.student_id) || [];
 
-      // Get student profiles
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, full_name, full_name_ar')
         .in('user_id', studentIds);
 
-      setAllGroupStudents(profiles?.map(p => ({
-        id: p.user_id,
-        name: p.full_name,
-        name_ar: p.full_name_ar || p.full_name,
-      })) || []);
-
-      // Get submissions for this quiz assignment
       const { data: submissions } = await supabase
         .from('quiz_submissions')
         .select('*')
         .eq('quiz_assignment_id', quiz.id);
 
-      // Build student results
       const results: StudentResult[] = studentIds.map(studentId => {
         const profile = profiles?.find(p => p.user_id === studentId);
         const submission = submissions?.find(s => s.student_id === studentId);
@@ -225,7 +383,6 @@ export default function InstructorQuizResultsPage() {
         };
       });
 
-      // Sort: completed first, then by score descending
       results.sort((a, b) => {
         if (a.status === 'graded' && b.status !== 'graded') return -1;
         if (b.status === 'graded' && a.status !== 'graded') return 1;
@@ -241,17 +398,16 @@ export default function InstructorQuizResultsPage() {
   };
 
   const handleViewStudentAnswers = async (student: StudentResult) => {
-    if (!selectedQuiz || !student.answers) return;
+    if (!selectedAssignment || !student.answers) return;
     
     setSelectedStudent(student);
     setLoadingDetails(true);
 
     try {
-      // Get quiz questions
       const { data: questions } = await supabase
         .from('quiz_questions')
         .select('*')
-        .eq('quiz_id', selectedQuiz.quiz_id)
+        .eq('quiz_id', selectedAssignment.quiz_id)
         .order('order_index');
 
       const answers = student.answers as Record<string, string>;
@@ -260,7 +416,6 @@ export default function InstructorQuizResultsPage() {
         const studentAnswer = answers[q.id] || null;
         const options = q.options as any;
         
-        // Handle both old and new option formats
         let optionsArray: string[] = [];
         if (Array.isArray(options)) {
           optionsArray = options;
@@ -314,14 +469,22 @@ export default function InstructorQuizResultsPage() {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
-      timeZone: 'Africa/Cairo', // Use Egypt timezone for consistency
+      timeZone: 'Africa/Cairo',
     });
   };
 
+  // Stats
+  const totalAssigned = assignedQuizzes.length;
+  const totalStudents = assignedQuizzes.reduce((sum, q) => sum + q.total_students, 0);
+  const totalPassed = assignedQuizzes.reduce((sum, q) => sum + q.passed_count, 0);
+  const avgScore = assignedQuizzes.length > 0
+    ? Math.round(assignedQuizzes.reduce((sum, q) => sum + q.average_score, 0) / assignedQuizzes.length)
+    : 0;
+
   return (
-    <DashboardLayout title={isRTL ? 'نتائج الكويزات' : 'Quiz Results'}>
+    <DashboardLayout title={isRTL ? 'كويزات المجموعات' : 'Group Quizzes'}>
       <div className="space-y-6">
-        {/* Header Stats */}
+        {/* Stats */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -331,7 +494,7 @@ export default function InstructorQuizResultsPage() {
               <FileQuestion className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{assignedQuizzes.length}</div>
+              <div className="text-2xl font-bold">{totalAssigned}</div>
             </CardContent>
           </Card>
 
@@ -343,9 +506,7 @@ export default function InstructorQuizResultsPage() {
               <Users className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {assignedQuizzes.reduce((sum, q) => sum + q.total_students, 0)}
-              </div>
+              <div className="text-2xl font-bold">{totalStudents}</div>
             </CardContent>
           </Card>
 
@@ -357,9 +518,7 @@ export default function InstructorQuizResultsPage() {
               <Trophy className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {assignedQuizzes.reduce((sum, q) => sum + q.passed_count, 0)}
-              </div>
+              <div className="text-2xl font-bold text-green-600">{totalPassed}</div>
             </CardContent>
           </Card>
 
@@ -371,95 +530,243 @@ export default function InstructorQuizResultsPage() {
               <Clock className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {assignedQuizzes.length > 0
-                  ? Math.round(assignedQuizzes.reduce((sum, q) => sum + q.average_score, 0) / assignedQuizzes.length)
-                  : 0}%
-              </div>
+              <div className="text-2xl font-bold">{avgScore}%</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Assigned Quizzes List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{isRTL ? 'الكويزات المسندة' : 'Assigned Quizzes'}</CardTitle>
-            <CardDescription>
-              {isRTL ? 'اضغط على أي كويز لعرض نتائج الطلاب' : 'Click on any quiz to view student results'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="py-8 text-center text-muted-foreground">
-                {isRTL ? 'جاري التحميل...' : 'Loading...'}
-              </div>
-            ) : assignedQuizzes.length === 0 ? (
-              <div className="py-8 text-center">
-                <FileQuestion className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">
-                  {isRTL ? 'لم تقم بإسناد أي كويزات بعد' : "You haven't assigned any quizzes yet"}
-                </p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => navigate('/quizzes')}
-                >
-                  {isRTL ? 'إسناد كويز' : 'Assign a Quiz'}
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {assignedQuizzes.map((quiz) => (
-                  <div
-                    key={quiz.id}
-                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
-                    onClick={() => handleViewDetails(quiz)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">
-                        {language === 'ar' ? quiz.quiz_title_ar : quiz.quiz_title}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                        <Badge variant="outline" className="text-xs">
-                          {language === 'ar' ? quiz.group_name_ar : quiz.group_name}
-                        </Badge>
-                        <span>•</span>
-                        <span>{quiz.duration_minutes} {isRTL ? 'دقيقة' : 'min'}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <div className="text-right hidden sm:block">
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-green-600 font-medium">{quiz.passed_count}</span>
-                          <span className="text-muted-foreground">/</span>
-                          <span>{quiz.completed_count}</span>
-                          <span className="text-muted-foreground">/</span>
-                          <span className="text-muted-foreground">{quiz.total_students}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {isRTL ? 'ناجح / أكمل / إجمالي' : 'passed / completed / total'}
-                        </p>
-                      </div>
-                      <div className="w-16 hidden md:block">
-                        <Progress value={quiz.total_students > 0 ? (quiz.completed_count / quiz.total_students) * 100 : 0} />
-                      </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
+        {/* Tabs */}
+        <Tabs defaultValue="available" dir={isRTL ? 'rtl' : 'ltr'}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="available">
+              <BookOpen className="h-4 w-4 mr-2" />
+              {isRTL ? 'الكويزات المتاحة' : 'Available Quizzes'}
+            </TabsTrigger>
+            <TabsTrigger value="my-assignments">
+              <FileQuestion className="h-4 w-4 mr-2" />
+              {isRTL ? 'إسناداتي ونتائجي' : 'My Assignments & Results'}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Available Quizzes Tab */}
+          <TabsContent value="available" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>{isRTL ? 'بنك الأسئلة' : 'Question Bank'}</CardTitle>
+                <CardDescription>
+                  {isRTL ? 'اختر كويز وأسنده لإحدى مجموعاتك' : 'Select a quiz and assign it to one of your groups'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingQuizzes ? (
+                  <div className="py-8 text-center text-muted-foreground">
+                    {isRTL ? 'جاري التحميل...' : 'Loading...'}
                   </div>
-                ))}
+                ) : quizzes.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <FileQuestion className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">
+                      {isRTL ? 'لا توجد كويزات متاحة' : 'No quizzes available'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {quizzes.map((quiz) => (
+                      <div
+                        key={quiz.id}
+                        className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">
+                            {language === 'ar' ? quiz.title_ar : quiz.title}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
+                            <span>{quiz.duration_minutes} {isRTL ? 'دقيقة' : 'min'}</span>
+                            <span>•</span>
+                            <span>{quiz.passing_score}% {isRTL ? 'للنجاح' : 'to pass'}</span>
+                            {quiz.level && (
+                              <>
+                                <span>•</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {language === 'ar' ? quiz.level.name_ar : quiz.level.name}
+                                </Badge>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <Button
+                          onClick={() => openAssignDialog(quiz)}
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <Send className="h-4 w-4" />
+                          {isRTL ? 'إسناد' : 'Assign'}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* My Assignments Tab */}
+          <TabsContent value="my-assignments" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>{isRTL ? 'الكويزات المسندة' : 'Assigned Quizzes'}</CardTitle>
+                <CardDescription>
+                  {isRTL ? 'اضغط على أي كويز لعرض نتائج الطلاب' : 'Click on any quiz to view student results'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingAssignments ? (
+                  <div className="py-8 text-center text-muted-foreground">
+                    {isRTL ? 'جاري التحميل...' : 'Loading...'}
+                  </div>
+                ) : assignedQuizzes.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <FileQuestion className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">
+                      {isRTL ? 'لم تقم بإسناد أي كويزات بعد' : "You haven't assigned any quizzes yet"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {assignedQuizzes.map((quiz) => (
+                      <div
+                        key={quiz.id}
+                        className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                      >
+                        <div 
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => handleViewDetails(quiz)}
+                        >
+                          <p className="font-medium truncate">
+                            {language === 'ar' ? quiz.quiz_title_ar : quiz.quiz_title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                            <Badge variant="outline" className="text-xs">
+                              {language === 'ar' ? quiz.group_name_ar : quiz.group_name}
+                            </Badge>
+                            <span>•</span>
+                            <span>{formatDateTime(quiz.start_time)}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          <div className="text-right hidden sm:block">
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="text-green-600 font-medium">{quiz.passed_count}</span>
+                              <span className="text-muted-foreground">/</span>
+                              <span>{quiz.completed_count}</span>
+                              <span className="text-muted-foreground">/</span>
+                              <span className="text-muted-foreground">{quiz.total_students}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {isRTL ? 'ناجح / أكمل / إجمالي' : 'passed / completed / total'}
+                            </p>
+                          </div>
+                          <div className="w-16 hidden md:block">
+                            <Progress value={quiz.total_students > 0 ? (quiz.completed_count / quiz.total_students) * 100 : 0} />
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteAssignment(quiz.id);
+                            }}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <ChevronRight 
+                            className="h-5 w-5 text-muted-foreground cursor-pointer" 
+                            onClick={() => handleViewDetails(quiz)}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Assign Quiz Dialog */}
+        <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {isRTL ? 'إسناد كويز' : 'Assign Quiz'}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedQuiz && (language === 'ar' ? selectedQuiz.title_ar : selectedQuiz.title)}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>{isRTL ? 'المجموعة' : 'Group'}</Label>
+                <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isRTL ? 'اختر مجموعة' : 'Select a group'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {language === 'ar' ? group.name_ar : group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-          </CardContent>
-        </Card>
+
+              <div className="space-y-2">
+                <Label>{isRTL ? 'وقت البداية' : 'Start Time'}</Label>
+                <Input
+                  type="datetime-local"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
+              </div>
+
+              {selectedQuiz && (
+                <div className="p-3 bg-muted rounded-lg text-sm">
+                  <p className="text-muted-foreground">
+                    {isRTL ? 'مدة الكويز:' : 'Quiz duration:'} {selectedQuiz.duration_minutes} {isRTL ? 'دقيقة' : 'minutes'}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {isRTL ? 'سينتهي تلقائياً بعد المدة المحددة من وقت البداية' : 'Will end automatically after the specified duration from start time'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </Button>
+              <Button 
+                onClick={handleAssignQuiz} 
+                disabled={!selectedGroupId || !startTime || assigning}
+              >
+                {assigning ? (isRTL ? 'جاري الإسناد...' : 'Assigning...') : (isRTL ? 'إسناد' : 'Assign')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Student Results Dialog */}
-        <Dialog open={!!selectedQuiz} onOpenChange={() => { setSelectedQuiz(null); setSelectedStudent(null); }}>
+        <Dialog open={!!selectedAssignment} onOpenChange={() => { setSelectedAssignment(null); setSelectedStudent(null); }}>
           <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <FileQuestion className="h-5 w-5" />
-                {selectedQuiz && (language === 'ar' ? selectedQuiz.quiz_title_ar : selectedQuiz.quiz_title)}
+                {selectedAssignment && (language === 'ar' ? selectedAssignment.quiz_title_ar : selectedAssignment.quiz_title)}
               </DialogTitle>
             </DialogHeader>
 
@@ -470,24 +777,24 @@ export default function InstructorQuizResultsPage() {
             ) : (
               <div className="space-y-4">
                 {/* Quiz Info */}
-                {selectedQuiz && (
+                {selectedAssignment && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
                     <div>
                       <p className="text-sm text-muted-foreground">{isRTL ? 'المجموعة' : 'Group'}</p>
-                      <p className="font-medium">{language === 'ar' ? selectedQuiz.group_name_ar : selectedQuiz.group_name}</p>
+                      <p className="font-medium">{language === 'ar' ? selectedAssignment.group_name_ar : selectedAssignment.group_name}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">{isRTL ? 'البداية' : 'Start'}</p>
-                      <p className="font-medium">{formatDateTime(selectedQuiz.start_time)}</p>
+                      <p className="font-medium">{formatDateTime(selectedAssignment.start_time)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">{isRTL ? 'متوسط الدرجات' : 'Avg. Score'}</p>
-                      <p className="font-medium">{selectedQuiz.average_score}%</p>
+                      <p className="font-medium">{selectedAssignment.average_score}%</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">{isRTL ? 'نسبة الإكمال' : 'Completion'}</p>
                       <p className="font-medium">
-                        {selectedQuiz.completed_count}/{selectedQuiz.total_students} ({Math.round((selectedQuiz.completed_count / selectedQuiz.total_students) * 100) || 0}%)
+                        {selectedAssignment.completed_count}/{selectedAssignment.total_students} ({selectedAssignment.total_students > 0 ? Math.round((selectedAssignment.completed_count / selectedAssignment.total_students) * 100) : 0}%)
                       </p>
                     </div>
                   </div>
@@ -512,7 +819,7 @@ export default function InstructorQuizResultsPage() {
                           {language === 'ar' ? result.student_name_ar : result.student_name}
                         </TableCell>
                         <TableCell>
-                          {getStatusBadge(result.status, result.percentage, selectedQuiz?.passing_score || 60)}
+                          {getStatusBadge(result.status, result.percentage, selectedAssignment?.passing_score || 60)}
                         </TableCell>
                         <TableCell>
                           {result.score !== null ? `${result.score}/${result.max_score}` : '-'}
@@ -521,7 +828,7 @@ export default function InstructorQuizResultsPage() {
                           {result.percentage !== null ? (
                             <div className="flex items-center gap-2">
                               <span>{result.percentage}%</span>
-                              {result.percentage >= (selectedQuiz?.passing_score || 60) ? (
+                              {result.percentage >= (selectedAssignment?.passing_score || 60) ? (
                                 <CheckCircle className="h-4 w-4 text-green-500" />
                               ) : (
                                 <XCircle className="h-4 w-4 text-red-500" />
@@ -580,7 +887,7 @@ export default function InstructorQuizResultsPage() {
                       <p className="text-xl font-bold">{selectedStudent.percentage}%</p>
                     </div>
                     <div>
-                      {getStatusBadge(selectedStudent.status, selectedStudent.percentage, selectedQuiz?.passing_score || 60)}
+                      {getStatusBadge(selectedStudent.status, selectedStudent.percentage, selectedAssignment?.passing_score || 60)}
                     </div>
                   </div>
                 )}
