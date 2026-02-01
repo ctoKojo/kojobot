@@ -4,6 +4,7 @@ import { Menu } from 'lucide-react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { LanguageToggle } from '@/components/LanguageToggle';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationBell } from '@/components/NotificationBell';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -75,9 +76,9 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             
             <div className="flex-1" />
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <NotificationBell />
-              
+              <ThemeToggle />
               <LanguageToggle />
               
               <DropdownMenu>
