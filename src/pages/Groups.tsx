@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye, TrendingUp, CalendarIcon, Snowflake, Play, Pause } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye, TrendingUp, CalendarIcon, Snowflake, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -54,7 +54,7 @@ import { logCreate, logUpdate, logDelete, logFreeze, logActivate } from '@/lib/a
 
 type GroupType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
 type AttendanceMode = 'online' | 'offline';
-type GroupStatus = 'active' | 'pending' | 'frozen';
+type GroupStatus = 'active' | 'frozen';
 
 interface Group {
   id: string;
@@ -535,7 +535,6 @@ export default function GroupsPage() {
       
       const statusLabels: Record<GroupStatus, { en: string; ar: string }> = {
         active: { en: 'activated', ar: 'تم تفعيل' },
-        pending: { en: 'set to pending', ar: 'تم تعليق' },
         frozen: { en: 'frozen', ar: 'تم تجميد' },
       };
       
@@ -561,8 +560,6 @@ export default function GroupsPage() {
     switch (status) {
       case 'active':
         return { className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', label: isRTL ? 'نشط' : 'Active' };
-      case 'pending':
-        return { className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', label: isRTL ? 'معلق' : 'Pending' };
       case 'frozen':
         return { className: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400', label: isRTL ? 'مجمد' : 'Frozen' };
       default:
@@ -1201,12 +1198,6 @@ export default function GroupsPage() {
                                   {isRTL ? 'تفعيل' : 'Activate'}
                                 </DropdownMenuItem>
                               )}
-                              {group.status !== 'pending' && (
-                                <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'pending')}>
-                                  <Pause className="h-4 w-4 mr-2 text-yellow-600" />
-                                  {isRTL ? 'تعليق' : 'Set Pending'}
-                                </DropdownMenuItem>
-                              )}
                               {group.status !== 'frozen' && (
                                 <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'frozen')}>
                                   <Snowflake className="h-4 w-4 mr-2 text-sky-600" />
@@ -1375,12 +1366,6 @@ export default function GroupsPage() {
                                     <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'active')}>
                                       <Play className="h-4 w-4 mr-2 text-green-600" />
                                       {isRTL ? 'تفعيل' : 'Activate'}
-                                    </DropdownMenuItem>
-                                  )}
-                                  {group.status !== 'pending' && (
-                                    <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'pending')}>
-                                      <Pause className="h-4 w-4 mr-2 text-yellow-600" />
-                                      {isRTL ? 'تعليق' : 'Set Pending'}
                                     </DropdownMenuItem>
                                   )}
                                   {group.status !== 'frozen' && (
