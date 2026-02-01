@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Mail, Lock, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Sparkles, BookOpen, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -64,7 +64,7 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Left Side - Brand Panel */}
+      {/* Left Side - Brand Panel (Desktop Only) */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden">
         {/* Gradient Background - matching brand gradient */}
         <div 
@@ -76,11 +76,8 @@ export default function Auth() {
         
         {/* Animated Background Shapes */}
         <div className="absolute inset-0 overflow-hidden">
-          {/* Large circle top right */}
           <div className="absolute -top-20 -right-20 w-96 h-96 rounded-full bg-white/10 blur-3xl animate-pulse" />
-          {/* Medium circle bottom left */}
           <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-white/10 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-          {/* Small floating circles */}
           <div className="absolute top-1/4 left-1/4 w-24 h-24 rounded-full bg-white/5 animate-bounce" style={{ animationDuration: '3s' }} />
           <div className="absolute top-2/3 right-1/4 w-16 h-16 rounded-full bg-white/5 animate-bounce" style={{ animationDuration: '4s', animationDelay: '0.5s' }} />
           <div className="absolute top-1/2 left-1/3 w-12 h-12 rounded-full bg-white/5 animate-bounce" style={{ animationDuration: '5s', animationDelay: '1s' }} />
@@ -94,14 +91,12 @@ export default function Auth() {
         
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center w-full p-12">
-          {/* Logo */}
           <img 
             src={kojobotLogoWhite} 
             alt="Kojobot" 
             className="w-72 xl:w-80 mb-12 drop-shadow-2xl animate-fade-in"
           />
           
-          {/* Tagline */}
           <div className="text-center text-white space-y-4 max-w-md animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <h2 className="text-3xl xl:text-4xl font-bold leading-tight">
               {isRTL ? 'ابدأ رحلتك في البرمجة' : 'Start Your Coding Journey'}
@@ -114,7 +109,6 @@ export default function Auth() {
             </p>
           </div>
 
-          {/* Features */}
           <div className="mt-12 grid grid-cols-3 gap-6 text-white/90 animate-fade-in" style={{ animationDelay: '0.4s' }}>
             <div className="text-center">
               <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-3 shadow-lg">
@@ -124,17 +118,13 @@ export default function Auth() {
             </div>
             <div className="text-center">
               <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-3 shadow-lg">
-                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+                <BookOpen className="w-7 h-7" />
               </div>
               <p className="text-sm font-medium">{isRTL ? 'مناهج متنوعة' : 'Rich Curriculum'}</p>
             </div>
             <div className="text-center">
               <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-3 shadow-lg">
-                <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                </svg>
+                <Award className="w-7 h-7" />
               </div>
               <p className="text-sm font-medium">{isRTL ? 'شهادات معتمدة' : 'Certificates'}</p>
             </div>
@@ -142,28 +132,169 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 xl:w-[45%] flex flex-col bg-background">
-        {/* Mobile Header with gradient */}
-        <div className="lg:hidden kojo-gradient p-6 flex items-center justify-center">
+      {/* Right Side - Login Form (Desktop) / Full Screen (Mobile) */}
+      <div className="w-full lg:w-1/2 xl:w-[45%] flex flex-col bg-background relative overflow-hidden">
+        
+        {/* Mobile: Full gradient background with decorations */}
+        <div className="lg:hidden absolute inset-0">
+          <div 
+            className="absolute inset-0" 
+            style={{
+              background: 'linear-gradient(160deg, #4EDDEA 0%, #6878F0 30%, #6455F0 60%, #5B8DEE 100%)'
+            }}
+          />
+          {/* Decorative shapes */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute top-1/3 -left-16 w-32 h-32 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -bottom-20 right-1/4 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
+        </div>
+
+        {/* Mobile Header - Logo and tagline */}
+        <div className="lg:hidden relative z-10 pt-12 pb-6 px-6 text-center">
           <img 
             src={kojobotLogoWhite} 
             alt="Kojobot" 
-            className="h-10"
+            className="h-14 mx-auto mb-4 drop-shadow-lg animate-fade-in"
           />
+          <p className="text-white/90 text-sm font-medium animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            {isRTL ? 'منصة تعليم البرمجة للأطفال' : 'Coding Platform for Kids'}
+          </p>
         </div>
 
-        {/* Language Toggle */}
-        <div className="absolute top-4 right-4 z-10 lg:top-6 lg:right-6">
-          <LanguageToggle />
+        {/* Language Toggle - positioned in top corner */}
+        <div className="absolute top-4 right-4 z-20 lg:top-6 lg:right-6">
+          <div className="lg:block">
+            <LanguageToggle />
+          </div>
+          {/* Mobile: White background pill for visibility */}
+          <div className="lg:hidden absolute inset-0 -z-10 bg-white/20 backdrop-blur-sm rounded-full scale-110" />
         </div>
 
-        {/* Form Container */}
-        <div className="flex-1 flex items-center justify-center p-6 sm:p-8 lg:p-12">
+        {/* Mobile: Card container for the form */}
+        <div className="lg:hidden relative z-10 flex-1 flex flex-col px-5 pb-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <div className="flex-1 flex items-start pt-2">
+            <div className="w-full bg-background rounded-3xl shadow-2xl p-6 space-y-6">
+              {/* Welcome text */}
+              <div className="text-center space-y-1">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl kojo-gradient flex items-center justify-center shadow-lg">
+                  <img 
+                    src={kojobotIcon} 
+                    alt="" 
+                    className="w-10 h-10 rounded-lg"
+                  />
+                </div>
+                <h1 className="text-xl font-bold text-foreground">
+                  {t.auth.welcomeBack}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {t.auth.loginSubtitle}
+                </p>
+              </div>
+
+              {/* Login Form - Mobile */}
+              <Form {...loginForm}>
+                <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+                  <FormField
+                    control={loginForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground font-medium text-sm">{t.auth.email}</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Mail className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground ${isRTL ? 'right-3' : 'left-3'}`} />
+                            <Input
+                              {...field}
+                              type="email"
+                              placeholder="email@example.com"
+                              className={`h-11 text-base rounded-xl border-2 bg-muted/50 transition-all focus:border-primary/50 focus:bg-background ${isRTL ? 'pr-10 pl-3' : 'pl-10 pr-3'}`}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={loginForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-foreground font-medium text-sm">{t.auth.password}</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Lock className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground ${isRTL ? 'right-3' : 'left-3'}`} />
+                            <Input
+                              {...field}
+                              type={showPassword ? 'text' : 'password'}
+                              placeholder="••••••••"
+                              className={`h-11 text-base rounded-xl border-2 bg-muted/50 transition-all focus:border-primary/50 focus:bg-background ${isRTL ? 'pr-10 pl-10' : 'pl-10 pr-10'}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 ${isRTL ? 'left-2' : 'right-2'}`}
+                            >
+                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button
+                    type="submit"
+                    className="w-full h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-[#61BAE2] to-[#6455F0] hover:opacity-90 transition-all shadow-lg active:scale-[0.98]"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        {t.common.loading}
+                      </span>
+                    ) : t.auth.login}
+                  </Button>
+                </form>
+              </Form>
+
+              {/* Footer */}
+              <p className="text-center text-xs text-muted-foreground pt-2">
+                {isRTL 
+                  ? '© 2024 Kojobot. جميع الحقوق محفوظة.'
+                  : '© 2024 Kojobot. All rights reserved.'
+                }
+              </p>
+            </div>
+          </div>
+
+          {/* Mobile: Feature badges at bottom */}
+          <div className="flex justify-center gap-4 pt-4">
+            <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-white" />
+              <span className="text-xs text-white font-medium">{isRTL ? 'تفاعلي' : 'Interactive'}</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <BookOpen className="w-3.5 h-3.5 text-white" />
+              <span className="text-xs text-white font-medium">{isRTL ? 'ممتع' : 'Fun'}</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
+              <Award className="w-3.5 h-3.5 text-white" />
+              <span className="text-xs text-white font-medium">{isRTL ? 'معتمد' : 'Certified'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Form Container */}
+        <div className="hidden lg:flex flex-1 items-center justify-center p-6 sm:p-8 lg:p-12">
           <div className="w-full max-w-md space-y-8">
             {/* Header */}
             <div className="text-center lg:text-start space-y-2">
-              {/* Icon for desktop */}
               <div className="hidden lg:block mb-6">
                 <img 
                   src={kojobotIcon} 
@@ -179,7 +310,7 @@ export default function Auth() {
               </p>
             </div>
 
-            {/* Login Form */}
+            {/* Login Form - Desktop */}
             <Form {...loginForm}>
               <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-5">
                 <FormField
