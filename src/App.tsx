@@ -11,8 +11,10 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAdminSessionTimeout } from "@/hooks/useAdminSessionTimeout";
 import { KojobotLogo } from "@/components/KojobotLogo";
 
-// Lazy load all pages for code splitting
-const Auth = lazy(() => import("./pages/Auth"));
+// Auth is not lazy-loaded since it's the landing page (critical for LCP)
+import Auth from "./pages/Auth";
+
+// Lazy load all other pages for code splitting
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Students = lazy(() => import("./pages/Students"));
 const Instructors = lazy(() => import("./pages/Instructors"));
