@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, FileQuestion, Play, Users, ListChecks } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, FileQuestion, Play, Users, ListChecks, BarChart3 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { notificationService } from '@/lib/notificationService';
 
 interface Quiz {
   id: string;
@@ -193,9 +194,27 @@ export default function QuizzesPage() {
       }]);
 
       if (error) throw error;
+
+      // Send notifications to students in the group
+      if (assignData.group_id) {
+        const formattedDueDate = assignData.due_date 
+          ? new Date(assignData.due_date).toLocaleDateString() 
+          : undefined;
+
+        await notificationService.notifyGroupStudents(
+          assignData.group_id,
+          'New Quiz Assigned',
+          'كويز جديد',
+          `You have been assigned a new quiz: "${assigningQuiz.title}"${formattedDueDate ? ` - Due: ${formattedDueDate}` : ''}`,
+          `تم إسناد كويز جديد لك: "${assigningQuiz.title_ar}"${formattedDueDate ? ` - الموعد: ${formattedDueDate}` : ''}`,
+          'info',
+          'quiz'
+        );
+      }
+
       toast({
         title: t.common.success,
-        description: isRTL ? 'تم إسناد الكويز' : 'Quiz assigned successfully',
+        description: isRTL ? 'تم إسناد الكويز وإشعار الطلاب' : 'Quiz assigned and students notified',
       });
 
       setIsAssignDialogOpen(false);
@@ -284,16 +303,25 @@ export default function QuizzesPage() {
             />
           </div>
 
-          {role === 'admin' && (
-            <Button className="kojo-gradient" onClick={() => {
-              setEditingQuiz(null);
-              resetForm();
-              setIsDialogOpen(true);
-            }}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t.quizzes.addQuiz}
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {role === 'admin' && (
+              <Button variant="outline" onClick={() => navigate('/quiz-reports')}>
+                <BarChart3 className="h-4 w-4 mr-2" />
+                {isRTL ? 'التقارير' : 'Reports'}
+              </Button>
+            )}
+
+            {role === 'admin' && (
+              <Button className="kojo-gradient" onClick={() => {
+                setEditingQuiz(null);
+                resetForm();
+                setIsDialogOpen(true);
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                {t.quizzes.addQuiz}
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Create/Edit Dialog */}
