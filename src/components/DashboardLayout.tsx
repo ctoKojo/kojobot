@@ -56,9 +56,9 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
       <div className="min-h-screen flex w-full" dir={isRTL ? 'rtl' : 'ltr'}>
         <AppSidebar />
         
-        <SidebarInset className="flex-1">
-          {/* Header - h-16 matches sidebar header height */}
-          <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border bg-background px-4 md:px-6">
+        <SidebarInset className="flex-1 overflow-x-auto">
+          {/* Header - h-16 matches sidebar header height, sticky within the inset */}
+          <header className="sticky top-0 z-40 flex h-16 min-w-max items-center gap-3 border-b border-border bg-background px-4 md:px-6">
             <SidebarTrigger className="-ml-2">
               <Menu className="h-5 w-5" />
             </SidebarTrigger>
@@ -122,7 +122,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
           </header>
           
           {/* Main Content */}
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-6 min-w-max">
             {children}
           </main>
         </SidebarInset>
