@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye, TrendingUp } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye, TrendingUp, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { ar, enUS } from 'date-fns/locale';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -39,6 +41,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -136,6 +142,9 @@ export default function GroupsPage() {
     group_type: 'kojo_squad' as GroupType,
     attendance_mode: 'offline' as AttendanceMode,
     session_link: '',
+    is_existing_group: false,
+    next_session_number: 1,
+    next_session_date: null as Date | null,
   });
   const [groupStudentCounts, setGroupStudentCounts] = useState<GroupStudentCount>({});
 
@@ -357,7 +366,7 @@ export default function GroupsPage() {
 
   const handleSubmit = async () => {
     try {
-      const payload = {
+      const payload: any = {
         name: formData.name,
         name_ar: formData.name_ar,
         age_group_id: formData.age_group_id || null,
@@ -370,6 +379,12 @@ export default function GroupsPage() {
         attendance_mode: formData.attendance_mode,
         session_link: formData.attendance_mode === 'online' ? formData.session_link || null : null,
       };
+
+      // If creating new group and it's an existing group, set starting session number and date
+      if (!editingGroup && formData.is_existing_group) {
+        payload.starting_session_number = formData.next_session_number;
+        payload.start_date = formData.next_session_date ? format(formData.next_session_date, 'yyyy-MM-dd') : null;
+      }
 
       const previousInstructorId = editingGroup?.instructor_id;
       const isNewInstructor = !editingGroup || previousInstructorId !== formData.instructor_id;
@@ -446,6 +461,9 @@ export default function GroupsPage() {
       group_type: 'kojo_squad',
       attendance_mode: 'offline',
       session_link: '',
+      is_existing_group: false,
+      next_session_number: 1,
+      next_session_date: null,
     });
   };
 
@@ -463,6 +481,9 @@ export default function GroupsPage() {
       group_type: group.group_type || 'kojo_squad',
       attendance_mode: group.attendance_mode || 'offline',
       session_link: group.session_link || '',
+      is_existing_group: false,
+      next_session_number: 1,
+      next_session_date: null,
     });
     setIsDialogOpen(true);
   };
@@ -753,6 +774,119 @@ export default function GroupsPage() {
                     placeholder="https://meet.google.com/..."
                     dir="ltr"
                   />
+                </div>
+              )}
+
+              {/* Group Status Section - Only show when creating new group */}
+              {!editingGroup && (
+                <div className="grid gap-4 pt-4 border-t">
+                  <Label className="font-semibold">{isRTL ? 'حالة المجموعة' : 'Group Status'}</Label>
+                  <RadioGroup
+                    value={formData.is_existing_group ? 'existing' : 'new'}
+                    onValueChange={(value) => setFormData({ 
+                      ...formData, 
+                      is_existing_group: value === 'existing',
+                      next_session_number: value === 'new' ? 1 : formData.next_session_number,
+                      next_session_date: value === 'new' ? null : formData.next_session_date
+                    })}
+                    className="flex flex-col gap-3"
+                  >
+                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                      <RadioGroupItem value="new" id="new-group" />
+                      <Label htmlFor="new-group" className="cursor-pointer font-normal">
+                        {isRTL ? 'مجموعة جديدة - تبدأ من السيشن 1' : 'New Group - Starts from Session 1'}
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                      <RadioGroupItem value="existing" id="existing-group" />
+                      <Label htmlFor="existing-group" className="cursor-pointer font-normal">
+                        {isRTL ? 'مجموعة قائمة - بدأت مسبقاً' : 'Existing Group - Already Started'}
+                      </Label>
+                    </div>
+                  </RadioGroup>
+
+                  {formData.is_existing_group && (
+                    <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
+                      <div className="grid gap-2">
+                        <Label>{isRTL ? 'السيشن القادم سيكون رقم' : 'Next Session Number'}</Label>
+                        <Select
+                          value={formData.next_session_number.toString()}
+                          onValueChange={(value) => setFormData({ ...formData, next_session_number: parseInt(value) })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                              <SelectItem key={num} value={num.toString()}>
+                                {isRTL ? `السيشن ${num}` : `Session ${num}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Progress Summary */}
+                      <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                        <div className="p-2 rounded bg-background">
+                          <div className="font-semibold text-muted-foreground">
+                            {formData.next_session_number - 1}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {isRTL ? 'سيشنات فاتت' : 'Passed'}
+                          </div>
+                        </div>
+                        <div className="p-2 rounded bg-background">
+                          <div className="font-semibold text-primary">
+                            {12 - formData.next_session_number + 1}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {isRTL ? 'سيشنات باقية' : 'Remaining'}
+                          </div>
+                        </div>
+                        <div className="p-2 rounded bg-background">
+                          <div className="font-semibold text-green-600">
+                            {Math.round(((formData.next_session_number - 1) / 12) * 100)}%
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {isRTL ? 'التقدم' : 'Progress'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label>{isRTL ? 'تاريخ السيشن القادم' : 'Next Session Date'}</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !formData.next_session_date && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4 rtl:ml-2 rtl:mr-0" />
+                              {formData.next_session_date ? (
+                                format(formData.next_session_date, "PPP", { locale: isRTL ? ar : enUS })
+                              ) : (
+                                <span>{isRTL ? 'اختر التاريخ' : 'Select date'}</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={formData.next_session_date || undefined}
+                              onSelect={(date) => setFormData({ ...formData, next_session_date: date || null })}
+                              disabled={(date) => date < new Date()}
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
