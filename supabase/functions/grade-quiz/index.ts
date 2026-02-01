@@ -106,7 +106,7 @@ serve(async (req) => {
     // Calculate score
     let score = 0
     let maxScore = 0
-    const results: Record<string, { correct: boolean; correctAnswer: string }> = {}
+    const results: Record<string, { correct: boolean; correctAnswer: string; correctIndex: number }> = {}
 
     for (const question of questions) {
       maxScore += question.points
@@ -120,19 +120,36 @@ serve(async (req) => {
         optionsList = optionsData.options.map((opt: any) => opt.text)
       }
       
-      const selectedIdx = parseInt(answers[question.id] || '-1')
-      const selectedOption = optionsList[selectedIdx]
+      const selectedIdx = parseInt(answers[question.id] ?? '-1')
       
-      // For new format, correct_answer is the option text itself
-      const isCorrect = selectedOption && selectedOption === question.correct_answer
+      // correct_answer can be either:
+      // 1. An index as string (e.g., "0", "1", "2") - new simplified format
+      // 2. The actual option text - old format
+      let correctIdx = -1
+      const parsedCorrectIdx = parseInt(question.correct_answer)
+      
+      if (!isNaN(parsedCorrectIdx) && parsedCorrectIdx >= 0 && parsedCorrectIdx < optionsList.length) {
+        // correct_answer is an index
+        correctIdx = parsedCorrectIdx
+      } else {
+        // correct_answer is the option text, find its index
+        correctIdx = optionsList.findIndex(opt => opt === question.correct_answer)
+      }
+      
+      const isCorrect = selectedIdx >= 0 && selectedIdx === correctIdx
       if (isCorrect) {
         score += question.points
       }
       
       // Store result for each question
+      const correctAnswerText = correctIdx >= 0 && correctIdx < optionsList.length 
+        ? optionsList[correctIdx] 
+        : question.correct_answer
+        
       results[question.id] = {
-        correct: !!isCorrect,
-        correctAnswer: question.correct_answer
+        correct: isCorrect,
+        correctAnswer: correctAnswerText,
+        correctIndex: correctIdx
       }
     }
 

@@ -245,8 +245,17 @@ export default function TakeQuiz() {
                 const isCorrect = questionResult?.correct || false;
                 const correctAnswerText = questionResult?.correctAnswer || '';
                 
-                // Find correct answer index - for new format it's stored as the option text directly
-                const correctAnswerIdx = optionsList.findIndex(opt => opt === correctAnswerText);
+                // Server now returns correctIndex directly, or we can parse from correctAnswer
+                let correctAnswerIdx = (questionResult as any)?.correctIndex ?? -1;
+                if (correctAnswerIdx < 0) {
+                  // Fallback: try to parse as index or find by text
+                  const parsedIdx = parseInt(correctAnswerText);
+                  if (!isNaN(parsedIdx) && parsedIdx >= 0 && parsedIdx < optionsList.length) {
+                    correctAnswerIdx = parsedIdx;
+                  } else {
+                    correctAnswerIdx = optionsList.findIndex(opt => opt === correctAnswerText);
+                  }
+                }
                 
                 return (
                   <div key={q.id} className={`p-4 rounded-lg border ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
