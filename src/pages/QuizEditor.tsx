@@ -1,24 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Trash2, GripVertical } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { SimplifiedQuestionEditor } from '@/components/quiz/SimplifiedQuestionEditor';
+import { ExcelImporter } from '@/components/quiz/ExcelImporter';
 
-interface Question {
+interface SimplifiedQuestion {
   id?: string;
   question_text: string;
   question_text_ar: string;
-  options: { en: string[]; ar: string[] };
+  options: string[];
   correct_answer: string;
   points: number;
   order_index: number;
+  image_url?: string;
 }
 
 interface Quiz {
@@ -34,7 +34,7 @@ export default function QuizEditor() {
   const { toast } = useToast();
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<SimplifiedQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -61,10 +61,28 @@ export default function QuizEditor() {
 
       if (questionsError) throw questionsError;
       
-      const formattedQuestions = (questionsData || []).map(q => ({
-        ...q,
-        options: typeof q.options === 'object' ? q.options as { en: string[]; ar: string[] } : { en: ['', '', '', ''], ar: ['', '', '', ''] }
-      }));
+      // Convert old format to simplified format
+      const formattedQuestions: SimplifiedQuestion[] = (questionsData || []).map(q => {
+        const oldOptions = typeof q.options === 'object' ? q.options as { en?: string[]; ar?: string[] } : null;
+        
+        // Merge old format options or use empty array
+        let options: string[] = ['', '', '', ''];
+        if (oldOptions) {
+          // Prefer English options, fallback to Arabic
+          options = oldOptions.en?.length ? oldOptions.en : (oldOptions.ar || options);
+        }
+        
+        return {
+          id: q.id,
+          question_text: q.question_text || q.question_text_ar || '',
+          question_text_ar: q.question_text_ar || q.question_text || '',
+          options,
+          correct_answer: q.correct_answer,
+          points: q.points,
+          order_index: q.order_index,
+          image_url: (q as any).image_url,
+        };
+      });
       
       setQuestions(formattedQuestions);
     } catch (error) {
@@ -79,35 +97,8 @@ export default function QuizEditor() {
     }
   };
 
-  const addQuestion = () => {
-    const newQuestion: Question = {
-      question_text: '',
-      question_text_ar: '',
-      options: { en: ['', '', '', ''], ar: ['', '', '', ''] },
-      correct_answer: '0',
-      points: 1,
-      order_index: questions.length,
-    };
-    setQuestions([...questions, newQuestion]);
-  };
-
-  const updateQuestion = (index: number, updates: Partial<Question>) => {
-    const updated = [...questions];
-    updated[index] = { ...updated[index], ...updates };
-    setQuestions(updated);
-  };
-
-  const updateOption = (qIndex: number, optIndex: number, lang: 'en' | 'ar', value: string) => {
-    const updated = [...questions];
-    const options = { ...updated[qIndex].options };
-    options[lang][optIndex] = value;
-    updated[qIndex] = { ...updated[qIndex], options };
-    setQuestions(updated);
-  };
-
-  const removeQuestion = (index: number) => {
-    const updated = questions.filter((_, i) => i !== index);
-    setQuestions(updated.map((q, i) => ({ ...q, order_index: i })));
+  const handleImportQuestions = (importedQuestions: SimplifiedQuestion[]) => {
+    setQuestions([...questions, ...importedQuestions]);
   };
 
   const handleSave = async () => {
@@ -123,12 +114,17 @@ export default function QuizEditor() {
         const questionsToInsert = questions.map((q, idx) => ({
           quiz_id: quizId,
           question_text: q.question_text,
-          question_text_ar: q.question_text_ar,
-          options: q.options,
+          question_text_ar: q.question_text_ar || q.question_text,
+          // Store in new simplified format but maintain backward compatibility
+          options: { 
+            en: q.options, 
+            ar: q.options // Same for both since we're using simplified single-field
+          },
           correct_answer: q.correct_answer,
           points: q.points,
           order_index: idx,
           question_type: 'multiple_choice',
+          image_url: q.image_url || null,
         }));
 
         const { error } = await supabase.from('quiz_questions').insert(questionsToInsert);
@@ -165,112 +161,31 @@ export default function QuizEditor() {
     <DashboardLayout title={language === 'ar' ? quiz?.title_ar : quiz?.title}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <Button variant="ghost" onClick={() => navigate('/quizzes')}>
             {isRTL ? <ArrowLeft className="w-4 h-4 mr-2 rotate-180" /> : <ArrowLeft className="w-4 h-4 mr-2" />}
             {t.common.back}
           </Button>
-          <Button className="kojo-gradient" onClick={handleSave} disabled={saving}>
-            <Save className="w-4 h-4 mr-2" />
-            {saving ? t.common.loading : t.common.save}
-          </Button>
+          
+          <div className="flex items-center gap-2 flex-wrap">
+            <ExcelImporter 
+              onImport={handleImportQuestions}
+              existingQuestionsCount={questions.length}
+              isRTL={isRTL}
+            />
+            <Button className="kojo-gradient" onClick={handleSave} disabled={saving}>
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? t.common.loading : t.common.save}
+            </Button>
+          </div>
         </div>
 
-        {/* Questions */}
-        <div className="space-y-4">
-          {questions.map((question, qIndex) => (
-            <Card key={qIndex} className="relative">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
-                    {isRTL ? `السؤال ${qIndex + 1}` : `Question ${qIndex + 1}`}
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <Label className="text-xs">{isRTL ? 'درجات:' : 'Points:'}</Label>
-                      <Input
-                        type="number"
-                        value={question.points}
-                        onChange={(e) => updateQuestion(qIndex, { points: parseInt(e.target.value) || 1 })}
-                        className="w-16 h-8"
-                        min={1}
-                      />
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => removeQuestion(qIndex)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Question Text */}
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>{isRTL ? 'نص السؤال (English)' : 'Question Text (English)'}</Label>
-                    <Input
-                      value={question.question_text}
-                      onChange={(e) => updateQuestion(qIndex, { question_text: e.target.value })}
-                      placeholder="Enter question in English..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{isRTL ? 'نص السؤال (عربي)' : 'Question Text (Arabic)'}</Label>
-                    <Input
-                      value={question.question_text_ar}
-                      onChange={(e) => updateQuestion(qIndex, { question_text_ar: e.target.value })}
-                      placeholder="أدخل نص السؤال..."
-                      dir="rtl"
-                    />
-                  </div>
-                </div>
-
-                {/* Options */}
-                <div className="space-y-3">
-                  <Label>{isRTL ? 'الخيارات (اختر الإجابة الصحيحة)' : 'Options (Select correct answer)'}</Label>
-                  <RadioGroup
-                    value={question.correct_answer}
-                    onValueChange={(value) => updateQuestion(qIndex, { correct_answer: value })}
-                  >
-                    {[0, 1, 2, 3].map((optIndex) => (
-                      <div key={optIndex} className="flex items-center gap-3 p-3 rounded-lg border">
-                        <RadioGroupItem value={optIndex.toString()} id={`q${qIndex}-opt${optIndex}`} />
-                        <div className="flex-1 grid gap-2 md:grid-cols-2">
-                          <Input
-                            value={question.options.en[optIndex]}
-                            onChange={(e) => updateOption(qIndex, optIndex, 'en', e.target.value)}
-                            placeholder={`Option ${optIndex + 1} (English)`}
-                          />
-                          <Input
-                            value={question.options.ar[optIndex]}
-                            onChange={(e) => updateOption(qIndex, optIndex, 'ar', e.target.value)}
-                            placeholder={`الخيار ${optIndex + 1} (عربي)`}
-                            dir="rtl"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </RadioGroup>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={addQuestion}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {isRTL ? 'إضافة سؤال' : 'Add Question'}
-          </Button>
-        </div>
+        {/* Questions Editor */}
+        <SimplifiedQuestionEditor
+          questions={questions}
+          onChange={setQuestions}
+          isRTL={isRTL}
+        />
 
         {/* Stats */}
         <Card>
