@@ -176,13 +176,11 @@ export default function Auth() {
             <div className="w-full bg-background rounded-3xl shadow-2xl p-6 space-y-6">
               {/* Welcome text */}
               <div className="text-center space-y-1">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl kojo-gradient flex items-center justify-center shadow-lg">
-                  <img 
-                    src={kojobotIcon} 
-                    alt="" 
-                    className="w-10 h-10 rounded-lg"
-                  />
-                </div>
+                <img 
+                  src={kojobotIcon} 
+                  alt="Kojobot" 
+                  className="w-16 h-16 mx-auto mb-4 rounded-2xl shadow-lg"
+                />
                 <h1 className="text-xl font-bold text-foreground">
                   {t.auth.welcomeBack}
                 </h1>
