@@ -8,13 +8,14 @@
     <meta name="description" content="kojobot academy">
     <meta name="author" content="Lovable" />
 
-    <!-- Google Fonts - Poppins for English, Cairo for Arabic -->
+    <!-- Preconnect to external origins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Preload LCP image for faster discovery -->
-    <link rel="preload" as="image" href="/src/assets/kojobot-logo-white.png" fetchpriority="high">
+    <!-- Load fonts asynchronously to prevent render blocking -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 
     <!-- TODO: Update og:title to match your application name -->
     
