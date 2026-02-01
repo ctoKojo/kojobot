@@ -118,9 +118,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar side={isRTL ? 'right' : 'left'} collapsible="icon" className="font-sans">
-      <SidebarHeader className="border-b border-sidebar-border p-4">
-        <div className="flex items-center justify-center">
-          <KojobotLogo size={collapsed ? 'sm' : 'md'} />
+      <SidebarHeader className="border-b border-sidebar-border h-16 flex items-center justify-center">
+        <div className="flex items-center justify-center overflow-hidden">
+          <KojobotLogo size={collapsed ? 'sm' : 'md'} showText={!collapsed} />
         </div>
       </SidebarHeader>
 
