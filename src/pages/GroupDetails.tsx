@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Users, Calendar, Clock, User, BookOpen, 
   FileText, ArrowLeft, CheckCircle, XCircle, AlertCircle,
-  TrendingUp, Target, Video, Copy, ExternalLink
+  TrendingUp, Target, Video, Copy, ExternalLink, Snowflake
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -310,6 +311,21 @@ export default function GroupDetails() {
           {isRTL ? 'رجوع' : 'Back'}
         </Button>
 
+        {/* Frozen Group Alert - for non-admin users */}
+        {data?.group?.status === 'frozen' && role !== 'admin' && (
+          <Alert className="border-sky-300 bg-sky-50 dark:bg-sky-950/30">
+            <Snowflake className="h-5 w-5 text-sky-600" />
+            <AlertTitle className="text-sky-800 dark:text-sky-300">
+              {isRTL ? 'هذه المجموعة مجمدة' : 'This Group is Frozen'}
+            </AlertTitle>
+            <AlertDescription className="text-sky-700 dark:text-sky-400">
+              {isRTL 
+                ? 'لا يمكن إجراء أي تعديلات على هذه المجموعة حالياً. يمكنك فقط عرض البيانات السابقة.'
+                : 'No modifications can be made to this group. You can only view historical data.'}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Group Header */}
         <Card>
           <CardContent className="p-6">
@@ -325,6 +341,12 @@ export default function GroupDetails() {
                   <Badge variant="secondary">
                     {getGroupTypeName(data.group.group_type)}
                   </Badge>
+                  {data.group.status === 'frozen' && (
+                    <Badge className="bg-sky-500 text-white">
+                      <Snowflake className="h-3 w-3 mr-1" />
+                      {isRTL ? 'مجمدة' : 'Frozen'}
+                    </Badge>
+                  )}
                   <Badge variant={data.group.attendance_mode === 'online' ? 'default' : 'outline'} className={data.group.attendance_mode === 'online' ? 'bg-green-600' : ''}>
                     {data.group.attendance_mode === 'online' 
                       ? (isRTL ? 'أونلاين' : 'Online')
