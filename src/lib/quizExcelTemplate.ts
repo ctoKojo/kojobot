@@ -61,20 +61,36 @@ export const parseExcelFile = (file: File): Promise<QuestionRow[]> => {
           const row = jsonData[i];
           if (!row || !row[0]) continue; // Skip empty rows
           
-          const question: QuestionRow = {
-            question: String(row[0] || ''),
-            option1: String(row[1] || ''),
-            option2: String(row[2] || ''),
-            option3: String(row[3] || ''),
-            option4: String(row[4] || ''),
-            correctAnswer: parseInt(String(row[5] || '1')) || 1,
-            points: parseInt(String(row[6] || '1')) || 1,
-          };
+          // Parse correct answer - handle various formats
+          let correctAnswerRaw = row[5];
+          let correctAnswer = 1; // default
           
-          // Validate correct answer is between 1-4
-          if (question.correctAnswer < 1 || question.correctAnswer > 4) {
-            question.correctAnswer = 1;
+          if (correctAnswerRaw !== undefined && correctAnswerRaw !== null && correctAnswerRaw !== '') {
+            const parsed = parseInt(String(correctAnswerRaw).trim());
+            if (!isNaN(parsed) && parsed >= 1 && parsed <= 4) {
+              correctAnswer = parsed;
+            }
           }
+          
+          // Parse points
+          let pointsRaw = row[6];
+          let points = 1; // default
+          if (pointsRaw !== undefined && pointsRaw !== null && pointsRaw !== '') {
+            const parsed = parseInt(String(pointsRaw).trim());
+            if (!isNaN(parsed) && parsed > 0) {
+              points = parsed;
+            }
+          }
+          
+          const question: QuestionRow = {
+            question: String(row[0] || '').trim(),
+            option1: String(row[1] || '').trim(),
+            option2: String(row[2] || '').trim(),
+            option3: String(row[3] || '').trim(),
+            option4: String(row[4] || '').trim(),
+            correctAnswer,
+            points,
+          };
           
           questions.push(question);
         }
@@ -107,19 +123,33 @@ export const parseCSVFile = (file: File): Promise<QuestionRow[]> => {
           
           if (!values[0]) continue;
           
+          // Parse correct answer - handle various formats
+          let correctAnswer = 1; // default
+          if (values[5] !== undefined && values[5] !== '') {
+            const parsed = parseInt(values[5].trim());
+            if (!isNaN(parsed) && parsed >= 1 && parsed <= 4) {
+              correctAnswer = parsed;
+            }
+          }
+          
+          // Parse points
+          let points = 1; // default
+          if (values[6] !== undefined && values[6] !== '') {
+            const parsed = parseInt(values[6].trim());
+            if (!isNaN(parsed) && parsed > 0) {
+              points = parsed;
+            }
+          }
+          
           const question: QuestionRow = {
             question: values[0] || '',
             option1: values[1] || '',
             option2: values[2] || '',
             option3: values[3] || '',
             option4: values[4] || '',
-            correctAnswer: parseInt(values[5] || '1') || 1,
-            points: parseInt(values[6] || '1') || 1,
+            correctAnswer,
+            points,
           };
-          
-          if (question.correctAnswer < 1 || question.correctAnswer > 4) {
-            question.correctAnswer = 1;
-          }
           
           questions.push(question);
         }
