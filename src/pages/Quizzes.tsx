@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, FileQuestion, Play, Users, ListChecks, BarChart3 } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, FileQuestion, Play, Users, ListChecks, BarChart3, AlertCircle } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +42,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/lib/notificationService';
+import { validateTimeRange, getLocalizedError } from '@/lib/validationUtils';
+import { cn } from '@/lib/utils';
 
 interface Quiz {
   id: string;
@@ -105,6 +107,12 @@ export default function QuizzesPage() {
     start_time: '',
     due_date: '',
   });
+
+  // Time validation for quiz assignments
+  const timeValidationError = useMemo(() => {
+    const result = validateTimeRange(assignData.start_time, assignData.due_date);
+    return getLocalizedError(result, isRTL);
+  }, [assignData.start_time, assignData.due_date, isRTL]);
 
   useEffect(() => {
     fetchData();
@@ -185,6 +193,16 @@ export default function QuizzesPage() {
 
   const handleAssign = async () => {
     if (!user || !assigningQuiz) return;
+
+    // Validate time range
+    if (timeValidationError) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: timeValidationError,
+      });
+      return;
+    }
 
     try {
       const { error } = await supabase.from('quiz_assignments').insert([{
@@ -469,33 +487,49 @@ export default function QuizzesPage() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>{isRTL ? 'وقت البداية' : 'Start Time'}</Label>
+                <Label className={cn(timeValidationError && 'text-destructive')}>
+                  {isRTL ? 'وقت البداية' : 'Start Time'}
+                </Label>
                 <Input
                   type="datetime-local"
                   value={assignData.start_time}
                   onChange={(e) => setAssignData({ ...assignData, start_time: e.target.value })}
+                  className={cn(timeValidationError && 'border-destructive focus-visible:ring-destructive')}
                 />
                 <p className="text-xs text-muted-foreground">
                   {isRTL ? 'متى يُسمح للطلاب ببدء الكويز' : 'When students can start taking the quiz'}
                 </p>
               </div>
               <div className="grid gap-2">
-                <Label>{t.quizzes.dueDate}</Label>
+                <Label className={cn(timeValidationError && 'text-destructive')}>
+                  {t.quizzes.dueDate}
+                </Label>
                 <Input
                   type="datetime-local"
                   value={assignData.due_date}
                   onChange={(e) => setAssignData({ ...assignData, due_date: e.target.value })}
+                  className={cn(timeValidationError && 'border-destructive focus-visible:ring-destructive')}
                 />
                 <p className="text-xs text-muted-foreground">
                   {isRTL ? 'الموعد النهائي لتسليم الكويز' : 'Deadline for quiz submission'}
                 </p>
+                {timeValidationError && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {timeValidationError}
+                  </p>
+                )}
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
                 {t.common.cancel}
               </Button>
-              <Button className="kojo-gradient" onClick={handleAssign}>
+              <Button 
+                className="kojo-gradient" 
+                onClick={handleAssign}
+                disabled={!!timeValidationError}
+              >
                 {t.quizzes.assignQuiz}
               </Button>
             </DialogFooter>
