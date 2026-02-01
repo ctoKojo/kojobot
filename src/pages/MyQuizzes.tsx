@@ -38,10 +38,20 @@ export default function MyQuizzes() {
   const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState<QuizAssignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [, setRefreshTrigger] = useState(0); // For auto-refresh
 
   useEffect(() => {
     if (user) fetchQuizzes();
   }, [user]);
+
+  // Auto-refresh every minute to update remaining time display
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshTrigger(prev => prev + 1);
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchQuizzes = async () => {
     try {
