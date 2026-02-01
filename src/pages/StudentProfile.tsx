@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Award, AlertTriangle, BookOpen, 
-  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle
+  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { StudentPerformanceCharts } from '@/components/student/StudentPerformanceCharts';
 
 interface StudentData {
   profile: any;
@@ -333,6 +334,16 @@ export default function StudentProfile() {
             </CardContent>
           </Card>
         )}
+
+        {/* Performance Charts - New Section */}
+        <StudentPerformanceCharts
+          attendance={data.attendance}
+          quizSubmissions={data.quizSubmissions}
+          assignmentSubmissions={data.assignmentSubmissions}
+          instructor={data.group?.profiles}
+          groupName={data.group?.name}
+          groupNameAr={data.group?.name_ar}
+        />
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="attendance" className="w-full">
