@@ -21,6 +21,7 @@ interface Question {
   correct_answer: string;
   points: number;
   order_index: number;
+  image_url?: string | null;
 }
 
 interface QuizAssignment {
@@ -439,6 +440,16 @@ export default function TakeQuiz() {
                 {language === 'ar' ? currentQuestion.question_text_ar : currentQuestion.question_text}
               </CardTitle>
               <Badge variant="secondary">{currentQuestion.points} {isRTL ? 'درجة' : 'points'}</Badge>
+              {/* Question Image */}
+              {currentQuestion.image_url && (
+                <div className="mt-4 rounded-lg overflow-hidden border">
+                  <img
+                    src={currentQuestion.image_url}
+                    alt={`Question ${currentIndex + 1}`}
+                    className="w-full max-h-80 object-contain bg-muted"
+                  />
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <RadioGroup
