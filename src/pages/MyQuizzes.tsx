@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { StudentQuizPreviewDialog } from '@/components/quiz/StudentQuizPreviewDialog';
 
 interface QuizAssignment {
   id: string;
@@ -308,7 +309,7 @@ export default function MyQuizzes() {
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {completedQuizzes.map((quiz) => (
-                <Card key={quiz.id} className="border-green-200 bg-green-50/50">
+                <Card key={quiz.id} className="border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/30">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
@@ -328,7 +329,7 @@ export default function MyQuizzes() {
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
                         {isRTL ? 'الدرجة: ' : 'Score: '}
@@ -337,6 +338,17 @@ export default function MyQuizzes() {
                         {quiz.submission?.score} / {quiz.submission?.max_score}
                       </span>
                     </div>
+                    {quiz.submission && (
+                      <StudentQuizPreviewDialog
+                        submissionId={quiz.submission.id}
+                        quizTitle={quiz.quizzes?.title || ''}
+                        quizTitleAr={quiz.quizzes?.title_ar || ''}
+                        score={quiz.submission.score}
+                        maxScore={quiz.submission.max_score}
+                        percentage={quiz.submission.percentage}
+                        submittedAt={quiz.submission.submitted_at}
+                      />
+                    )}
                   </CardContent>
                 </Card>
               ))}
