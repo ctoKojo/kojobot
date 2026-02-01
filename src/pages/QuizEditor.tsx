@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { SimplifiedQuestionEditor } from '@/components/quiz/SimplifiedQuestionEditor';
 import { ExcelImporter } from '@/components/quiz/ExcelImporter';
+import { StudentPreviewDialog } from '@/components/quiz/StudentPreviewDialog';
+import { ImportFromQuizzesDialog } from '@/components/quiz/ImportFromQuizzesDialog';
 
 interface SimplifiedQuestion {
   id?: string;
@@ -168,6 +170,13 @@ export default function QuizEditor() {
           </Button>
           
           <div className="flex items-center gap-2 flex-wrap">
+            <StudentPreviewDialog questions={questions} isRTL={isRTL} />
+            <ImportFromQuizzesDialog
+              currentQuizId={quizId}
+              existingQuestionsCount={questions.length}
+              onImport={handleImportQuestions}
+              isRTL={isRTL}
+            />
             <ExcelImporter 
               onImport={handleImportQuestions}
               existingQuestionsCount={questions.length}

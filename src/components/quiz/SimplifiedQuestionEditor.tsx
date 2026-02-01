@@ -1,11 +1,21 @@
-import { Plus, Trash2, Copy, GripVertical } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Textarea } from '@/components/ui/textarea';
-import { QuestionImageUpload } from './QuestionImageUpload';
+import { DraggableQuestionCard } from './DraggableQuestionCard';
 
 interface SimplifiedQuestion {
   id?: string;
@@ -25,6 +35,17 @@ interface SimplifiedQuestionEditorProps {
 }
 
 export function SimplifiedQuestionEditor({ questions, onChange, isRTL }: SimplifiedQuestionEditorProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const addQuestion = () => {
     const newQuestion: SimplifiedQuestion = {
       question_text: '',
@@ -66,105 +87,55 @@ export function SimplifiedQuestionEditor({ questions, onChange, isRTL }: Simplif
     onChange(updated);
   };
 
-  const handleImageChange = (qIndex: number, url: string | null) => {
-    updateQuestion(qIndex, { image_url: url || undefined });
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = questions.findIndex(
+        (q) => (q.id || `question-${questions.indexOf(q)}`) === active.id
+      );
+      const newIndex = questions.findIndex(
+        (q) => (q.id || `question-${questions.indexOf(q)}`) === over.id
+      );
+
+      const reordered = arrayMove(questions, oldIndex, newIndex).map((q, i) => ({
+        ...q,
+        order_index: i,
+      }));
+
+      onChange(reordered);
+    }
+  };
+
+  const getQuestionId = (question: SimplifiedQuestion, index: number) => {
+    return question.id || `question-${index}`;
   };
 
   return (
     <div className="space-y-4">
-      {questions.map((question, qIndex) => (
-        <Card key={qIndex} className="relative">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
-                {isRTL ? `السؤال ${qIndex + 1}` : `Question ${qIndex + 1}`}
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <Label className="text-xs">{isRTL ? 'درجات:' : 'Points:'}</Label>
-                  <Input
-                    type="number"
-                    value={question.points}
-                    onChange={(e) => updateQuestion(qIndex, { points: parseInt(e.target.value) || 1 })}
-                    className="w-16 h-8"
-                    min={1}
-                  />
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={() => duplicateQuestion(qIndex)}
-                  title={isRTL ? 'نسخ السؤال' : 'Duplicate Question'}
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => removeQuestion(qIndex)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Image Upload */}
-            <QuestionImageUpload
-              imageUrl={question.image_url}
-              onImageChange={(url) => handleImageChange(qIndex, url)}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={questions.map((q, i) => getQuestionId(q, i))}
+          strategy={verticalListSortingStrategy}
+        >
+          {questions.map((question, qIndex) => (
+            <DraggableQuestionCard
+              key={getQuestionId(question, qIndex)}
+              question={question}
+              index={qIndex}
               isRTL={isRTL}
+              onUpdate={(updates) => updateQuestion(qIndex, updates)}
+              onRemove={() => removeQuestion(qIndex)}
+              onDuplicate={() => duplicateQuestion(qIndex)}
+              onUpdateOption={(optIndex, value) => updateOption(qIndex, optIndex, value)}
             />
-
-            {/* Question Text - Single Field */}
-            <div className="space-y-2">
-              <Label>{isRTL ? 'نص السؤال' : 'Question Text'}</Label>
-              <Textarea
-                value={question.question_text}
-                onChange={(e) => updateQuestion(qIndex, { 
-                  question_text: e.target.value,
-                  question_text_ar: e.target.value // Keep both in sync for backward compatibility
-                })}
-                placeholder={isRTL 
-                  ? 'اكتب السؤال هنا... (يمكنك الكتابة بالعربية أو الإنجليزية أو كليهما)' 
-                  : 'Enter your question here... (Arabic, English, or both)'}
-                className="min-h-[80px]"
-              />
-            </div>
-
-            {/* Options - Single Field per Option */}
-            <div className="space-y-3">
-              <Label>{isRTL ? 'الخيارات (اختر الإجابة الصحيحة)' : 'Options (Select correct answer)'}</Label>
-              <RadioGroup
-                value={question.correct_answer}
-                onValueChange={(value) => updateQuestion(qIndex, { correct_answer: value })}
-              >
-                {[0, 1, 2, 3].map((optIndex) => (
-                  <div key={optIndex} className="flex items-center gap-3 p-3 rounded-lg border">
-                    <RadioGroupItem value={optIndex.toString()} id={`q${qIndex}-opt${optIndex}`} />
-                    <Input
-                      value={question.options[optIndex] || ''}
-                      onChange={(e) => updateOption(qIndex, optIndex, e.target.value)}
-                      placeholder={isRTL 
-                        ? `الخيار ${optIndex + 1}` 
-                        : `Option ${optIndex + 1}`}
-                      className="flex-1"
-                    />
-                    {question.correct_answer === optIndex.toString() && (
-                      <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                        {isRTL ? '✓ صحيح' : '✓ Correct'}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+          ))}
+        </SortableContext>
+      </DndContext>
 
       <Button
         type="button"
