@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import kojobotIcon from '@/assets/kojobot-icon.png';
+import kojobotIcon from '@/assets/kojobot-icon-optimized.webp';
 
 interface KojobotLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
