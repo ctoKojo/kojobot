@@ -61,6 +61,7 @@ export function AppSidebar() {
 
   const educationNavItems: NavItem[] = [
     { title: t.nav.questionBank, url: '/quizzes', icon: FileQuestion, roles: ['admin', 'instructor'] },
+    { title: isRTL ? 'نتائج الكويزات' : 'Quiz Results', url: '/instructor-quiz-results', icon: BarChart3, roles: ['instructor'] },
     { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileQuestion, roles: ['student'] },
     { title: isRTL ? 'تقارير الكويزات' : 'Quiz Reports', url: '/quiz-reports', icon: BarChart3, roles: ['admin'] },
     { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['admin', 'instructor', 'student'] },
