@@ -56,9 +56,9 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
       <div className="min-h-screen flex w-full" dir={isRTL ? 'rtl' : 'ltr'}>
         <AppSidebar />
         
-        <SidebarInset className="flex-1 overflow-x-auto">
-          {/* Header - h-16 matches sidebar header height, sticky within the inset */}
-          <header className="sticky top-0 z-40 flex h-16 min-w-max items-center gap-3 border-b border-border bg-background px-4 md:px-6">
+        <SidebarInset className="flex-1 flex flex-col min-w-0">
+          {/* Header - fixed height, doesn't scroll with content */}
+          <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:px-6">
             <SidebarTrigger className="-ml-2">
               <Menu className="h-5 w-5" />
             </SidebarTrigger>
@@ -71,12 +71,12 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             </div>
             
             {title && (
-              <h1 className="text-lg md:text-xl font-semibold hidden md:block">{title}</h1>
+              <h1 className="text-lg md:text-xl font-semibold hidden md:block truncate">{title}</h1>
             )}
             
             <div className="flex-1" />
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3 shrink-0">
               <NotificationBell />
               <ThemeToggle />
               <LanguageToggle />
@@ -121,9 +121,11 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             </div>
           </header>
           
-          {/* Main Content */}
-          <main className="flex-1 p-6 min-w-max">
-            {children}
+          {/* Main Content - scrollable area for tables */}
+          <main className="flex-1 p-4 md:p-6 overflow-x-auto">
+            <div className="min-w-fit">
+              {children}
+            </div>
           </main>
         </SidebarInset>
       </div>
