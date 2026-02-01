@@ -559,7 +559,7 @@ export default function InstructorsPage() {
                   <TableHead>{t.students.fullName}</TableHead>
                   <TableHead>{t.auth.email}</TableHead>
                   <TableHead>{t.instructors.specializations}</TableHead>
-                  <TableHead className="w-[100px]">{t.common.actions}</TableHead>
+                  <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -633,7 +633,7 @@ export default function AssignmentsPage() {
                   <TableHead>{t.students.group}</TableHead>
                   <TableHead>{t.assignments.dueDate}</TableHead>
                   <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                  <TableHead className="w-[100px]">{t.common.actions}</TableHead>
+                  <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -1248,7 +1248,7 @@ export default function GroupsPage() {
                   <TableHead>{isRTL ? 'الطلاب' : 'Students'}</TableHead>
                   <TableHead>{t.groups.instructor}</TableHead>
                   <TableHead>{t.groups.schedule}</TableHead>
-                  <TableHead className="w-[120px]">{t.common.actions}</TableHead>
+                  <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

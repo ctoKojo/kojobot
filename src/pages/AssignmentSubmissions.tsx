@@ -259,7 +259,7 @@ export default function AssignmentSubmissions() {
                   <TableHead>{isRTL ? 'آخر تحديث' : 'Last Updated'}</TableHead>
                   <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
                   <TableHead>{isRTL ? 'الدرجة' : 'Score'}</TableHead>
-                  <TableHead>{t.common.actions}</TableHead>
+                  <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
