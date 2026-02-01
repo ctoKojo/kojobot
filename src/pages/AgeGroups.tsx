@@ -255,7 +255,7 @@ export default function AgeGroupsPage() {
                   <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
                   <TableHead>{t.ageGroups.minAge}</TableHead>
                   <TableHead>{t.ageGroups.maxAge}</TableHead>
-                  <TableHead className="w-[100px]">{t.common.actions}</TableHead>
+                  <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

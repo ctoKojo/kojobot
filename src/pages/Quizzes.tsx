@@ -677,7 +677,7 @@ export default function QuizzesPage() {
                   <TableHead>{t.students.level}</TableHead>
                   <TableHead>{t.quizzes.duration}</TableHead>
                   <TableHead>{isRTL ? 'درجة النجاح' : 'Pass Score'}</TableHead>
-                  <TableHead className="w-[100px]">{t.common.actions}</TableHead>
+                  <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

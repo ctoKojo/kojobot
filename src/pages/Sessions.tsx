@@ -592,7 +592,7 @@ export default function SessionsPage() {
                             <TableHead>{isRTL ? 'الوقت' : 'Time'}</TableHead>
                             <TableHead>{isRTL ? 'الموضوع' : 'Topic'}</TableHead>
                             <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                            {canManageGroup(group) && <TableHead className="w-[100px]">{t.common.actions}</TableHead>}
+                            {canManageGroup(group) && <TableHead className="w-[60px]"></TableHead>}
                           </TableRow>
                         </TableHeader>
                         <TableBody>

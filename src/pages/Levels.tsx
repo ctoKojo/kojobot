@@ -318,7 +318,7 @@ export default function LevelsPage() {
                   <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
                   <TableHead>{t.levels.track}</TableHead>
                   <TableHead>{t.levels.parentLevel}</TableHead>
-                  <TableHead className="w-[100px]">{t.common.actions}</TableHead>
+                  <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
