@@ -100,14 +100,15 @@ export function AppSidebar() {
                 navigate(item.url);
               }}
               className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
+                'flex items-center gap-3 rounded-lg transition-colors text-sm',
+                collapsed ? 'justify-center px-2 py-2' : 'px-3 py-2',
                 isActive(item.url)
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               )}
             >
               <item.icon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{item.title}</span>}
+              {!collapsed && <span className="truncate">{item.title}</span>}
             </a>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -116,8 +117,8 @@ export function AppSidebar() {
   );
 
   return (
-    <Sidebar side={isRTL ? 'right' : 'left'} collapsible="icon">
-      <SidebarHeader className="border-b p-4">
+    <Sidebar side={isRTL ? 'right' : 'left'} collapsible="icon" className="font-sans">
+      <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center justify-center">
           <KojobotLogo size={collapsed ? 'sm' : 'md'} />
         </div>
@@ -154,13 +155,16 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-4">
+      <SidebarFooter className="border-t border-sidebar-border p-4">
         <Button
           variant="ghost"
-          className={cn('w-full justify-start gap-2', collapsed && 'justify-center')}
+          className={cn(
+            'w-full gap-2 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+            collapsed ? 'justify-center px-2' : 'justify-start'
+          )}
           onClick={handleSignOut}
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-5 w-5 shrink-0" />
           {!collapsed && <span>{t.auth.logout}</span>}
         </Button>
       </SidebarFooter>
