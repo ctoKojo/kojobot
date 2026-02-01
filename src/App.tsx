@@ -8,6 +8,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useAdminSessionTimeout } from "@/hooks/useAdminSessionTimeout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Students from "./pages/Students";
@@ -34,6 +35,12 @@ import GroupDetails from "./pages/GroupDetails";
 import Profile from "./pages/Profile";
 import InstructorSchedule from "./pages/InstructorSchedule";
 
+// Component to handle admin session timeout
+function AdminSessionTimeoutHandler() {
+  useAdminSessionTimeout();
+  return null;
+}
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -41,6 +48,7 @@ const App = () => (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
       <LanguageProvider>
         <AuthProvider>
+          <AdminSessionTimeoutHandler />
           <TooltipProvider>
             <Toaster />
             <Sonner />
