@@ -122,6 +122,15 @@ interface Translations {
     copyLink: string;
     joinSession: string;
     linkCopied: string;
+    groupStatus: string;
+    newGroup: string;
+    existingGroup: string;
+    nextSessionNumber: string;
+    nextSessionDate: string;
+    sessionsPassed: string;
+    sessionsRemaining: string;
+    progress: string;
+    selectDate: string;
   };
   ageGroups: {
     title: string;
@@ -353,6 +362,15 @@ export const translations: Record<Language, Translations> = {
       copyLink: 'Copy Link',
       joinSession: 'Join Session',
       linkCopied: 'Link copied to clipboard',
+      groupStatus: 'Group Status',
+      newGroup: 'New Group - Starts from Session 1',
+      existingGroup: 'Existing Group - Already Started',
+      nextSessionNumber: 'Next Session Number',
+      nextSessionDate: 'Next Session Date',
+      sessionsPassed: 'Sessions Passed',
+      sessionsRemaining: 'Sessions Remaining',
+      progress: 'Progress',
+      selectDate: 'Select Date',
     },
 
     // Age Groups
@@ -599,6 +617,15 @@ export const translations: Record<Language, Translations> = {
       copyLink: 'نسخ الرابط',
       joinSession: 'انضم للجلسة',
       linkCopied: 'تم نسخ الرابط',
+      groupStatus: 'حالة المجموعة',
+      newGroup: 'مجموعة جديدة - تبدأ من السيشن 1',
+      existingGroup: 'مجموعة قائمة - بدأت مسبقاً',
+      nextSessionNumber: 'رقم السيشن القادم',
+      nextSessionDate: 'تاريخ السيشن القادم',
+      sessionsPassed: 'سيشنات فاتت',
+      sessionsRemaining: 'سيشنات باقية',
+      progress: 'التقدم',
+      selectDate: 'اختر التاريخ',
     },
 
     // Age Groups
