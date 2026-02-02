@@ -62,6 +62,9 @@ import {
   Pencil,
   Trash2,
   ExternalLink,
+  Upload,
+  X,
+  FileIcon,
 } from 'lucide-react';
 
 interface Session {
@@ -135,6 +138,8 @@ export default function SessionDetails() {
     max_score: 100,
     due_date: '',
   });
+  const [assignmentFile, setAssignmentFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [savingAssignment, setSavingAssignment] = useState(false);
   
   // Edit quiz dialog
@@ -381,18 +386,50 @@ export default function SessionDetails() {
     
     setSavingAssignment(true);
     try {
+      let attachmentUrl: string | null = null;
+      let attachmentType: string | null = null;
+      
+      // Upload file if exists
+      if (assignmentFile) {
+        setUploadingFile(true);
+        const fileExt = assignmentFile.name.split('.').pop();
+        const fileName = `${session.id}-${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError, data: uploadData } = await supabase.storage
+          .from('assignments')
+          .upload(fileName, assignmentFile);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: publicUrl } = supabase.storage
+          .from('assignments')
+          .getPublicUrl(fileName);
+        
+        attachmentUrl = publicUrl.publicUrl;
+        attachmentType = assignmentFile.type;
+        setUploadingFile(false);
+      }
+      
       if (editingAssignment && assignment) {
         // Update existing assignment
+        const updateData: any = {
+          title: assignmentForm.title,
+          title_ar: assignmentForm.title_ar,
+          description: assignmentForm.description || null,
+          description_ar: assignmentForm.description_ar || null,
+          max_score: assignmentForm.max_score,
+          due_date: new Date(assignmentForm.due_date).toISOString(),
+        };
+        
+        // Only update attachment if new file was uploaded
+        if (attachmentUrl) {
+          updateData.attachment_url = attachmentUrl;
+          updateData.attachment_type = attachmentType;
+        }
+        
         const { error } = await supabase
           .from('assignments')
-          .update({
-            title: assignmentForm.title,
-            title_ar: assignmentForm.title_ar,
-            description: assignmentForm.description || null,
-            description_ar: assignmentForm.description_ar || null,
-            max_score: assignmentForm.max_score,
-            due_date: new Date(assignmentForm.due_date).toISOString(),
-          })
+          .update(updateData)
           .eq('id', assignment.id);
         
         if (error) throw error;
@@ -415,6 +452,8 @@ export default function SessionDetails() {
             session_id: session.id,
             group_id: session.group_id,
             assigned_by: user.id,
+            attachment_url: attachmentUrl,
+            attachment_type: attachmentType,
           });
         
         if (error) throw error;
@@ -428,6 +467,7 @@ export default function SessionDetails() {
       setAssignmentDialogOpen(false);
       setEditingAssignment(false);
       setAssignmentForm({ title: '', title_ar: '', description: '', description_ar: '', max_score: 100, due_date: '' });
+      setAssignmentFile(null);
       fetchSessionData();
     } catch (error: any) {
       toast({
@@ -437,6 +477,7 @@ export default function SessionDetails() {
       });
     } finally {
       setSavingAssignment(false);
+      setUploadingFile(false);
     }
   };
 
@@ -1112,6 +1153,58 @@ export default function SessionDetails() {
                   />
                 </div>
               </div>
+              
+              {/* File Upload */}
+              <div className="grid gap-2">
+                <Label>{isRTL ? 'ملف مرفق (اختياري)' : 'Attachment (optional)'}</Label>
+                {assignmentFile ? (
+                  <div className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30">
+                    <FileIcon className="h-5 w-5 text-muted-foreground" />
+                    <span className="flex-1 text-sm truncate">{assignmentFile.name}</span>
+                    <Button 
+                      type="button"
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6"
+                      onClick={() => setAssignmentFile(null)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="file"
+                      id="assignment-file"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.mp4,.mp3,.zip"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 50 * 1024 * 1024) {
+                            toast({
+                              title: isRTL ? 'حجم الملف كبير جداً' : 'File too large',
+                              description: isRTL ? 'الحد الأقصى 50 ميجابايت' : 'Maximum file size is 50MB',
+                              variant: 'destructive',
+                            });
+                            return;
+                          }
+                          setAssignmentFile(file);
+                        }
+                      }}
+                    />
+                    <div className="flex items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors cursor-pointer">
+                      <Upload className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {isRTL ? 'اضغط لرفع ملف أو اسحب وأفلت' : 'Click to upload or drag and drop'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {isRTL ? 'PDF, Word, PowerPoint, Excel, صور, فيديو, صوت (حتى 50MB)' : 'PDF, Word, PowerPoint, Excel, Images, Video, Audio (up to 50MB)'}
+                </p>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setAssignmentDialogOpen(false)}>
@@ -1119,11 +1212,13 @@ export default function SessionDetails() {
               </Button>
               <Button 
                 onClick={handleSaveAssignment} 
-                disabled={savingAssignment || !assignmentForm.title || !assignmentForm.title_ar || !assignmentForm.due_date}
+                disabled={savingAssignment || uploadingFile || !assignmentForm.title || !assignmentForm.title_ar || !assignmentForm.due_date}
               >
-                {savingAssignment 
-                  ? (isRTL ? 'جاري الحفظ...' : 'Saving...') 
-                  : (editingAssignment ? (isRTL ? 'تحديث' : 'Update') : (isRTL ? 'إنشاء' : 'Create'))
+                {uploadingFile 
+                  ? (isRTL ? 'جاري رفع الملف...' : 'Uploading...')
+                  : savingAssignment 
+                    ? (isRTL ? 'جاري الحفظ...' : 'Saving...') 
+                    : (editingAssignment ? (isRTL ? 'تحديث' : 'Update') : (isRTL ? 'إنشاء' : 'Create'))
                 }
               </Button>
             </DialogFooter>
