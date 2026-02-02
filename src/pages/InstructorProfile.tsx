@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Users, BookOpen, 
-  FileText, ArrowLeft, Mail, Phone, Award, BarChart3
+  FileText, ArrowLeft, Mail, Phone, Award, BarChart3, AlertTriangle
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +36,16 @@ interface AssignmentStats {
   submissionRate: number;
 }
 
+interface InstructorWarning {
+  id: string;
+  session_id: string;
+  warning_type: string;
+  reason: string;
+  reason_ar: string;
+  created_at: string;
+  is_active: boolean;
+}
+
 interface InstructorData {
   profile: any;
   groups: any[];
@@ -48,6 +58,7 @@ interface InstructorData {
   quizStats: QuizStats;
   assignmentStats: AssignmentStats;
   attendanceTrend: { date: string; rate: number }[];
+  warnings: InstructorWarning[];
 }
 
 export default function InstructorProfile() {
@@ -260,6 +271,14 @@ export default function InstructorProfile() {
           : 0,
       };
 
+      // Fetch instructor warnings
+      const { data: warnings } = await supabase
+        .from('instructor_warnings')
+        .select('*')
+        .eq('instructor_id', instructorId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
       setData({
         profile,
         groups: groups || [],
@@ -272,6 +291,7 @@ export default function InstructorProfile() {
         quizStats,
         assignmentStats,
         attendanceTrend,
+        warnings: (warnings || []) as InstructorWarning[],
       });
     } catch (error) {
       console.error('Error fetching instructor data:', error);
@@ -420,6 +440,46 @@ export default function InstructorProfile() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Warnings Section */}
+        {data.warnings.length > 0 && (
+          <Card className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
+                <AlertTriangle className="h-5 w-5" />
+                {isRTL ? 'إنذارات نشطة' : 'Active Warnings'}
+                <Badge variant="destructive">{data.warnings.length}</Badge>
+              </CardTitle>
+              <CardDescription className="text-red-600 dark:text-red-400">
+                {isRTL ? 'هذه الإنذارات تم إصدارها بسبب عدم الالتزام بمتطلبات السيشنات' : 'These warnings were issued due to non-compliance with session requirements'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {data.warnings.map((warning) => (
+                  <div 
+                    key={warning.id} 
+                    className="flex items-center justify-between p-3 rounded-lg bg-red-100 dark:bg-red-900/30"
+                  >
+                    <div>
+                      <p className="font-medium text-red-800 dark:text-red-300">
+                        {language === 'ar' ? warning.reason_ar : warning.reason}
+                      </p>
+                      <p className="text-xs text-red-600 dark:text-red-400">
+                        {formatDate(warning.created_at)}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="border-red-300 text-red-700 dark:border-red-700 dark:text-red-400">
+                      {warning.warning_type === 'no_quiz' && (isRTL ? 'كويز مفقود' : 'Missing Quiz')}
+                      {warning.warning_type === 'no_assignment' && (isRTL ? 'واجب مفقود' : 'Missing Assignment')}
+                      {warning.warning_type === 'no_attendance' && (isRTL ? 'حضور غير مسجل' : 'No Attendance')}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="reports" className="w-full">
