@@ -39,7 +39,8 @@ interface AssignmentStats {
 interface InstructorData {
   profile: any;
   groups: any[];
-  sessions: any[];
+  upcomingSessions: any[];
+  completedSessions: any[];
   quizzes: any[];
   assignments: any[];
   totalStudents: number;
@@ -86,13 +87,22 @@ export default function InstructorProfile() {
         .eq('is_active', true);
 
       // Fetch upcoming sessions
-      const { data: sessions } = await supabase
+      const { data: upcomingSessions } = await supabase
         .from('sessions')
         .select('*, groups(name, name_ar)')
         .in('group_id', groupIds.length > 0 ? groupIds : ['no-groups'])
         .gte('session_date', new Date().toISOString().split('T')[0])
         .order('session_date', { ascending: true })
         .limit(10);
+
+      // Fetch completed sessions
+      const { data: completedSessions } = await supabase
+        .from('sessions')
+        .select('*, groups(name, name_ar)')
+        .in('group_id', groupIds.length > 0 ? groupIds : ['no-groups'])
+        .eq('status', 'completed')
+        .order('session_date', { ascending: false })
+        .limit(20);
 
       // Fetch all sessions for attendance
       const { data: allSessions } = await supabase
@@ -253,7 +263,8 @@ export default function InstructorProfile() {
       setData({
         profile,
         groups: groups || [],
-        sessions: sessions || [],
+        upcomingSessions: upcomingSessions || [],
+        completedSessions: completedSessions || [],
         quizzes: quizzes || [],
         assignments: assignments || [],
         totalStudents: totalStudents || 0,
@@ -374,7 +385,7 @@ export default function InstructorProfile() {
                   <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{data.sessions.length}</p>
+                  <p className="text-2xl font-bold">{data.upcomingSessions.length}</p>
                   <p className="text-sm text-muted-foreground">{isRTL ? 'جلسات قادمة' : 'Upcoming Sessions'}</p>
                 </div>
               </div>
@@ -486,42 +497,99 @@ export default function InstructorProfile() {
             </Card>
           </TabsContent>
 
-          {/* Sessions Tab */}
           <TabsContent value="sessions">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  {isRTL ? 'الجلسات القادمة' : 'Upcoming Sessions'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {data.sessions.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    {isRTL ? 'لا توجد جلسات قادمة' : 'No upcoming sessions'}
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {data.sessions.map((session: any) => (
-                      <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border">
-                        <div>
-                          <p className="font-medium">
-                            {language === 'ar' ? session.topic_ar || session.topic : session.topic || (isRTL ? 'جلسة' : 'Session')}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {language === 'ar' ? session.groups?.name_ar : session.groups?.name}
-                          </p>
+            <div className="space-y-6">
+              {/* Upcoming Sessions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-green-500" />
+                    {isRTL ? 'الجلسات القادمة' : 'Upcoming Sessions'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {data.upcomingSessions.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      {isRTL ? 'لا توجد جلسات قادمة' : 'No upcoming sessions'}
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {data.upcomingSessions.map((session: any) => (
+                        <div 
+                          key={session.id} 
+                          className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
+                          onClick={() => navigate(`/session/${session.id}`)}
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">
+                                {session.session_number ? `${isRTL ? 'سيشن' : 'Session'} ${session.session_number}` : ''}
+                              </p>
+                              <Badge variant="outline" className="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                {isRTL ? 'قادمة' : 'Upcoming'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {language === 'ar' ? session.groups?.name_ar : session.groups?.name}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">{formatDate(session.session_date)}</p>
+                            <p className="text-sm text-muted-foreground">{formatTime12Hour(session.session_time, isRTL)}</p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium">{formatDate(session.session_date)}</p>
-                          <p className="text-sm text-muted-foreground">{formatTime12Hour(session.session_time, isRTL)}</p>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Completed Sessions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-blue-500" />
+                    {isRTL ? 'الجلسات المكتملة' : 'Completed Sessions'}
+                    <Badge variant="secondary">{data.completedSessions.length}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {data.completedSessions.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      {isRTL ? 'لا توجد جلسات مكتملة' : 'No completed sessions'}
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {data.completedSessions.map((session: any) => (
+                        <div 
+                          key={session.id} 
+                          className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
+                          onClick={() => navigate(`/session/${session.id}`)}
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">
+                                {session.session_number ? `${isRTL ? 'سيشن' : 'Session'} ${session.session_number}` : ''}
+                              </p>
+                              <Badge variant="secondary" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                {isRTL ? 'مكتملة' : 'Completed'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {language === 'ar' ? session.groups?.name_ar : session.groups?.name}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">{formatDate(session.session_date)}</p>
+                            <p className="text-sm text-muted-foreground">{formatTime12Hour(session.session_time, isRTL)}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Quizzes Tab */}
