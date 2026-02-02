@@ -146,6 +146,11 @@ export default function SessionDetails() {
   const [deleteQuizDialogOpen, setDeleteQuizDialogOpen] = useState(false);
   const [deleteAssignmentDialogOpen, setDeleteAssignmentDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  // Attendance dialog
+  const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
+  const [attendanceRecords, setAttendanceRecords] = useState<Record<string, string>>({});
+  const [savingAttendance, setSavingAttendance] = useState(false);
 
   // Check and update session status based on time
   const checkAndUpdateSessionStatus = useCallback(async () => {
@@ -559,6 +564,67 @@ export default function SessionDetails() {
     }
   };
 
+  const openAttendanceDialog = () => {
+    // Initialize attendance records from current student data
+    const records: Record<string, string> = {};
+    students.forEach(s => {
+      records[s.student_id] = s.attendance_status || 'absent';
+    });
+    setAttendanceRecords(records);
+    setAttendanceDialogOpen(true);
+  };
+
+  const handleSaveAttendance = async () => {
+    if (!session || !user) return;
+    
+    setSavingAttendance(true);
+    try {
+      // First, delete existing attendance for this session
+      await supabase
+        .from('attendance')
+        .delete()
+        .eq('session_id', session.id);
+      
+      // Insert new attendance records
+      const attendanceToInsert = Object.entries(attendanceRecords).map(([studentId, status]) => ({
+        session_id: session.id,
+        student_id: studentId,
+        status,
+        recorded_by: user.id,
+      }));
+      
+      const { error } = await supabase
+        .from('attendance')
+        .insert(attendanceToInsert);
+      
+      if (error) throw error;
+      
+      toast({
+        title: isRTL ? 'تم الحفظ' : 'Attendance Saved',
+        description: isRTL ? 'تم حفظ سجل الحضور بنجاح' : 'Attendance records saved successfully',
+      });
+      
+      setAttendanceDialogOpen(false);
+      fetchSessionData();
+    } catch (error: any) {
+      toast({
+        title: isRTL ? 'خطأ' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingAttendance(false);
+    }
+  };
+
+  const markAllAs = (status: string) => {
+    const newRecords: Record<string, string> = {};
+    students.forEach(s => {
+      newRecords[s.student_id] = status;
+    });
+    setAttendanceRecords(newRecords);
+  };
+
   const getAttendanceBadge = (status: string | null) => {
     if (!status) return <Badge variant="outline" className="text-muted-foreground">{isRTL ? 'غير مسجل' : 'Not recorded'}</Badge>;
     
@@ -704,7 +770,7 @@ export default function SessionDetails() {
             <CardContent className="flex gap-4 flex-wrap">
               <Button
                 variant="outline"
-                onClick={() => navigate(`/attendance?session=${session.id}`)}
+                onClick={openAttendanceDialog}
                 className="flex items-center gap-2"
               >
                 <UserCheck className="h-4 w-4" />
@@ -1105,6 +1171,84 @@ export default function SessionDetails() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Attendance Dialog */}
+        <Dialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{isRTL ? 'تسجيل الحضور' : 'Record Attendance'}</DialogTitle>
+              <DialogDescription>
+                {isRTL 
+                  ? `سيشن ${session.session_number} - ${session.session_date}`
+                  : `Session ${session.session_number} - ${session.session_date}`
+                }
+              </DialogDescription>
+            </DialogHeader>
+            
+            {/* Quick Actions */}
+            <div className="flex gap-2 flex-wrap py-2 border-b">
+              <Button size="sm" variant="outline" onClick={() => markAllAs('present')} className="text-green-600 border-green-200 hover:bg-green-50">
+                {isRTL ? 'الكل حاضر' : 'Mark All Present'}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => markAllAs('absent')} className="text-red-600 border-red-200 hover:bg-red-50">
+                {isRTL ? 'الكل غائب' : 'Mark All Absent'}
+              </Button>
+            </div>
+            
+            <div className="space-y-3 py-4">
+              {students.map((student) => (
+                <div key={student.student_id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                  <span className="font-medium">
+                    {language === 'ar' ? student.student_name_ar : student.student_name}
+                  </span>
+                  <Select 
+                    value={attendanceRecords[student.student_id] || 'absent'} 
+                    onValueChange={(value) => setAttendanceRecords(prev => ({ ...prev, [student.student_id]: value }))}
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="present">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                          {isRTL ? 'حاضر' : 'Present'}
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="absent">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          {isRTL ? 'غائب' : 'Absent'}
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="late">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                          {isRTL ? 'متأخر' : 'Late'}
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="excused">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          {isRTL ? 'معتذر' : 'Excused'}
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAttendanceDialogOpen(false)}>
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </Button>
+              <Button onClick={handleSaveAttendance} disabled={savingAttendance}>
+                {savingAttendance ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ الحضور' : 'Save Attendance')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
