@@ -46,6 +46,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { formatTime12Hour } from '@/lib/timeUtils';
+import { QuizResultsDialog } from '@/components/session/QuizResultsDialog';
+import { AssignmentSubmissionsDialog } from '@/components/session/AssignmentSubmissionsDialog';
 import {
   ArrowLeft,
   ArrowRight,
@@ -65,6 +67,7 @@ import {
   Upload,
   X,
   FileIcon,
+  Eye,
 } from 'lucide-react';
 
 interface Session {
@@ -155,6 +158,12 @@ export default function SessionDetails() {
   // Attendance dialog
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, string>>({});
+  
+  // Quiz results dialog
+  const [quizResultsDialogOpen, setQuizResultsDialogOpen] = useState(false);
+  
+  // Assignment submissions dialog
+  const [assignmentSubmissionsDialogOpen, setAssignmentSubmissionsDialogOpen] = useState(false);
   const [savingAttendance, setSavingAttendance] = useState(false);
 
   // Check and update session status based on time
@@ -885,6 +894,17 @@ export default function SessionDetails() {
                   </div>
                   <div className="text-2xl font-bold">{quizCompletedCount}/{students.length}</div>
                   <Progress value={students.length > 0 ? (quizCompletedCount / students.length) * 100 : 0} className="mt-2" />
+                  {canManage && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-3"
+                      onClick={() => setQuizResultsDialogOpen(true)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      {isRTL ? 'عرض النتائج التفصيلية' : 'View Detailed Results'}
+                    </Button>
+                  )}
                 </>
               ) : (
                 <div className="flex items-center gap-2">
@@ -922,6 +942,17 @@ export default function SessionDetails() {
                   </div>
                   <div className="text-2xl font-bold">{assignmentSubmittedCount}/{students.length}</div>
                   <Progress value={students.length > 0 ? (assignmentSubmittedCount / students.length) * 100 : 0} className="mt-2" />
+                  {canManage && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-3"
+                      onClick={() => setAssignmentSubmissionsDialogOpen(true)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      {isRTL ? 'عرض التسليمات والتصحيح' : 'View Submissions & Grade'}
+                    </Button>
+                  )}
                 </>
               ) : (
                 <div className="flex items-center gap-2">
@@ -1357,6 +1388,34 @@ export default function SessionDetails() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Quiz Results Dialog */}
+        {quizAssignment && (
+          <QuizResultsDialog
+            open={quizResultsDialogOpen}
+            onOpenChange={setQuizResultsDialogOpen}
+            quizAssignmentId={quizAssignment.id}
+            quizId={quizAssignment.quiz_id}
+            quizTitle={quizAssignment.quizzes?.title || ''}
+            quizTitleAr={quizAssignment.quizzes?.title_ar || ''}
+            groupId={session.group_id}
+            passingScore={quizAssignment.quizzes?.passing_score || 60}
+          />
+        )}
+
+        {/* Assignment Submissions Dialog */}
+        {assignment && (
+          <AssignmentSubmissionsDialog
+            open={assignmentSubmissionsDialogOpen}
+            onOpenChange={setAssignmentSubmissionsDialogOpen}
+            assignmentId={assignment.id}
+            assignmentTitle={assignment.title}
+            assignmentTitleAr={assignment.title_ar}
+            maxScore={assignment.max_score}
+            groupId={session.group_id}
+            onGraded={fetchSessionData}
+          />
+        )}
       </div>
     </DashboardLayout>
   );
