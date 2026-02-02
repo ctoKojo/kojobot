@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, FileQuestion, Play, Users, ListChecks, BarChart3, AlertCircle } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, FileQuestion, ListChecks, BarChart3 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -41,9 +41,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { notificationService } from '@/lib/notificationService';
-import { validateTimeRange, getLocalizedError } from '@/lib/validationUtils';
-import { cn } from '@/lib/utils';
 
 interface Quiz {
   id: string;
@@ -71,12 +68,6 @@ interface Level {
   name_ar: string;
 }
 
-interface Group {
-  id: string;
-  name: string;
-  name_ar: string;
-}
-
 export default function QuizzesPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
@@ -85,13 +76,10 @@ export default function QuizzesPage() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
-  const [assigningQuiz, setAssigningQuiz] = useState<Quiz | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     title_ar: '',
@@ -102,37 +90,6 @@ export default function QuizzesPage() {
     age_group_id: '',
     level_id: '',
   });
-  const [assignData, setAssignData] = useState({
-    group_id: '',
-    start_time: '',
-  });
-
-  // Calculate end time automatically based on quiz duration
-  // Convert local datetime to proper ISO string for database
-  const getISOString = (localDateTime: string) => {
-    if (!localDateTime) return '';
-    // datetime-local gives us local time, we need to convert to ISO
-    const date = new Date(localDateTime);
-    return date.toISOString();
-  };
-
-  const calculatedEndTime = useMemo(() => {
-    if (!assignData.start_time || !assigningQuiz) return '';
-    const startDate = new Date(assignData.start_time);
-    const endDate = new Date(startDate.getTime() + (assigningQuiz.duration_minutes * 60 * 1000));
-    return endDate.toISOString();
-  }, [assignData.start_time, assigningQuiz]);
-
-  // Validation: start time must be in the future
-  const startTimeError = useMemo(() => {
-    if (!assignData.start_time) return null;
-    const startDate = new Date(assignData.start_time);
-    const now = new Date();
-    if (startDate <= now) {
-      return isRTL ? 'وقت البداية يجب أن يكون في المستقبل' : 'Start time must be in the future';
-    }
-    return null;
-  }, [assignData.start_time, isRTL]);
 
   useEffect(() => {
     fetchData();
@@ -140,17 +97,15 @@ export default function QuizzesPage() {
 
   const fetchData = async () => {
     try {
-      const [quizzesRes, ageGroupsRes, levelsRes, groupsRes] = await Promise.all([
+      const [quizzesRes, ageGroupsRes, levelsRes] = await Promise.all([
         supabase.from('quizzes').select('*').order('created_at', { ascending: false }),
         supabase.from('age_groups').select('id, name, name_ar').eq('is_active', true),
         supabase.from('levels').select('id, name, name_ar').eq('is_active', true),
-        supabase.from('groups').select('id, name, name_ar').eq('is_active', true),
       ]);
 
       setQuizzes(quizzesRes.data || []);
       setAgeGroups(ageGroupsRes.data || []);
       setLevels(levelsRes.data || []);
-      setGroups(groupsRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -207,75 +162,6 @@ export default function QuizzesPage() {
         variant: 'destructive',
         title: t.common.error,
         description: isRTL ? 'فشل في حفظ الكويز' : 'Failed to save quiz',
-      });
-    }
-  };
-
-  const handleAssign = async () => {
-    if (!user || !assigningQuiz) return;
-
-    // Validate start time
-    if (startTimeError) {
-      toast({
-        variant: 'destructive',
-        title: t.common.error,
-        description: startTimeError,
-      });
-      return;
-    }
-
-    // Require start time
-    if (!assignData.start_time) {
-      toast({
-        variant: 'destructive',
-        title: t.common.error,
-        description: isRTL ? 'يجب تحديد وقت البداية' : 'Start time is required',
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase.from('quiz_assignments').insert([{
-        quiz_id: assigningQuiz.id,
-        group_id: assignData.group_id || null,
-        start_time: getISOString(assignData.start_time) || null,
-        due_date: calculatedEndTime || null, // Auto-calculated end time
-        assigned_by: user.id,
-      }]);
-
-      if (error) throw error;
-
-      // Send notifications to students in the group
-      if (assignData.group_id) {
-        const formattedEndTime = calculatedEndTime 
-          ? new Date(calculatedEndTime).toLocaleString() 
-          : undefined;
-
-        await notificationService.notifyGroupStudents(
-          assignData.group_id,
-          'New Quiz Assigned',
-          'كويز جديد',
-          `You have been assigned a new quiz: "${assigningQuiz.title}"${formattedEndTime ? ` - Ends: ${formattedEndTime}` : ''}`,
-          `تم إسناد كويز جديد لك: "${assigningQuiz.title_ar}"${formattedEndTime ? ` - ينتهي: ${formattedEndTime}` : ''}`,
-          'info',
-          'quiz'
-        );
-      }
-
-      toast({
-        title: t.common.success,
-        description: isRTL ? 'تم إسناد الكويز وإشعار الطلاب' : 'Quiz assigned and students notified',
-      });
-
-      setIsAssignDialogOpen(false);
-      setAssigningQuiz(null);
-      setAssignData({ group_id: '', start_time: '' });
-    } catch (error) {
-      console.error('Error assigning quiz:', error);
-      toast({
-        variant: 'destructive',
-        title: t.common.error,
-        description: isRTL ? 'فشل في إسناد الكويز' : 'Failed to assign quiz',
       });
     }
   };
@@ -488,105 +374,6 @@ export default function QuizzesPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Assign Dialog */}
-        <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t.quizzes.assignQuiz}</DialogTitle>
-              <DialogDescription>
-                {isRTL ? 'اختر المجموعة لإسناد الكويز' : 'Select a group to assign the quiz'}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label>{t.students.group}</Label>
-                <Select
-                  value={assignData.group_id}
-                  onValueChange={(value) => setAssignData({ ...assignData, group_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={isRTL ? 'اختر مجموعة' : 'Select group'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {language === 'ar' ? group.name_ar : group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label className={cn(startTimeError && 'text-destructive')}>
-                  {isRTL ? 'وقت البداية' : 'Start Time'} <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  type="datetime-local"
-                  value={assignData.start_time}
-                  onChange={(e) => setAssignData({ ...assignData, start_time: e.target.value })}
-                  className={cn(startTimeError && 'border-destructive focus-visible:ring-destructive')}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {isRTL ? 'متى يبدأ العد التنازلي للكويز' : 'When the quiz countdown starts'}
-                </p>
-                {startTimeError && (
-                  <p className="text-sm text-destructive flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {startTimeError}
-                  </p>
-                )}
-              </div>
-              
-              {/* Auto-calculated end time display */}
-              {assignData.start_time && assigningQuiz && (
-                <div className="p-4 rounded-lg bg-muted/50 border space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {isRTL ? 'مدة الكويز:' : 'Quiz Duration:'}
-                    </span>
-                    <span className="font-medium">
-                      {assigningQuiz.duration_minutes} {isRTL ? 'دقيقة' : 'minutes'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {isRTL ? 'ينتهي تلقائياً:' : 'Auto-ends at:'}
-                    </span>
-                    <span className="font-medium text-primary">
-                      {new Date(calculatedEndTime).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true,
-                        timeZone: 'Africa/Cairo',
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {isRTL 
-                      ? '⏰ الوقت يبدأ من موعد البداية - إذا دخل الطالب متأخراً، يُخصم الوقت المنقضي'
-                      : '⏰ Timer starts from scheduled time - late entries get reduced time'}
-                  </p>
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)}>
-                {t.common.cancel}
-              </Button>
-              <Button 
-                className="kojo-gradient" 
-                onClick={handleAssign}
-                disabled={!!startTimeError || !assignData.start_time || !assignData.group_id}
-              >
-                {t.quizzes.assignQuiz}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
         {/* Mobile Cards View */}
         <div className="block md:hidden space-y-3">
           {loading ? (
@@ -617,41 +404,32 @@ export default function QuizzesPage() {
                         {getLevelName(quiz.level_id)}
                       </p>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="flex-shrink-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                        <DropdownMenuItem onClick={() => {
-                          setAssigningQuiz(quiz);
-                          setIsAssignDialogOpen(true);
-                        }}>
-                          <Users className="h-4 w-4 mr-2" />
-                          {t.quizzes.assignQuiz}
-                        </DropdownMenuItem>
-                        {role === 'admin' && (
-                          <>
-                            <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
-                              <ListChecks className="h-4 w-4 mr-2" />
-                              {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(quiz)}>
-                              <Pencil className="h-4 w-4 mr-2" />
-                              {t.common.edit}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(quiz.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {t.common.delete}
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {role === 'admin' && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="flex-shrink-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                          <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
+                            <ListChecks className="h-4 w-4 mr-2" />
+                            {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(quiz)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            {t.common.edit}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(quiz.id)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {t.common.delete}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 mt-3">
                     <Badge variant="outline" className="text-xs">
@@ -677,19 +455,19 @@ export default function QuizzesPage() {
                   <TableHead>{t.students.level}</TableHead>
                   <TableHead>{t.quizzes.duration}</TableHead>
                   <TableHead>{isRTL ? 'درجة النجاح' : 'Pass Score'}</TableHead>
-                  <TableHead className="w-[100px]">{t.common.actions}</TableHead>
+                  {role === 'admin' && <TableHead className="w-[100px]">{t.common.actions}</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={role === 'admin' ? 5 : 4} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredQuizzes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={role === 'admin' ? 5 : 4} className="text-center py-8">
                       <FileQuestion className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <p className="text-muted-foreground">
                         {isRTL ? 'لا توجد كويزات' : 'No quizzes found'}
@@ -709,43 +487,34 @@ export default function QuizzesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>{quiz.passing_score}%</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                            <DropdownMenuItem onClick={() => {
-                              setAssigningQuiz(quiz);
-                              setIsAssignDialogOpen(true);
-                            }}>
-                              <Users className="h-4 w-4 mr-2" />
-                              {t.quizzes.assignQuiz}
-                            </DropdownMenuItem>
-                            {role === 'admin' && (
-                              <>
-                                <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
-                                  <ListChecks className="h-4 w-4 mr-2" />
-                                  {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleEdit(quiz)}>
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  {t.common.edit}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(quiz.id)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  {t.common.delete}
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                      {role === 'admin' && (
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                              <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
+                                <ListChecks className="h-4 w-4 mr-2" />
+                                {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(quiz)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                {t.common.edit}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(quiz.id)}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {t.common.delete}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}

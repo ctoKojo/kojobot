@@ -489,7 +489,7 @@ export default function MyInstructorQuizzes() {
     : 0;
 
   return (
-    <DashboardLayout title={isRTL ? 'كويزات المجموعات' : 'Group Quizzes'}>
+    <DashboardLayout title={isRTL ? 'إسناد الكويزات' : 'Quiz Assignments'}>
       <div className="space-y-6">
         {/* Stats */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">

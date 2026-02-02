@@ -11,10 +11,12 @@ import {
   Layers,
   Activity,
   Bell,
-  FileQuestion,
   LogOut,
   CalendarDays,
   BarChart3,
+  Library,
+  Send,
+  FileCheck,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,29 +52,43 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
 
+  // Main navigation - different per role
   const mainNavItems: NavItem[] = [
     { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'instructor', 'student'] },
     { title: t.nav.students, url: '/students', icon: GraduationCap, roles: ['admin'] },
     { title: t.nav.instructors, url: '/instructors', icon: Users, roles: ['admin'] },
     { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['admin', 'instructor'] },
-    { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin', 'instructor'] },
     { title: isRTL ? 'جدول العمل' : 'My Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['instructor'] },
   ];
 
-  const educationNavItems: NavItem[] = [
-    { title: t.nav.questionBank, url: '/quizzes', icon: FileQuestion, roles: ['admin'] },
-    { title: isRTL ? 'كويزات المجموعات' : 'Group Quizzes', url: '/my-instructor-quizzes', icon: FileQuestion, roles: ['admin', 'instructor'] },
-    { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileQuestion, roles: ['student'] },
-    { title: isRTL ? 'تقارير الكويزات' : 'Quiz Reports', url: '/quiz-reports', icon: BarChart3, roles: ['admin'] },
-    { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['admin', 'instructor', 'student'] },
-    { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['admin', 'instructor', 'student'] },
+  // Groups & Sessions category (Admin & Instructor)
+  const sessionsNavItems: NavItem[] = [
+    { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin', 'instructor'] },
+    { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['admin', 'instructor'] },
   ];
 
+  // Quizzes & Assignments category
+  const quizzesNavItems: NavItem[] = [
+    { title: t.nav.questionBank, url: '/quizzes', icon: Library, roles: ['admin'] },
+    { title: isRTL ? 'إسناد الكويزات' : 'Quiz Assignments', url: '/my-instructor-quizzes', icon: Send, roles: ['admin', 'instructor'] },
+    { title: isRTL ? 'تقارير الكويزات' : 'Quiz Reports', url: '/quiz-reports', icon: BarChart3, roles: ['admin'] },
+    { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['admin', 'instructor'] },
+  ];
+
+  // Student's "My Learning" section
+  const studentLearningItems: NavItem[] = [
+    { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileCheck, roles: ['student'] },
+    { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['student'] },
+    { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['student'] },
+    { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['student'] },
+  ];
+
+  // Settings category (Admin only mostly)
   const settingsNavItems: NavItem[] = [
     { title: t.nav.ageGroups, url: '/age-groups', icon: Layers, roles: ['admin'] },
     { title: t.nav.levels, url: '/levels', icon: BookOpen, roles: ['admin'] },
     { title: t.nav.activityLog, url: '/activity-log', icon: Activity, roles: ['admin'] },
-    { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['admin', 'student'] },
+    { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['admin'] },
     { title: t.nav.settings, url: '/settings', icon: Settings, roles: ['admin'] },
   ];
 
@@ -116,6 +132,12 @@ export function AppSidebar() {
     </SidebarMenu>
   );
 
+  // Check if sections have items for current role
+  const hasSessionsItems = filterByRole(sessionsNavItems).length > 0;
+  const hasQuizzesItems = filterByRole(quizzesNavItems).length > 0;
+  const hasStudentLearningItems = filterByRole(studentLearningItems).length > 0;
+  const hasSettingsItems = filterByRole(settingsNavItems).length > 0;
+
   return (
     <Sidebar side={isRTL ? 'right' : 'left'} collapsible="icon" className="font-sans">
       <SidebarHeader className="border-b border-sidebar-border h-16 flex items-center justify-center">
@@ -125,6 +147,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4">
+        {/* Main Menu */}
         <SidebarGroup>
           {!collapsed && (
             <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
@@ -134,25 +157,53 @@ export function AppSidebar() {
           <SidebarGroupContent>{renderNavItems(mainNavItems)}</SidebarGroupContent>
         </SidebarGroup>
 
-        {filterByRole(educationNavItems).length > 0 && (
+        {/* Sessions & Attendance (Admin & Instructor) */}
+        {hasSessionsItems && (
           <SidebarGroup className="mt-4">
             {!collapsed && (
               <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
-                {isRTL ? 'التعليم' : 'Education'}
+                {isRTL ? 'السيشنات والحضور' : 'Sessions & Attendance'}
               </SidebarGroupLabel>
             )}
-            <SidebarGroupContent>{renderNavItems(educationNavItems)}</SidebarGroupContent>
+            <SidebarGroupContent>{renderNavItems(sessionsNavItems)}</SidebarGroupContent>
           </SidebarGroup>
         )}
 
-        <SidebarGroup className="mt-4">
-          {!collapsed && (
-            <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
-              {isRTL ? 'الإعدادات' : 'Settings'}
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent>{renderNavItems(settingsNavItems)}</SidebarGroupContent>
-        </SidebarGroup>
+        {/* Quizzes & Assignments (Admin & Instructor) */}
+        {hasQuizzesItems && (
+          <SidebarGroup className="mt-4">
+            {!collapsed && (
+              <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
+                {isRTL ? 'الكويزات والواجبات' : 'Quizzes & Assignments'}
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>{renderNavItems(quizzesNavItems)}</SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Student's My Learning section */}
+        {hasStudentLearningItems && (
+          <SidebarGroup className="mt-4">
+            {!collapsed && (
+              <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
+                {isRTL ? 'دراستي' : 'My Learning'}
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>{renderNavItems(studentLearningItems)}</SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Settings (Admin) */}
+        {hasSettingsItems && (
+          <SidebarGroup className="mt-4">
+            {!collapsed && (
+              <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
+                {isRTL ? 'الإعدادات' : 'Settings'}
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>{renderNavItems(settingsNavItems)}</SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
