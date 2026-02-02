@@ -45,6 +45,7 @@ const MyInstructorQuizzes = lazy(() => import("./pages/MyInstructorQuizzes"));
 const SessionDetails = lazy(() => import("./pages/SessionDetails"));
 const InstructorWarnings = lazy(() => import("./pages/InstructorWarnings"));
 const StudentWarnings = lazy(() => import("./pages/StudentWarnings"));
+const MyInstructorWarningsPage = lazy(() => import("./pages/MyInstructorWarnings"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -107,6 +108,7 @@ const App = () => (
                   <Route path="/session/:sessionId" element={<ProtectedRoute><SessionDetails /></ProtectedRoute>} />
                   <Route path="/instructor-warnings" element={<ProtectedRoute allowedRoles={['admin']}><InstructorWarnings /></ProtectedRoute>} />
                   <Route path="/my-warnings" element={<ProtectedRoute allowedRoles={['student']}><StudentWarnings /></ProtectedRoute>} />
+                  <Route path="/my-instructor-warnings" element={<ProtectedRoute allowedRoles={['instructor']}><MyInstructorWarningsPage /></ProtectedRoute>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
