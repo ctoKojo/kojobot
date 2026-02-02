@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -279,7 +279,7 @@ export function AssignmentSubmissionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2">
             {selectedSubmission && (
@@ -323,149 +323,145 @@ export function AssignmentSubmissionsDialog({
             </div>
 
             {/* Submissions Table */}
-            <ScrollArea className="flex-1 min-h-0">
-              {loading ? (
-                <div className="space-y-3 p-4">
-                  {[1, 2, 3, 4].map(i => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                      <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                      <TableHead className="text-center">{isRTL ? 'الدرجة' : 'Score'}</TableHead>
-                      <TableHead className="text-center">{isRTL ? 'الإجراءات' : 'Actions'}</TableHead>
+            {loading ? (
+              <div className="space-y-3 p-4">
+                {[1, 2, 3, 4].map(i => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                    <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                    <TableHead className="text-center">{isRTL ? 'الدرجة' : 'Score'}</TableHead>
+                    <TableHead className="text-center">{isRTL ? 'الإجراءات' : 'Actions'}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {submissions.map(submission => (
+                    <TableRow key={submission.student_id}>
+                      <TableCell className="font-medium">
+                        {language === 'ar' ? submission.student_name_ar : submission.student_name}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {getStatusIcon(submission.status)}
+                          <span className="text-sm">{getStatusText(submission.status)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {getStatusBadge(submission.status, submission.score)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {submission.has_submitted ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openGradeView(submission)}
+                            className="h-8"
+                          >
+                            {submission.status === 'graded' ? (
+                              <>
+                                <Eye className="h-4 w-4 mr-1" />
+                                {isRTL ? 'عرض' : 'View'}
+                              </>
+                            ) : (
+                              <>
+                                <Pencil className="h-4 w-4 mr-1" />
+                                {isRTL ? 'تقييم' : 'Grade'}
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {submissions.map(submission => (
-                      <TableRow key={submission.student_id}>
-                        <TableCell className="font-medium">
-                          {language === 'ar' ? submission.student_name_ar : submission.student_name}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            {getStatusIcon(submission.status)}
-                            <span className="text-sm">{getStatusText(submission.status)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {getStatusBadge(submission.status, submission.score)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {submission.has_submitted ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openGradeView(submission)}
-                              className="h-8"
-                            >
-                              {submission.status === 'graded' ? (
-                                <>
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  {isRTL ? 'عرض' : 'View'}
-                                </>
-                              ) : (
-                                <>
-                                  <Pencil className="h-4 w-4 mr-1" />
-                                  {isRTL ? 'تقييم' : 'Grade'}
-                                </>
-                              )}
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </ScrollArea>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </>
         ) : (
           /* Grade View */
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-4 p-4">
-              {/* Submission Content */}
-              <div className="space-y-2">
-                <Label className="text-base font-semibold">{isRTL ? 'محتوى التسليم' : 'Submission Content'}</Label>
-                {selectedSubmission.content ? (
-                  <div className="p-4 rounded-lg border bg-muted/30 whitespace-pre-wrap">
-                    {selectedSubmission.content}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-lg border bg-muted/30 text-muted-foreground italic">
-                    {isRTL ? 'لا يوجد نص مكتوب' : 'No text content'}
-                  </div>
-                )}
-              </div>
-
-              {/* Attachment */}
-              {selectedSubmission.attachment_url && (
-                <div className="space-y-2">
-                  <Label className="text-base font-semibold">{isRTL ? 'ملف مرفق' : 'Attachment'}</Label>
-                  <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
-                    <FileText className="h-8 w-8 text-muted-foreground" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">
-                        {selectedSubmission.attachment_type || 'File'}
-                      </p>
-                    </div>
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={selectedSubmission.attachment_url} target="_blank" rel="noopener noreferrer">
-                        <Download className="h-4 w-4 mr-1" />
-                        {isRTL ? 'تحميل' : 'Download'}
-                      </a>
-                    </Button>
-                  </div>
+          <div className="space-y-4">
+            {/* Submission Content */}
+            <div className="space-y-2">
+              <Label className="text-base font-semibold">{isRTL ? 'محتوى التسليم' : 'Submission Content'}</Label>
+              {selectedSubmission.content ? (
+                <div className="p-4 rounded-lg border bg-muted/30 whitespace-pre-wrap">
+                  {selectedSubmission.content}
+                </div>
+              ) : (
+                <div className="p-4 rounded-lg border bg-muted/30 text-muted-foreground italic">
+                  {isRTL ? 'لا يوجد نص مكتوب' : 'No text content'}
                 </div>
               )}
+            </div>
 
-              {/* Grade Input */}
+            {/* Attachment */}
+            {selectedSubmission.attachment_url && (
               <div className="space-y-2">
-                <Label>{isRTL ? 'الدرجة' : 'Score'}</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={maxScore}
-                    value={gradeForm.score}
-                    onChange={(e) => setGradeForm({ ...gradeForm, score: e.target.value })}
-                    className="w-24"
-                    placeholder="0"
-                  />
-                  <span className="text-muted-foreground">/ {maxScore}</span>
+                <Label className="text-base font-semibold">{isRTL ? 'ملف مرفق' : 'Attachment'}</Label>
+                <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30">
+                  <FileText className="h-8 w-8 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">
+                      {selectedSubmission.attachment_type || 'File'}
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={selectedSubmission.attachment_url} target="_blank" rel="noopener noreferrer">
+                      <Download className="h-4 w-4 mr-1" />
+                      {isRTL ? 'تحميل' : 'Download'}
+                    </a>
+                  </Button>
                 </div>
               </div>
+            )}
 
-              {/* Feedback */}
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <Label>{isRTL ? 'ملاحظات' : 'Feedback'} (English)</Label>
-                  <Textarea
-                    value={gradeForm.feedback}
-                    onChange={(e) => setGradeForm({ ...gradeForm, feedback: e.target.value })}
-                    placeholder="Enter feedback..."
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{isRTL ? 'ملاحظات' : 'Feedback'} (عربي)</Label>
-                  <Textarea
-                    value={gradeForm.feedback_ar}
-                    onChange={(e) => setGradeForm({ ...gradeForm, feedback_ar: e.target.value })}
-                    placeholder="أدخل الملاحظات..."
-                    rows={3}
-                    dir="rtl"
-                  />
-                </div>
+            {/* Grade Input */}
+            <div className="space-y-2">
+              <Label>{isRTL ? 'الدرجة' : 'Score'}</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  max={maxScore}
+                  value={gradeForm.score}
+                  onChange={(e) => setGradeForm({ ...gradeForm, score: e.target.value })}
+                  className="w-24"
+                  placeholder="0"
+                />
+                <span className="text-muted-foreground">/ {maxScore}</span>
               </div>
             </div>
-          </ScrollArea>
+
+            {/* Feedback */}
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label>{isRTL ? 'ملاحظات' : 'Feedback'} (English)</Label>
+                <Textarea
+                  value={gradeForm.feedback}
+                  onChange={(e) => setGradeForm({ ...gradeForm, feedback: e.target.value })}
+                  placeholder="Enter feedback..."
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{isRTL ? 'ملاحظات' : 'Feedback'} (عربي)</Label>
+                <Textarea
+                  value={gradeForm.feedback_ar}
+                  onChange={(e) => setGradeForm({ ...gradeForm, feedback_ar: e.target.value })}
+                  placeholder="أدخل الملاحظات..."
+                  rows={3}
+                  dir="rtl"
+                />
+              </div>
+            </div>
+          </div>
         )}
 
         {selectedSubmission && (
