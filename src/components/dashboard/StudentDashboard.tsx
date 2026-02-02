@@ -290,7 +290,10 @@ export function StudentDashboard() {
         </Card>
 
         {/* Warnings */}
-        <Card className={stats.warnings > 0 ? 'border-warning' : ''}>
+        <Card 
+          className={`${stats.warnings > 0 ? 'border-warning' : ''} cursor-pointer hover:shadow-lg transition-shadow`}
+          onClick={() => navigate('/my-warnings')}
+        >
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               {isRTL ? 'الإنذارات' : 'Warnings'}
@@ -301,6 +304,11 @@ export function StudentDashboard() {
             <div className={`text-2xl sm:text-3xl font-bold ${stats.warnings > 0 ? 'text-warning' : ''}`}>
               {loading ? '...' : stats.warnings}
             </div>
+            {stats.warnings > 0 && (
+              <p className="text-xs text-warning mt-1">
+                {isRTL ? 'اضغط للتفاصيل' : 'Click for details'}
+              </p>
+            )}
           </CardContent>
         </Card>
 
