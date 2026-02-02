@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -22,6 +21,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -45,12 +54,14 @@ import {
   Users,
   FileQuestion,
   ClipboardList,
-  CheckCircle,
-  XCircle,
   AlertCircle,
   Plus,
   Import,
-  Eye,
+  UserCheck,
+  Video,
+  Pencil,
+  Trash2,
+  ExternalLink,
 } from 'lucide-react';
 
 interface Session {
@@ -69,6 +80,8 @@ interface Group {
   id: string;
   name: string;
   name_ar: string;
+  attendance_mode?: string;
+  session_link?: string | null;
 }
 
 interface StudentData {
@@ -111,8 +124,9 @@ export default function SessionDetails() {
   const [quizStartTime, setQuizStartTime] = useState('');
   const [importing, setImporting] = useState(false);
   
-  // Create assignment dialog
+  // Create/Edit assignment dialog
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState(false);
   const [assignmentForm, setAssignmentForm] = useState({
     title: '',
     title_ar: '',
@@ -121,13 +135,58 @@ export default function SessionDetails() {
     max_score: 100,
     due_date: '',
   });
-  const [creatingAssignment, setCreatingAssignment] = useState(false);
+  const [savingAssignment, setSavingAssignment] = useState(false);
+  
+  // Edit quiz dialog
+  const [editQuizDialogOpen, setEditQuizDialogOpen] = useState(false);
+  const [editQuizStartTime, setEditQuizStartTime] = useState('');
+  const [savingQuiz, setSavingQuiz] = useState(false);
+  
+  // Delete dialogs
+  const [deleteQuizDialogOpen, setDeleteQuizDialogOpen] = useState(false);
+  const [deleteAssignmentDialogOpen, setDeleteAssignmentDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Check and update session status based on time
+  const checkAndUpdateSessionStatus = useCallback(async () => {
+    if (!session || session.status === 'completed') return;
+    
+    const sessionDateTime = new Date(`${session.session_date}T${session.session_time}`);
+    const sessionEndTime = new Date(sessionDateTime.getTime() + session.duration_minutes * 60 * 1000);
+    const now = new Date();
+    
+    if (now >= sessionEndTime) {
+      // Session should be completed
+      const { error } = await supabase
+        .from('sessions')
+        .update({ status: 'completed' })
+        .eq('id', session.id);
+      
+      if (!error) {
+        setSession(prev => prev ? { ...prev, status: 'completed' } : null);
+        toast({
+          title: isRTL ? 'تم تحديث الحالة' : 'Status Updated',
+          description: isRTL ? 'تم تحديث حالة السيشن تلقائياً' : 'Session status updated automatically',
+        });
+      }
+    }
+  }, [session, isRTL]);
 
   useEffect(() => {
     if (sessionId) {
       fetchSessionData();
     }
   }, [sessionId]);
+
+  // Real-time status sync
+  useEffect(() => {
+    checkAndUpdateSessionStatus();
+    
+    // Check every minute
+    const interval = setInterval(checkAndUpdateSessionStatus, 60000);
+    
+    return () => clearInterval(interval);
+  }, [checkAndUpdateSessionStatus]);
 
   const fetchSessionData = async () => {
     if (!sessionId) return;
@@ -143,10 +202,10 @@ export default function SessionDetails() {
       if (sessionError) throw sessionError;
       setSession(sessionData);
       
-      // Fetch group
+      // Fetch group with attendance mode and session link
       const { data: groupData } = await supabase
         .from('groups')
-        .select('id, name, name_ar')
+        .select('id, name, name_ar, attendance_mode, session_link')
         .eq('id', sessionData.group_id)
         .single();
       setGroup(groupData);
@@ -198,7 +257,7 @@ export default function SessionDetails() {
       // Fetch assignment for this session
       const { data: assignmentData } = await supabase
         .from('assignments')
-        .select('id, title, title_ar, max_score')
+        .select('id, title, title_ar, description, description_ar, max_score, due_date')
         .eq('session_id', sessionId)
         .eq('is_active', true)
         .maybeSingle();
@@ -215,8 +274,13 @@ export default function SessionDetails() {
         assignmentSubmissions = submissions || [];
       }
       
-      // Combine all data
-      const combinedStudents: StudentData[] = studentIds.map(studentId => {
+      // Combine all data - for students, filter to show only their own data
+      let filteredStudentIds = studentIds;
+      if (role === 'student' && user) {
+        filteredStudentIds = studentIds.filter(id => id === user.id);
+      }
+      
+      const combinedStudents: StudentData[] = filteredStudentIds.map(studentId => {
         const profile = profiles?.find(p => p.user_id === studentId);
         const attendance = attendanceData?.find(a => a.student_id === studentId);
         const quizSubmission = quizSubmissions.find(qs => qs.student_id === studentId);
@@ -307,33 +371,57 @@ export default function SessionDetails() {
     }
   };
 
-  const handleCreateAssignment = async () => {
+  const handleSaveAssignment = async () => {
     if (!assignmentForm.title || !assignmentForm.title_ar || !assignmentForm.due_date || !session || !user) return;
     
-    setCreatingAssignment(true);
+    setSavingAssignment(true);
     try {
-      const { error } = await supabase
-        .from('assignments')
-        .insert({
-          title: assignmentForm.title,
-          title_ar: assignmentForm.title_ar,
-          description: assignmentForm.description || null,
-          description_ar: assignmentForm.description_ar || null,
-          max_score: assignmentForm.max_score,
-          due_date: new Date(assignmentForm.due_date).toISOString(),
-          session_id: session.id,
-          group_id: session.group_id,
-          assigned_by: user.id,
+      if (editingAssignment && assignment) {
+        // Update existing assignment
+        const { error } = await supabase
+          .from('assignments')
+          .update({
+            title: assignmentForm.title,
+            title_ar: assignmentForm.title_ar,
+            description: assignmentForm.description || null,
+            description_ar: assignmentForm.description_ar || null,
+            max_score: assignmentForm.max_score,
+            due_date: new Date(assignmentForm.due_date).toISOString(),
+          })
+          .eq('id', assignment.id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: isRTL ? 'تم التحديث' : 'Assignment Updated',
+          description: isRTL ? 'تم تحديث الواجب بنجاح' : 'Assignment updated successfully',
         });
-      
-      if (error) throw error;
-      
-      toast({
-        title: isRTL ? 'تم الإنشاء' : 'Assignment Created',
-        description: isRTL ? 'تم إنشاء الواجب بنجاح' : 'Assignment created successfully',
-      });
+      } else {
+        // Create new assignment
+        const { error } = await supabase
+          .from('assignments')
+          .insert({
+            title: assignmentForm.title,
+            title_ar: assignmentForm.title_ar,
+            description: assignmentForm.description || null,
+            description_ar: assignmentForm.description_ar || null,
+            max_score: assignmentForm.max_score,
+            due_date: new Date(assignmentForm.due_date).toISOString(),
+            session_id: session.id,
+            group_id: session.group_id,
+            assigned_by: user.id,
+          });
+        
+        if (error) throw error;
+        
+        toast({
+          title: isRTL ? 'تم الإنشاء' : 'Assignment Created',
+          description: isRTL ? 'تم إنشاء الواجب بنجاح' : 'Assignment created successfully',
+        });
+      }
       
       setAssignmentDialogOpen(false);
+      setEditingAssignment(false);
       setAssignmentForm({ title: '', title_ar: '', description: '', description_ar: '', max_score: 100, due_date: '' });
       fetchSessionData();
     } catch (error: any) {
@@ -343,7 +431,131 @@ export default function SessionDetails() {
         variant: 'destructive',
       });
     } finally {
-      setCreatingAssignment(false);
+      setSavingAssignment(false);
+    }
+  };
+
+  const handleEditAssignment = () => {
+    if (!assignment) return;
+    
+    setEditingAssignment(true);
+    setAssignmentForm({
+      title: assignment.title,
+      title_ar: assignment.title_ar,
+      description: assignment.description || '',
+      description_ar: assignment.description_ar || '',
+      max_score: assignment.max_score,
+      due_date: new Date(assignment.due_date).toISOString().slice(0, 16),
+    });
+    setAssignmentDialogOpen(true);
+  };
+
+  const handleEditQuiz = () => {
+    if (!quizAssignment) return;
+    
+    setEditQuizStartTime(new Date(quizAssignment.start_time).toISOString().slice(0, 16));
+    setEditQuizDialogOpen(true);
+  };
+
+  const handleSaveQuizEdit = async () => {
+    if (!quizAssignment || !editQuizStartTime) return;
+    
+    setSavingQuiz(true);
+    try {
+      const { data: quiz } = await supabase
+        .from('quizzes')
+        .select('duration_minutes')
+        .eq('id', quizAssignment.quiz_id)
+        .single();
+      
+      const startDate = new Date(editQuizStartTime);
+      const dueDate = new Date(startDate.getTime() + (quiz?.duration_minutes || 30) * 60 * 1000);
+      
+      const { error } = await supabase
+        .from('quiz_assignments')
+        .update({
+          start_time: startDate.toISOString(),
+          due_date: dueDate.toISOString(),
+        })
+        .eq('id', quizAssignment.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: isRTL ? 'تم التحديث' : 'Quiz Updated',
+        description: isRTL ? 'تم تحديث موعد الكويز بنجاح' : 'Quiz schedule updated successfully',
+      });
+      
+      setEditQuizDialogOpen(false);
+      fetchSessionData();
+    } catch (error: any) {
+      toast({
+        title: isRTL ? 'خطأ' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingQuiz(false);
+    }
+  };
+
+  const handleDeleteQuiz = async () => {
+    if (!quizAssignment) return;
+    
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('quiz_assignments')
+        .update({ is_active: false })
+        .eq('id', quizAssignment.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: isRTL ? 'تم الحذف' : 'Quiz Removed',
+        description: isRTL ? 'تم إزالة الكويز من السيشن' : 'Quiz removed from session',
+      });
+      
+      setDeleteQuizDialogOpen(false);
+      fetchSessionData();
+    } catch (error: any) {
+      toast({
+        title: isRTL ? 'خطأ' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDeleteAssignment = async () => {
+    if (!assignment) return;
+    
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('assignments')
+        .update({ is_active: false })
+        .eq('id', assignment.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: isRTL ? 'تم الحذف' : 'Assignment Removed',
+        description: isRTL ? 'تم إزالة الواجب من السيشن' : 'Assignment removed from session',
+      });
+      
+      setDeleteAssignmentDialogOpen(false);
+      fetchSessionData();
+    } catch (error: any) {
+      toast({
+        title: isRTL ? 'خطأ' : 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -402,6 +614,9 @@ export default function SessionDetails() {
   const quizCompletedCount = students.filter(s => s.quiz_status === 'graded' || s.quiz_status === 'submitted').length;
   const assignmentSubmittedCount = students.filter(s => s.assignment_status).length;
 
+  const canManage = role === 'admin' || role === 'instructor';
+  const isOnline = group?.attendance_mode === 'online';
+
   if (loading) {
     return (
       <DashboardLayout title={isRTL ? 'تفاصيل السيشن' : 'Session Details'}>
@@ -421,8 +636,6 @@ export default function SessionDetails() {
       </DashboardLayout>
     );
   }
-
-  const canManage = role === 'admin' || role === 'instructor';
 
   return (
     <DashboardLayout title={isRTL ? `سيشن ${session.session_number}` : `Session ${session.session_number}`}>
@@ -464,12 +677,51 @@ export default function SessionDetails() {
                   </span>
                 </CardDescription>
               </div>
-              <Badge className={session.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}>
-                {session.status === 'completed' ? (isRTL ? 'مكتمل' : 'Completed') : (isRTL ? 'مجدول' : 'Scheduled')}
-              </Badge>
+              <div className="flex items-center gap-2">
+                {isOnline && group?.session_link && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={group.session_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                      <Video className="h-4 w-4" />
+                      {isRTL ? 'رابط السيشن' : 'Join Session'}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </Button>
+                )}
+                <Badge className={session.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}>
+                  {session.status === 'completed' ? (isRTL ? 'مكتمل' : 'Completed') : (isRTL ? 'مجدول' : 'Scheduled')}
+                </Badge>
+              </div>
             </div>
           </CardHeader>
         </Card>
+
+        {/* Quick Actions for Admin/Instructor */}
+        {canManage && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">{isRTL ? 'إجراءات سريعة' : 'Quick Actions'}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex gap-4 flex-wrap">
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/attendance?session=${session.id}`)}
+                className="flex items-center gap-2"
+              >
+                <UserCheck className="h-4 w-4" />
+                {isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
+              </Button>
+              {isOnline && group?.session_link && (
+                <Button variant="outline" asChild>
+                  <a href={group.session_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                    <Video className="h-4 w-4" />
+                    {isRTL ? 'انضم للسيشن' : 'Join Session'}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -482,22 +734,37 @@ export default function SessionDetails() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{presentCount}/{students.length}</div>
-              <Progress value={(presentCount / students.length) * 100} className="mt-2" />
+              <Progress value={students.length > 0 ? (presentCount / students.length) * 100 : 0} className="mt-2" />
             </CardContent>
           </Card>
           
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <FileQuestion className="h-4 w-4 text-blue-500" />
-                {isRTL ? 'الكويز' : 'Quiz'}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <FileQuestion className="h-4 w-4 text-blue-500" />
+                  {isRTL ? 'الكويز' : 'Quiz'}
+                </CardTitle>
+                {canManage && quizAssignment && (
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleEditQuiz}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteQuizDialogOpen(true)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {quizAssignment ? (
                 <>
+                  <div className="text-sm text-muted-foreground mb-1">
+                    {language === 'ar' ? quizAssignment.quizzes?.title_ar : quizAssignment.quizzes?.title}
+                  </div>
                   <div className="text-2xl font-bold">{quizCompletedCount}/{students.length}</div>
-                  <Progress value={(quizCompletedCount / students.length) * 100} className="mt-2" />
+                  <Progress value={students.length > 0 ? (quizCompletedCount / students.length) * 100 : 0} className="mt-2" />
                 </>
               ) : (
                 <div className="flex items-center gap-2">
@@ -510,16 +777,31 @@ export default function SessionDetails() {
           
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-purple-500" />
-                {isRTL ? 'الواجب' : 'Assignment'}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4 text-purple-500" />
+                  {isRTL ? 'الواجب' : 'Assignment'}
+                </CardTitle>
+                {canManage && assignment && (
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleEditAssignment}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setDeleteAssignmentDialogOpen(true)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {assignment ? (
                 <>
+                  <div className="text-sm text-muted-foreground mb-1">
+                    {language === 'ar' ? assignment.title_ar : assignment.title}
+                  </div>
                   <div className="text-2xl font-bold">{assignmentSubmittedCount}/{students.length}</div>
-                  <Progress value={(assignmentSubmittedCount / students.length) * 100} className="mt-2" />
+                  <Progress value={students.length > 0 ? (assignmentSubmittedCount / students.length) * 100 : 0} className="mt-2" />
                 </>
               ) : (
                 <div className="flex items-center gap-2">
@@ -553,7 +835,11 @@ export default function SessionDetails() {
               {!assignment && (
                 <Button
                   variant="outline"
-                  onClick={() => setAssignmentDialogOpen(true)}
+                  onClick={() => {
+                    setEditingAssignment(false);
+                    setAssignmentForm({ title: '', title_ar: '', description: '', description_ar: '', max_score: 100, due_date: '' });
+                    setAssignmentDialogOpen(true);
+                  }}
                   className="flex items-center gap-2"
                 >
                   <Plus className="h-4 w-4" />
@@ -567,9 +853,12 @@ export default function SessionDetails() {
         {/* Students Table */}
         <Card>
           <CardHeader>
-            <CardTitle>{isRTL ? 'أداء الطلاب' : 'Student Performance'}</CardTitle>
+            <CardTitle>{role === 'student' ? (isRTL ? 'أدائي' : 'My Performance') : (isRTL ? 'أداء الطلاب' : 'Student Performance')}</CardTitle>
             <CardDescription>
-              {isRTL ? 'عرض الحضور والدرجات لكل طالب' : 'View attendance and scores for each student'}
+              {role === 'student' 
+                ? (isRTL ? 'عرض حضورك ودرجاتك' : 'View your attendance and scores')
+                : (isRTL ? 'عرض الحضور والدرجات لكل طالب' : 'View attendance and scores for each student')
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -586,7 +875,10 @@ export default function SessionDetails() {
                 {students.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      {isRTL ? 'لا يوجد طلاب في هذه المجموعة' : 'No students in this group'}
+                      {role === 'student' 
+                        ? (isRTL ? 'لا توجد بيانات بعد' : 'No data yet')
+                        : (isRTL ? 'لا يوجد طلاب في هذه المجموعة' : 'No students in this group')
+                      }
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -657,13 +949,48 @@ export default function SessionDetails() {
           </DialogContent>
         </Dialog>
 
-        {/* Create Assignment Dialog */}
+        {/* Edit Quiz Time Dialog */}
+        <Dialog open={editQuizDialogOpen} onOpenChange={setEditQuizDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{isRTL ? 'تعديل موعد الكويز' : 'Edit Quiz Schedule'}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>{isRTL ? 'وقت البدء الجديد' : 'New Start Time'}</Label>
+                <Input
+                  type="datetime-local"
+                  value={editQuizStartTime}
+                  onChange={(e) => setEditQuizStartTime(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditQuizDialogOpen(false)}>
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </Button>
+              <Button onClick={handleSaveQuizEdit} disabled={savingQuiz || !editQuizStartTime}>
+                {savingQuiz ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create/Edit Assignment Dialog */}
         <Dialog open={assignmentDialogOpen} onOpenChange={setAssignmentDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>{isRTL ? 'إنشاء واجب جديد' : 'Create New Assignment'}</DialogTitle>
+              <DialogTitle>
+                {editingAssignment 
+                  ? (isRTL ? 'تعديل الواجب' : 'Edit Assignment')
+                  : (isRTL ? 'إنشاء واجب جديد' : 'Create New Assignment')
+                }
+              </DialogTitle>
               <DialogDescription>
-                {isRTL ? 'أنشئ واجب جديد لهذه السيشن' : 'Create a new assignment for this session'}
+                {editingAssignment
+                  ? (isRTL ? 'عدّل تفاصيل الواجب' : 'Edit assignment details')
+                  : (isRTL ? 'أنشئ واجب جديد لهذه السيشن' : 'Create a new assignment for this session')
+                }
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -725,14 +1052,59 @@ export default function SessionDetails() {
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </Button>
               <Button 
-                onClick={handleCreateAssignment} 
-                disabled={creatingAssignment || !assignmentForm.title || !assignmentForm.title_ar || !assignmentForm.due_date}
+                onClick={handleSaveAssignment} 
+                disabled={savingAssignment || !assignmentForm.title || !assignmentForm.title_ar || !assignmentForm.due_date}
               >
-                {creatingAssignment ? (isRTL ? 'جاري الإنشاء...' : 'Creating...') : (isRTL ? 'إنشاء' : 'Create')}
+                {savingAssignment 
+                  ? (isRTL ? 'جاري الحفظ...' : 'Saving...') 
+                  : (editingAssignment ? (isRTL ? 'تحديث' : 'Update') : (isRTL ? 'إنشاء' : 'Create'))
+                }
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Quiz Confirmation */}
+        <AlertDialog open={deleteQuizDialogOpen} onOpenChange={setDeleteQuizDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{isRTL ? 'إزالة الكويز' : 'Remove Quiz'}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {isRTL 
+                  ? 'هل أنت متأكد من إزالة الكويز من هذه السيشن؟ سيتم حذف جميع النتائج المرتبطة.'
+                  : 'Are you sure you want to remove the quiz from this session? All related submissions will be deleted.'
+                }
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{isRTL ? 'إلغاء' : 'Cancel'}</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteQuiz} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {deleting ? (isRTL ? 'جاري الحذف...' : 'Removing...') : (isRTL ? 'إزالة' : 'Remove')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Assignment Confirmation */}
+        <AlertDialog open={deleteAssignmentDialogOpen} onOpenChange={setDeleteAssignmentDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{isRTL ? 'إزالة الواجب' : 'Remove Assignment'}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {isRTL 
+                  ? 'هل أنت متأكد من إزالة الواجب من هذه السيشن؟ سيتم حذف جميع التسليمات المرتبطة.'
+                  : 'Are you sure you want to remove the assignment from this session? All related submissions will be deleted.'
+                }
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{isRTL ? 'إلغاء' : 'Cancel'}</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteAssignment} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {deleting ? (isRTL ? 'جاري الحذف...' : 'Removing...') : (isRTL ? 'إزالة' : 'Remove')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
