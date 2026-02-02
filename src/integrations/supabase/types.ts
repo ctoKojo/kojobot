@@ -467,6 +467,57 @@ export type Database = {
         }
         Relationships: []
       }
+      instructor_warnings: {
+        Row: {
+          created_at: string | null
+          id: string
+          instructor_id: string
+          is_active: boolean | null
+          issued_by: string | null
+          reason: string
+          reason_ar: string | null
+          session_id: string | null
+          warning_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          instructor_id: string
+          is_active?: boolean | null
+          issued_by?: string | null
+          reason: string
+          reason_ar?: string | null
+          session_id?: string | null
+          warning_type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          instructor_id?: string
+          is_active?: boolean | null
+          issued_by?: string | null
+          reason?: string
+          reason_ar?: string | null
+          session_id?: string | null
+          warning_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instructor_warnings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "instructor_warnings_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       levels: {
         Row: {
           created_at: string
@@ -990,6 +1041,7 @@ export type Database = {
       }
       warnings: {
         Row: {
+          assignment_id: string | null
           created_at: string
           id: string
           is_active: boolean | null
@@ -1000,6 +1052,7 @@ export type Database = {
           warning_type: string
         }
         Insert: {
+          assignment_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
@@ -1010,6 +1063,7 @@ export type Database = {
           warning_type?: string
         }
         Update: {
+          assignment_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
@@ -1019,7 +1073,22 @@ export type Database = {
           student_id?: string
           warning_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "warnings_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warnings_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["assignment_id"]
+          },
+        ]
       }
     }
     Views: {
