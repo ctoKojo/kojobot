@@ -264,7 +264,7 @@ export function QuizResultsDialog({
             </div>
 
             {/* Results Table */}
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 min-h-0">
               {loading ? (
                 <div className="space-y-3 p-4">
                   {[1, 2, 3, 4].map(i => (
@@ -334,7 +334,7 @@ export function QuizResultsDialog({
           </>
         ) : (
           /* Student Answers View */
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             {loadingAnswers ? (
               <div className="space-y-3 p-4">
                 {[1, 2, 3].map(i => (
