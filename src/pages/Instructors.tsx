@@ -53,6 +53,7 @@ interface Instructor {
   avatar_url: string | null;
   specialization: string | null;
   specialization_ar: string | null;
+  employment_status: 'permanent' | 'training' | null;
 }
 
 export default function InstructorsPage() {
@@ -72,6 +73,7 @@ export default function InstructorsPage() {
     specialization: '',
     specialization_ar: '',
     password: '',
+    employment_status: 'training' as 'permanent' | 'training',
   });
   const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
 
@@ -177,6 +179,7 @@ export default function InstructorsPage() {
             phone: formData.phone || null,
             specialization: formData.specialization || null,
             specialization_ar: formData.specialization_ar || null,
+            employment_status: formData.employment_status,
           })
           .eq('id', editingInstructor.id);
 
@@ -197,6 +200,7 @@ export default function InstructorsPage() {
             role: 'instructor',
             specialization: formData.specialization || undefined,
             specialization_ar: formData.specialization_ar || undefined,
+            employment_status: formData.employment_status,
           }
         });
 
@@ -234,6 +238,7 @@ export default function InstructorsPage() {
       specialization: '',
       specialization_ar: '',
       password: '',
+      employment_status: 'training',
     });
     setFormTouched({});
   };
@@ -248,6 +253,7 @@ export default function InstructorsPage() {
       specialization: instructor.specialization || '',
       specialization_ar: instructor.specialization_ar || '',
       password: '',
+      employment_status: instructor.employment_status || 'training',
     });
     setIsDialogOpen(true);
   };
@@ -462,6 +468,35 @@ export default function InstructorsPage() {
                   dir="rtl"
                 />
               </div>
+              
+              {/* Employment Status */}
+              <div className="grid gap-2">
+                <Label>{isRTL ? 'حالة التوظيف' : 'Employment Status'} <span className="text-destructive">*</span></Label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="employment_status"
+                      value="permanent"
+                      checked={formData.employment_status === 'permanent'}
+                      onChange={() => setFormData({ ...formData, employment_status: 'permanent' })}
+                      className="h-4 w-4 text-primary"
+                    />
+                    <span className="text-sm">{isRTL ? 'مثبت' : 'Permanent'}</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="employment_status"
+                      value="training"
+                      checked={formData.employment_status === 'training'}
+                      onChange={() => setFormData({ ...formData, employment_status: 'training' })}
+                      className="h-4 w-4 text-primary"
+                    />
+                    <span className="text-sm">{isRTL ? 'تدريب' : 'Training'}</span>
+                  </label>
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
@@ -535,15 +570,28 @@ export default function InstructorsPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  {instructor.specialization && (
-                    <div className="mt-3">
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {instructor.specialization && (
                       <Badge variant="secondary" className="text-xs">
                         {language === 'ar' && instructor.specialization_ar 
                           ? instructor.specialization_ar 
                           : instructor.specialization}
                       </Badge>
-                    </div>
-                  )}
+                    )}
+                    <Badge 
+                      variant={instructor.employment_status === 'permanent' ? 'default' : 'outline'}
+                      className={cn(
+                        "text-xs",
+                        instructor.employment_status === 'permanent' 
+                          ? "bg-green-600 hover:bg-green-700" 
+                          : "border-amber-500 text-amber-600"
+                      )}
+                    >
+                      {instructor.employment_status === 'permanent' 
+                        ? (isRTL ? 'مثبت' : 'Permanent')
+                        : (isRTL ? 'تدريب' : 'Training')}
+                    </Badge>
+                  </div>
                 </CardContent>
               </Card>
             ))
@@ -559,19 +607,20 @@ export default function InstructorsPage() {
                   <TableHead>{t.students.fullName}</TableHead>
                   <TableHead>{t.auth.email}</TableHead>
                   <TableHead>{t.instructors.specializations}</TableHead>
+                  <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
                   <TableHead className="w-[100px]">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8">
+                    <TableCell colSpan={5} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredInstructors.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       {isRTL ? 'لا يوجد مدربين' : 'No instructors found'}
                     </TableCell>
                   </TableRow>
@@ -602,6 +651,20 @@ export default function InstructorsPage() {
                               : instructor.specialization}
                           </Badge>
                         ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={instructor.employment_status === 'permanent' ? 'default' : 'outline'}
+                          className={cn(
+                            instructor.employment_status === 'permanent' 
+                              ? "bg-green-600 hover:bg-green-700" 
+                              : "border-amber-500 text-amber-600"
+                          )}
+                        >
+                          {instructor.employment_status === 'permanent' 
+                            ? (isRTL ? 'مثبت' : 'Permanent')
+                            : (isRTL ? 'تدريب' : 'Training')}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div>

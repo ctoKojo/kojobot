@@ -612,6 +612,9 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           email: string
+          employment_status:
+            | Database["public"]["Enums"]["employment_status"]
+            | null
           full_name: string
           full_name_ar: string | null
           id: string
@@ -632,6 +635,9 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           email: string
+          employment_status?:
+            | Database["public"]["Enums"]["employment_status"]
+            | null
           full_name: string
           full_name_ar?: string | null
           id?: string
@@ -652,6 +658,9 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           email?: string
+          employment_status?:
+            | Database["public"]["Enums"]["employment_status"]
+            | null
           full_name?: string
           full_name_ar?: string | null
           id?: string
@@ -1207,6 +1216,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "instructor" | "student"
+      employment_status: "permanent" | "training"
       group_type: "kojo_squad" | "kojo_core" | "kojo_x"
       subscription_type: "kojo_squad" | "kojo_core" | "kojo_x"
     }
@@ -1337,6 +1347,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "instructor", "student"],
+      employment_status: ["permanent", "training"],
       group_type: ["kojo_squad", "kojo_core", "kojo_x"],
       subscription_type: ["kojo_squad", "kojo_core", "kojo_x"],
     },

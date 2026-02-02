@@ -22,6 +22,7 @@ interface CreateUserRequest {
   // Instructor-specific fields
   specialization?: string
   specialization_ar?: string
+  employment_status?: 'permanent' | 'training'
 }
 
 serve(async (req) => {
@@ -164,6 +165,7 @@ serve(async (req) => {
     } else if (body.role === 'instructor') {
       profileData.specialization = body.specialization || null
       profileData.specialization_ar = body.specialization_ar || null
+      profileData.employment_status = body.employment_status || 'training'
     }
 
     const { error: profileError } = await adminSupabase
