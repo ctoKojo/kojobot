@@ -17,6 +17,7 @@ import {
   Library,
   Send,
   FileCheck,
+  AlertTriangle,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -88,6 +89,7 @@ export function AppSidebar() {
   const settingsNavItems: NavItem[] = [
     { title: t.nav.ageGroups, url: '/age-groups', icon: Layers, roles: ['admin'] },
     { title: t.nav.levels, url: '/levels', icon: BookOpen, roles: ['admin'] },
+    { title: isRTL ? 'إنذارات المدربين' : 'Instructor Warnings', url: '/instructor-warnings', icon: AlertTriangle, roles: ['admin'] },
     { title: t.nav.activityLog, url: '/activity-log', icon: Activity, roles: ['admin'] },
     { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['admin'] },
     { title: t.nav.settings, url: '/settings', icon: Settings, roles: ['admin'] },

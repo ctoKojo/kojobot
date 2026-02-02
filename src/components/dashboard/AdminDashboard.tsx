@@ -12,6 +12,7 @@ interface AdminStats {
   totalGroups: number;
   activeSubscriptions: number;
   expiringSubscriptions: number;
+  activeWarnings: number;
 }
 
 export function AdminDashboard() {
@@ -24,6 +25,7 @@ export function AdminDashboard() {
     totalGroups: 0,
     activeSubscriptions: 0,
     expiringSubscriptions: 0,
+    activeWarnings: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -33,11 +35,12 @@ export function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const [studentsRes, instructorsRes, groupsRes, subscriptionsRes] = await Promise.all([
+      const [studentsRes, instructorsRes, groupsRes, subscriptionsRes, warningsRes] = await Promise.all([
         supabase.from('user_roles').select('id', { count: 'exact' }).eq('role', 'student'),
         supabase.from('user_roles').select('id', { count: 'exact' }).eq('role', 'instructor'),
         supabase.from('groups').select('id', { count: 'exact' }).eq('is_active', true),
         supabase.from('subscriptions').select('id', { count: 'exact' }).eq('status', 'active'),
+        supabase.from('instructor_warnings').select('id', { count: 'exact' }).eq('is_active', true),
       ]);
 
       // Check for expiring subscriptions (within 7 days)
@@ -55,6 +58,7 @@ export function AdminDashboard() {
         totalGroups: groupsRes.count || 0,
         activeSubscriptions: subscriptionsRes.count || 0,
         expiringSubscriptions: expiringCount || 0,
+        activeWarnings: warningsRes.count || 0,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -123,6 +127,27 @@ export function AdminDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Instructor Warnings Alert */}
+      {stats.activeWarnings > 0 && (
+        <Card 
+          className="border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/instructor-warnings')}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              {isRTL ? 'إنذارات المدربين النشطة' : 'Active Instructor Warnings'}
+            </CardTitle>
+            <CardDescription className="text-red-600 dark:text-red-400">
+              {isRTL 
+                ? `يوجد ${stats.activeWarnings} إنذار نشط يتطلب المراجعة`
+                : `${stats.activeWarnings} active warnings require review`
+              }
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
       {/* Expiring Subscriptions Alert */}
       {stats.expiringSubscriptions > 0 && (
