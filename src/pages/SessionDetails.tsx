@@ -406,7 +406,17 @@ export default function SessionDetails() {
           .getPublicUrl(fileName);
         
         attachmentUrl = publicUrl.publicUrl;
-        attachmentType = assignmentFile.type;
+        // Map MIME type to allowed database values: 'text', 'image', 'pdf', 'video'
+        const mimeType = assignmentFile.type;
+        if (mimeType.startsWith('image/')) {
+          attachmentType = 'image';
+        } else if (mimeType === 'application/pdf') {
+          attachmentType = 'pdf';
+        } else if (mimeType.startsWith('video/')) {
+          attachmentType = 'video';
+        } else {
+          attachmentType = 'text'; // Default for documents, audio, etc.
+        }
         setUploadingFile(false);
       }
       
