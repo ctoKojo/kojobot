@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Award, AlertTriangle, BookOpen, 
-  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3
+  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,8 +12,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { StudentPerformanceCharts } from '@/components/student/StudentPerformanceCharts';
+import { IssueWarningDialog } from '@/components/student/IssueWarningDialog';
 
 interface StudentData {
   profile: any;
@@ -29,8 +31,10 @@ export default function StudentProfile() {
   const { studentId } = useParams();
   const navigate = useNavigate();
   const { isRTL, language } = useLanguage();
+  const { role } = useAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<StudentData | null>(null);
+  const [showWarningDialog, setShowWarningDialog] = useState(false);
 
   useEffect(() => {
     if (studentId) fetchStudentData();
@@ -164,11 +168,24 @@ export default function StudentProfile() {
   return (
     <DashboardLayout title={isRTL ? 'ملف الطالب' : 'Student Profile'}>
       <div className="space-y-6">
-        {/* Back Button */}
-        <Button variant="ghost" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          {isRTL ? 'رجوع' : 'Back'}
-        </Button>
+        {/* Back Button & Actions */}
+        <div className="flex justify-between items-center">
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            {isRTL ? 'رجوع' : 'Back'}
+          </Button>
+          
+          {(role === 'admin' || role === 'instructor') && (
+            <Button 
+              variant="outline" 
+              className="border-warning text-warning hover:bg-warning/10"
+              onClick={() => setShowWarningDialog(true)}
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              {isRTL ? 'إصدار إنذار' : 'Issue Warning'}
+            </Button>
+          )}
+        </div>
 
         {/* Profile Header */}
         <Card>
@@ -538,6 +555,15 @@ export default function StudentProfile() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Issue Warning Dialog */}
+      <IssueWarningDialog
+        open={showWarningDialog}
+        onOpenChange={setShowWarningDialog}
+        studentId={studentId!}
+        studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+        onSuccess={fetchStudentData}
+      />
     </DashboardLayout>
   );
 }
