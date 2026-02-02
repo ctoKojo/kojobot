@@ -850,6 +850,9 @@ export default function SessionDetails() {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="text-sm text-muted-foreground mb-1">
+                {isRTL ? 'نسبة الحضور' : 'Attendance Rate'}
+              </div>
               <div className="text-2xl font-bold">{presentCount}/{students.length}</div>
               <Progress value={students.length > 0 ? (presentCount / students.length) * 100 : 0} className="mt-2" />
             </CardContent>
