@@ -369,6 +369,33 @@ export default function GroupsPage() {
 
   const handleSubmit = async () => {
     try {
+      // Validate: if existing group with today's date, check time is not in the past
+      if (!editingGroup && formData.is_existing_group && formData.next_session_date) {
+        const today = new Date();
+        const selectedDate = new Date(formData.next_session_date);
+        today.setHours(0, 0, 0, 0);
+        selectedDate.setHours(0, 0, 0, 0);
+        
+        if (selectedDate.getTime() === today.getTime()) {
+          // Check if the schedule time is in the past
+          const now = new Date();
+          const [hours, minutes] = formData.schedule_time.split(':').map(Number);
+          const sessionTime = new Date();
+          sessionTime.setHours(hours, minutes, 0, 0);
+          
+          if (sessionTime < now) {
+            toast({
+              title: isRTL ? 'خطأ' : 'Error',
+              description: isRTL 
+                ? 'لا يمكن تحديد وقت السيشن في الماضي. اختر وقتاً بعد الوقت الحالي أو اختر تاريخاً آخر.'
+                : 'Session time cannot be in the past. Choose a time after the current time or select another date.',
+              variant: 'destructive',
+            });
+            return;
+          }
+        }
+      }
+
       const payload: any = {
         name: formData.name,
         name_ar: formData.name_ar,
@@ -782,7 +809,11 @@ export default function GroupsPage() {
                               mode="single"
                               selected={formData.next_session_date || undefined}
                               onSelect={(date) => setFormData({ ...formData, next_session_date: date || null })}
-                              disabled={(date) => date < new Date()}
+                              disabled={(date) => {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                return date < today;
+                              }}
                               initialFocus
                               className={cn("p-3 pointer-events-auto")}
                             />
