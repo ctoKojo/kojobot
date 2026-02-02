@@ -109,7 +109,7 @@ interface QuestionDetail {
 
 export default function MyInstructorQuizzes() {
   const { isRTL, language } = useLanguage();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   
   // Available quizzes tab
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -174,14 +174,19 @@ export default function MyInstructorQuizzes() {
   const fetchGroups = async () => {
     if (!user) return;
     try {
-      // Only fetch active groups that are NOT frozen
-      const { data, error } = await supabase
+      // Admin can see all active groups, instructors only see their own
+      let query = supabase
         .from('groups')
         .select('id, name, name_ar, status')
-        .eq('instructor_id', user.id)
         .eq('is_active', true)
         .neq('status', 'frozen'); // Exclude frozen groups from assignment
+      
+      // If instructor, filter by their groups only
+      if (role === 'instructor') {
+        query = query.eq('instructor_id', user.id);
+      }
 
+      const { data, error } = await query;
       if (error) throw error;
       setGroups(data || []);
     } catch (error) {
