@@ -137,6 +137,13 @@ export type Database = {
             referencedRelation: "assignments"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "assignment_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["assignment_id"]
+          },
         ]
       }
       assignments: {
@@ -152,6 +159,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           max_score: number | null
+          session_id: string | null
           student_id: string | null
           title: string
           title_ar: string
@@ -169,6 +177,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           max_score?: number | null
+          session_id?: string | null
           student_id?: string | null
           title: string
           title_ar: string
@@ -186,6 +195,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           max_score?: number | null
+          session_id?: string | null
           student_id?: string | null
           title?: string
           title_ar?: string
@@ -197,6 +207,20 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "assignments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -230,6 +254,13 @@ export type Database = {
           student_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "attendance_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["session_id"]
+          },
           {
             foreignKeyName: "attendance_session_id_fkey"
             columns: ["session_id"]
@@ -609,6 +640,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           quiz_id: string
+          session_id: string | null
           start_time: string | null
           student_id: string | null
         }
@@ -620,6 +652,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           quiz_id: string
+          session_id?: string | null
           start_time?: string | null
           student_id?: string | null
         }
@@ -631,6 +664,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           quiz_id?: string
+          session_id?: string | null
           start_time?: string | null
           student_id?: string | null
         }
@@ -647,6 +681,20 @@ export type Database = {
             columns: ["quiz_id"]
             isOneToOne: false
             referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_assignments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "quiz_assignments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -751,6 +799,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "quiz_assignments"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_submissions_quiz_assignment_id_fkey"
+            columns: ["quiz_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["quiz_assignment_id"]
           },
         ]
       }
@@ -1011,6 +1066,45 @@ export type Database = {
             columns: ["quiz_id"]
             isOneToOne: false
             referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_details: {
+        Row: {
+          assignment_id: string | null
+          assignment_title: string | null
+          assignment_title_ar: string | null
+          duration_minutes: number | null
+          group_id: string | null
+          group_name: string | null
+          group_name_ar: string | null
+          instructor_id: string | null
+          quiz_assignment_id: string | null
+          quiz_id: string | null
+          quiz_title: string | null
+          quiz_title_ar: string | null
+          session_date: string | null
+          session_id: string | null
+          session_number: number | null
+          session_time: string | null
+          status: string | null
+          topic: string | null
+          topic_ar: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_assignments_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
         ]
