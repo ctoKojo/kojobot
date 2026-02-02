@@ -16,6 +16,7 @@ interface CompletedSession {
     instructor_id: string;
     name: string;
     name_ar: string;
+    starting_session_number: number | null;
   };
 }
 
@@ -34,6 +35,7 @@ serve(async (req) => {
     const results = {
       instructorWarnings: 0,
       studentWarnings: 0,
+      skippedLegacySessions: 0,
       errors: [] as string[],
     };
 
@@ -45,6 +47,17 @@ serve(async (req) => {
 
     console.log(`[Compliance Monitor] Running at ${todayStr} ${currentTime} Egypt time`);
 
+    // Helper function to check if session is a legacy session (before starting_session_number)
+    // Legacy sessions are auto-generated as "completed" for existing groups and should be skipped
+    const isLegacySession = (session: CompletedSession): boolean => {
+      const startingNum = session.groups.starting_session_number || 1;
+      // If starting_session_number > 1, sessions before it are legacy (auto-completed)
+      if (startingNum > 1 && session.session_number < startingNum) {
+        return true;
+      }
+      return false;
+    };
+
     // ========================================
     // 1. Check for sessions without quiz
     // ========================================
@@ -52,7 +65,7 @@ serve(async (req) => {
       .from('sessions')
       .select(`
         id, session_date, session_time, session_number, group_id,
-        groups!inner(instructor_id, name, name_ar)
+        groups!inner(instructor_id, name, name_ar, starting_session_number)
       `)
       .eq('status', 'completed');
 
@@ -61,6 +74,12 @@ serve(async (req) => {
       results.errors.push(`Quiz check error: ${quizError.message}`);
     } else if (sessionsWithoutQuiz) {
       for (const session of sessionsWithoutQuiz as unknown as CompletedSession[]) {
+        // Skip legacy sessions (auto-completed for existing groups)
+        if (isLegacySession(session)) {
+          results.skippedLegacySessions++;
+          continue;
+        }
+
         // Check if quiz assignment exists for this session
         const { data: quizAssignment } = await supabase
           .from('quiz_assignments')
@@ -120,7 +139,7 @@ serve(async (req) => {
       .from('sessions')
       .select(`
         id, session_date, session_time, session_number, group_id, duration_minutes,
-        groups!inner(instructor_id, name, name_ar)
+        groups!inner(instructor_id, name, name_ar, starting_session_number)
       `)
       .eq('status', 'completed');
 
@@ -129,6 +148,11 @@ serve(async (req) => {
       results.errors.push(`Attendance check error: ${attendanceCheckError.message}`);
     } else if (completedSessions) {
       for (const session of completedSessions as unknown as (CompletedSession & { duration_minutes: number })[]) {
+        // Skip legacy sessions (auto-completed for existing groups)
+        if (isLegacySession(session)) {
+          continue; // Already counted in quiz check
+        }
+
         // Check if any attendance records exist
         const { count: attendanceCount } = await supabase
           .from('attendance')
@@ -189,7 +213,7 @@ serve(async (req) => {
       .from('sessions')
       .select(`
         id, session_date, session_time, session_number, group_id,
-        groups!inner(instructor_id, name, name_ar)
+        groups!inner(instructor_id, name, name_ar, starting_session_number)
       `)
       .eq('status', 'completed')
       .lte('session_date', yesterdayStr);
@@ -199,6 +223,11 @@ serve(async (req) => {
       results.errors.push(`Assignment check error: ${assignmentCheckError.message}`);
     } else if (oldSessions) {
       for (const session of oldSessions as unknown as CompletedSession[]) {
+        // Skip legacy sessions (auto-completed for existing groups)
+        if (isLegacySession(session)) {
+          continue; // Already counted in quiz check
+        }
+
         // Check if assignment exists for this session
         const { data: assignment } = await supabase
           .from('assignments')
@@ -252,12 +281,12 @@ serve(async (req) => {
 
     // ========================================
     // 4. Check for expired assignment deadlines (student warnings)
+    // Only for assignments linked to non-legacy sessions
     // ========================================
     const { data: expiredAssignments, error: deadlineError } = await supabase
       .from('assignments')
       .select(`
-        id, title, title_ar, due_date, group_id, student_id,
-        groups(id)
+        id, title, title_ar, due_date, group_id, student_id, session_id
       `)
       .lt('due_date', now.toISOString())
       .eq('is_active', true);
@@ -267,6 +296,26 @@ serve(async (req) => {
       results.errors.push(`Deadline check error: ${deadlineError.message}`);
     } else if (expiredAssignments) {
       for (const assignment of expiredAssignments) {
+        // If assignment is linked to a session, check if it's a legacy session
+        if (assignment.session_id) {
+          const { data: sessionData } = await supabase
+            .from('sessions')
+            .select(`
+              session_number,
+              groups!inner(starting_session_number)
+            `)
+            .eq('id', assignment.session_id)
+            .maybeSingle();
+
+          if (sessionData) {
+            const startingNum = (sessionData.groups as any)?.starting_session_number || 1;
+            if (startingNum > 1 && sessionData.session_number < startingNum) {
+              // This is a legacy session assignment, skip it
+              continue;
+            }
+          }
+        }
+
         // Get students who should have submitted
         let studentIds: string[] = [];
 
@@ -351,7 +400,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`[Compliance Monitor] Complete. Instructor warnings: ${results.instructorWarnings}, Student warnings: ${results.studentWarnings}`);
+    console.log(`[Compliance Monitor] Complete. Instructor warnings: ${results.instructorWarnings}, Student warnings: ${results.studentWarnings}, Skipped legacy sessions: ${results.skippedLegacySessions}`);
 
     return new Response(
       JSON.stringify({
