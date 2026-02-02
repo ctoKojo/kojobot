@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Users, BookOpen, 
-  FileText, ArrowLeft, Mail, Phone, Award, BarChart3, AlertTriangle
+  FileText, ArrowLeft, Mail, Phone, Award, BarChart3, AlertTriangle, X
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -65,8 +66,10 @@ export default function InstructorProfile() {
   const { instructorId } = useParams();
   const navigate = useNavigate();
   const { isRTL, language } = useLanguage();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<InstructorData | null>(null);
+  const [dismissingWarningId, setDismissingWarningId] = useState<string | null>(null);
 
   useEffect(() => {
     if (instructorId) fetchInstructorData();
@@ -308,6 +311,35 @@ export default function InstructorProfile() {
     });
   };
 
+  const handleDismissWarning = async (warningId: string) => {
+    setDismissingWarningId(warningId);
+    try {
+      const { error } = await supabase
+        .from('instructor_warnings')
+        .update({ is_active: false })
+        .eq('id', warningId);
+
+      if (error) throw error;
+
+      toast({
+        title: isRTL ? 'تم الإلغاء' : 'Dismissed',
+        description: isRTL ? 'تم إلغاء الإنذار بنجاح' : 'Warning dismissed successfully',
+      });
+
+      // Refresh data
+      fetchInstructorData();
+    } catch (error) {
+      console.error('Error dismissing warning:', error);
+      toast({
+        variant: 'destructive',
+        title: isRTL ? 'خطأ' : 'Error',
+        description: isRTL ? 'فشل في إلغاء الإنذار' : 'Failed to dismiss warning',
+      });
+    } finally {
+      setDismissingWarningId(null);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout title={isRTL ? 'ملف المدرب' : 'Instructor Profile'}>
@@ -461,7 +493,7 @@ export default function InstructorProfile() {
                     key={warning.id} 
                     className="flex items-center justify-between p-3 rounded-lg bg-red-100 dark:bg-red-900/30"
                   >
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium text-red-800 dark:text-red-300">
                         {language === 'ar' ? warning.reason_ar : warning.reason}
                       </p>
@@ -469,11 +501,22 @@ export default function InstructorProfile() {
                         {formatDate(warning.created_at)}
                       </p>
                     </div>
-                    <Badge variant="outline" className="border-red-300 text-red-700 dark:border-red-700 dark:text-red-400">
-                      {warning.warning_type === 'no_quiz' && (isRTL ? 'كويز مفقود' : 'Missing Quiz')}
-                      {warning.warning_type === 'no_assignment' && (isRTL ? 'واجب مفقود' : 'Missing Assignment')}
-                      {warning.warning_type === 'no_attendance' && (isRTL ? 'حضور غير مسجل' : 'No Attendance')}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="border-red-300 text-red-700 dark:border-red-700 dark:text-red-400">
+                        {warning.warning_type === 'no_quiz' && (isRTL ? 'كويز مفقود' : 'Missing Quiz')}
+                        {warning.warning_type === 'no_assignment' && (isRTL ? 'واجب مفقود' : 'Missing Assignment')}
+                        {warning.warning_type === 'no_attendance' && (isRTL ? 'حضور غير مسجل' : 'No Attendance')}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDismissWarning(warning.id)}
+                        disabled={dismissingWarningId === warning.id}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-200 dark:hover:bg-red-900/50"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
