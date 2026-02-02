@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Eye, CheckCircle2, XCircle, Clock, CircleDashed, ArrowLeft, ArrowRight } from 'lucide-react';
@@ -216,7 +216,7 @@ export function QuizResultsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2">
             {selectedStudent && (
@@ -264,161 +264,157 @@ export function QuizResultsDialog({
             </div>
 
             {/* Results Table */}
-            <ScrollArea className="flex-1 min-h-0">
-              {loading ? (
-                <div className="space-y-3 p-4">
-                  {[1, 2, 3, 4].map(i => (
-                    <Skeleton key={i} className="h-12 w-full" />
-                  ))}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                      <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                      <TableHead className="text-center">{isRTL ? 'الدرجة' : 'Score'}</TableHead>
-                      <TableHead className="text-center">{isRTL ? 'النسبة' : 'Percentage'}</TableHead>
-                      <TableHead className="text-center">{isRTL ? 'الإجراءات' : 'Actions'}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.map(student => (
-                      <TableRow key={student.student_id}>
-                        <TableCell className="font-medium">
-                          {language === 'ar' ? student.student_name_ar : student.student_name}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            {getStatusIcon(student.status)}
-                            <span className="text-sm">{getStatusText(student.status)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {student.score !== null ? (
-                            <span>{student.score}/{student.max_score}</span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {student.percentage !== null ? (
-                            <Badge className={(student.percentage >= passingScore) ? 'bg-green-500' : 'bg-red-500'}>
-                              {student.percentage.toFixed(0)}%
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {student.answers ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => fetchStudentAnswers(student)}
-                              className="h-8"
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              {isRTL ? 'معاينة' : 'Preview'}
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </ScrollArea>
-          </>
-        ) : (
-          /* Student Answers View */
-          <ScrollArea className="flex-1 min-h-0">
-            {loadingAnswers ? (
+            {loading ? (
               <div className="space-y-3 p-4">
-                {[1, 2, 3].map(i => (
-                  <Skeleton key={i} className="h-24 w-full" />
+                {[1, 2, 3, 4].map(i => (
+                  <Skeleton key={i} className="h-12 w-full" />
                 ))}
               </div>
             ) : (
-              <div className="space-y-4 p-4">
-                {questionDetails.map((question, index) => (
-                  <div
-                    key={question.id}
-                    className={`p-4 rounded-lg border ${question.is_correct ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20' : 'border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20'}`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className="flex-1">
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {isRTL ? `سؤال ${index + 1}` : `Question ${index + 1}`}
-                          <span className="mx-2">•</span>
-                          {question.points} {isRTL ? 'نقطة' : 'points'}
-                        </span>
-                        <p className="font-medium mt-1">
-                          {language === 'ar' ? question.question_text_ar : question.question_text}
-                        </p>
-                      </div>
-                      {question.is_correct ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-                      )}
-                    </div>
-
-                    {question.image_url && (
-                      <img
-                        src={question.image_url}
-                        alt="Question"
-                        className="max-h-32 rounded-lg mb-3"
-                      />
-                    )}
-
-                    <div className="space-y-2">
-                      {question.options.map((option, optIndex) => {
-                        const isCorrect = option === question.correct_answer;
-                        const isStudentAnswer = option === question.student_answer;
-
-                        return (
-                          <div
-                            key={optIndex}
-                            className={`p-2 rounded-md text-sm ${
-                              isCorrect
-                                ? 'bg-green-100 dark:bg-green-900/30 border border-green-300'
-                                : isStudentAnswer
-                                  ? 'bg-red-100 dark:bg-red-900/30 border border-red-300'
-                                  : 'bg-muted/50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              {isCorrect && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                              {isStudentAnswer && !isCorrect && <XCircle className="h-4 w-4 text-red-600" />}
-                              <span>{option}</span>
-                              {isCorrect && (
-                                <Badge variant="outline" className="ml-auto text-xs text-green-600 border-green-300">
-                                  {isRTL ? 'الإجابة الصحيحة' : 'Correct Answer'}
-                                </Badge>
-                              )}
-                              {isStudentAnswer && !isCorrect && (
-                                <Badge variant="outline" className="ml-auto text-xs text-red-600 border-red-300">
-                                  {isRTL ? 'إجابة الطالب' : 'Student Answer'}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                      {!question.student_answer && (
-                        <div className="p-2 rounded-md text-sm bg-muted/50 text-muted-foreground italic">
-                          {isRTL ? 'لم يجب الطالب على هذا السؤال' : 'Student did not answer this question'}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                    <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                    <TableHead className="text-center">{isRTL ? 'الدرجة' : 'Score'}</TableHead>
+                    <TableHead className="text-center">{isRTL ? 'النسبة' : 'Percentage'}</TableHead>
+                    <TableHead className="text-center">{isRTL ? 'الإجراءات' : 'Actions'}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {results.map(student => (
+                    <TableRow key={student.student_id}>
+                      <TableCell className="font-medium">
+                        {language === 'ar' ? student.student_name_ar : student.student_name}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {getStatusIcon(student.status)}
+                          <span className="text-sm">{getStatusText(student.status)}</span>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {student.score !== null ? (
+                          <span>{student.score}/{student.max_score}</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {student.percentage !== null ? (
+                          <Badge className={(student.percentage >= passingScore) ? 'bg-green-500' : 'bg-red-500'}>
+                            {student.percentage.toFixed(0)}%
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {student.answers ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => fetchStudentAnswers(student)}
+                            className="h-8"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            {isRTL ? 'معاينة' : 'Preview'}
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
-          </ScrollArea>
+          </>
+        ) : (
+          /* Student Answers View */
+          loadingAnswers ? (
+            <div className="space-y-3 p-4">
+              {[1, 2, 3].map(i => (
+                <Skeleton key={i} className="h-24 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {questionDetails.map((question, index) => (
+                <div
+                  key={question.id}
+                  className={`p-4 rounded-lg border ${question.is_correct ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20' : 'border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20'}`}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {isRTL ? `سؤال ${index + 1}` : `Question ${index + 1}`}
+                        <span className="mx-2">•</span>
+                        {question.points} {isRTL ? 'نقطة' : 'points'}
+                      </span>
+                      <p className="font-medium mt-1">
+                        {language === 'ar' ? question.question_text_ar : question.question_text}
+                      </p>
+                    </div>
+                    {question.is_correct ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                    )}
+                  </div>
+
+                  {question.image_url && (
+                    <img
+                      src={question.image_url}
+                      alt="Question"
+                      className="max-h-32 rounded-lg mb-3"
+                    />
+                  )}
+
+                  <div className="space-y-2">
+                    {question.options.map((option, optIndex) => {
+                      const isCorrect = option === question.correct_answer;
+                      const isStudentAnswer = option === question.student_answer;
+
+                      return (
+                        <div
+                          key={optIndex}
+                          className={`p-2 rounded-md text-sm ${
+                            isCorrect
+                              ? 'bg-green-100 dark:bg-green-900/30 border border-green-300'
+                              : isStudentAnswer
+                                ? 'bg-red-100 dark:bg-red-900/30 border border-red-300'
+                                : 'bg-muted/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {isCorrect && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                            {isStudentAnswer && !isCorrect && <XCircle className="h-4 w-4 text-red-600" />}
+                            <span>{option}</span>
+                            {isCorrect && (
+                              <Badge variant="outline" className="ml-auto text-xs text-green-600 border-green-300">
+                                {isRTL ? 'الإجابة الصحيحة' : 'Correct Answer'}
+                              </Badge>
+                            )}
+                            {isStudentAnswer && !isCorrect && (
+                              <Badge variant="outline" className="ml-auto text-xs text-red-600 border-red-300">
+                                {isRTL ? 'إجابة الطالب' : 'Student Answer'}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {!question.student_answer && (
+                      <div className="p-2 rounded-md text-sm bg-muted/50 text-muted-foreground italic">
+                        {isRTL ? 'لم يجب الطالب على هذا السؤال' : 'Student did not answer this question'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </DialogContent>
     </Dialog>
