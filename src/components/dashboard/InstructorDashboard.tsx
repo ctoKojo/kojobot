@@ -244,10 +244,10 @@ export function InstructorDashboard() {
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <FileQuestion className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
-              {isRTL ? 'كويزات المجموعات' : 'Group Quizzes'}
+              {isRTL ? 'إسناد الكويزات' : 'Quiz Assignments'}
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              {isRTL ? 'أسند كويزات وشاهد نتائج الطلاب' : 'Assign quizzes and view student results'}
+              {isRTL ? 'أسند كويزات وتابع نتائج الطلاب' : 'Assign quizzes and track student results'}
             </CardDescription>
           </CardHeader>
         </Card>
