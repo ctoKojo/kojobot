@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Users, BookOpen, 
-  FileText, ArrowLeft, Mail, Phone, Award
+  FileText, ArrowLeft, Mail, Phone, Award, BarChart3
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,28 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatTime12Hour } from '@/lib/timeUtils';
+import { InstructorPerformanceCharts } from '@/components/instructor/InstructorPerformanceCharts';
+
+interface AttendanceStats {
+  totalRecords: number;
+  presentRate: number;
+  absentRate: number;
+  lateRate: number;
+}
+
+interface QuizStats {
+  totalSubmissions: number;
+  averageScore: number;
+  passRate: number;
+  submissionsPerQuiz: { quiz_id: string; title: string; title_ar: string; count: number; avgScore: number }[];
+}
+
+interface AssignmentStats {
+  totalSubmissions: number;
+  pendingGrading: number;
+  averageScore: number;
+  submissionRate: number;
+}
 
 interface InstructorData {
   profile: any;
@@ -20,6 +42,11 @@ interface InstructorData {
   sessions: any[];
   quizzes: any[];
   assignments: any[];
+  totalStudents: number;
+  attendanceStats: AttendanceStats;
+  quizStats: QuizStats;
+  assignmentStats: AssignmentStats;
+  attendanceTrend: { date: string; rate: number }[];
 }
 
 export default function InstructorProfile() {
@@ -49,14 +76,75 @@ export default function InstructorProfile() {
         .eq('instructor_id', instructorId)
         .eq('is_active', true);
 
+      const groupIds = (groups || []).map(g => g.id);
+
+      // Fetch students count
+      const { count: totalStudents } = await supabase
+        .from('group_students')
+        .select('*', { count: 'exact', head: true })
+        .in('group_id', groupIds.length > 0 ? groupIds : ['no-groups'])
+        .eq('is_active', true);
+
       // Fetch upcoming sessions
       const { data: sessions } = await supabase
         .from('sessions')
         .select('*, groups(name, name_ar)')
-        .in('group_id', (groups || []).map(g => g.id))
+        .in('group_id', groupIds.length > 0 ? groupIds : ['no-groups'])
         .gte('session_date', new Date().toISOString().split('T')[0])
         .order('session_date', { ascending: true })
         .limit(10);
+
+      // Fetch all sessions for attendance
+      const { data: allSessions } = await supabase
+        .from('sessions')
+        .select('id, session_date')
+        .in('group_id', groupIds.length > 0 ? groupIds : ['no-groups'])
+        .eq('status', 'completed');
+
+      const sessionIds = (allSessions || []).map(s => s.id);
+
+      // Fetch attendance records
+      const { data: attendanceRecords } = await supabase
+        .from('attendance')
+        .select('status, session_id, sessions(session_date)')
+        .in('session_id', sessionIds.length > 0 ? sessionIds : ['no-sessions']);
+
+      // Calculate attendance stats
+      const totalAttendance = attendanceRecords?.length || 0;
+      const presentCount = attendanceRecords?.filter(a => a.status === 'present').length || 0;
+      const absentCount = attendanceRecords?.filter(a => a.status === 'absent').length || 0;
+      const lateCount = attendanceRecords?.filter(a => a.status === 'late').length || 0;
+
+      const attendanceStats: AttendanceStats = {
+        totalRecords: totalAttendance,
+        presentRate: totalAttendance > 0 ? (presentCount / totalAttendance) * 100 : 0,
+        absentRate: totalAttendance > 0 ? (absentCount / totalAttendance) * 100 : 0,
+        lateRate: totalAttendance > 0 ? (lateCount / totalAttendance) * 100 : 0,
+      };
+
+      // Calculate attendance trend by date
+      const attendanceByDate = new Map<string, { present: number; total: number }>();
+      attendanceRecords?.forEach(record => {
+        const date = (record.sessions as any)?.session_date;
+        if (date) {
+          if (!attendanceByDate.has(date)) {
+            attendanceByDate.set(date, { present: 0, total: 0 });
+          }
+          const entry = attendanceByDate.get(date)!;
+          entry.total++;
+          if (record.status === 'present' || record.status === 'late') {
+            entry.present++;
+          }
+        }
+      });
+
+      const attendanceTrend = Array.from(attendanceByDate.entries())
+        .map(([date, data]) => ({
+          date,
+          rate: data.total > 0 ? (data.present / data.total) * 100 : 0,
+        }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .slice(-30); // Last 30 days
 
       // Fetch quizzes created
       const { data: quizzes } = await supabase
@@ -66,6 +154,63 @@ export default function InstructorProfile() {
         .order('created_at', { ascending: false })
         .limit(10);
 
+      const quizIds = (quizzes || []).map(q => q.id);
+
+      // Fetch quiz assignments for these quizzes
+      const { data: quizAssignments } = await supabase
+        .from('quiz_assignments')
+        .select('id, quiz_id, quizzes(title, title_ar, passing_score)')
+        .in('quiz_id', quizIds.length > 0 ? quizIds : ['no-quizzes']);
+
+      const assignmentIds = (quizAssignments || []).map(qa => qa.id);
+
+      // Fetch quiz submissions
+      const { data: quizSubmissions } = await supabase
+        .from('quiz_submissions')
+        .select('*, quiz_assignments(quiz_id, quizzes(title, title_ar, passing_score))')
+        .in('quiz_assignment_id', assignmentIds.length > 0 ? assignmentIds : ['no-assignments'])
+        .eq('status', 'completed');
+
+      // Calculate quiz stats
+      const completedSubmissions = quizSubmissions?.filter(s => s.percentage !== null) || [];
+      const avgQuizScore = completedSubmissions.length > 0
+        ? completedSubmissions.reduce((sum, s) => sum + (s.percentage || 0), 0) / completedSubmissions.length
+        : 0;
+
+      const passedCount = completedSubmissions.filter(s => {
+        const passingScore = (s.quiz_assignments as any)?.quizzes?.passing_score || 60;
+        return (s.percentage || 0) >= passingScore;
+      }).length;
+
+      // Group submissions by quiz
+      const submissionsByQuiz = new Map<string, { quiz_id: string; title: string; title_ar: string; scores: number[] }>();
+      completedSubmissions.forEach(s => {
+        const quizId = (s.quiz_assignments as any)?.quiz_id;
+        const title = (s.quiz_assignments as any)?.quizzes?.title || 'Unknown';
+        const title_ar = (s.quiz_assignments as any)?.quizzes?.title_ar || title;
+        if (quizId) {
+          if (!submissionsByQuiz.has(quizId)) {
+            submissionsByQuiz.set(quizId, { quiz_id: quizId, title, title_ar, scores: [] });
+          }
+          submissionsByQuiz.get(quizId)!.scores.push(s.percentage || 0);
+        }
+      });
+
+      const submissionsPerQuiz = Array.from(submissionsByQuiz.values()).map(q => ({
+        quiz_id: q.quiz_id,
+        title: q.title,
+        title_ar: q.title_ar,
+        count: q.scores.length,
+        avgScore: q.scores.reduce((a, b) => a + b, 0) / q.scores.length,
+      }));
+
+      const quizStats: QuizStats = {
+        totalSubmissions: completedSubmissions.length,
+        averageScore: avgQuizScore,
+        passRate: completedSubmissions.length > 0 ? (passedCount / completedSubmissions.length) * 100 : 0,
+        submissionsPerQuiz,
+      };
+
       // Fetch assignments created
       const { data: assignments } = await supabase
         .from('assignments')
@@ -74,12 +219,48 @@ export default function InstructorProfile() {
         .order('created_at', { ascending: false })
         .limit(10);
 
+      const instructorAssignmentIds = (assignments || []).map(a => a.id);
+
+      // Fetch assignment submissions
+      const { data: assignmentSubmissions } = await supabase
+        .from('assignment_submissions')
+        .select('*, assignments(max_score)')
+        .in('assignment_id', instructorAssignmentIds.length > 0 ? instructorAssignmentIds : ['no-assignments']);
+
+      // Calculate assignment stats
+      const gradedSubmissions = assignmentSubmissions?.filter(s => s.status === 'graded' && s.score !== null) || [];
+      const pendingSubmissions = assignmentSubmissions?.filter(s => s.status === 'submitted') || [];
+      
+      const avgAssignmentScore = gradedSubmissions.length > 0
+        ? gradedSubmissions.reduce((sum, s) => {
+            const maxScore = (s.assignments as any)?.max_score || 100;
+            return sum + ((s.score || 0) / maxScore) * 100;
+          }, 0) / gradedSubmissions.length
+        : 0;
+
+      // Calculate expected submissions (total students * number of assignments)
+      const expectedSubmissions = (totalStudents || 0) * (assignments?.length || 0);
+
+      const assignmentStats: AssignmentStats = {
+        totalSubmissions: assignmentSubmissions?.length || 0,
+        pendingGrading: pendingSubmissions.length,
+        averageScore: avgAssignmentScore,
+        submissionRate: expectedSubmissions > 0 
+          ? ((assignmentSubmissions?.length || 0) / expectedSubmissions) * 100 
+          : 0,
+      };
+
       setData({
         profile,
         groups: groups || [],
         sessions: sessions || [],
         quizzes: quizzes || [],
         assignments: assignments || [],
+        totalStudents: totalStudents || 0,
+        attendanceStats,
+        quizStats,
+        assignmentStats,
+        attendanceTrend,
       });
     } catch (error) {
       console.error('Error fetching instructor data:', error);
@@ -94,11 +275,6 @@ export default function InstructorProfile() {
       month: 'short',
       day: 'numeric',
     });
-  };
-
-  const getTotalStudents = () => {
-    // This would need actual count from group_students
-    return data?.groups.length ? data.groups.length * 5 : 0; // Placeholder
   };
 
   if (loading) {
@@ -180,8 +356,8 @@ export default function InstructorProfile() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-100">
-                  <Users className="h-5 w-5 text-blue-600" />
+                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{data.groups.length}</p>
@@ -194,8 +370,8 @@ export default function InstructorProfile() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-100">
-                  <Calendar className="h-5 w-5 text-green-600" />
+                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                  <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{data.sessions.length}</p>
@@ -208,8 +384,8 @@ export default function InstructorProfile() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-100">
-                  <BookOpen className="h-5 w-5 text-purple-600" />
+                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                  <BookOpen className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{data.quizzes.length}</p>
@@ -222,8 +398,8 @@ export default function InstructorProfile() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-100">
-                  <FileText className="h-5 w-5 text-orange-600" />
+                <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                  <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{data.assignments.length}</p>
@@ -235,13 +411,28 @@ export default function InstructorProfile() {
         </div>
 
         {/* Detailed Tabs */}
-        <Tabs defaultValue="groups" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="reports" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="reports" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              {isRTL ? 'التقارير' : 'Reports'}
+            </TabsTrigger>
             <TabsTrigger value="groups">{isRTL ? 'المجموعات' : 'Groups'}</TabsTrigger>
             <TabsTrigger value="sessions">{isRTL ? 'الجلسات' : 'Sessions'}</TabsTrigger>
             <TabsTrigger value="quizzes">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
             <TabsTrigger value="assignments">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
           </TabsList>
+
+          {/* Reports Tab */}
+          <TabsContent value="reports">
+            <InstructorPerformanceCharts
+              totalStudents={data.totalStudents}
+              attendanceStats={data.attendanceStats}
+              quizStats={data.quizStats}
+              assignmentStats={data.assignmentStats}
+              attendanceTrend={data.attendanceTrend}
+            />
+          </TabsContent>
 
           {/* Groups Tab */}
           <TabsContent value="groups">
