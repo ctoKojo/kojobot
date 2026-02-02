@@ -443,9 +443,11 @@ export default function GroupsPage() {
           description: isRTL ? 'تم تحديث المجموعة' : 'Group updated successfully',
         });
       } else {
-        const { error } = await supabase
+        const { data: newGroup, error } = await supabase
           .from('groups')
-          .insert([payload]);
+          .insert([payload])
+          .select('id')
+          .single();
 
         if (error) throw error;
         
@@ -457,6 +459,23 @@ export default function GroupsPage() {
           formData.schedule_day,
           formData.schedule_time
         );
+
+        // If it's an existing group with completed sessions, populate their data
+        if (formData.is_existing_group && formData.next_session_number > 1 && newGroup?.id) {
+          console.log('Populating completed sessions for existing group...');
+          try {
+            const { error: populateError } = await supabase.functions.invoke('populate-completed-sessions', {
+              body: { group_id: newGroup.id },
+            });
+            if (populateError) {
+              console.error('Failed to populate completed sessions:', populateError);
+            } else {
+              console.log('Successfully populated completed sessions');
+            }
+          } catch (populateErr) {
+            console.error('Error populating completed sessions:', populateErr);
+          }
+        }
         
         toast({
           title: t.common.success,
