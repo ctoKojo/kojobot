@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, Clock, Users, ClipboardList, FileQuestion, BarChart3 } from 'lucide-react';
+import { Calendar, GraduationCap, Clock, Users, ClipboardList, FileQuestion, BarChart3, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,12 +8,29 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { formatTime12Hour } from '@/lib/timeUtils';
 
+interface InstructorWarning {
+  id: string;
+  session_id: string;
+  warning_type: string;
+  reason: string;
+  reason_ar: string;
+  created_at: string;
+  sessions?: {
+    session_number: number;
+    groups?: {
+      name: string;
+      name_ar: string;
+    };
+  };
+}
+
 interface InstructorStats {
   groupCount: number;
   studentCount: number;
   upcomingSessions: any[];
   pendingAssignments: number;
   pendingSubmissions: number;
+  activeWarnings: InstructorWarning[];
 }
 
 export function InstructorDashboard() {
@@ -26,6 +43,7 @@ export function InstructorDashboard() {
     upcomingSessions: [],
     pendingAssignments: 0,
     pendingSubmissions: 0,
+    activeWarnings: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -98,12 +116,25 @@ export function InstructorDashboard() {
         pendingSubmissionsCount = submissionsCount || 0;
       }
 
+      // Get active warnings for this instructor
+      const { data: warnings } = await supabase
+        .from('instructor_warnings')
+        .select(`
+          id, session_id, warning_type, reason, reason_ar, created_at,
+          sessions(session_number, groups(name, name_ar))
+        `)
+        .eq('instructor_id', user?.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
       setStats({
         groupCount: groups?.length || 0,
         studentCount,
         upcomingSessions,
         pendingAssignments: pendingCount || 0,
         pendingSubmissions: pendingSubmissionsCount,
+        activeWarnings: (warnings || []) as unknown as InstructorWarning[],
       });
     } catch (error) {
       console.error('Error fetching instructor stats:', error);
@@ -114,6 +145,45 @@ export function InstructorDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Warnings Alert */}
+      {stats.activeWarnings.length > 0 && (
+        <Card className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              {isRTL ? 'إنذارات نشطة' : 'Active Warnings'}
+              <Badge variant="destructive">{stats.activeWarnings.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {stats.activeWarnings.slice(0, 3).map((warning) => (
+                <div 
+                  key={warning.id} 
+                  className="flex items-center justify-between p-2 rounded-lg bg-red-100 dark:bg-red-900/30 text-sm"
+                >
+                  <span className="text-red-800 dark:text-red-300">
+                    {language === 'ar' ? warning.reason_ar : warning.reason}
+                  </span>
+                  <Badge variant="outline" className="border-red-300 text-red-700 dark:border-red-700 dark:text-red-400">
+                    {warning.warning_type === 'no_quiz' && (isRTL ? 'كويز' : 'Quiz')}
+                    {warning.warning_type === 'no_assignment' && (isRTL ? 'واجب' : 'Assignment')}
+                    {warning.warning_type === 'no_attendance' && (isRTL ? 'حضور' : 'Attendance')}
+                  </Badge>
+                </div>
+              ))}
+              {stats.activeWarnings.length > 3 && (
+                <p className="text-xs text-red-600 dark:text-red-400 text-center">
+                  {isRTL 
+                    ? `+${stats.activeWarnings.length - 3} إنذارات أخرى` 
+                    : `+${stats.activeWarnings.length - 3} more warnings`}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats Grid */}
       <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4">
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/groups')}>
@@ -121,8 +191,8 @@ export function InstructorDashboard() {
             <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               {isRTL ? 'مجموعاتي' : 'My Groups'}
             </CardTitle>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-blue-100">
-              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+            <div className="p-1.5 sm:p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
             </div>
           </CardHeader>
           <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
@@ -135,8 +205,8 @@ export function InstructorDashboard() {
             <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
               {isRTL ? 'إجمالي الطلاب' : 'Total Students'}
             </CardTitle>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-green-100">
-              <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+            <div className="p-1.5 sm:p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+              <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400" />
             </div>
           </CardHeader>
           <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
@@ -149,8 +219,8 @@ export function InstructorDashboard() {
             <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground line-clamp-2">
               {isRTL ? 'السيشنات القادمة' : 'Upcoming'}
             </CardTitle>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-purple-100">
-              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            <div className="p-1.5 sm:p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
             </div>
           </CardHeader>
           <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
@@ -163,8 +233,8 @@ export function InstructorDashboard() {
             <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground line-clamp-2">
               {isRTL ? 'تسليمات بانتظار' : 'Pending Submissions'}
             </CardTitle>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-orange-100">
-              <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+            <div className="p-1.5 sm:p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+              <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 dark:text-orange-400" />
             </div>
           </CardHeader>
           <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
@@ -172,6 +242,7 @@ export function InstructorDashboard() {
           </CardContent>
         </Card>
       </div>
+
 
       {/* Today & Tomorrow Sessions */}
       <Card>

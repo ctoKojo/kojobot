@@ -54,8 +54,7 @@ serve(async (req) => {
         id, session_date, session_time, session_number, group_id,
         groups!inner(instructor_id, name, name_ar)
       `)
-      .eq('status', 'completed')
-      .is('id', 'not.null');
+      .eq('status', 'completed');
 
     if (quizError) {
       console.error('Error fetching sessions for quiz check:', quizError);
