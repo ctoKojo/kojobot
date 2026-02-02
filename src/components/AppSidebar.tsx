@@ -62,9 +62,10 @@ export function AppSidebar() {
   ];
 
   // Groups & Sessions category (Admin & Instructor)
+  // Note: Attendance is only in sidebar for admin - instructors access it from within session page
   const sessionsNavItems: NavItem[] = [
     { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin', 'instructor'] },
-    { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['admin', 'instructor'] },
+    { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['admin'] },
   ];
 
   // Quizzes & Assignments category
