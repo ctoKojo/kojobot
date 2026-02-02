@@ -60,6 +60,7 @@ export function AppSidebar() {
     { title: t.nav.instructors, url: '/instructors', icon: Users, roles: ['admin'] },
     { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['admin', 'instructor'] },
     { title: isRTL ? 'جدول العمل' : 'My Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['instructor'] },
+    { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-instructor-warnings', icon: AlertTriangle, roles: ['instructor'] },
   ];
 
   // Groups & Sessions category (Admin & Instructor)
