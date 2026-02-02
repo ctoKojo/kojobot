@@ -82,6 +82,7 @@ export function AppSidebar() {
     { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileCheck, roles: ['student'] },
     { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['student'] },
     { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['student'] },
+    { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-warnings', icon: AlertTriangle, roles: ['student'] },
     { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['student'] },
   ];
 
