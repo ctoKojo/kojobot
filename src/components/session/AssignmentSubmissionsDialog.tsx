@@ -334,6 +334,7 @@ export function AssignmentSubmissionsDialog({
                 <TableHeader>
                   <TableRow>
                     <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                    <TableHead className="text-center">{isRTL ? 'تاريخ التسليم' : 'Submitted At'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'الدرجة' : 'Score'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'الإجراءات' : 'Actions'}</TableHead>
@@ -344,6 +345,17 @@ export function AssignmentSubmissionsDialog({
                     <TableRow key={submission.student_id}>
                       <TableCell className="font-medium">
                         {language === 'ar' ? submission.student_name_ar : submission.student_name}
+                      </TableCell>
+                      <TableCell className="text-center text-sm text-muted-foreground">
+                        {submission.submitted_at 
+                          ? new Date(submission.submitted_at).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : '-'
+                        }
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1.5">
