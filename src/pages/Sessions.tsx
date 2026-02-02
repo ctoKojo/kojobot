@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users, ChevronDown, FolderOpen, Snowflake } from 'lucide-react';
+import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users, ChevronDown, FolderOpen, Snowflake, Eye } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -508,7 +508,7 @@ export default function SessionsPage() {
                           <div 
                             key={session.id}
                             className={`p-3 ${isToday(session.session_date) ? 'bg-primary/5' : ''} cursor-pointer hover:bg-muted/50`}
-                            onClick={() => navigate(`/attendance?session=${session.id}&group=${session.group_id}`)}
+                            onClick={() => navigate(`/session/${session.id}`)}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="space-y-1.5 min-w-0 flex-1">
@@ -550,9 +550,9 @@ export default function SessionsPage() {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/attendance?session=${session.id}&group=${session.group_id}`); }}>
-                                      <Users className="h-4 w-4 mr-2" />
-                                      {isRTL ? 'تسجيل الحضور' : 'Attendance'}
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/session/${session.id}`); }}>
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      {isRTL ? 'تفاصيل السيشن' : 'Session Details'}
                                     </DropdownMenuItem>
                                     {session.status === 'scheduled' && (
                                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkComplete(session); }}>
@@ -607,7 +607,7 @@ export default function SessionsPage() {
                               <TableRow 
                                 key={session.id}
                                 className={`${isToday(session.session_date) ? 'bg-primary/5' : ''} cursor-pointer hover:bg-muted/50`}
-                                onClick={() => navigate(`/attendance?session=${session.id}&group=${session.group_id}`)}
+                                onClick={() => navigate(`/session/${session.id}`)}
                               >
                                 <TableCell>
                                   <Badge variant="outline" className="font-mono">
@@ -645,11 +645,11 @@ export default function SessionsPage() {
                                         size="icon"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          navigate(`/attendance?session=${session.id}&group=${session.group_id}`);
+                                          navigate(`/session/${session.id}`);
                                         }}
-                                        title={isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
+                                        title={isRTL ? 'تفاصيل السيشن' : 'Session Details'}
                                       >
-                                        <Users className="h-4 w-4 text-primary" />
+                                        <Eye className="h-4 w-4 text-primary" />
                                       </Button>
                                       <DropdownMenu>
                                         <DropdownMenuTrigger asChild>

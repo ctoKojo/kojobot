@@ -42,6 +42,7 @@ const InstructorSchedule = lazy(() => import("./pages/InstructorSchedule"));
 const MyQuizzes = lazy(() => import("./pages/MyQuizzes"));
 const QuizReports = lazy(() => import("./pages/QuizReports"));
 const MyInstructorQuizzes = lazy(() => import("./pages/MyInstructorQuizzes"));
+const SessionDetails = lazy(() => import("./pages/SessionDetails"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -101,6 +102,7 @@ const App = () => (
                   <Route path="/group/:groupId" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><GroupDetails /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="/instructor-schedule/:instructorId?" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><InstructorSchedule /></ProtectedRoute>} />
+                  <Route path="/session/:sessionId" element={<ProtectedRoute><SessionDetails /></ProtectedRoute>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
