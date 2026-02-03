@@ -213,7 +213,7 @@ export default function Auth() {
                           <div className="relative">
                             <Lock className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground ${isRTL ? 'right-3' : 'left-3'}`} />
                             <Input {...field} type={showPassword ? 'text' : 'password'} placeholder="••••••••" className={`h-11 text-base rounded-xl border-2 bg-muted/50 transition-all focus:border-primary/50 focus:bg-background ${isRTL ? 'pr-10 pl-10' : 'pl-10 pr-10'}`} />
-                            <button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 ${isRTL ? 'left-2' : 'right-2'}`}>
+                            <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'} className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1.5 min-w-6 min-h-6 flex items-center justify-center ${isRTL ? 'left-2' : 'right-2'}`}>
                               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                           </div>
@@ -297,7 +297,7 @@ export default function Auth() {
                         <div className="relative">
                           <Lock className={`absolute top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground ${isRTL ? 'right-4' : 'left-4'}`} />
                           <Input {...field} type={showPassword ? 'text' : 'password'} placeholder="••••••••" className={`h-12 text-base border-2 transition-all focus:border-primary/50 ${isRTL ? 'pr-12 pl-12' : 'pl-12 pr-12'}`} />
-                          <button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors ${isRTL ? 'left-4' : 'right-4'}`}>
+                          <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'} className={`absolute top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1 min-w-6 min-h-6 flex items-center justify-center ${isRTL ? 'left-4' : 'right-4'}`}>
                             {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                           </button>
                         </div>
