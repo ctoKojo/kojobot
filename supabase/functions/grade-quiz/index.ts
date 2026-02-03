@@ -1,10 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
+import { checkRateLimit, getClientIP, rateLimitResponse } from '../_shared/rateLimit.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+// Rate limit config: 20 quiz submissions per minute per IP
+const RATE_LIMIT_CONFIG = { maxRequests: 20, windowMs: 60000 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -12,6 +16,13 @@ serve(async (req) => {
   }
 
   try {
+    // Apply rate limiting
+    const clientIP = getClientIP(req)
+    const rateLimitResult = checkRateLimit(clientIP, RATE_LIMIT_CONFIG)
+    if (!rateLimitResult.allowed) {
+      console.log(`Rate limit exceeded for grade-quiz from IP: ${clientIP}`)
+      return rateLimitResponse(rateLimitResult, corsHeaders)
+    }
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
