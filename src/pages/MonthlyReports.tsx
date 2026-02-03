@@ -32,7 +32,7 @@ interface StudentSummary {
 }
 
 export default function MonthlyReports() {
-  const { user, role: userRole } = useAuth();
+  const { user, role: userRole, loading: authLoading } = useAuth();
   const { isRTL, language } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -60,13 +60,13 @@ export default function MonthlyReports() {
   ];
 
   useEffect(() => {
-    if (user) {
+    if (user && userRole) {
       fetchReportData();
       if (userRole === 'admin') {
         fetchInstructors();
       }
     }
-  }, [user, currentMonth, currentYear, selectedInstructor]);
+  }, [user, userRole, currentMonth, currentYear, selectedInstructor]);
 
   const fetchInstructors = async () => {
     const { data } = await supabase
@@ -446,7 +446,7 @@ export default function MonthlyReports() {
           </div>
         </div>
 
-        {loading ? (
+        {loading || authLoading || !userRole ? (
           <div className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">{isRTL ? 'جاري التحميل...' : 'Loading...'}</p>
           </div>
