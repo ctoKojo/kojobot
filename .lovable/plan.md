@@ -1,205 +1,206 @@
 
+# خطة إصلاح عيوب مشروع Kojobot
 
-# خطة: إضافة تقارير شاملة لصفحة ملف المدرب
+## المرحلة 1: إصلاحات أمنية حرجة (يوم واحد)
 
-## الهدف
-تحويل صفحة ملف المدرب (InstructorProfile) لتصبح لوحة تحكم شاملة تعرض كل التقارير والإحصائيات المتعلقة بأداء المدرب وطلابه.
+### 1.1 إصلاح ثغرة جدول profiles
+```sql
+-- إضافة سياسة تمنع الوصول غير المصادق
+CREATE POLICY "Require authentication for profiles"
+ON profiles FOR SELECT
+USING (auth.uid() IS NOT NULL);
+```
 
----
-
-## التقارير المطلوب إضافتها
-
-### 1. تقرير أداء الطلاب الشامل
-
-| الإحصائية | الوصف |
-|-----------|-------|
-| إجمالي الطلاب | عدد الطلاب في كل مجموعات المدرب |
-| متوسط الحضور | نسبة الحضور لكل الطلاب |
-| متوسط درجات الكويزات | متوسط أداء الطلاب في الكويزات |
-| متوسط درجات الواجبات | متوسط أداء الطلاب في الواجبات |
-| نسبة النجاح | نسبة الطلاب الناجحين |
-
-### 2. تقرير أداء الكويزات
-
-| البيان | التفاصيل |
-|--------|---------|
-| إجمالي الكويزات المنشأة | عدد الكويزات التي أنشأها المدرب |
-| إجمالي المحاولات | عدد مرات حل الطلاب للكويزات |
-| متوسط الدرجات لكل كويز | رسم بياني بمتوسط الدرجات |
-| نسبة النجاح/الرسوب | رسم دائري |
-
-### 3. تقرير الواجبات والتسليمات
-
-| البيان | التفاصيل |
-|--------|---------|
-| إجمالي الواجبات | عدد الواجبات المعينة |
-| نسبة التسليم | عدد التسليمات مقارنة بالإجمالي |
-| في انتظار التصحيح | عدد التسليمات غير المصححة |
-| متوسط الدرجات | متوسط درجات الواجبات المصححة |
-
-### 4. تقرير الحضور والغياب
-
-| البيان | التفاصيل |
-|--------|---------|
-| إجمالي السيشنات | عدد السيشنات المكتملة |
-| نسبة الحضور العامة | متوسط حضور جميع الطلاب |
-| أكثر الطلاب غياباً | قائمة بأسماء الطلاب الأكثر غياباً |
+### 1.2 تفعيل Leaked Password Protection
+- يتطلب تفعيل يدوي من Cloud View > Authentication > Settings
+- تفعيل خيار "Leaked Password Protection"
 
 ---
 
-## التغييرات التقنية
+## المرحلة 2: تحسينات الأداء (2-3 أيام)
 
-### 1. تحديث واجهة البيانات
+### 2.1 إضافة Pagination للجداول الكبيرة
 
+**الملفات المتأثرة:**
+- `src/pages/Students.tsx`
+- `src/pages/Groups.tsx`
+- `src/pages/Instructors.tsx`
+- `src/pages/Sessions.tsx`
+
+**التغييرات:**
 ```typescript
-interface InstructorData {
-  profile: any;
-  groups: any[];
-  sessions: any[];
-  quizzes: any[];
-  assignments: any[];
-  // الإضافات الجديدة
-  totalStudents: number;
-  attendanceStats: {
-    totalRecords: number;
-    presentRate: number;
-    absentRate: number;
-    lateRate: number;
-  };
-  quizStats: {
-    totalSubmissions: number;
-    averageScore: number;
-    passRate: number;
-    submissionsPerQuiz: { quiz_id: string; title: string; title_ar: string; count: number; avgScore: number }[];
-  };
-  assignmentStats: {
-    totalSubmissions: number;
-    pendingGrading: number;
-    averageScore: number;
-    submissionRate: number;
-  };
+// إضافة state للصفحات
+const [page, setPage] = useState(1);
+const [pageSize] = useState(20);
+const [totalCount, setTotalCount] = useState(0);
+
+// تعديل الـ query
+const { data, error, count } = await supabase
+  .from('profiles')
+  .select('*', { count: 'exact' })
+  .range((page - 1) * pageSize, page * pageSize - 1);
+
+// إضافة مكون Pagination
+<Pagination
+  currentPage={page}
+  totalPages={Math.ceil(totalCount / pageSize)}
+  onPageChange={setPage}
+/>
+```
+
+### 2.2 إضافة Rate Limiting للـ Edge Functions
+
+**الملفات المتأثرة:**
+- `supabase/functions/create-user/index.ts`
+- `supabase/functions/grade-quiz/index.ts`
+- جميع Edge Functions الأخرى
+
+**التغييرات:**
+```typescript
+// إضافة rate limiting بسيط
+const rateLimitMap = new Map<string, number>();
+const RATE_LIMIT = 10; // 10 requests per minute
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const lastRequest = rateLimitMap.get(ip) || 0;
+  if (now - lastRequest < 60000 / RATE_LIMIT) {
+    return false; // Rate limited
+  }
+  rateLimitMap.set(ip, now);
+  return true;
 }
 ```
 
-### 2. إضافة Tab جديد للتقارير
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│ المجموعات | الجلسات | الكويزات | الواجبات | 📊 التقارير         │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-### 3. تصميم قسم التقارير
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│ 📊 لوحة التقارير الشاملة                                           │
-├─────────────────────────────────────────────────────────────────────┤
-│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐    │
-│ │ 45          │ │ 85%         │ │ 72%         │ │ 68%         │    │
-│ │ طالب        │ │ حضور        │ │ كويزات      │ │ واجبات      │    │
-│ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘    │
-├─────────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────┐ ┌─────────────────────────┐            │
-│ │   📊 أداء الكويزات      │ │   📊 نسبة النجاح        │            │
-│ │   [Bar Chart]           │ │   [Pie Chart]           │            │
-│ └─────────────────────────┘ └─────────────────────────┘            │
-├─────────────────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────────────────┐│
-│ │   📊 ترند الحضور على مدار الشهر                                 ││
-│ │   [Line Chart]                                                  ││
-│ └─────────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────────┘
-```
-
 ---
 
-## الدوال الجديدة
+## المرحلة 3: تحسينات جودة الكود (3-5 أيام)
 
-### جلب إحصائيات الطلاب
+### 3.1 إضافة Error Boundary
+
+**ملف جديد:** `src/components/ErrorBoundary.tsx`
 ```typescript
-const fetchStudentStats = async (groupIds: string[]) => {
-  // 1. جلب عدد الطلاب
-  // 2. جلب سجلات الحضور
-  // 3. حساب النسب
-};
+class ErrorBoundary extends React.Component {
+  state = { hasError: false };
+  
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  
+  componentDidCatch(error, info) {
+    console.error('Error caught:', error, info);
+    // في المستقبل: إرسال للـ Sentry
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return <ErrorFallback onRetry={() => window.location.reload()} />;
+    }
+    return this.props.children;
+  }
+}
 ```
 
-### جلب إحصائيات الكويزات
+### 3.2 إنشاء Custom Hooks لتقليل التكرار
+
+**ملفات جديدة:**
+- `src/hooks/usePaginatedQuery.ts` - للـ pagination
+- `src/hooks/useFormValidation.ts` - للـ validation
+- `src/hooks/useStudents.ts` - لجلب الطلاب
+- `src/hooks/useGroups.ts` - لجلب المجموعات
+
+### 3.3 إضافة Unit Tests
+
+**ملفات جديدة:**
+- `src/lib/validationUtils.test.ts`
+- `src/hooks/useAuth.test.ts`
+- `src/components/ProtectedRoute.test.tsx`
+
+**مثال:**
 ```typescript
-const fetchQuizStats = async (quizIds: string[]) => {
-  // 1. جلب quiz_assignments للكويزات
-  // 2. جلب quiz_submissions
-  // 3. حساب المتوسطات ونسب النجاح
-};
+describe('validateMobileNumber', () => {
+  it('should accept valid Egyptian numbers', () => {
+    expect(validateMobileNumber('01012345678').isValid).toBe(true);
+  });
+  
+  it('should reject invalid numbers', () => {
+    expect(validateMobileNumber('123456').isValid).toBe(false);
+  });
+});
 ```
 
-### جلب إحصائيات الواجبات
+---
+
+## المرحلة 4: تحسينات تجربة المستخدم (2-3 أيام)
+
+### 4.1 إضافة Skeleton Loading
+
+**بدلاً من:**
 ```typescript
-const fetchAssignmentStats = async (assignmentIds: string[]) => {
-  // 1. جلب assignment_submissions
-  // 2. حساب نسبة التسليم
-  // 3. حساب متوسط الدرجات
-};
+{loading ? <p>Loading...</p> : <Table>...</Table>}
 ```
 
----
+**استخدام:**
+```typescript
+{loading ? <TableSkeleton rows={5} /> : <Table>...</Table>}
+```
 
-## الرسوم البيانية
+### 4.2 تحسين Error Messages
 
-### 1. Bar Chart - أداء الكويزات
-- المحور X: أسماء الكويزات
-- المحور Y: متوسط الدرجات (0-100)
-- لون مختلف للناجح والراسب
+**إنشاء:** `src/lib/errorHandler.ts`
+```typescript
+export function handleSupabaseError(error: any, isRTL: boolean) {
+  const errorMap = {
+    'duplicate key': isRTL ? 'هذا العنصر موجود بالفعل' : 'This item already exists',
+    'foreign key': isRTL ? 'لا يمكن الحذف لوجود بيانات مرتبطة' : 'Cannot delete due to related data',
+    // ... more errors
+  };
+  
+  for (const [key, message] of Object.entries(errorMap)) {
+    if (error.message?.includes(key)) return message;
+  }
+  return isRTL ? 'حدث خطأ غير متوقع' : 'An unexpected error occurred';
+}
+```
 
-### 2. Pie Chart - نسبة النجاح/الرسوب
-- الناجحين (أخضر)
-- الراسبين (أحمر)
+### 4.3 إضافة Confirmation Dialogs للعمليات الحساسة
 
-### 3. Area Chart - ترند الحضور
-- المحور X: التواريخ (آخر 30 يوم)
-- المحور Y: نسبة الحضور
-
-### 4. Bar Chart - تسليمات الواجبات
-- مقارنة بين المطلوب والمسلم
-
----
-
-## الملفات المعدلة
-
-| الملف | نوع التعديل |
-|-------|-------------|
-| `src/pages/InstructorProfile.tsx` | تعديل كبير - إضافة Tab التقارير والرسوم البيانية |
-| `src/components/instructor/InstructorPerformanceCharts.tsx` | **جديد** - مكون منفصل للرسوم البيانية |
-
----
-
-## خطة التنفيذ
-
-### المرحلة 1: تحديث جلب البيانات
-1. تعديل `fetchInstructorData` لجلب إحصائيات إضافية
-2. إضافة queries جديدة للـ attendance, quiz_submissions, assignment_submissions
-
-### المرحلة 2: إنشاء مكون الرسوم البيانية
-1. إنشاء `InstructorPerformanceCharts.tsx` مشابه لـ `StudentPerformanceCharts.tsx`
-2. تضمين 4 رسوم بيانية رئيسية
-
-### المرحلة 3: تحديث الواجهة
-1. إضافة Tab "التقارير" في الـ TabsList
-2. عرض كاردات الإحصائيات السريعة
-3. دمج مكون الرسوم البيانية
-
-### المرحلة 4: إضافة جدول الأداء التفصيلي
-1. جدول بقائمة الطلاب مع مؤشرات الأداء
-2. إمكانية الانتقال لملف كل طالب
+- حذف طالب/مدرب
+- إلغاء تفعيل مجموعة
+- حذف كويز
 
 ---
 
-## ملخص التغييرات
+## المرحلة 5: ميزات إضافية (مستقبلية)
 
-1. **Stats Cards جديدة** - إجمالي الطلاب، متوسط الحضور، متوسط الكويزات، متوسط الواجبات
-2. **Tab التقارير** - قسم جديد للتقارير الشاملة
-3. **4 رسوم بيانية** - أداء الكويزات، نسب النجاح، ترند الحضور، تسليمات الواجبات
-4. **مكون جديد** - `InstructorPerformanceCharts.tsx` للرسوم البيانية
-5. **جدول أداء الطلاب** - قائمة بكل الطلاب مع مؤشرات الأداء
+### 5.1 Offline Support (PWA)
+- إضافة Service Worker
+- تخزين البيانات محلياً
 
+### 5.2 Real-time Updates
+- تفعيل Supabase Realtime للإشعارات
+- تحديث الحضور مباشرة
+
+### 5.3 Export/Import
+- تصدير التقارير إلى PDF/Excel
+- استيراد الطلاب من Excel
+
+---
+
+## ملخص الأولويات
+
+| الأولوية | المهمة | الوقت المقدر |
+|---------|--------|-------------|
+| 🔴 حرج | إصلاح ثغرة profiles | 30 دقيقة |
+| 🔴 حرج | تفعيل Leaked Password Protection | 5 دقائق |
+| 🟠 متوسط | إضافة Pagination | 4 ساعات |
+| 🟠 متوسط | Rate Limiting | 2 ساعة |
+| 🟡 منخفض | Error Boundaries | 1 ساعة |
+| 🟡 منخفض | Custom Hooks | 3 ساعات |
+| 🟡 منخفض | Unit Tests | 4 ساعات |
+
+---
+
+## الخطوة التالية
+
+هل تريد أن أبدأ بإصلاح الثغرة الأمنية الحرجة في جدول profiles أولاً؟
