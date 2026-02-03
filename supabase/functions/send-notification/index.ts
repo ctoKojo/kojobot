@@ -1,10 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit, getClientIP, rateLimitResponse } from '../_shared/rateLimit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Rate limit config: 30 notifications per minute per IP
+const RATE_LIMIT_CONFIG = { maxRequests: 30, windowMs: 60000 };
 
 interface NotificationPayload {
   user_id?: string;
@@ -24,7 +28,21 @@ serve(async (req) => {
   }
 
   try {
+    // Apply rate limiting
+    const clientIP = getClientIP(req);
+    const rateLimitResult = checkRateLimit(clientIP, RATE_LIMIT_CONFIG);
+    if (!rateLimitResult.allowed) {
+      console.log(`Rate limit exceeded for send-notification from IP: ${clientIP}`);
+      return rateLimitResponse(rateLimitResult, corsHeaders);
+    }
+
     const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
