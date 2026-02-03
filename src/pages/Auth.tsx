@@ -104,7 +104,7 @@ export default function Auth() {
         
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center w-full p-12">
-          <img src={kojobotLogoWhite} alt="Kojobot" width={320} height={110} fetchPriority="high" className="w-72 xl:w-80 mb-12 drop-shadow-2xl animate-fade-in" />
+          <img src={kojobotLogoWhite} alt="Kojobot" width={320} height={110} fetchPriority="high" decoding="async" className="w-72 xl:w-80 mb-12 drop-shadow-2xl animate-fade-in" />
           
           <div className="text-center text-white space-y-4 max-w-md animate-fade-in" style={{
           animationDelay: '0.2s'
@@ -158,7 +158,7 @@ export default function Auth() {
 
         {/* Mobile Header - Logo and tagline */}
         <div className="lg:hidden relative z-10 pt-12 pb-6 px-6 text-center">
-          <img src={kojobotLogoWhite} alt="Kojobot" width={407} height={140} fetchPriority="high" className="h-20 mx-auto mb-4 drop-shadow-lg animate-fade-in object-contain" />
+          <img src={kojobotLogoWhite} alt="Kojobot" width={232} height={80} fetchPriority="high" decoding="async" className="h-20 mx-auto mb-4 drop-shadow-lg animate-fade-in object-contain" />
           
         </div>
 
@@ -179,7 +179,7 @@ export default function Auth() {
             <div className="w-full bg-background rounded-3xl shadow-2xl p-6 space-y-6">
               {/* Welcome text */}
               <div className="text-center space-y-1">
-                <img src={kojobotIcon} alt="Kojobot" width={112} height={112} className="w-16 h-16 mx-auto mb-4 rounded-2xl shadow-lg" />
+                <img src={kojobotIcon} alt="Kojobot" width={64} height={64} loading="lazy" decoding="async" className="w-16 h-16 mx-auto mb-4 rounded-2xl shadow-lg" />
                 <h1 className="text-xl font-bold text-foreground">
                   {t.auth.welcomeBack}
                 </h1>
@@ -262,7 +262,7 @@ export default function Auth() {
             {/* Header */}
             <div className="text-center lg:text-start space-y-2">
               <div className="hidden lg:block mb-6">
-                <img src={kojobotIcon} alt="Kojobot" width={64} height={64} className="w-16 h-16 rounded-2xl shadow-lg" />
+                <img src={kojobotIcon} alt="Kojobot" width={64} height={64} loading="lazy" decoding="async" className="w-16 h-16 rounded-2xl shadow-lg" />
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                 {t.auth.welcomeBack}
