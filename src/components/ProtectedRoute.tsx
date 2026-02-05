@@ -1,8 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { KojobotLogo } from '@/components/KojobotLogo';
+import { LoadingScreen } from '@/components/LoadingScreen';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,17 +10,9 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, role, loading } = useAuth();
-  const { t } = useLanguage();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <KojobotLogo size="xl" />
-          <p className="mt-4 text-muted-foreground">{t.common.loading}</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!user) {
