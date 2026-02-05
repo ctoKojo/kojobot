@@ -11,10 +11,13 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, role, loading } = useAuth();
 
-  if (loading) {
+  // Only show loading screen on initial app load, not on navigation
+  if (loading && !user) {
     return <LoadingScreen />;
   }
 
+  // If we're still loading role but user exists, don't show loading screen
+  // This prevents flash during navigation
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
