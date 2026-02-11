@@ -564,6 +564,7 @@ export type Database = {
       }
       makeup_sessions: {
         Row: {
+          assigned_instructor_id: string | null
           completed_at: string | null
           created_at: string
           group_id: string
@@ -576,9 +577,11 @@ export type Database = {
           scheduled_date: string | null
           scheduled_time: string | null
           status: string
+          student_confirmed: boolean | null
           student_id: string
         }
         Insert: {
+          assigned_instructor_id?: string | null
           completed_at?: string | null
           created_at?: string
           group_id: string
@@ -591,9 +594,11 @@ export type Database = {
           scheduled_date?: string | null
           scheduled_time?: string | null
           status?: string
+          student_confirmed?: boolean | null
           student_id: string
         }
         Update: {
+          assigned_instructor_id?: string | null
           completed_at?: string | null
           created_at?: string
           group_id?: string
@@ -606,6 +611,7 @@ export type Database = {
           scheduled_date?: string | null
           scheduled_time?: string | null
           status?: string
+          student_confirmed?: boolean | null
           student_id?: string
         }
         Relationships: [
