@@ -135,9 +135,7 @@ export default function SessionDetails() {
   const [editingAssignment, setEditingAssignment] = useState(false);
   const [assignmentForm, setAssignmentForm] = useState({
     title: '',
-    title_ar: '',
     description: '',
-    description_ar: '',
     max_score: 100,
     due_date: '',
   });
@@ -391,7 +389,7 @@ export default function SessionDetails() {
   };
 
   const handleSaveAssignment = async () => {
-    if (!assignmentForm.title || !assignmentForm.title_ar || !assignmentForm.due_date || !session || !user) return;
+    if (!assignmentForm.title || !assignmentForm.due_date || !session || !user) return;
     
     setSavingAssignment(true);
     try {
@@ -433,9 +431,9 @@ export default function SessionDetails() {
         // Update existing assignment
         const updateData: any = {
           title: assignmentForm.title,
-          title_ar: assignmentForm.title_ar,
+          title_ar: assignmentForm.title,
           description: assignmentForm.description || null,
-          description_ar: assignmentForm.description_ar || null,
+          description_ar: assignmentForm.description || null,
           max_score: assignmentForm.max_score,
           due_date: new Date(assignmentForm.due_date).toISOString(),
         };
@@ -463,9 +461,9 @@ export default function SessionDetails() {
           .from('assignments')
           .insert({
             title: assignmentForm.title,
-            title_ar: assignmentForm.title_ar,
+            title_ar: assignmentForm.title,
             description: assignmentForm.description || null,
-            description_ar: assignmentForm.description_ar || null,
+            description_ar: assignmentForm.description || null,
             max_score: assignmentForm.max_score,
             due_date: new Date(assignmentForm.due_date).toISOString(),
             session_id: session.id,
@@ -485,7 +483,7 @@ export default function SessionDetails() {
       
       setAssignmentDialogOpen(false);
       setEditingAssignment(false);
-      setAssignmentForm({ title: '', title_ar: '', description: '', description_ar: '', max_score: 100, due_date: '' });
+      setAssignmentForm({ title: '', description: '', max_score: 100, due_date: '' });
       setAssignmentFile(null);
       fetchSessionData();
     } catch (error: any) {
@@ -506,9 +504,7 @@ export default function SessionDetails() {
     setEditingAssignment(true);
     setAssignmentForm({
       title: assignment.title,
-      title_ar: assignment.title_ar,
       description: assignment.description || '',
-      description_ar: assignment.description_ar || '',
       max_score: assignment.max_score,
       due_date: new Date(assignment.due_date).toISOString().slice(0, 16),
     });
@@ -988,7 +984,7 @@ export default function SessionDetails() {
                   variant="outline"
                   onClick={() => {
                     setEditingAssignment(false);
-                    setAssignmentForm({ title: '', title_ar: '', description: '', description_ar: '', max_score: 100, due_date: '' });
+                    setAssignmentForm({ title: '', description: '', max_score: 100, due_date: '' });
                     setAssignmentDialogOpen(true);
                   }}
                   className="flex items-center gap-2"
@@ -1146,37 +1142,19 @@ export default function SessionDetails() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>{isRTL ? 'العنوان' : 'Title'} (English)</Label>
+                <Label>{isRTL ? 'العنوان' : 'Title'}</Label>
                 <Input
                   value={assignmentForm.title}
                   onChange={(e) => setAssignmentForm({ ...assignmentForm, title: e.target.value })}
-                  placeholder="e.g., Session 1 Practice"
+                  placeholder={isRTL ? 'مثال: تمارين السيشن الأول' : 'e.g., Session 1 Practice'}
                 />
               </div>
               <div className="grid gap-2">
-                <Label>{isRTL ? 'العنوان' : 'Title'} (عربي)</Label>
-                <Input
-                  value={assignmentForm.title_ar}
-                  onChange={(e) => setAssignmentForm({ ...assignmentForm, title_ar: e.target.value })}
-                  placeholder="مثال: تمارين السيشن الأول"
-                  dir="rtl"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>{isRTL ? 'الوصف' : 'Description'} (English)</Label>
+                <Label>{isRTL ? 'الوصف' : 'Description'}</Label>
                 <Textarea
                   value={assignmentForm.description}
                   onChange={(e) => setAssignmentForm({ ...assignmentForm, description: e.target.value })}
-                  placeholder="Assignment instructions..."
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>{isRTL ? 'الوصف' : 'Description'} (عربي)</Label>
-                <Textarea
-                  value={assignmentForm.description_ar}
-                  onChange={(e) => setAssignmentForm({ ...assignmentForm, description_ar: e.target.value })}
-                  placeholder="تعليمات الواجب..."
-                  dir="rtl"
+                  placeholder={isRTL ? 'تعليمات الواجب...' : 'Assignment instructions...'}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -1256,7 +1234,7 @@ export default function SessionDetails() {
               </Button>
               <Button 
                 onClick={handleSaveAssignment} 
-                disabled={savingAssignment || uploadingFile || !assignmentForm.title || !assignmentForm.title_ar || !assignmentForm.due_date}
+                disabled={savingAssignment || uploadingFile || !assignmentForm.title || !assignmentForm.due_date}
               >
                 {uploadingFile 
                   ? (isRTL ? 'جاري رفع الملف...' : 'Uploading...')

@@ -79,9 +79,7 @@ export default function AssignmentsPage() {
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   const [formData, setFormData] = useState({
     title: '',
-    title_ar: '',
     description: '',
-    description_ar: '',
     group_id: '',
     due_date: '',
     max_score: 100,
@@ -182,9 +180,9 @@ export default function AssignmentsPage() {
 
       const payload = {
         title: formData.title,
-        title_ar: formData.title_ar,
+        title_ar: formData.title,
         description: formData.description || null,
-        description_ar: formData.description_ar || null,
+        description_ar: formData.description || null,
         group_id: formData.group_id || null,
         due_date: formData.due_date,
         max_score: formData.max_score,
@@ -220,7 +218,7 @@ export default function AssignmentsPage() {
               title: 'New Assignment',
               title_ar: 'واجب جديد',
               message: `You have a new assignment: "${formData.title}" - Due: ${dueDate}`,
-              message_ar: `لديك واجب جديد: "${formData.title_ar}" - موعد التسليم: ${dueDate}`,
+              message_ar: `لديك واجب جديد: "${formData.title}" - موعد التسليم: ${dueDate}`,
               type: 'info',
               category: 'assignment',
               action_url: '/assignments',
@@ -253,9 +251,7 @@ export default function AssignmentsPage() {
   const resetForm = () => {
     setFormData({
       title: '',
-      title_ar: '',
       description: '',
-      description_ar: '',
       group_id: '',
       due_date: '',
       max_score: 100,
@@ -268,9 +264,7 @@ export default function AssignmentsPage() {
     setEditingAssignment(assignment);
     setFormData({
       title: assignment.title,
-      title_ar: assignment.title_ar,
       description: assignment.description || '',
-      description_ar: assignment.description_ar || '',
       group_id: assignment.group_id || '',
       due_date: assignment.due_date ? new Date(assignment.due_date).toISOString().slice(0, 16) : '',
       max_score: assignment.max_score || 100,
@@ -364,37 +358,19 @@ export default function AssignmentsPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
               <div className="grid gap-2">
-                <Label>{t.assignments.assignmentName} (English)</Label>
+                <Label>{t.assignments.assignmentName}</Label>
                 <Input
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g., Create a Scratch Game"
+                  placeholder={isRTL ? 'مثال: إنشاء لعبة سكراتش' : 'e.g., Create a Scratch Game'}
                 />
               </div>
               <div className="grid gap-2">
-                <Label>{t.assignments.assignmentName} (عربي)</Label>
-                <Input
-                  value={formData.title_ar}
-                  onChange={(e) => setFormData({ ...formData, title_ar: e.target.value })}
-                  placeholder="مثال: إنشاء لعبة سكراتش"
-                  dir="rtl"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>{t.assignments.description} (English)</Label>
+                <Label>{t.assignments.description}</Label>
                 <Textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Assignment instructions..."
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>{t.assignments.description} (عربي)</Label>
-                <Textarea
-                  value={formData.description_ar}
-                  onChange={(e) => setFormData({ ...formData, description_ar: e.target.value })}
-                  placeholder="تعليمات الاساينمنت..."
-                  dir="rtl"
+                  placeholder={isRTL ? 'تعليمات الاساينمنت...' : 'Assignment instructions...'}
                 />
               </div>
               <div className="grid gap-2">

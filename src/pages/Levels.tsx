@@ -60,7 +60,6 @@ export default function LevelsPage() {
   const [editingLevel, setEditingLevel] = useState<Level | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    name_ar: '',
     level_order: 0,
     track: '',
     parent_level_id: '',
@@ -95,7 +94,7 @@ export default function LevelsPage() {
     try {
       const payload = {
         name: formData.name,
-        name_ar: formData.name_ar,
+        name_ar: formData.name,
         level_order: formData.level_order,
         track: formData.track || null,
         parent_level_id: formData.parent_level_id || null,
@@ -126,7 +125,7 @@ export default function LevelsPage() {
 
       setIsDialogOpen(false);
       setEditingLevel(null);
-      setFormData({ name: '', name_ar: '', level_order: 0, track: '', parent_level_id: '' });
+      setFormData({ name: '', level_order: 0, track: '', parent_level_id: '' });
       fetchLevels();
     } catch (error) {
       console.error('Error saving level:', error);
@@ -142,7 +141,6 @@ export default function LevelsPage() {
     setEditingLevel(level);
     setFormData({
       name: level.name,
-      name_ar: level.name_ar,
       level_order: level.level_order,
       track: level.track || '',
       parent_level_id: level.parent_level_id || '',
@@ -216,7 +214,7 @@ export default function LevelsPage() {
             <DialogTrigger asChild>
               <Button className="kojo-gradient" onClick={() => {
                 setEditingLevel(null);
-                setFormData({ name: '', name_ar: '', level_order: levels.length, track: '', parent_level_id: '' });
+                setFormData({ name: '', level_order: levels.length, track: '', parent_level_id: '' });
               }}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t.levels.addLevel}
@@ -233,22 +231,12 @@ export default function LevelsPage() {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Name (English)</Label>
+                  <Label htmlFor="name">{isRTL ? 'الاسم' : 'Name'}</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., Level 2 Software"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="name_ar">الاسم (عربي)</Label>
-                  <Input
-                    id="name_ar"
-                    value={formData.name_ar}
-                    onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-                    placeholder="مثال: المستوى 2 سوفتوير"
-                    dir="rtl"
+                    placeholder={isRTL ? 'مثال: المستوى 2 سوفتوير' : 'e.g., Level 2 Software'}
                   />
                 </div>
                 <div className="grid gap-2">

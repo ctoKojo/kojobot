@@ -87,7 +87,6 @@ export default function SessionsPage() {
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [formData, setFormData] = useState({
     topic: '',
-    topic_ar: '',
     status: 'scheduled',
     notes: '',
   });
@@ -156,7 +155,6 @@ export default function SessionsPage() {
     setEditingSession(session);
     setFormData({
       topic: session.topic || '',
-      topic_ar: session.topic_ar || '',
       status: session.status,
       notes: session.notes || '',
     });
@@ -171,7 +169,7 @@ export default function SessionsPage() {
         .from('sessions')
         .update({
           topic: formData.topic || null,
-          topic_ar: formData.topic_ar || null,
+          topic_ar: formData.topic || null,
           status: formData.status,
           notes: formData.notes || null,
         })
@@ -394,20 +392,11 @@ export default function SessionsPage() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>{isRTL ? 'الموضوع' : 'Topic'} (English)</Label>
+                <Label>{isRTL ? 'الموضوع' : 'Topic'}</Label>
                 <Input
                   value={formData.topic}
                   onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
-                  placeholder="e.g., Introduction to Scratch"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>{isRTL ? 'الموضوع' : 'Topic'} (عربي)</Label>
-                <Input
-                  value={formData.topic_ar}
-                  onChange={(e) => setFormData({ ...formData, topic_ar: e.target.value })}
-                  placeholder="مثال: مقدمة في سكراتش"
-                  dir="rtl"
+                  placeholder={isRTL ? 'مثال: مقدمة في سكراتش' : 'e.g., Introduction to Scratch'}
                 />
               </div>
               <div className="grid gap-2">
