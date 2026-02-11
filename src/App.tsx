@@ -48,6 +48,9 @@ import Materials from "./pages/Materials";
 import MyMaterials from "./pages/MyMaterials";
 import MakeupSessions from "./pages/MakeupSessions";
 import MyMakeupSessions from "./pages/MyMakeupSessions";
+import PricingPlans from "./pages/PricingPlans";
+import Finance from "./pages/Finance";
+import AccountSuspended from "./pages/AccountSuspended";
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
@@ -106,6 +109,9 @@ const App = () => (
                   <Route path="/my-materials" element={<ProtectedRoute allowedRoles={['student']}><MyMaterials /></ProtectedRoute>} />
                   <Route path="/makeup-sessions" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><MakeupSessions /></ProtectedRoute>} />
                   <Route path="/my-makeup-sessions" element={<ProtectedRoute allowedRoles={['student']}><MyMakeupSessions /></ProtectedRoute>} />
+                  <Route path="/pricing-plans" element={<ProtectedRoute allowedRoles={['admin']}><PricingPlans /></ProtectedRoute>} />
+                  <Route path="/finance" element={<ProtectedRoute allowedRoles={['admin']}><Finance /></ProtectedRoute>} />
+                  <Route path="/account-suspended" element={<AccountSuspended />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
             </BrowserRouter>

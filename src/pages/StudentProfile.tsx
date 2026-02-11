@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Award, AlertTriangle, BookOpen, 
-  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw
+  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw, DollarSign
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/lib/notificationService';
 import { StudentPerformanceCharts } from '@/components/student/StudentPerformanceCharts';
 import { IssueWarningDialog } from '@/components/student/IssueWarningDialog';
+import { CreateSubscriptionDialog } from '@/components/student/CreateSubscriptionDialog';
 
 interface StudentData {
   profile: any;
@@ -39,6 +40,7 @@ export default function StudentProfile() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<StudentData | null>(null);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
+  const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
 
   useEffect(() => {
     if (studentId) fetchStudentData();
@@ -53,10 +55,10 @@ export default function StudentProfile() {
         .eq('user_id', studentId)
         .single();
 
-      // Fetch subscription
+      // Fetch subscription with pricing plan
       const { data: subscription } = await supabase
         .from('subscriptions')
-        .select('*')
+        .select('*, pricing_plans(name, name_ar, attendance_mode)')
         .eq('student_id', studentId)
         .eq('status', 'active')
         .order('created_at', { ascending: false })
@@ -188,14 +190,25 @@ export default function StudentProfile() {
           </Button>
           
           {(role === 'admin' || role === 'instructor') && (
-            <Button 
-              variant="outline" 
-              className="border-warning text-warning hover:bg-warning/10"
-              onClick={() => setShowWarningDialog(true)}
-            >
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              {isRTL ? 'إصدار إنذار' : 'Issue Warning'}
-            </Button>
+            <div className="flex gap-2">
+              {role === 'admin' && (
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowSubscriptionDialog(true)}
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  {isRTL ? 'إنشاء اشتراك' : 'Create Subscription'}
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                className="border-warning text-warning hover:bg-warning/10"
+                onClick={() => setShowWarningDialog(true)}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                {isRTL ? 'إصدار إنذار' : 'Issue Warning'}
+              </Button>
+            </div>
           )}
         </div>
 
@@ -252,13 +265,29 @@ export default function StudentProfile() {
                     <Badge className="bg-green-100 text-green-800">
                       {isRTL ? 'اشتراك فعال' : 'Active Subscription'}
                     </Badge>
+                    {data.subscription.pricing_plans && (
+                      <p className="text-sm font-medium">
+                        {language === 'ar' ? data.subscription.pricing_plans.name_ar : data.subscription.pricing_plans.name}
+                      </p>
+                    )}
                     <p className="text-sm text-muted-foreground">
                       {isRTL ? 'ينتهي: ' : 'Ends: '}{formatDate(data.subscription.end_date)}
                     </p>
-                    {data.subscription.remaining_amount > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {data.subscription.payment_type === 'installment' ? (isRTL ? 'تقسيط' : 'Installment') : (isRTL ? 'دفع كامل' : 'Full Payment')}
+                    </Badge>
+                    {Number(data.subscription.remaining_amount) > 0 && (
                       <p className="text-sm text-orange-600">
                         {isRTL ? 'متبقي: ' : 'Remaining: '}{data.subscription.remaining_amount} {isRTL ? 'ج.م' : 'EGP'}
                       </p>
+                    )}
+                    {data.subscription.next_payment_date && (
+                      <p className="text-xs text-muted-foreground">
+                        {isRTL ? 'الدفع القادم: ' : 'Next: '}{formatDate(data.subscription.next_payment_date)}
+                      </p>
+                    )}
+                    {data.subscription.is_suspended && (
+                      <Badge variant="destructive">{isRTL ? 'موقوف' : 'Suspended'}</Badge>
                     )}
                   </div>
                 ) : (
@@ -712,6 +741,15 @@ export default function StudentProfile() {
       <IssueWarningDialog
         open={showWarningDialog}
         onOpenChange={setShowWarningDialog}
+        studentId={studentId!}
+        studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+        onSuccess={fetchStudentData}
+      />
+
+      {/* Create Subscription Dialog */}
+      <CreateSubscriptionDialog
+        open={showSubscriptionDialog}
+        onOpenChange={setShowSubscriptionDialog}
         studentId={studentId!}
         studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
         onSuccess={fetchStudentData}

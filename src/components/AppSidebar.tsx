@@ -21,6 +21,8 @@ import {
   FileCheck,
   AlertTriangle,
   RefreshCw,
+  DollarSign,
+  CreditCard,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -96,6 +98,12 @@ export function AppSidebar() {
     { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['student'] },
   ];
 
+  // Finance category (Admin only)
+  const financeNavItems: NavItem[] = [
+    { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['admin'] },
+    { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['admin'] },
+  ];
+
   // Settings category (Admin only mostly)
   const settingsNavItems: NavItem[] = [
     { title: t.nav.ageGroups, url: '/age-groups', icon: Layers, roles: ['admin'] },
@@ -152,6 +160,7 @@ export function AppSidebar() {
   const hasSessionsItems = filterByRole(sessionsNavItems).length > 0;
   const hasQuizzesItems = filterByRole(quizzesNavItems).length > 0;
   const hasStudentLearningItems = filterByRole(studentLearningItems).length > 0;
+  const hasFinanceItems = filterByRole(financeNavItems).length > 0;
   const hasSettingsItems = filterByRole(settingsNavItems).length > 0;
 
   return (
@@ -206,6 +215,18 @@ export function AppSidebar() {
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>{renderNavItems(studentLearningItems)}</SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Finance (Admin) */}
+        {hasFinanceItems && (
+          <SidebarGroup className="mt-4">
+            {!collapsed && (
+              <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
+                {isRTL ? 'المالية' : 'Finance'}
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>{renderNavItems(financeNavItems)}</SidebarGroupContent>
           </SidebarGroup>
         )}
 

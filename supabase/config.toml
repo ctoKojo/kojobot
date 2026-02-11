@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.populate-completed-sessions]
 verify_jwt = false
+
+[functions.check-payment-dues]
+verify_jwt = false
