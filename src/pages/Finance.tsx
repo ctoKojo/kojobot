@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DollarSign, Users, AlertTriangle, TrendingUp, CreditCard, Ban, Search } from 'lucide-react';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +39,10 @@ export default function Finance() {
   const [reportPeriod, setReportPeriod] = useState('6');
   const [reportPlan, setReportPlan] = useState('all');
   const [pricingPlans, setPricingPlans] = useState<any[]>([]);
+  const [subPage, setSubPage] = useState(1);
+  const [subPageSize, setSubPageSize] = useState(10);
+  const [payPage, setPayPage] = useState(1);
+  const [payPageSize, setPayPageSize] = useState(10);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -192,6 +197,17 @@ export default function Finance() {
     return name.includes(search.toLowerCase()) || nameAr.includes(search.toLowerCase());
   });
 
+  // Reset page on filter/search change
+  useEffect(() => { setSubPage(1); }, [filter, search]);
+
+  // Paginated subscriptions
+  const subTotalPages = Math.max(1, Math.ceil(filtered.length / subPageSize));
+  const paginatedSubs = filtered.slice((subPage - 1) * subPageSize, subPage * subPageSize);
+
+  // Paginated payments
+  const payTotalPages = Math.max(1, Math.ceil(payments.length / payPageSize));
+  const paginatedPayments = payments.slice((payPage - 1) * payPageSize, payPage * payPageSize);
+
   const formatDate = (d: string) => d ? new Date(d).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
 
   return (
@@ -262,7 +278,7 @@ export default function Finance() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.map((sub: any) => {
+                    {paginatedSubs.map((sub: any) => {
                       const isOverdue = sub.next_payment_date && new Date(sub.next_payment_date) < new Date() && Number(sub.remaining_amount) > 0;
                       return (
                         <TableRow key={sub.id} className={sub.is_suspended ? 'bg-destructive/5' : isOverdue ? 'bg-warning/5' : ''}>
@@ -300,6 +316,18 @@ export default function Finance() {
                   </TableBody>
                 </Table>
                 {filtered.length === 0 && <p className="text-center text-muted-foreground py-8">{isRTL ? 'لا توجد اشتراكات' : 'No subscriptions found'}</p>}
+                {filtered.length > 0 && (
+                  <DataTablePagination
+                    currentPage={subPage}
+                    totalPages={subTotalPages}
+                    pageSize={subPageSize}
+                    totalCount={filtered.length}
+                    hasNextPage={subPage < subTotalPages}
+                    hasPreviousPage={subPage > 1}
+                    onPageChange={setSubPage}
+                    onPageSizeChange={(size) => { setSubPageSize(size); setSubPage(1); }}
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -319,7 +347,7 @@ export default function Finance() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payments.map((p: any) => (
+                    {paginatedPayments.map((p: any) => (
                       <TableRow key={p.id}>
                         <TableCell>{formatDate(p.payment_date)}</TableCell>
                         <TableCell className="font-medium text-green-600">{p.amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
@@ -334,6 +362,18 @@ export default function Finance() {
                     ))}
                   </TableBody>
                 </Table>
+                {payments.length > 0 && (
+                  <DataTablePagination
+                    currentPage={payPage}
+                    totalPages={payTotalPages}
+                    pageSize={payPageSize}
+                    totalCount={payments.length}
+                    hasNextPage={payPage < payTotalPages}
+                    hasPreviousPage={payPage > 1}
+                    onPageChange={setPayPage}
+                    onPageSizeChange={(size) => { setPayPageSize(size); setPayPage(1); }}
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
