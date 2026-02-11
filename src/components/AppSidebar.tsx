@@ -74,6 +74,7 @@ export function AppSidebar() {
     { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin', 'instructor'] },
     { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['admin'] },
     { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['admin', 'instructor'] },
+    { title: isRTL ? 'سيشناتي التعويضية' : 'My Makeup Sessions', url: '/my-makeup-sessions', icon: RefreshCw, roles: ['student'] },
   ];
 
   // Quizzes & Assignments category
