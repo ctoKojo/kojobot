@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTransition } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -50,6 +51,7 @@ export function AppSidebar() {
   const { role, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [, startTransition] = useTransition();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
 
@@ -119,7 +121,9 @@ export function AppSidebar() {
               href={item.url}
               onClick={(e) => {
                 e.preventDefault();
-                navigate(item.url);
+                startTransition(() => {
+                  navigate(item.url);
+                });
               }}
               className={cn(
                 'flex items-center gap-3 rounded-lg transition-colors text-sm',
