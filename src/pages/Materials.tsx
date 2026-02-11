@@ -446,7 +446,45 @@ export default function Materials() {
                 ) : (
                   <div>
                     <Label>{isRTL ? 'الملف (حتى 50MB)' : 'File (up to 50MB)'}</Label>
-                    <Input type="file" onChange={(e) => setFormFile(e.target.files?.[0] || null)} />
+                    <div
+                      className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
+                        formFile ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-accent/30'
+                      }`}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.add('border-primary', 'bg-primary/10'); }}
+                      onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove('border-primary', 'bg-primary/10'); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.currentTarget.classList.remove('border-primary', 'bg-primary/10');
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) setFormFile(file);
+                      }}
+                      onClick={() => document.getElementById('material-file-input')?.click()}
+                    >
+                      <input
+                        id="material-file-input"
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => setFormFile(e.target.files?.[0] || null)}
+                      />
+                      {formFile ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <FileText className="h-5 w-5 text-primary" />
+                          <span className="text-sm font-medium">{formFile.name}</span>
+                          <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); setFormFile(null); }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div>
+                          <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">
+                            {isRTL ? 'اسحب الملف هنا أو اضغط للاختيار' : 'Drag & drop a file here, or click to browse'}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">{isRTL ? 'حتى 50 ميجابايت' : 'Up to 50MB'}</p>
+                        </div>
+                      )}
+                    </div>
                     {editingMaterial && !formFile && (
                       <p className="text-xs text-muted-foreground mt-1">
                         {isRTL ? 'الملف الحالي: ' : 'Current file: '}{editingMaterial.original_filename || 'file'}
