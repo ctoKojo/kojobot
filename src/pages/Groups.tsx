@@ -398,7 +398,7 @@ export default function GroupsPage() {
 
       const payload: any = {
         name: formData.name,
-        name_ar: formData.name_ar,
+        name_ar: formData.name,
         age_group_id: formData.age_group_id || null,
         level_id: formData.level_id || null,
         instructor_id: formData.instructor_id,
@@ -845,20 +845,11 @@ export default function GroupsPage() {
               )}
 
               <div className="grid gap-2">
-                <Label>{t.groups.groupName} (English)</Label>
+                <Label>{t.groups.groupName}</Label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Monday Juniors"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>{t.groups.groupName} (عربي)</Label>
-                <Input
-                  value={formData.name_ar}
-                  onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-                  placeholder="مثال: مجموعة الاثنين"
-                  dir="rtl"
+                  placeholder={isRTL ? 'مثال: مجموعة الاثنين' : 'e.g., Monday Juniors'}
                 />
               </div>
               <div className="grid gap-2">

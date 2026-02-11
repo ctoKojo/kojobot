@@ -85,9 +85,7 @@ export default function Materials() {
 
   // Form state
   const [formTitle, setFormTitle] = useState('');
-  const [formTitleAr, setFormTitleAr] = useState('');
   const [formDesc, setFormDesc] = useState('');
-  const [formDescAr, setFormDescAr] = useState('');
   const [formAgeGroupId, setFormAgeGroupId] = useState<string>('all');
   const [formLevelId, setFormLevelId] = useState<string>('all');
   const [formSubscription, setFormSubscription] = useState<string>('all');
@@ -232,9 +230,7 @@ export default function Materials() {
 
   const resetForm = () => {
     setFormTitle('');
-    setFormTitleAr('');
     setFormDesc('');
-    setFormDescAr('');
     setFormAgeGroupId('all');
     setFormLevelId('all');
     setFormSubscription('all');
@@ -248,9 +244,7 @@ export default function Materials() {
   const openEditDialog = (m: Material) => {
     setEditingMaterial(m);
     setFormTitle(m.title);
-    setFormTitleAr(m.title_ar);
     setFormDesc(m.description || '');
-    setFormDescAr(m.description_ar || '');
     setFormAgeGroupId(m.age_group_id || 'all');
     setFormLevelId(m.level_id || 'all');
     setFormSubscription(m.subscription_type || 'all');
@@ -261,7 +255,7 @@ export default function Materials() {
   };
 
   const handleSave = async () => {
-    if (!formTitle.trim() || !formTitleAr.trim()) {
+    if (!formTitle.trim()) {
       toast({ title: isRTL ? 'العنوان مطلوب' : 'Title is required', variant: 'destructive' });
       return;
     }
@@ -298,9 +292,9 @@ export default function Materials() {
 
       const record: Record<string, unknown> = {
         title: formTitle,
-        title_ar: formTitleAr,
+        title_ar: formTitle,
         description: formDesc || null,
-        description_ar: formDescAr || null,
+        description_ar: formDesc || null,
         material_type: formType,
         file_url: fileUrl,
         file_type: fileType,
@@ -370,25 +364,13 @@ export default function Materials() {
                 <DialogTitle>{editingMaterial ? (isRTL ? 'تعديل مادة' : 'Edit Material') : (isRTL ? 'إضافة مادة جديدة' : 'Add New Material')}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-2">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>{isRTL ? 'العنوان (EN)' : 'Title (EN)'}</Label>
-                    <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>{isRTL ? 'العنوان (AR)' : 'Title (AR)'}</Label>
-                    <Input value={formTitleAr} onChange={(e) => setFormTitleAr(e.target.value)} dir="rtl" />
-                  </div>
+                <div>
+                  <Label>{isRTL ? 'العنوان' : 'Title'}</Label>
+                  <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>{isRTL ? 'الوصف (EN)' : 'Description (EN)'}</Label>
-                    <Textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} rows={2} />
-                  </div>
-                  <div>
-                    <Label>{isRTL ? 'الوصف (AR)' : 'Description (AR)'}</Label>
-                    <Textarea value={formDescAr} onChange={(e) => setFormDescAr(e.target.value)} rows={2} dir="rtl" />
-                  </div>
+                <div>
+                  <Label>{isRTL ? 'الوصف' : 'Description'}</Label>
+                  <Textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} rows={2} />
                 </div>
 
                 {/* Targeting */}

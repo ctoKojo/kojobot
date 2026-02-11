@@ -68,7 +68,7 @@ export function AssignmentSubmissionsDialog({
   const [loading, setLoading] = useState(true);
   const [submissions, setSubmissions] = useState<AssignmentSubmissionData[]>([]);
   const [selectedSubmission, setSelectedSubmission] = useState<AssignmentSubmissionData | null>(null);
-  const [gradeForm, setGradeForm] = useState({ score: '', feedback: '', feedback_ar: '' });
+  const [gradeForm, setGradeForm] = useState({ score: '', feedback: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -141,13 +141,12 @@ export function AssignmentSubmissionsDialog({
     setGradeForm({
       score: submission.score?.toString() || '',
       feedback: submission.feedback || '',
-      feedback_ar: submission.feedback_ar || '',
     });
   };
 
   const goBack = () => {
     setSelectedSubmission(null);
-    setGradeForm({ score: '', feedback: '', feedback_ar: '' });
+    setGradeForm({ score: '', feedback: '' });
   };
 
   const handleSaveGrade = async () => {
@@ -170,7 +169,7 @@ export function AssignmentSubmissionsDialog({
         .update({
           score: scoreNum,
           feedback: gradeForm.feedback || null,
-          feedback_ar: gradeForm.feedback_ar || null,
+          feedback_ar: gradeForm.feedback || null,
           status: 'graded',
           graded_by: user.id,
           graded_at: new Date().toISOString(),
@@ -208,7 +207,7 @@ export function AssignmentSubmissionsDialog({
         .update({
           status: 'revision_requested',
           feedback: gradeForm.feedback || null,
-          feedback_ar: gradeForm.feedback_ar || null,
+          feedback_ar: gradeForm.feedback || null,
         })
         .eq('id', selectedSubmission.submission_id);
 
@@ -452,24 +451,14 @@ export function AssignmentSubmissionsDialog({
             </div>
 
             {/* Feedback */}
-            <div className="grid gap-4">
+            <div className="space-y-2">
               <div className="space-y-2">
-                <Label>{isRTL ? 'ملاحظات' : 'Feedback'} (English)</Label>
+                <Label>{isRTL ? 'ملاحظات' : 'Feedback'}</Label>
                 <Textarea
                   value={gradeForm.feedback}
                   onChange={(e) => setGradeForm({ ...gradeForm, feedback: e.target.value })}
-                  placeholder="Enter feedback..."
+                  placeholder={isRTL ? 'أدخل الملاحظات...' : 'Enter feedback...'}
                   rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{isRTL ? 'ملاحظات' : 'Feedback'} (عربي)</Label>
-                <Textarea
-                  value={gradeForm.feedback_ar}
-                  onChange={(e) => setGradeForm({ ...gradeForm, feedback_ar: e.target.value })}
-                  placeholder="أدخل الملاحظات..."
-                  rows={3}
-                  dir="rtl"
                 />
               </div>
             </div>

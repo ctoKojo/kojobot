@@ -39,7 +39,6 @@ export function IssueWarningDialog({
   const [loading, setLoading] = useState(false);
   const [warningType, setWarningType] = useState('');
   const [reason, setReason] = useState('');
-  const [reasonAr, setReasonAr] = useState('');
 
   const handleSubmit = async () => {
     if (!warningType || !reason.trim()) {
@@ -54,7 +53,7 @@ export function IssueWarningDialog({
         issued_by: user!.id,
         warning_type: warningType,
         reason: reason.trim(),
-        reason_ar: reasonAr.trim() || null,
+        reason_ar: reason.trim(),
         is_active: true,
       });
 
@@ -68,7 +67,7 @@ export function IssueWarningDialog({
         title: 'New Warning',
         title_ar: 'إنذار جديد',
         message: `You have received a warning: ${reason.trim()}`,
-        message_ar: `لقد تلقيت إنذارًا: ${reasonAr.trim() || reason.trim()}`,
+        message_ar: `لقد تلقيت إنذارًا: ${reason.trim()}`,
         action_url: '/my-warnings',
       });
 
@@ -76,7 +75,6 @@ export function IssueWarningDialog({
       onOpenChange(false);
       setWarningType('');
       setReason('');
-      setReasonAr('');
       onSuccess?.();
     } catch (error) {
       console.error('Error issuing warning:', error);
@@ -120,23 +118,12 @@ export function IssueWarningDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>{isRTL ? 'السبب (بالإنجليزية)' : 'Reason (English)'} *</Label>
+            <Label>{isRTL ? 'السبب' : 'Reason'} *</Label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder={isRTL ? 'اكتب سبب الإنذار...' : 'Enter warning reason...'}
               rows={3}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>{isRTL ? 'السبب (بالعربية)' : 'Reason (Arabic)'}</Label>
-            <Textarea
-              value={reasonAr}
-              onChange={(e) => setReasonAr(e.target.value)}
-              placeholder={isRTL ? 'اكتب السبب بالعربية (اختياري)...' : 'Enter reason in Arabic (optional)...'}
-              rows={3}
-              dir="rtl"
             />
           </div>
         </div>

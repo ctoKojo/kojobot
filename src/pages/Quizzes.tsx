@@ -82,9 +82,7 @@ export default function QuizzesPage() {
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
   const [formData, setFormData] = useState({
     title: '',
-    title_ar: '',
     description: '',
-    description_ar: '',
     duration_minutes: 30,
     passing_score: 60,
     age_group_id: '',
@@ -119,9 +117,9 @@ export default function QuizzesPage() {
     try {
       const payload = {
         title: formData.title,
-        title_ar: formData.title_ar,
+        title_ar: formData.title,
         description: formData.description || null,
-        description_ar: formData.description_ar || null,
+        description_ar: formData.description || null,
         duration_minutes: formData.duration_minutes,
         passing_score: formData.passing_score,
         age_group_id: formData.age_group_id || null,
@@ -169,9 +167,7 @@ export default function QuizzesPage() {
   const resetForm = () => {
     setFormData({
       title: '',
-      title_ar: '',
       description: '',
-      description_ar: '',
       duration_minutes: 30,
       passing_score: 60,
       age_group_id: '',
@@ -183,9 +179,7 @@ export default function QuizzesPage() {
     setEditingQuiz(quiz);
     setFormData({
       title: quiz.title,
-      title_ar: quiz.title_ar,
       description: quiz.description || '',
-      description_ar: quiz.description_ar || '',
       duration_minutes: quiz.duration_minutes,
       passing_score: quiz.passing_score,
       age_group_id: quiz.age_group_id || '',
@@ -273,37 +267,19 @@ export default function QuizzesPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
               <div className="grid gap-2">
-                <Label>{t.quizzes.quizName} (English)</Label>
+                <Label>{t.quizzes.quizName}</Label>
                 <Input
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g., Scratch Basics Quiz"
+                  placeholder={isRTL ? 'مثال: اختبار سكراتش' : 'e.g., Scratch Basics Quiz'}
                 />
               </div>
               <div className="grid gap-2">
-                <Label>{t.quizzes.quizName} (عربي)</Label>
-                <Input
-                  value={formData.title_ar}
-                  onChange={(e) => setFormData({ ...formData, title_ar: e.target.value })}
-                  placeholder="مثال: اختبار سكراتش"
-                  dir="rtl"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>{t.assignments.description} (English)</Label>
+                <Label>{t.assignments.description}</Label>
                 <Textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Quiz description..."
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>{t.assignments.description} (عربي)</Label>
-                <Textarea
-                  value={formData.description_ar}
-                  onChange={(e) => setFormData({ ...formData, description_ar: e.target.value })}
-                  placeholder="وصف الكويز..."
-                  dir="rtl"
+                  placeholder={isRTL ? 'وصف الكويز...' : 'Quiz description...'}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">

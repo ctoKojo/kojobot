@@ -56,7 +56,6 @@ export default function GradeAssignment() {
   const [studentProfile, setStudentProfile] = useState<Profile | null>(null);
   const [score, setScore] = useState<string>('');
   const [feedback, setFeedback] = useState('');
-  const [feedbackAr, setFeedbackAr] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [requestingRevision, setRequestingRevision] = useState(false);
@@ -78,7 +77,6 @@ export default function GradeAssignment() {
       setSubmission(submissionData);
       setScore(submissionData.score?.toString() || '');
       setFeedback(submissionData.feedback || '');
-      setFeedbackAr(submissionData.feedback_ar || '');
 
       // Get assignment
       const { data: assignmentData } = await supabase
@@ -139,7 +137,7 @@ export default function GradeAssignment() {
         .update({
           score: scoreNum,
           feedback: feedback || null,
-          feedback_ar: feedbackAr || null,
+          feedback_ar: feedback || null,
           status: 'graded',
           graded_at: new Date().toISOString(),
           graded_by: user.id,
@@ -189,7 +187,7 @@ export default function GradeAssignment() {
         .update({
           status: 'revision_requested',
           feedback: feedback || null,
-          feedback_ar: feedbackAr || null,
+          feedback_ar: feedback || null,
         })
         .eq('id', submission.id);
 
@@ -384,27 +382,14 @@ export default function GradeAssignment() {
               </div>
             </div>
 
-            {/* Feedback English */}
+            {/* Feedback */}
             <div className="space-y-2">
-              <Label>{isRTL ? 'ملاحظات (إنجليزي)' : 'Feedback (English)'}</Label>
+              <Label>{isRTL ? 'ملاحظات' : 'Feedback'}</Label>
               <Textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
-                placeholder={isRTL ? 'اكتب ملاحظاتك بالإنجليزية...' : 'Write your feedback in English...'}
+                placeholder={isRTL ? 'اكتب ملاحظاتك...' : 'Write your feedback...'}
                 className="min-h-[100px]"
-                dir="ltr"
-              />
-            </div>
-
-            {/* Feedback Arabic */}
-            <div className="space-y-2">
-              <Label>{isRTL ? 'ملاحظات (عربي)' : 'Feedback (Arabic)'}</Label>
-              <Textarea
-                value={feedbackAr}
-                onChange={(e) => setFeedbackAr(e.target.value)}
-                placeholder={isRTL ? 'اكتب ملاحظاتك بالعربية...' : 'Write your feedback in Arabic...'}
-                className="min-h-[100px]"
-                dir="rtl"
               />
             </div>
 

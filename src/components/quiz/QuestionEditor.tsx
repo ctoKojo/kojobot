@@ -39,6 +39,10 @@ export function QuestionEditor({ questions, onChange }: QuestionEditorProps) {
 
   const updateQuestion = (index: number, updates: Partial<Question>) => {
     const updated = [...questions];
+    // Auto-copy to AR fields
+    if ('question_text' in updates) {
+      updates.question_text_ar = updates.question_text;
+    }
     updated[index] = { ...updated[index], ...updates };
     onChange(updated);
   };
@@ -48,10 +52,11 @@ export function QuestionEditor({ questions, onChange }: QuestionEditorProps) {
     onChange(updated.map((q, i) => ({ ...q, order_index: i })));
   };
 
-  const updateOption = (qIndex: number, optIndex: number, lang: 'en' | 'ar', value: string) => {
+  const updateOption = (qIndex: number, optIndex: number, value: string) => {
     const updated = [...questions];
     const options = { ...updated[qIndex].options };
-    options[lang][optIndex] = value;
+    options.en[optIndex] = value;
+    options.ar[optIndex] = value;
     updated[qIndex] = { ...updated[qIndex], options };
     onChange(updated);
   };
@@ -90,24 +95,13 @@ export function QuestionEditor({ questions, onChange }: QuestionEditorProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Question Text */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{isRTL ? 'نص السؤال (English)' : 'Question Text (English)'}</Label>
-                <Input
-                  value={question.question_text}
-                  onChange={(e) => updateQuestion(qIndex, { question_text: e.target.value })}
-                  placeholder="Enter question in English..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{isRTL ? 'نص السؤال (عربي)' : 'Question Text (Arabic)'}</Label>
-                <Input
-                  value={question.question_text_ar}
-                  onChange={(e) => updateQuestion(qIndex, { question_text_ar: e.target.value })}
-                  placeholder="أدخل نص السؤال..."
-                  dir="rtl"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>{isRTL ? 'نص السؤال' : 'Question Text'}</Label>
+              <Input
+                value={question.question_text}
+                onChange={(e) => updateQuestion(qIndex, { question_text: e.target.value })}
+                placeholder={isRTL ? 'أدخل نص السؤال...' : 'Enter question text...'}
+              />
             </div>
 
             {/* Options */}
@@ -120,19 +114,12 @@ export function QuestionEditor({ questions, onChange }: QuestionEditorProps) {
                 {[0, 1, 2, 3].map((optIndex) => (
                   <div key={optIndex} className="flex items-center gap-3 p-3 rounded-lg border">
                     <RadioGroupItem value={optIndex.toString()} id={`q${qIndex}-opt${optIndex}`} />
-                    <div className="flex-1 grid gap-2 md:grid-cols-2">
-                      <Input
-                        value={question.options.en[optIndex]}
-                        onChange={(e) => updateOption(qIndex, optIndex, 'en', e.target.value)}
-                        placeholder={`Option ${optIndex + 1} (English)`}
-                      />
-                      <Input
-                        value={question.options.ar[optIndex]}
-                        onChange={(e) => updateOption(qIndex, optIndex, 'ar', e.target.value)}
-                        placeholder={`الخيار ${optIndex + 1} (عربي)`}
-                        dir="rtl"
-                      />
-                    </div>
+                    <Input
+                      value={question.options.en[optIndex]}
+                      onChange={(e) => updateOption(qIndex, optIndex, e.target.value)}
+                      placeholder={isRTL ? `الخيار ${optIndex + 1}` : `Option ${optIndex + 1}`}
+                      className="flex-1"
+                    />
                   </div>
                 ))}
               </RadioGroup>

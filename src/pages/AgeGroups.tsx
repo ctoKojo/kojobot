@@ -51,7 +51,6 @@ export default function AgeGroupsPage() {
   const [editingGroup, setEditingGroup] = useState<AgeGroup | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    name_ar: '',
     min_age: 0,
     max_age: 0,
   });
@@ -83,10 +82,11 @@ export default function AgeGroupsPage() {
 
   const handleSubmit = async () => {
     try {
+      const payload = { ...formData, name_ar: formData.name };
       if (editingGroup) {
         const { error } = await supabase
           .from('age_groups')
-          .update(formData)
+          .update(payload)
           .eq('id', editingGroup.id);
 
         if (error) throw error;
@@ -97,7 +97,7 @@ export default function AgeGroupsPage() {
       } else {
         const { error } = await supabase
           .from('age_groups')
-          .insert([formData]);
+          .insert([payload]);
 
         if (error) throw error;
         toast({
@@ -108,7 +108,7 @@ export default function AgeGroupsPage() {
 
       setIsDialogOpen(false);
       setEditingGroup(null);
-      setFormData({ name: '', name_ar: '', min_age: 0, max_age: 0 });
+      setFormData({ name: '', min_age: 0, max_age: 0 });
       fetchAgeGroups();
     } catch (error) {
       console.error('Error saving age group:', error);
@@ -124,7 +124,6 @@ export default function AgeGroupsPage() {
     setEditingGroup(group);
     setFormData({
       name: group.name,
-      name_ar: group.name_ar,
       min_age: group.min_age,
       max_age: group.max_age,
     });
@@ -178,7 +177,7 @@ export default function AgeGroupsPage() {
             <DialogTrigger asChild>
               <Button className="kojo-gradient" onClick={() => {
                 setEditingGroup(null);
-                setFormData({ name: '', name_ar: '', min_age: 0, max_age: 0 });
+                setFormData({ name: '', min_age: 0, max_age: 0 });
               }}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t.ageGroups.addAgeGroup}
@@ -195,22 +194,12 @@ export default function AgeGroupsPage() {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Name (English)</Label>
+                  <Label htmlFor="name">{isRTL ? 'الاسم' : 'Name'}</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., 6-9 Years"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="name_ar">الاسم (عربي)</Label>
-                  <Input
-                    id="name_ar"
-                    value={formData.name_ar}
-                    onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-                    placeholder="مثال: 6-9 سنوات"
-                    dir="rtl"
+                    placeholder={isRTL ? 'مثال: 6-9 سنوات' : 'e.g., 6-9 Years'}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
