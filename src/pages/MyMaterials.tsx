@@ -79,18 +79,24 @@ export default function MyMaterials() {
                       </span>
                     </div>
                   </div>
-                  <Button size="icon" variant="outline" className="shrink-0" onClick={() => {
+                  <Button size="icon" variant="outline" className="shrink-0" onClick={async () => {
                     if (m.material_type === 'link') {
                       window.open(m.file_url, '_blank');
                     } else {
-                      const link = document.createElement('a');
-                      link.href = m.file_url;
-                      link.download = m.original_filename || m.title || 'download';
-                      link.target = '_blank';
-                      link.rel = 'noopener noreferrer';
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
+                      try {
+                        const response = await fetch(m.file_url);
+                        const blob = await response.blob();
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = m.original_filename || m.title || 'download';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                      } catch {
+                        window.open(m.file_url, '_blank');
+                      }
                     }
                   }}>
                     {m.material_type === 'link' ? <ExternalLink className="h-4 w-4" /> : <Download className="h-4 w-4" />}
