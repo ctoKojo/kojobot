@@ -20,6 +20,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { notificationService } from '@/lib/notificationService';
 
 interface MakeupSession {
   id: string;
@@ -230,6 +231,19 @@ export default function MakeupSessionsPage() {
         .eq('id', selectedSession.id);
 
       if (error) throw error;
+
+      // Send notification to student
+      await notificationService.create({
+        user_id: selectedSession.student_id,
+        title: 'Makeup Session Scheduled',
+        title_ar: 'تم جدولة سيشن تعويضية',
+        message: `Your makeup session for "${selectedSession.group_name}" has been scheduled on ${scheduleForm.date} at ${scheduleForm.time}. Please confirm or reject.`,
+        message_ar: `تم جدولة سيشن تعويضية لمجموعة "${selectedSession.group_name}" في ${scheduleForm.date} الساعة ${scheduleForm.time}. يرجى التأكيد أو الرفض.`,
+        type: 'info',
+        category: 'makeup_session',
+        action_url: '/profile',
+      });
+
       toast({ title: isRTL ? 'تم الجدولة' : 'Scheduled', description: isRTL ? 'تم جدولة السيشن التعويضية - في انتظار تأكيد الطالب' : 'Makeup session scheduled - awaiting student confirmation' });
       setScheduleDialogOpen(false);
       fetchMakeupSessions();
