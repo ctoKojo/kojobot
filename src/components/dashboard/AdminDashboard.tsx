@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, GraduationCap, Calendar, TrendingUp, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Users, GraduationCap, Calendar, TrendingUp, AlertTriangle, RefreshCw, DollarSign, Ban } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -14,6 +14,8 @@ interface AdminStats {
   expiringSubscriptions: number;
   activeWarnings: number;
   pendingMakeupSessions: number;
+  overduePayments: number;
+  suspendedStudents: number;
 }
 
 export function AdminDashboard() {
@@ -28,6 +30,8 @@ export function AdminDashboard() {
     expiringSubscriptions: 0,
     activeWarnings: 0,
     pendingMakeupSessions: 0,
+    overduePayments: 0,
+    suspendedStudents: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -55,6 +59,21 @@ export function AdminDashboard() {
         .eq('status', 'active')
         .lte('end_date', weekFromNow.toISOString().split('T')[0]);
 
+      // Check overdue and suspended
+      const { count: suspendedCount } = await supabase
+        .from('subscriptions')
+        .select('id', { count: 'exact' })
+        .eq('status', 'active')
+        .eq('is_suspended', true);
+
+      const today = new Date().toISOString().split('T')[0];
+      const { count: overdueCount } = await supabase
+        .from('subscriptions')
+        .select('id', { count: 'exact' })
+        .eq('status', 'active')
+        .lt('next_payment_date', today)
+        .gt('remaining_amount', 0);
+
       setStats({
         totalStudents: studentsRes.count || 0,
         totalInstructors: instructorsRes.count || 0,
@@ -63,6 +82,8 @@ export function AdminDashboard() {
         expiringSubscriptions: expiringCount || 0,
         activeWarnings: warningsRes.count || 0,
         pendingMakeupSessions: makeupRes.count || 0,
+        overduePayments: overdueCount || 0,
+        suspendedStudents: suspendedCount || 0,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -186,6 +207,27 @@ export function AdminDashboard() {
               {isRTL 
                 ? `يوجد ${stats.expiringSubscriptions} اشتراك سينتهي خلال الأسبوع القادم`
                 : `${stats.expiringSubscriptions} subscriptions will expire within the next week`
+              }
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+      {/* Overdue Payments Alert */}
+      {stats.overduePayments > 0 && (
+        <Card 
+          className="border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/finance')}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
+              <DollarSign className="h-5 w-5" />
+              {isRTL ? 'مدفوعات متأخرة' : 'Overdue Payments'}
+            </CardTitle>
+            <CardDescription className="text-red-600 dark:text-red-400">
+              {isRTL 
+                ? `يوجد ${stats.overduePayments} طالب متأخر في الدفع${stats.suspendedStudents > 0 ? ` (${stats.suspendedStudents} موقوف)` : ''}`
+                : `${stats.overduePayments} students with overdue payments${stats.suspendedStudents > 0 ? ` (${stats.suspendedStudents} suspended)` : ''}`
               }
             </CardDescription>
           </CardHeader>

@@ -762,6 +762,104 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_date: string
+          payment_method: string
+          payment_type: string
+          recorded_by: string
+          student_id: string
+          subscription_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string
+          payment_type?: string
+          recorded_by: string
+          student_id: string
+          subscription_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string
+          payment_type?: string
+          recorded_by?: string
+          student_id?: string
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_plans: {
+        Row: {
+          attendance_mode: string
+          created_at: string
+          discount_percentage: number
+          group_type: Database["public"]["Enums"]["group_type"]
+          id: string
+          is_active: boolean
+          max_students: number
+          min_students: number
+          name: string
+          name_ar: string
+          price_1_month: number
+          price_3_months: number
+          price_before_discount: number
+          updated_at: string
+        }
+        Insert: {
+          attendance_mode?: string
+          created_at?: string
+          discount_percentage?: number
+          group_type: Database["public"]["Enums"]["group_type"]
+          id?: string
+          is_active?: boolean
+          max_students?: number
+          min_students?: number
+          name: string
+          name_ar: string
+          price_1_month: number
+          price_3_months: number
+          price_before_discount: number
+          updated_at?: string
+        }
+        Update: {
+          attendance_mode?: string
+          created_at?: string
+          discount_percentage?: number
+          group_type?: Database["public"]["Enums"]["group_type"]
+          id?: string
+          is_active?: boolean
+          max_students?: number
+          min_students?: number
+          name?: string
+          name_ar?: string
+          price_1_month?: number
+          price_3_months?: number
+          price_before_discount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age_group_id: string | null
@@ -1148,8 +1246,13 @@ export type Database = {
           created_at: string
           end_date: string
           id: string
+          installment_amount: number | null
+          is_suspended: boolean
+          next_payment_date: string | null
           notes: string | null
           paid_amount: number
+          payment_type: string
+          pricing_plan_id: string | null
           remaining_amount: number | null
           start_date: string
           status: string
@@ -1161,8 +1264,13 @@ export type Database = {
           created_at?: string
           end_date: string
           id?: string
+          installment_amount?: number | null
+          is_suspended?: boolean
+          next_payment_date?: string | null
           notes?: string | null
           paid_amount?: number
+          payment_type?: string
+          pricing_plan_id?: string | null
           remaining_amount?: number | null
           start_date: string
           status?: string
@@ -1174,8 +1282,13 @@ export type Database = {
           created_at?: string
           end_date?: string
           id?: string
+          installment_amount?: number | null
+          is_suspended?: boolean
+          next_payment_date?: string | null
           notes?: string | null
           paid_amount?: number
+          payment_type?: string
+          pricing_plan_id?: string | null
           remaining_amount?: number | null
           start_date?: string
           status?: string
@@ -1183,7 +1296,15 @@ export type Database = {
           total_amount?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_pricing_plan_id_fkey"
+            columns: ["pricing_plan_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
