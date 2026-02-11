@@ -79,7 +79,20 @@ export default function MyMaterials() {
                       </span>
                     </div>
                   </div>
-                  <Button size="icon" variant="outline" className="shrink-0" onClick={() => window.open(m.file_url, '_blank')}>
+                  <Button size="icon" variant="outline" className="shrink-0" onClick={() => {
+                    if (m.material_type === 'link') {
+                      window.open(m.file_url, '_blank');
+                    } else {
+                      const link = document.createElement('a');
+                      link.href = m.file_url;
+                      link.download = m.original_filename || m.title || 'download';
+                      link.target = '_blank';
+                      link.rel = 'noopener noreferrer';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }
+                  }}>
                     {m.material_type === 'link' ? <ExternalLink className="h-4 w-4" /> : <Download className="h-4 w-4" />}
                   </Button>
                 </CardContent>
