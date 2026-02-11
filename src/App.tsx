@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react";
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -10,49 +10,40 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAdminSessionTimeout } from "@/hooks/useAdminSessionTimeout";
-import { KojobotLogo } from "@/components/KojobotLogo";
 
-// Auth is not lazy-loaded since it's the landing page (critical for LCP)
 import Auth from "./pages/Auth";
-
-// Lazy load all other pages for code splitting
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Students = lazy(() => import("./pages/Students"));
-const Instructors = lazy(() => import("./pages/Instructors"));
-const Groups = lazy(() => import("./pages/Groups"));
-const AgeGroups = lazy(() => import("./pages/AgeGroups"));
-const Levels = lazy(() => import("./pages/Levels"));
-const Notifications = lazy(() => import("./pages/Notifications"));
-const ActivityLog = lazy(() => import("./pages/ActivityLog"));
-const Settings = lazy(() => import("./pages/Settings"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const Quizzes = lazy(() => import("./pages/Quizzes"));
-const Assignments = lazy(() => import("./pages/Assignments"));
-const Attendance = lazy(() => import("./pages/Attendance"));
-const Sessions = lazy(() => import("./pages/Sessions"));
-const TakeQuiz = lazy(() => import("./pages/TakeQuiz"));
-const SubmitAssignment = lazy(() => import("./pages/SubmitAssignment"));
-const QuizEditor = lazy(() => import("./pages/QuizEditor"));
-const GradeAssignment = lazy(() => import("./pages/GradeAssignment"));
-const AssignmentSubmissions = lazy(() => import("./pages/AssignmentSubmissions"));
-const StudentProfile = lazy(() => import("./pages/StudentProfile"));
-const InstructorProfile = lazy(() => import("./pages/InstructorProfile"));
-const GroupDetails = lazy(() => import("./pages/GroupDetails"));
-const Profile = lazy(() => import("./pages/Profile"));
-const InstructorSchedule = lazy(() => import("./pages/InstructorSchedule"));
-const MyQuizzes = lazy(() => import("./pages/MyQuizzes"));
-const QuizReports = lazy(() => import("./pages/QuizReports"));
-const MyInstructorQuizzes = lazy(() => import("./pages/MyInstructorQuizzes"));
-const SessionDetails = lazy(() => import("./pages/SessionDetails"));
-const InstructorWarnings = lazy(() => import("./pages/InstructorWarnings"));
-const StudentWarnings = lazy(() => import("./pages/StudentWarnings"));
-const MyInstructorWarningsPage = lazy(() => import("./pages/MyInstructorWarnings"));
-const MonthlyReports = lazy(() => import("./pages/MonthlyReports"));
-
-// Minimal loading fallback - no visible loader to avoid flash during navigation
-const PageLoader = () => (
-  <div className="min-h-screen bg-background" />
-);
+import Dashboard from "./pages/Dashboard";
+import Students from "./pages/Students";
+import Instructors from "./pages/Instructors";
+import Groups from "./pages/Groups";
+import AgeGroups from "./pages/AgeGroups";
+import Levels from "./pages/Levels";
+import Notifications from "./pages/Notifications";
+import ActivityLog from "./pages/ActivityLog";
+import Settings from "./pages/Settings";
+import NotFound from "./pages/NotFound";
+import Quizzes from "./pages/Quizzes";
+import Assignments from "./pages/Assignments";
+import Attendance from "./pages/Attendance";
+import Sessions from "./pages/Sessions";
+import TakeQuiz from "./pages/TakeQuiz";
+import SubmitAssignment from "./pages/SubmitAssignment";
+import QuizEditor from "./pages/QuizEditor";
+import GradeAssignment from "./pages/GradeAssignment";
+import AssignmentSubmissions from "./pages/AssignmentSubmissions";
+import StudentProfile from "./pages/StudentProfile";
+import InstructorProfile from "./pages/InstructorProfile";
+import GroupDetails from "./pages/GroupDetails";
+import Profile from "./pages/Profile";
+import InstructorSchedule from "./pages/InstructorSchedule";
+import MyQuizzes from "./pages/MyQuizzes";
+import QuizReports from "./pages/QuizReports";
+import MyInstructorQuizzes from "./pages/MyInstructorQuizzes";
+import SessionDetails from "./pages/SessionDetails";
+import InstructorWarnings from "./pages/InstructorWarnings";
+import StudentWarnings from "./pages/StudentWarnings";
+import MyInstructorWarningsPage from "./pages/MyInstructorWarnings";
+import MonthlyReports from "./pages/MonthlyReports";
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
@@ -73,7 +64,6 @@ const App = () => (
               <Toaster />
               <Sonner />
             <BrowserRouter>
-              <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/auth" element={<Auth />} />
@@ -110,7 +100,6 @@ const App = () => (
                   <Route path="/monthly-reports" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student']}><MonthlyReports /></ProtectedRoute>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
-              </Suspense>
             </BrowserRouter>
           </TooltipProvider>
         </AuthProvider>
