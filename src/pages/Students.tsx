@@ -755,6 +755,14 @@ export default function StudentsPage() {
                     >
                       {getAttendanceModeName(student.attendance_mode)}
                     </Badge>
+                    {(() => {
+                      const ps = getPaymentStatus(student.user_id);
+                      return (
+                        <Badge variant={ps.variant} className={`text-xs ${ps.color}`}>
+                          {ps.label}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                 </CardContent>
               </Card>
