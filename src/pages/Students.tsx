@@ -70,6 +70,16 @@ interface Student {
   attendance_mode: AttendanceMode | null;
 }
 
+interface StudentSubscription {
+  student_id: string;
+  status: string;
+  is_suspended: boolean;
+  remaining_amount: number | null;
+  next_payment_date: string | null;
+  paid_amount: number;
+  total_amount: number;
+}
+
 interface AgeGroup {
   id: string;
   name: string;
@@ -88,6 +98,7 @@ export default function StudentsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
+  const [subscriptions, setSubscriptions] = useState<StudentSubscription[]>([]);
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,8 +188,17 @@ export default function StudentsPage() {
 
         if (profilesError) throw profilesError;
         setStudents((profilesData || []) as Student[]);
+
+        // Fetch active subscriptions for all students
+        const { data: subsData } = await supabase
+          .from('subscriptions')
+          .select('student_id, status, is_suspended, remaining_amount, next_payment_date, paid_amount, total_amount')
+          .eq('status', 'active')
+          .in('student_id', studentUserIds);
+        setSubscriptions((subsData || []) as StudentSubscription[]);
       } else {
         setStudents([]);
+        setSubscriptions([]);
       }
 
       // Fetch age groups
@@ -358,6 +378,15 @@ export default function StudentsPage() {
     if (!mode) return language === 'ar' ? 'حضوري' : 'Offline';
     const found = attendanceModes.find((m) => m.value === mode);
     return found ? (language === 'ar' ? found.labelAr : found.label) : '-';
+  };
+
+  const getPaymentStatus = (userId: string) => {
+    const sub = subscriptions.find(s => s.student_id === userId);
+    if (!sub) return { label: isRTL ? 'لا اشتراك' : 'No Sub', variant: 'outline' as const, color: '' };
+    if (sub.is_suspended) return { label: isRTL ? 'موقوف' : 'Suspended', variant: 'destructive' as const, color: '' };
+    if (Number(sub.remaining_amount) <= 0) return { label: isRTL ? 'مدفوع' : 'Paid', variant: 'default' as const, color: 'bg-green-600 hover:bg-green-700' };
+    if (sub.next_payment_date && new Date(sub.next_payment_date) < new Date()) return { label: isRTL ? 'متأخر' : 'Overdue', variant: 'destructive' as const, color: '' };
+    return { label: isRTL ? 'جاري' : 'Active', variant: 'secondary' as const, color: '' };
   };
 
   return (
@@ -744,6 +773,7 @@ export default function StudentsPage() {
                   <TableHead>{t.students.ageGroup}</TableHead>
                   <TableHead>{t.students.level}</TableHead>
                   <TableHead>{isRTL ? 'الاشتراك' : 'Subscription'}</TableHead>
+                  <TableHead>{isRTL ? 'حالة الدفع' : 'Payment'}</TableHead>
                   <TableHead>{isRTL ? 'نوع الحضور' : 'Attendance'}</TableHead>
                   <TableHead className="w-[100px]">{t.common.actions}</TableHead>
                 </TableRow>
@@ -751,13 +781,13 @@ export default function StudentsPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredStudents.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       {isRTL ? 'لا يوجد طلاب' : 'No students found'}
                     </TableCell>
                   </TableRow>
@@ -786,6 +816,16 @@ export default function StudentsPage() {
                         <Badge variant="secondary">
                           {getSubscriptionTypeName(student.subscription_type)}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const ps = getPaymentStatus(student.user_id);
+                          return (
+                            <Badge variant={ps.variant} className={ps.color}>
+                              {ps.label}
+                            </Badge>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <Badge 

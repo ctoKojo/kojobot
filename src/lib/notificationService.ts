@@ -197,4 +197,70 @@ export const notificationService = {
       action_url: '/groups',
     });
   },
+
+  // Notify about payment due soon
+  async notifyPaymentDueSoon(studentId: string, amount: number, dueDate: string) {
+    return this.create({
+      user_id: studentId,
+      title: 'Payment Due Soon',
+      title_ar: 'موعد الدفع قريب',
+      message: `Your next payment of ${amount} EGP is due on ${dueDate}. Please arrange payment to avoid account suspension.`,
+      message_ar: `موعد الدفع القادم ${amount} ج.م في ${dueDate}. يرجى الدفع لتجنب إيقاف الحساب.`,
+      type: 'warning',
+      category: 'payment',
+    });
+  },
+
+  // Notify when payment is recorded
+  async notifyPaymentRecorded(studentId: string, amount: number, remaining: number) {
+    return this.create({
+      user_id: studentId,
+      title: 'Payment Received',
+      title_ar: 'تم استلام الدفعة',
+      message: `Your payment of ${amount} EGP has been recorded. Remaining: ${remaining} EGP.`,
+      message_ar: `تم تسجيل دفعة بقيمة ${amount} ج.م. المتبقي: ${remaining} ج.م.`,
+      type: 'success',
+      category: 'payment',
+    });
+  },
+
+  // Notify when account is suspended due to overdue payment
+  async notifyAccountSuspended(studentId: string) {
+    return this.create({
+      user_id: studentId,
+      title: 'Account Suspended',
+      title_ar: 'تم إيقاف حسابك',
+      message: 'Your account has been suspended due to overdue payment. Please contact the administration.',
+      message_ar: 'تم إيقاف حسابك بسبب تأخر في سداد القسط. يرجى التواصل مع الإدارة.',
+      type: 'error',
+      category: 'payment',
+    });
+  },
+
+  // Notify admin about overdue student
+  async notifyAdminOverduePayment(adminId: string, studentName: string, studentNameAr: string, studentId: string) {
+    return this.create({
+      user_id: adminId,
+      title: 'Student Account Suspended',
+      title_ar: 'تم إيقاف حساب طالب',
+      message: `${studentName} has been suspended due to overdue payment.`,
+      message_ar: `تم إيقاف حساب ${studentNameAr || studentName} بسبب تأخر في الدفع.`,
+      type: 'warning',
+      category: 'payment',
+      action_url: `/student/${studentId}`,
+    });
+  },
+
+  // Notify when account is reactivated after payment
+  async notifyAccountReactivated(studentId: string) {
+    return this.create({
+      user_id: studentId,
+      title: 'Account Reactivated',
+      title_ar: 'تم تفعيل حسابك',
+      message: 'Your account has been reactivated after payment. Thank you!',
+      message_ar: 'تم تفعيل حسابك بعد استلام الدفعة. شكراً لك!',
+      type: 'success',
+      category: 'payment',
+    });
+  },
 };
