@@ -61,6 +61,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
       const isSuspended = nextPaymentDate && new Date(nextPaymentDate) < new Date() && remaining > 0;
 
       // Create subscription
+      // Note: remaining_amount is a generated column (total_amount - paid_amount), don't insert it
       const { data: sub, error } = await supabase.from('subscriptions').insert({
         student_id: studentId,
         pricing_plan_id: selectedPlanId,
@@ -69,7 +70,6 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
         end_date: endDate,
         total_amount: totalAmount,
         paid_amount: paidAmount,
-        remaining_amount: remaining,
         installment_amount: paymentType === 'installment' ? installmentAmount : null,
         next_payment_date: nextPaymentDate,
         is_suspended: !!isSuspended,
