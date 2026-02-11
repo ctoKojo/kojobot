@@ -1,90 +1,95 @@
 
-
-# تنظيم عرض المواد التعليمية للمدير
+# إزالة الحقول المزدوجة (عربي/إنجليزي) من كل الفورمات
 
 ## المشكلة
-عرض المواد كقائمة مسطحة (آخر حاجة اتضافت تظهر الأول) يكون عشوائي وصعب التنقل فيه خصوصاً لما المواد تكتر.
+حالياً كل الفورمات بتطلب من المستخدم يدخل البيانات مرتين - مرة بالإنجليزي ومرة بالعربي. المطلوب إن المستخدم يدخل البيانات مرة واحدة بس ونفس القيمة تتحفظ في الحقلين (العربي والإنجليزي).
 
-## الحل: عرض هرمي منظم
+## الحل
+إزالة حقول الإدخال المكررة (AR) من الواجهة، وعند الحفظ نسخ نفس القيمة اللي المستخدم دخلها في الحقلين `title` و `title_ar` (ونفس الكلام لـ `name/name_ar`, `description/description_ar`, إلخ).
 
-### هيكل العرض
-المواد هتظهر مجمّعة ومنظمة بالشكل ده:
+---
 
-```text
-+-- الفئة العمرية: أطفال (6-9)
-|   +-- المستوى 0
-|   |   +-- [مادة 1] [مادة 2] ...
-|   +-- المستوى 1
-|   |   +-- [مادة 1] [مادة 2] ...
-|   +-- كل المستويات (مواد مش محددة للفل معين)
-|       +-- [مادة 1] ...
-|
-+-- الفئة العمرية: ناشئين (10-13)
-|   +-- المستوى 0
-|   |   +-- [مادة 1] ...
-|   ...
-|
-+-- كل الفئات (مواد عامة مش محددة لفئة)
-    +-- [مادة 1] ...
-```
+## الملفات المتأثرة (13 ملف)
 
-### طريقة العرض في الواجهة
+### 1. `src/pages/Materials.tsx`
+- إزالة حقول: Title (AR)، Description (AR)
+- إزالة state: `formTitleAr`، `formDescAr`
+- عند الحفظ: `title_ar = formTitle`، `description_ar = formDesc`
 
-1. **Accordion/Collapsible Sections** - كل فئة عمرية تكون قسم قابل للفتح والإغلاق
-2. جوا كل فئة، الليفلات تظهر كأقسام فرعية مرتبة بترتيب الليفل (`level_order`)
-3. جوا كل ليفل، المواد تظهر كبطاقات (Cards) مرتبة بتاريخ الإضافة (الأحدث الأول)
-4. المواد اللي محددة لـ "كل الفئات" أو "كل اللفلات" تظهر في قسم خاص بعنوان "عام / General"
-5. كل بطاقة مادة تعرض: الاسم، النوع (PDF/فيديو/لينك...)، تاريخ الرفع، وأزرار التعديل والحذف
+### 2. `src/pages/AgeGroups.tsx`
+- إزالة حقل: الاسم (عربي) / Name (Arabic)
+- إزالة `name_ar` من `formData`
+- عند الحفظ: `name_ar = formData.name`
 
-### فلاتر إضافية في أعلى الصفحة
-- فلتر سريع بالفئة العمرية (لإخفاء/إظهار أقسام معينة)
-- فلتر بالباقة (kojo_squad / kojo_core / kojo_x)
-- فلتر بالوضع (أونلاين / أوفلاين)
-- بحث بالاسم
+### 3. `src/pages/Levels.tsx`
+- إزالة حقل: الاسم (عربي)
+- عند الحفظ: `name_ar = formData.name`
+
+### 4. `src/pages/Groups.tsx`
+- إزالة حقل: اسم المجموعة (عربي)
+- عند الحفظ: `name_ar = formData.name`
+
+### 5. `src/pages/Sessions.tsx`
+- إزالة حقل: الموضوع (عربي) / Topic (Arabic)
+- عند الحفظ: `topic_ar = formData.topic`
+
+### 6. `src/pages/Assignments.tsx`
+- إزالة حقول: العنوان (عربي)، الوصف (عربي)
+- عند الحفظ: `title_ar = title`، `description_ar = description`
+
+### 7. `src/pages/SessionDetails.tsx`
+- إزالة حقول: العنوان (عربي)، الوصف (عربي) في فورم الاساينمنت
+- عند الحفظ: نسخ القيم
+
+### 8. `src/pages/Quizzes.tsx`
+- إزالة حقول: اسم الكويز (عربي)، الوصف (عربي)
+- عند الحفظ: `title_ar = title`، `description_ar = description`
+
+### 9. `src/pages/GradeAssignment.tsx`
+- إزالة حقل: ملاحظات (عربي) / Feedback (Arabic)
+- عند الحفظ: `feedback_ar = feedback`
+
+### 10. `src/components/session/AssignmentSubmissionsDialog.tsx`
+- إزالة حقل: ملاحظات (عربي)
+- عند الحفظ: `feedback_ar = feedback`
+
+### 11. `src/components/student/IssueWarningDialog.tsx`
+- إزالة حقل: السبب (بالعربية)
+- عند الحفظ: `reason_ar = reason`
+
+### 12. `src/components/quiz/QuestionEditor.tsx`
+- إزالة حقل: نص السؤال (Arabic) وحقول الخيارات العربية
+- عند الحفظ: `question_text_ar = question_text`، الخيارات العربية = الخيارات الإنجليزية
+
+### 13. `src/components/quiz/DraggableQuestionCard.tsx`
+- التأكد إنه بيحفظ `question_text_ar = question_text` (ده موجود فعلاً)
+- لا حاجة لتعديل لأنه بالفعل بيستخدم حقل واحد
 
 ---
 
 ## التفاصيل التقنية
 
-### الملفات المتأثرة
+### النمط المتبع في كل ملف:
 
-1. **`src/pages/Materials.tsx`** (ملف جديد) - صفحة إدارة المواد للمدير
-   - جلب المواد من جدول `materials` مع join على `age_groups` و `levels`
-   - تجميع المواد في هيكل بيانات هرمي: `Map<age_group_id, Map<level_id, Material[]>>`
-   - ترتيب الفئات حسب `min_age` والليفلات حسب `level_order`
-   - استخدام مكون `Collapsible` من Radix UI لكل مجموعة
-   - المواد اللي `age_group_id = null` تظهر تحت قسم "عام"
-   - المواد اللي `level_id = null` داخل فئة معينة تظهر تحت "كل المستويات"
-
-2. **`src/App.tsx`** - إضافة Route `/materials`
-3. **`src/components/AppSidebar.tsx`** - إضافة رابط "المواد التعليمية" للمدير
-
-### هيكل البيانات في الكود
+1. **إزالة حقول الإدخال المكررة** من الـ JSX (إزالة الـ Input/Textarea الخاص بالعربي)
+2. **إزالة الـ state المكرر** (مثل `formTitleAr`) إن وُجد كـ state منفصل
+3. **تعديل دالة الحفظ** بحيث تنسخ القيمة الأصلية للحقل العربي:
 
 ```text
-groupedMaterials = {
-  "age-group-id-1": {
-    ageGroup: { id, name, name_ar, min_age },
-    levels: {
-      "level-id-1": {
-        level: { id, name, name_ar, level_order },
-        materials: [...]
-      },
-      "all": {  // materials with level_id = null
-        materials: [...]
-      }
-    }
-  },
-  "all": {  // materials with age_group_id = null
-    levels: { ... }
-  }
-}
+عند الحفظ:
+  title_ar = title
+  name_ar = name
+  description_ar = description
+  reason_ar = reason
+  topic_ar = topic
+  feedback_ar = feedback
+  question_text_ar = question_text
 ```
 
-### Migration SQL
-- إنشاء جدول `materials` (كما هو موضح في الخطة السابقة)
-- إنشاء Storage bucket
-- إضافة RLS policies
+4. **تعديل دالة التعديل (Edit)** بحيث لا تحاول ملء حقل عربي غير موجود
+5. **إزالة اللابل "(EN)" / "(English)"** من الحقول المتبقية لأنه مفيش حاجة عربي خلاص
 
-### ملاحظة
-هذا التخطيط يشمل فقط **طريقة عرض المواد للمدير**. صفحة الطالب (`MyMaterials.tsx`) ستُبنى بعد ذلك بعرض مبسط للمواد المتاحة له فقط.
+### ملاحظة مهمة
+- البيانات الموجودة في قاعدة البيانات مش هتتأثر
+- العرض للمستخدمين (طلاب/مدرسين) هيفضل يعمل check على `name_ar` و `name` - بس القيمتين هيبقوا نفس الحاجة
+- لو حد عايز يضيف ترجمة في المستقبل، الأعمدة في الداتابيز لسه موجودة
