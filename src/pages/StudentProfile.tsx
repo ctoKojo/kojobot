@@ -15,6 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { notificationService } from '@/lib/notificationService';
 import { StudentPerformanceCharts } from '@/components/student/StudentPerformanceCharts';
 import { IssueWarningDialog } from '@/components/student/IssueWarningDialog';
 
@@ -593,6 +594,22 @@ export default function StudentProfile() {
                           <div className="mt-3 flex gap-2 border-t pt-3">
                             <Button size="sm" className="flex-1" onClick={async () => {
                               await supabase.from('makeup_sessions').update({ student_confirmed: true }).eq('id', ms.id);
+                              // Notify admins
+                              const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
+                              if (adminRoles) {
+                                for (const admin of adminRoles) {
+                                  await notificationService.create({
+                                    user_id: admin.user_id,
+                                    title: 'Makeup Session Confirmed',
+                                    title_ar: 'تأكيد سيشن تعويضية',
+                                    message: `${data.profile.full_name} confirmed a makeup session`,
+                                    message_ar: `${data.profile.full_name_ar || data.profile.full_name} أكد السيشن التعويضية`,
+                                    type: 'success',
+                                    category: 'makeup_session',
+                                    action_url: '/makeup-sessions',
+                                  });
+                                }
+                              }
                               toast({ title: isRTL ? 'تم التأكيد' : 'Confirmed' });
                               fetchStudentData();
                             }}>
@@ -601,6 +618,22 @@ export default function StudentProfile() {
                             </Button>
                             <Button size="sm" variant="destructive" className="flex-1" onClick={async () => {
                               await supabase.from('makeup_sessions').update({ student_confirmed: false }).eq('id', ms.id);
+                              // Notify admins
+                              const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
+                              if (adminRoles) {
+                                for (const admin of adminRoles) {
+                                  await notificationService.create({
+                                    user_id: admin.user_id,
+                                    title: 'Makeup Session Rejected',
+                                    title_ar: 'رفض سيشن تعويضية',
+                                    message: `${data.profile.full_name} rejected a makeup session`,
+                                    message_ar: `${data.profile.full_name_ar || data.profile.full_name} رفض السيشن التعويضية`,
+                                    type: 'warning',
+                                    category: 'makeup_session',
+                                    action_url: '/makeup-sessions',
+                                  });
+                                }
+                              }
                               toast({ title: isRTL ? 'تم الرفض' : 'Rejected' });
                               fetchStudentData();
                             }}>
