@@ -244,6 +244,22 @@ export default function MakeupSessionsPage() {
         action_url: '/profile',
       });
 
+      // Send notification to assigned instructor
+      if (scheduleForm.instructorId) {
+        const instructor = instructors.find(i => i.user_id === scheduleForm.instructorId);
+        const instructorName = instructor ? (language === 'ar' ? (instructor.full_name_ar || instructor.full_name) : instructor.full_name) : '';
+        await notificationService.create({
+          user_id: scheduleForm.instructorId,
+          title: 'Makeup Session Assigned',
+          title_ar: 'تم تعيينك لسيشن تعويضية',
+          message: `You have been assigned a makeup session for "${selectedSession.group_name}" student "${selectedSession.student_name}" on ${scheduleForm.date} at ${scheduleForm.time}.`,
+          message_ar: `تم تعيينك لسيشن تعويضية لمجموعة "${selectedSession.group_name}" للطالب "${selectedSession.student_name}" في ${scheduleForm.date} الساعة ${scheduleForm.time}.`,
+          type: 'info',
+          category: 'makeup_session',
+          action_url: '/makeup-sessions',
+        });
+      }
+
       toast({ title: isRTL ? 'تم الجدولة' : 'Scheduled', description: isRTL ? 'تم جدولة السيشن التعويضية - في انتظار تأكيد الطالب' : 'Makeup session scheduled - awaiting student confirmation' });
       setScheduleDialogOpen(false);
       fetchMakeupSessions();
