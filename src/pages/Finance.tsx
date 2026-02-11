@@ -15,6 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { notificationService } from '@/lib/notificationService';
 
 export default function Finance() {
   const { isRTL, language } = useLanguage();
@@ -94,7 +95,7 @@ export default function Finance() {
       recorded_by: user?.id,
     } as any);
 
-    // Update subscription
+    // Update subscription (remaining_amount is a generated column, only update paid_amount)
     const newPaid = Number(selectedSub.paid_amount) + paymentAmount;
     const newRemaining = Number(selectedSub.total_amount) - newPaid;
     
@@ -106,12 +107,19 @@ export default function Finance() {
     }
     if (newRemaining <= 0) nextPaymentDate = null;
 
+    const wasSuspended = selectedSub.is_suspended;
+
     await supabase.from('subscriptions').update({
       paid_amount: newPaid,
-      remaining_amount: Math.max(0, newRemaining),
       next_payment_date: nextPaymentDate,
       is_suspended: false,
     }).eq('id', selectedSub.id);
+
+    // Send notifications
+    await notificationService.notifyPaymentRecorded(selectedSub.student_id, paymentAmount, Math.max(0, newRemaining));
+    if (wasSuspended) {
+      await notificationService.notifyAccountReactivated(selectedSub.student_id);
+    }
 
     toast({ title: isRTL ? 'تم تسجيل الدفعة بنجاح' : 'Payment recorded successfully' });
     setPaymentDialog(false);
