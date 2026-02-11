@@ -562,6 +562,81 @@ export type Database = {
           },
         ]
       }
+      materials: {
+        Row: {
+          age_group_id: string | null
+          attendance_mode: string | null
+          created_at: string
+          description: string | null
+          description_ar: string | null
+          file_type: string
+          file_url: string
+          id: string
+          is_active: boolean
+          level_id: string | null
+          material_type: string
+          original_filename: string | null
+          subscription_type: string | null
+          title: string
+          title_ar: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          age_group_id?: string | null
+          attendance_mode?: string | null
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          file_type?: string
+          file_url: string
+          id?: string
+          is_active?: boolean
+          level_id?: string | null
+          material_type?: string
+          original_filename?: string | null
+          subscription_type?: string | null
+          title: string
+          title_ar: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          age_group_id?: string | null
+          attendance_mode?: string | null
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          file_type?: string
+          file_url?: string
+          id?: string
+          is_active?: boolean
+          level_id?: string | null
+          material_type?: string
+          original_filename?: string | null
+          subscription_type?: string | null
+          title?: string
+          title_ar?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materials_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "materials_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_url: string | null
