@@ -49,14 +49,9 @@ const StudentWarnings = lazy(() => import("./pages/StudentWarnings"));
 const MyInstructorWarningsPage = lazy(() => import("./pages/MyInstructorWarnings"));
 const MonthlyReports = lazy(() => import("./pages/MonthlyReports"));
 
-// Loading fallback component
+// Minimal loading fallback - no visible loader to avoid flash during navigation
 const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center">
-    <div className="text-center">
-      <KojobotLogo size="xl" />
-      <p className="mt-4 text-muted-foreground">Loading...</p>
-    </div>
-  </div>
+  <div className="min-h-screen bg-background" />
 );
 
 // Component to handle admin session timeout
