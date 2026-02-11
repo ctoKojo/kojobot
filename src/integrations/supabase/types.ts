@@ -562,6 +562,83 @@ export type Database = {
           },
         ]
       }
+      makeup_sessions: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          group_id: string
+          id: string
+          is_free: boolean
+          level_id: string | null
+          notes: string | null
+          original_session_id: string | null
+          reason: string
+          scheduled_date: string | null
+          scheduled_time: string | null
+          status: string
+          student_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          group_id: string
+          id?: string
+          is_free?: boolean
+          level_id?: string | null
+          notes?: string | null
+          original_session_id?: string | null
+          reason: string
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          status?: string
+          student_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          group_id?: string
+          id?: string
+          is_free?: boolean
+          level_id?: string | null
+          notes?: string | null
+          original_session_id?: string | null
+          reason?: string
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "makeup_sessions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "makeup_sessions_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "makeup_sessions_original_session_id_fkey"
+            columns: ["original_session_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "makeup_sessions_original_session_id_fkey"
+            columns: ["original_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       materials: {
         Row: {
           age_group_id: string | null

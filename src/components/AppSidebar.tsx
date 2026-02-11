@@ -20,6 +20,7 @@ import {
   Send,
   FileCheck,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -72,6 +73,7 @@ export function AppSidebar() {
   const sessionsNavItems: NavItem[] = [
     { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin', 'instructor'] },
     { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['admin'] },
+    { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['admin', 'instructor'] },
   ];
 
   // Quizzes & Assignments category
