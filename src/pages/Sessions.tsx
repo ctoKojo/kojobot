@@ -90,6 +90,9 @@ export default function SessionsPage() {
     status: 'scheduled',
     notes: '',
   });
+  const [makeupDialogOpen, setMakeupDialogOpen] = useState(false);
+  const [pendingCancelSession, setPendingCancelSession] = useState<Session | null>(null);
+  const [creatingMakeup, setCreatingMakeup] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -164,6 +167,20 @@ export default function SessionsPage() {
   const handleSaveEdit = async () => {
     if (!editingSession) return;
     
+    // If changing to cancelled, show makeup dialog
+    if (formData.status === 'cancelled' && editingSession.status !== 'cancelled') {
+      setPendingCancelSession(editingSession);
+      setIsEditDialogOpen(false);
+      setMakeupDialogOpen(true);
+      return;
+    }
+
+    await saveSessionUpdate();
+  };
+
+  const saveSessionUpdate = async () => {
+    if (!editingSession) return;
+    
     try {
       const { error } = await supabase
         .from('sessions')
@@ -177,13 +194,9 @@ export default function SessionsPage() {
 
       if (error) throw error;
       
-      // Log activity
       await logUpdate('session', editingSession.id, {
         session_number: editingSession.session_number,
-        changes: {
-          topic: formData.topic,
-          status: formData.status,
-        }
+        changes: { topic: formData.topic, status: formData.status },
       });
       
       toast({
@@ -196,11 +209,74 @@ export default function SessionsPage() {
       fetchData();
     } catch (error) {
       console.error('Error updating session:', error);
-      toast({
-        variant: 'destructive',
-        title: t.common.error,
-        description: isRTL ? 'فشل في تحديث السيشن' : 'Failed to update session',
-      });
+      toast({ variant: 'destructive', title: t.common.error, description: isRTL ? 'فشل في تحديث السيشن' : 'Failed to update session' });
+    }
+  };
+
+  const handleCancelWithMakeup = async (createMakeup: boolean) => {
+    if (!pendingCancelSession) return;
+    setCreatingMakeup(true);
+
+    try {
+      // Cancel the session
+      await supabase.from('sessions').update({ status: 'cancelled' }).eq('id', pendingCancelSession.id);
+
+      if (createMakeup) {
+        // Get group's level and students
+        const group = groups.find(g => g.id === pendingCancelSession.group_id);
+        const { data: groupData } = await supabase.from('groups').select('level_id').eq('id', pendingCancelSession.group_id).single();
+        const { data: groupStudents } = await supabase
+          .from('group_students')
+          .select('student_id')
+          .eq('group_id', pendingCancelSession.group_id)
+          .eq('is_active', true);
+
+        if (groupStudents && groupStudents.length > 0) {
+          const levelId = groupData?.level_id || null;
+
+          // For each student, check free quota and create makeup session
+          for (const gs of groupStudents) {
+            let isFree = true;
+            if (levelId) {
+              const { count } = await supabase
+                .from('makeup_sessions')
+                .select('id', { count: 'exact' })
+                .eq('student_id', gs.student_id)
+                .eq('level_id', levelId)
+                .eq('is_free', true);
+              isFree = (count || 0) < 2;
+            }
+
+            await supabase.from('makeup_sessions').insert({
+              student_id: gs.student_id,
+              original_session_id: pendingCancelSession.id,
+              group_id: pendingCancelSession.group_id,
+              level_id: levelId,
+              reason: 'group_cancelled',
+              is_free: isFree,
+            });
+          }
+
+          toast({
+            title: t.common.success,
+            description: isRTL 
+              ? `تم إلغاء السيشن وإنشاء ${groupStudents.length} سيشن تعويضية`
+              : `Session cancelled and ${groupStudents.length} makeup sessions created`,
+          });
+        }
+      } else {
+        toast({ title: t.common.success, description: isRTL ? 'تم إلغاء السيشن' : 'Session cancelled' });
+      }
+
+      setMakeupDialogOpen(false);
+      setPendingCancelSession(null);
+      setEditingSession(null);
+      fetchData();
+    } catch (error) {
+      console.error('Error:', error);
+      toast({ variant: 'destructive', title: t.common.error });
+    } finally {
+      setCreatingMakeup(false);
     }
   };
 
@@ -414,6 +490,29 @@ export default function SessionsPage() {
               </Button>
               <Button className="kojo-gradient" onClick={handleSaveEdit}>
                 {t.common.save}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Makeup Session Confirmation Dialog */}
+        <Dialog open={makeupDialogOpen} onOpenChange={setMakeupDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{isRTL ? 'إنشاء سيشنات تعويضية؟' : 'Create Makeup Sessions?'}</DialogTitle>
+              <DialogDescription>
+                {isRTL 
+                  ? 'هل تريد إنشاء سيشنات تعويضية لطلاب هذه المجموعة؟'
+                  : 'Would you like to create makeup sessions for the students in this group?'
+                }
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => handleCancelWithMakeup(false)} disabled={creatingMakeup}>
+                {isRTL ? 'إلغاء فقط' : 'Cancel Only'}
+              </Button>
+              <Button className="kojo-gradient" onClick={() => handleCancelWithMakeup(true)} disabled={creatingMakeup}>
+                {creatingMakeup ? (isRTL ? 'جاري الإنشاء...' : 'Creating...') : (isRTL ? 'إلغاء + إنشاء تعويضات' : 'Cancel + Create Makeup')}
               </Button>
             </DialogFooter>
           </DialogContent>

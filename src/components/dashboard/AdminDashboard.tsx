@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, GraduationCap, Calendar, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Users, GraduationCap, Calendar, TrendingUp, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -13,6 +13,7 @@ interface AdminStats {
   activeSubscriptions: number;
   expiringSubscriptions: number;
   activeWarnings: number;
+  pendingMakeupSessions: number;
 }
 
 export function AdminDashboard() {
@@ -26,6 +27,7 @@ export function AdminDashboard() {
     activeSubscriptions: 0,
     expiringSubscriptions: 0,
     activeWarnings: 0,
+    pendingMakeupSessions: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -35,12 +37,13 @@ export function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const [studentsRes, instructorsRes, groupsRes, subscriptionsRes, warningsRes] = await Promise.all([
+      const [studentsRes, instructorsRes, groupsRes, subscriptionsRes, warningsRes, makeupRes] = await Promise.all([
         supabase.from('user_roles').select('id', { count: 'exact' }).eq('role', 'student'),
         supabase.from('user_roles').select('id', { count: 'exact' }).eq('role', 'instructor'),
         supabase.from('groups').select('id', { count: 'exact' }).eq('is_active', true),
         supabase.from('subscriptions').select('id', { count: 'exact' }).eq('status', 'active'),
         supabase.from('instructor_warnings').select('id', { count: 'exact' }).eq('is_active', true),
+        supabase.from('makeup_sessions').select('id', { count: 'exact' }).eq('status', 'pending'),
       ]);
 
       // Check for expiring subscriptions (within 7 days)
@@ -59,6 +62,7 @@ export function AdminDashboard() {
         activeSubscriptions: subscriptionsRes.count || 0,
         expiringSubscriptions: expiringCount || 0,
         activeWarnings: warningsRes.count || 0,
+        pendingMakeupSessions: makeupRes.count || 0,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -143,6 +147,27 @@ export function AdminDashboard() {
               {isRTL 
                 ? `يوجد ${stats.activeWarnings} إنذار نشط يتطلب المراجعة`
                 : `${stats.activeWarnings} active warnings require review`
+              }
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+      {/* Pending Makeup Sessions Alert */}
+      {stats.pendingMakeupSessions > 0 && (
+        <Card 
+          className="border-orange-300 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/makeup-sessions')}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400">
+              <RefreshCw className="h-5 w-5" />
+              {isRTL ? 'سيشنات تعويضية معلقة' : 'Pending Makeup Sessions'}
+            </CardTitle>
+            <CardDescription className="text-orange-600 dark:text-orange-400">
+              {isRTL 
+                ? `يوجد ${stats.pendingMakeupSessions} سيشن تعويضية تحتاج جدولة`
+                : `${stats.pendingMakeupSessions} makeup sessions need to be scheduled`
               }
             </CardDescription>
           </CardHeader>

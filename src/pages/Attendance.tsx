@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, UserCheck, UserX, Clock, AlertCircle, Calendar, ChevronLeft, ChevronRight, Save, Snowflake } from 'lucide-react';
+import { Search, UserCheck, UserX, Clock, AlertCircle, Calendar, ChevronLeft, ChevronRight, Save, Snowflake, RefreshCw } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -241,6 +241,40 @@ export default function AttendancePage() {
     }
   };
 
+  const handleCreateMakeupSession = async (studentId: string) => {
+    if (!selectedSession || !selectedGroup) return;
+    try {
+      const { data: groupData } = await supabase.from('groups').select('level_id').eq('id', selectedGroup).single();
+      const levelId = groupData?.level_id || null;
+
+      let isFree = true;
+      if (levelId) {
+        const { count } = await supabase
+          .from('makeup_sessions')
+          .select('id', { count: 'exact' })
+          .eq('student_id', studentId)
+          .eq('level_id', levelId)
+          .eq('is_free', true);
+        isFree = (count || 0) < 2;
+      }
+
+      const { error } = await supabase.from('makeup_sessions').insert({
+        student_id: studentId,
+        original_session_id: selectedSession,
+        group_id: selectedGroup,
+        level_id: levelId,
+        reason: 'student_absent',
+        is_free: isFree,
+      });
+
+      if (error) throw error;
+      toast({ title: isRTL ? 'تم الإنشاء' : 'Created', description: isRTL ? 'تم إنشاء سيشن تعويضية' : 'Makeup session created' });
+    } catch (error) {
+      console.error(error);
+      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error' });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       present: 'bg-green-100 text-green-800 border-green-200',
@@ -436,22 +470,35 @@ export default function AttendancePage() {
                       </span>
                     </div>
                     {canManage ? (
-                      <div className="grid grid-cols-4 gap-2">
-                        {(['present', 'absent', 'late', 'excused'] as const).map((status) => (
+                      <>
+                        <div className="grid grid-cols-4 gap-2">
+                          {(['present', 'absent', 'late', 'excused'] as const).map((status) => (
+                            <Button
+                              key={status}
+                              variant={currentStatus === status ? 'default' : 'outline'}
+                              size="sm"
+                              className={`text-xs h-8 ${currentStatus === status ? 'kojo-gradient' : ''}`}
+                              onClick={() => updateStatus(student.user_id, status)}
+                            >
+                              {status === 'present' && (isRTL ? 'حاضر' : 'P')}
+                              {status === 'absent' && (isRTL ? 'غائب' : 'A')}
+                              {status === 'late' && (isRTL ? 'متأخر' : 'L')}
+                              {status === 'excused' && (isRTL ? 'معذور' : 'E')}
+                            </Button>
+                          ))}
+                        </div>
+                        {currentStatus === 'absent' && record?.id && (
                           <Button
-                            key={status}
-                            variant={currentStatus === status ? 'default' : 'outline'}
                             size="sm"
-                            className={`text-xs h-8 ${currentStatus === status ? 'kojo-gradient' : ''}`}
-                            onClick={() => updateStatus(student.user_id, status)}
+                            variant="outline"
+                            className="w-full text-xs h-7"
+                            onClick={() => handleCreateMakeupSession(student.user_id)}
                           >
-                            {status === 'present' && (isRTL ? 'حاضر' : 'P')}
-                            {status === 'absent' && (isRTL ? 'غائب' : 'A')}
-                            {status === 'late' && (isRTL ? 'متأخر' : 'L')}
-                            {status === 'excused' && (isRTL ? 'معذور' : 'E')}
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            {isRTL ? 'إنشاء تعويض' : 'Create Makeup'}
                           </Button>
-                        ))}
-                      </div>
+                        )}
+                      </>
                     ) : (
                       <div>{getStatusBadge(currentStatus)}</div>
                     )}
