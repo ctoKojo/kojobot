@@ -6,6 +6,7 @@ import {
   GraduationCap,
   Calendar,
   BookOpen,
+  BookMarked,
   ClipboardList,
   UserCheck,
   Settings,
@@ -79,12 +80,14 @@ export function AppSidebar() {
     { title: isRTL ? 'إسناد الكويزات' : 'Quiz Assignments', url: '/my-instructor-quizzes', icon: Send, roles: ['admin', 'instructor'] },
     { title: isRTL ? 'تقارير الكويزات' : 'Quiz Reports', url: '/quiz-reports', icon: BarChart3, roles: ['admin'] },
     { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['admin', 'instructor'] },
+    { title: isRTL ? 'المواد التعليمية' : 'Materials', url: '/materials', icon: BookMarked, roles: ['admin'] },
   ];
 
   // Student's "My Learning" section
   const studentLearningItems: NavItem[] = [
     { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileCheck, roles: ['student'] },
     { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['student'] },
+    { title: isRTL ? 'موادي التعليمية' : 'My Materials', url: '/my-materials', icon: BookMarked, roles: ['student'] },
     { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['student'] },
     { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-warnings', icon: AlertTriangle, roles: ['student'] },
     { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['student'] },
