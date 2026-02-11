@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Search, Filter, CheckCircle, XCircle, AlertTriangle, Users, GraduationCap, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, Search, Filter, CheckCircle, XCircle, AlertTriangle, Users, GraduationCap, RefreshCw, UserCheck } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,8 @@ interface MakeupSession {
   is_free: boolean;
   created_at: string;
   completed_at: string | null;
+  student_confirmed: boolean | null;
+  assigned_instructor_id: string | null;
 }
 
 interface EnrichedMakeupSession extends MakeupSession {
@@ -42,6 +44,13 @@ interface EnrichedMakeupSession extends MakeupSession {
   group_name: string;
   level_name: string;
   original_session_number: number | null;
+  instructor_name: string;
+}
+
+interface Instructor {
+  user_id: string;
+  full_name: string;
+  full_name_ar: string | null;
 }
 
 export default function MakeupSessionsPage() {
@@ -55,11 +64,81 @@ export default function MakeupSessionsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<EnrichedMakeupSession | null>(null);
-  const [scheduleForm, setScheduleForm] = useState({ date: '', time: '', notes: '' });
+  const [scheduleForm, setScheduleForm] = useState({ date: '', time: '', notes: '', instructorId: '' });
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [instructorConflicts, setInstructorConflicts] = useState<string[]>([]);
 
   useEffect(() => {
     fetchMakeupSessions();
+    fetchInstructors();
   }, []);
+
+  const fetchInstructors = async () => {
+    try {
+      const { data: instructorRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'instructor');
+      
+      if (instructorRoles && instructorRoles.length > 0) {
+        const ids = instructorRoles.map(r => r.user_id);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, full_name_ar')
+          .in('user_id', ids);
+        setInstructors(profiles || []);
+      }
+    } catch (error) {
+      console.error('Error fetching instructors:', error);
+    }
+  };
+
+  const checkInstructorConflicts = async (instructorId: string, date: string, time: string) => {
+    if (!instructorId || !date || !time) {
+      setInstructorConflicts([]);
+      return;
+    }
+    try {
+      // Check if instructor has sessions on this date/time
+      const { data: instructorGroups } = await supabase
+        .from('groups')
+        .select('id, name, name_ar')
+        .eq('instructor_id', instructorId);
+      
+      if (!instructorGroups || instructorGroups.length === 0) {
+        setInstructorConflicts([]);
+        return;
+      }
+
+      const groupIds = instructorGroups.map(g => g.id);
+      const { data: conflictingSessions } = await supabase
+        .from('sessions')
+        .select('id, session_time, group_id')
+        .in('group_id', groupIds)
+        .eq('session_date', date)
+        .eq('status', 'scheduled');
+
+      const conflicts = (conflictingSessions || [])
+        .filter(s => s.session_time === time)
+        .map(s => {
+          const group = instructorGroups.find(g => g.id === s.group_id);
+          return language === 'ar' ? (group?.name_ar || group?.name || '') : (group?.name || '');
+        });
+
+      setInstructorConflicts(conflicts);
+    } catch (error) {
+      console.error('Error checking conflicts:', error);
+    }
+  };
+
+  // Watch for changes in schedule form to check conflicts
+  useEffect(() => {
+    if (scheduleForm.instructorId && scheduleForm.date && scheduleForm.time) {
+      checkInstructorConflicts(scheduleForm.instructorId, scheduleForm.date, scheduleForm.time);
+    } else {
+      setInstructorConflicts([]);
+    }
+  }, [scheduleForm.instructorId, scheduleForm.date, scheduleForm.time]);
 
   const fetchMakeupSessions = async () => {
     try {
@@ -75,36 +154,40 @@ export default function MakeupSessionsPage() {
         return;
       }
 
-      // Enrich with student names, group names, level names
       const studentIds = [...new Set(msData.map(m => m.student_id))];
       const groupIds = [...new Set(msData.map(m => m.group_id))];
       const levelIds = [...new Set(msData.filter(m => m.level_id).map(m => m.level_id!))];
       const sessionIds = [...new Set(msData.filter(m => m.original_session_id).map(m => m.original_session_id!))];
+      const instructorIds = [...new Set(msData.filter(m => m.assigned_instructor_id).map(m => m.assigned_instructor_id!))];
 
-      const [profilesRes, groupsRes, levelsRes, sessionsRes] = await Promise.all([
+      const [profilesRes, groupsRes, levelsRes, sessionsRes, instructorProfilesRes] = await Promise.all([
         supabase.from('profiles').select('user_id, full_name, full_name_ar').in('user_id', studentIds),
         supabase.from('groups').select('id, name, name_ar').in('id', groupIds),
         levelIds.length > 0 ? supabase.from('levels').select('id, name, name_ar').in('id', levelIds) : { data: [] },
         sessionIds.length > 0 ? supabase.from('sessions').select('id, session_number').in('id', sessionIds) : { data: [] },
+        instructorIds.length > 0 ? supabase.from('profiles').select('user_id, full_name, full_name_ar').in('user_id', instructorIds) : { data: [] },
       ]);
 
       const profilesMap = new Map((profilesRes.data || []).map(p => [p.user_id, p]));
       const groupsMap = new Map((groupsRes.data || []).map(g => [g.id, g]));
-      const levelsMap = new Map(((levelsRes as any).data || []).map((l: { id: string; name: string; name_ar: string }) => [l.id, l]));
-      const sessionsMap = new Map(((sessionsRes as any).data || []).map((s: { id: string; session_number: number }) => [s.id, s]));
+      const levelsMap = new Map(((levelsRes as any).data || []).map((l: any) => [l.id, l]));
+      const sessionsMap = new Map(((sessionsRes as any).data || []).map((s: any) => [s.id, s]));
+      const instructorMap = new Map(((instructorProfilesRes as any).data || []).map((p: any) => [p.user_id, p]));
 
       const enriched: EnrichedMakeupSession[] = msData.map(m => {
         const profile = profilesMap.get(m.student_id);
         const group = groupsMap.get(m.group_id);
-        const level = m.level_id ? levelsMap.get(m.level_id) as { id: string; name: string; name_ar: string } | undefined : null;
-        const origSession = m.original_session_id ? sessionsMap.get(m.original_session_id) as { id: string; session_number: number } | undefined : null;
+        const level = m.level_id ? levelsMap.get(m.level_id) as any : null;
+        const origSession = m.original_session_id ? sessionsMap.get(m.original_session_id) as any : null;
+        const instructorProfile = m.assigned_instructor_id ? instructorMap.get(m.assigned_instructor_id) as any : null;
 
         return {
           ...m,
           student_name: language === 'ar' ? (profile?.full_name_ar || profile?.full_name || '-') : (profile?.full_name || '-'),
           group_name: language === 'ar' ? (group?.name_ar || group?.name || '-') : (group?.name || '-'),
-          level_name: level ? (language === 'ar' ? (level.name_ar || level.name) : level.name) : '-',
+          level_name: level ? (language === 'ar' ? (level?.name_ar || level?.name) : level?.name) : '-',
           original_session_number: origSession?.session_number || null,
+          instructor_name: instructorProfile ? (language === 'ar' ? (instructorProfile?.full_name_ar || instructorProfile?.full_name) : instructorProfile?.full_name) : '-',
         };
       });
 
@@ -118,12 +201,21 @@ export default function MakeupSessionsPage() {
 
   const handleSchedule = (session: EnrichedMakeupSession) => {
     setSelectedSession(session);
-    setScheduleForm({ date: session.scheduled_date || '', time: session.scheduled_time || '', notes: session.notes || '' });
+    setScheduleForm({
+      date: session.scheduled_date || '',
+      time: session.scheduled_time || '',
+      notes: session.notes || '',
+      instructorId: session.assigned_instructor_id || '',
+    });
     setScheduleDialogOpen(true);
   };
 
   const handleSaveSchedule = async () => {
     if (!selectedSession || !scheduleForm.date || !scheduleForm.time) return;
+    if (instructorConflicts.length > 0) {
+      toast({ variant: 'destructive', title: isRTL ? 'تعارض' : 'Conflict', description: isRTL ? 'المدرب لديه سيشن في نفس الوقت' : 'Instructor has a session at this time' });
+      return;
+    }
     try {
       const { error } = await supabase
         .from('makeup_sessions')
@@ -132,11 +224,13 @@ export default function MakeupSessionsPage() {
           scheduled_time: scheduleForm.time,
           notes: scheduleForm.notes || null,
           status: 'scheduled',
+          assigned_instructor_id: scheduleForm.instructorId || null,
+          student_confirmed: null, // Reset confirmation when rescheduled
         })
         .eq('id', selectedSession.id);
 
       if (error) throw error;
-      toast({ title: isRTL ? 'تم الجدولة' : 'Scheduled', description: isRTL ? 'تم جدولة السيشن التعويضية' : 'Makeup session scheduled' });
+      toast({ title: isRTL ? 'تم الجدولة' : 'Scheduled', description: isRTL ? 'تم جدولة السيشن التعويضية - في انتظار تأكيد الطالب' : 'Makeup session scheduled - awaiting student confirmation' });
       setScheduleDialogOpen(false);
       fetchMakeupSessions();
     } catch (error) {
@@ -174,6 +268,12 @@ export default function MakeupSessionsPage() {
     return <Badge className={styles[status] || ''}>{labels[status] || status}</Badge>;
   };
 
+  const getConfirmationBadge = (confirmed: boolean | null) => {
+    if (confirmed === null) return <Badge variant="outline" className="text-muted-foreground">{isRTL ? 'في الانتظار' : 'Awaiting'}</Badge>;
+    if (confirmed) return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">{isRTL ? 'مؤكد' : 'Confirmed'}</Badge>;
+    return <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">{isRTL ? 'مرفوض' : 'Rejected'}</Badge>;
+  };
+
   const getReasonBadge = (reason: string) => {
     if (reason === 'group_cancelled') {
       return <Badge variant="outline" className="text-red-600 border-red-300">{isRTL ? 'إلغاء مجموعة' : 'Group Cancelled'}</Badge>;
@@ -192,7 +292,7 @@ export default function MakeupSessionsPage() {
     pending: makeupSessions.filter(m => m.status === 'pending').length,
     scheduled: makeupSessions.filter(m => m.status === 'scheduled').length,
     completed: makeupSessions.filter(m => m.status === 'completed').length,
-    free: makeupSessions.filter(m => m.is_free).length,
+    awaitingConfirmation: makeupSessions.filter(m => m.status === 'scheduled' && m.student_confirmed === null).length,
   };
 
   return (
@@ -236,10 +336,10 @@ export default function MakeupSessionsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-2">
-                <GraduationCap className="h-5 w-5 text-purple-600" />
+                <UserCheck className="h-5 w-5 text-purple-600" />
                 <div>
-                  <p className="text-2xl font-bold">{stats.free}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'مجانية' : 'Free'}</p>
+                  <p className="text-2xl font-bold">{stats.awaitingConfirmation}</p>
+                  <p className="text-sm text-muted-foreground">{isRTL ? 'بانتظار التأكيد' : 'Awaiting Confirm'}</p>
                 </div>
               </div>
             </CardContent>
@@ -291,6 +391,8 @@ export default function MakeupSessionsPage() {
                       <TableHead>{isRTL ? 'المجموعة' : 'Group'}</TableHead>
                       <TableHead>{isRTL ? 'السبب' : 'Reason'}</TableHead>
                       <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                      <TableHead>{isRTL ? 'تأكيد الطالب' : 'Student Confirm'}</TableHead>
+                      <TableHead>{isRTL ? 'المدرب' : 'Instructor'}</TableHead>
                       <TableHead>{isRTL ? 'مجانية' : 'Free'}</TableHead>
                       <TableHead>{isRTL ? 'الموعد' : 'Schedule'}</TableHead>
                       {role === 'admin' && <TableHead>{isRTL ? 'إجراءات' : 'Actions'}</TableHead>}
@@ -303,6 +405,10 @@ export default function MakeupSessionsPage() {
                         <TableCell>{session.group_name}</TableCell>
                         <TableCell>{getReasonBadge(session.reason)}</TableCell>
                         <TableCell>{getStatusBadge(session.status)}</TableCell>
+                        <TableCell>
+                          {session.status === 'scheduled' ? getConfirmationBadge(session.student_confirmed) : '-'}
+                        </TableCell>
+                        <TableCell>{session.instructor_name}</TableCell>
                         <TableCell>
                           {session.is_free ? (
                             <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">{isRTL ? 'مجاني' : 'Free'}</Badge>
@@ -320,13 +426,13 @@ export default function MakeupSessionsPage() {
                         {role === 'admin' && (
                           <TableCell>
                             <div className="flex gap-1">
-                              {session.status === 'pending' && (
+                              {(session.status === 'pending' || session.status === 'scheduled') && (
                                 <Button size="sm" variant="outline" onClick={() => handleSchedule(session)}>
                                   <Calendar className="h-3 w-3 mr-1" />
                                   {isRTL ? 'جدولة' : 'Schedule'}
                                 </Button>
                               )}
-                              {session.status === 'scheduled' && (
+                              {session.status === 'scheduled' && session.student_confirmed === true && (
                                 <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(session.id, 'completed')}>
                                   <CheckCircle className="h-3 w-3 mr-1" />
                                   {isRTL ? 'مكتمل' : 'Complete'}
@@ -361,6 +467,19 @@ export default function MakeupSessionsPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
+                <Label>{isRTL ? 'المدرب' : 'Instructor'}</Label>
+                <Select value={scheduleForm.instructorId} onValueChange={v => setScheduleForm(f => ({ ...f, instructorId: v }))}>
+                  <SelectTrigger><SelectValue placeholder={isRTL ? 'اختر مدرب' : 'Select instructor'} /></SelectTrigger>
+                  <SelectContent>
+                    {instructors.map(inst => (
+                      <SelectItem key={inst.user_id} value={inst.user_id}>
+                        {language === 'ar' ? (inst.full_name_ar || inst.full_name) : inst.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
                 <Label>{isRTL ? 'التاريخ' : 'Date'}</Label>
                 <Input type="date" value={scheduleForm.date} onChange={e => setScheduleForm(f => ({ ...f, date: e.target.value }))} />
               </div>
@@ -368,6 +487,17 @@ export default function MakeupSessionsPage() {
                 <Label>{isRTL ? 'الوقت' : 'Time'}</Label>
                 <Input type="time" value={scheduleForm.time} onChange={e => setScheduleForm(f => ({ ...f, time: e.target.value }))} />
               </div>
+              {instructorConflicts.length > 0 && (
+                <div className="p-3 rounded-lg border border-destructive bg-destructive/10">
+                  <p className="text-sm font-medium text-destructive flex items-center gap-1">
+                    <AlertTriangle className="h-4 w-4" />
+                    {isRTL ? 'تعارض مع سيشنات أخرى:' : 'Conflicts with other sessions:'}
+                  </p>
+                  <ul className="text-sm text-destructive mt-1">
+                    {instructorConflicts.map((c, i) => <li key={i}>• {c}</li>)}
+                  </ul>
+                </div>
+              )}
               <div className="grid gap-2">
                 <Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>
                 <Textarea value={scheduleForm.notes} onChange={e => setScheduleForm(f => ({ ...f, notes: e.target.value }))} />
@@ -375,7 +505,13 @@ export default function MakeupSessionsPage() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-              <Button className="kojo-gradient" onClick={handleSaveSchedule}>{isRTL ? 'جدولة' : 'Schedule'}</Button>
+              <Button 
+                className="kojo-gradient" 
+                onClick={handleSaveSchedule}
+                disabled={instructorConflicts.length > 0}
+              >
+                {isRTL ? 'جدولة' : 'Schedule'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

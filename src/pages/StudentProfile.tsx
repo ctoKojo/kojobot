@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { StudentPerformanceCharts } from '@/components/student/StudentPerformanceCharts';
 import { IssueWarningDialog } from '@/components/student/IssueWarningDialog';
@@ -33,6 +34,7 @@ export default function StudentProfile() {
   const navigate = useNavigate();
   const { isRTL, language } = useLanguage();
   const { role } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<StudentData | null>(null);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
@@ -582,10 +584,41 @@ export default function StudentProfile() {
                             <p>{isRTL ? 'المجموعة: ' : 'Group: '}{language === 'ar' ? ms.groups.name_ar : ms.groups.name}</p>
                           )}
                           {ms.scheduled_date && (
-                            <p>{isRTL ? 'الموعد: ' : 'Scheduled: '}{formatDate(ms.scheduled_date)}</p>
+                            <p>{isRTL ? 'الموعد: ' : 'Scheduled: '}{formatDate(ms.scheduled_date)} {ms.scheduled_time}</p>
                           )}
                           <p>{isRTL ? 'تاريخ الإنشاء: ' : 'Created: '}{formatDate(ms.created_at)}</p>
                         </div>
+                        {/* Student confirmation for scheduled sessions */}
+                        {ms.status === 'scheduled' && ms.student_confirmed === null && role === 'student' && (
+                          <div className="mt-3 flex gap-2 border-t pt-3">
+                            <Button size="sm" className="flex-1" onClick={async () => {
+                              await supabase.from('makeup_sessions').update({ student_confirmed: true }).eq('id', ms.id);
+                              toast({ title: isRTL ? 'تم التأكيد' : 'Confirmed' });
+                              fetchStudentData();
+                            }}>
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              {isRTL ? 'تأكيد' : 'Confirm'}
+                            </Button>
+                            <Button size="sm" variant="destructive" className="flex-1" onClick={async () => {
+                              await supabase.from('makeup_sessions').update({ student_confirmed: false }).eq('id', ms.id);
+                              toast({ title: isRTL ? 'تم الرفض' : 'Rejected' });
+                              fetchStudentData();
+                            }}>
+                              <XCircle className="h-3 w-3 mr-1" />
+                              {isRTL ? 'رفض' : 'Reject'}
+                            </Button>
+                          </div>
+                        )}
+                        {ms.status === 'scheduled' && ms.student_confirmed === true && (
+                          <div className="mt-2">
+                            <Badge className="bg-green-100 text-green-800">{isRTL ? 'تم التأكيد ✓' : 'Confirmed ✓'}</Badge>
+                          </div>
+                        )}
+                        {ms.status === 'scheduled' && ms.student_confirmed === false && (
+                          <div className="mt-2">
+                            <Badge variant="destructive">{isRTL ? 'مرفوض' : 'Rejected'}</Badge>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
