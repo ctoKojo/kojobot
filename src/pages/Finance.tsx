@@ -35,11 +35,17 @@ export default function Finance() {
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentNotes, setPaymentNotes] = useState('');
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [reportPeriod, setReportPeriod] = useState('6');
+  const [reportPlan, setReportPlan] = useState('all');
+  const [pricingPlans, setPricingPlans] = useState<any[]>([]);
 
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
+    // Fetch pricing plans for filter
+    const { data: plans } = await supabase.from('pricing_plans').select('id, name, name_ar').eq('is_active', true);
+    setPricingPlans(plans || []);
+
     // Fetch subscriptions with profile info
     const { data: subs } = await supabase
       .from('subscriptions')
@@ -74,34 +80,51 @@ export default function Finance() {
 
     setStats({ totalRevenue, totalOutstanding, activeCount: active.length, suspendedCount, overdueCount });
 
-    // Build monthly chart data from payments
+    // Store raw data for filtered reports
+    setPayments(payData || []);
+    setSubscriptions(enriched);
+    setLoading(false);
+  };
+
+  // Build filtered monthly data based on reportPeriod and reportPlan
+  const filteredMonthlyData = useMemo(() => {
+    const periodMonths = Number(reportPeriod);
+    
+    // Filter payments by plan if needed
+    const filteredPayments = reportPlan === 'all' ? payments : payments.filter((p: any) => {
+      const sub = subscriptions.find((s: any) => s.id === p.subscription_id);
+      return sub?.pricing_plan_id === reportPlan;
+    });
+
+    // Filter subscriptions by plan
+    const filteredSubs = reportPlan === 'all' 
+      ? subscriptions.filter((s: any) => s.status === 'active')
+      : subscriptions.filter((s: any) => s.status === 'active' && s.pricing_plan_id === reportPlan);
+
     const monthlyMap = new Map<string, { revenue: number; count: number }>();
-    (payData || []).forEach((p: any) => {
+    filteredPayments.forEach((p: any) => {
       const d = new Date(p.payment_date);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const existing = monthlyMap.get(key) || { revenue: 0, count: 0 };
       monthlyMap.set(key, { revenue: existing.revenue + Number(p.amount), count: existing.count + 1 });
     });
 
-    // Also calculate overdue per month from subscriptions
     const now = new Date();
     const months: any[] = [];
-    for (let i = 5; i >= 0; i--) {
+    for (let i = periodMonths - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const monthLabel = d.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', year: '2-digit' });
       const mp = monthlyMap.get(key) || { revenue: 0, count: 0 };
-      const overdueInMonth = active.filter((s: any) => {
+      const overdueInMonth = filteredSubs.filter((s: any) => {
         if (!s.next_payment_date || Number(s.remaining_amount) <= 0) return false;
         const npd = new Date(s.next_payment_date);
         return npd.getMonth() === d.getMonth() && npd.getFullYear() === d.getFullYear() && npd < now;
       }).length;
       months.push({ month: monthLabel, revenue: mp.revenue, payments: mp.count, overdue: overdueInMonth });
     }
-    setMonthlyData(months);
-
-    setLoading(false);
-  };
+    return months;
+  }, [payments, subscriptions, reportPeriod, reportPlan, language]);
 
   const openPaymentDialog = (sub: any) => {
     setSelectedSub(sub);
@@ -316,63 +339,98 @@ export default function Finance() {
           </TabsContent>
 
           <TabsContent value="reports">
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Monthly Revenue Chart */}
+            <div className="space-y-4">
+              {/* Report Filters */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{isRTL ? 'الإيرادات الشهرية' : 'Monthly Revenue'}</CardTitle>
-                  <CardDescription>{isRTL ? 'آخر 6 أشهر' : 'Last 6 months'}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer config={{ revenue: { label: isRTL ? 'الإيرادات' : 'Revenue', color: 'hsl(var(--primary))' } }} className="h-[300px] w-full">
-                    <BarChart data={monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                      <XAxis dataKey="month" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <CardContent className="pt-6">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">{isRTL ? 'الفترة الزمنية' : 'Time Period'}</Label>
+                      <Select value={reportPeriod} onValueChange={setReportPeriod}>
+                        <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="3">{isRTL ? '3 أشهر' : '3 Months'}</SelectItem>
+                          <SelectItem value="6">{isRTL ? '6 أشهر' : '6 Months'}</SelectItem>
+                          <SelectItem value="12">{isRTL ? 'سنة' : '1 Year'}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1 block">{isRTL ? 'الباقة' : 'Plan'}</Label>
+                      <Select value={reportPlan} onValueChange={setReportPlan}>
+                        <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">{isRTL ? 'كل الباقات' : 'All Plans'}</SelectItem>
+                          {pricingPlans.map((plan: any) => (
+                            <SelectItem key={plan.id} value={plan.id}>
+                              {language === 'ar' ? plan.name_ar : plan.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Monthly Revenue Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">{isRTL ? 'الإيرادات الشهرية' : 'Monthly Revenue'}</CardTitle>
+                    <CardDescription>{isRTL ? `آخر ${reportPeriod} أشهر` : `Last ${reportPeriod} months`}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer config={{ revenue: { label: isRTL ? 'الإيرادات' : 'Revenue', color: 'hsl(var(--primary))' } }} className="h-[300px] w-full">
+                      <BarChart data={filteredMonthlyData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                        <XAxis dataKey="month" className="text-xs" />
+                        <YAxis className="text-xs" />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+
+                {/* Overdue Trend Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">{isRTL ? 'المتأخرات الشهرية' : 'Monthly Overdue'}</CardTitle>
+                    <CardDescription>{isRTL ? 'عدد الطلاب المتأخرين شهرياً' : 'Overdue students per month'}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer config={{ overdue: { label: isRTL ? 'متأخرين' : 'Overdue', color: 'hsl(var(--destructive))' } }} className="h-[300px] w-full">
+                      <LineChart data={filteredMonthlyData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                        <XAxis dataKey="month" className="text-xs" />
+                        <YAxis className="text-xs" />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Line type="monotone" dataKey="overdue" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} />
+                      </LineChart>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+
+                {/* Payment Count Chart */}
+                <Card className="md:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="text-base">{isRTL ? 'عدد الدفعات الشهرية' : 'Monthly Payment Count'}</CardTitle>
+                    <CardDescription>{isRTL ? 'عدد عمليات الدفع لكل شهر' : 'Number of payments per month'}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer config={{ payments: { label: isRTL ? 'دفعات' : 'Payments', color: 'hsl(var(--secondary))' } }} className="h-[250px] w-full">
+                      <BarChart data={filteredMonthlyData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                        <XAxis dataKey="month" className="text-xs" />
+                        <YAxis className="text-xs" />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="payments" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ChartContainer>
                 </CardContent>
               </Card>
-
-              {/* Overdue Trend Chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">{isRTL ? 'المتأخرات الشهرية' : 'Monthly Overdue'}</CardTitle>
-                  <CardDescription>{isRTL ? 'عدد الطلاب المتأخرين شهرياً' : 'Overdue students per month'}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer config={{ overdue: { label: isRTL ? 'متأخرين' : 'Overdue', color: 'hsl(var(--destructive))' } }} className="h-[300px] w-full">
-                    <LineChart data={monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                      <XAxis dataKey="month" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Line type="monotone" dataKey="overdue" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} />
-                    </LineChart>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
-
-              {/* Payment Count Chart */}
-              <Card className="md:col-span-2">
-                <CardHeader>
-                  <CardTitle className="text-base">{isRTL ? 'عدد الدفعات الشهرية' : 'Monthly Payment Count'}</CardTitle>
-                  <CardDescription>{isRTL ? 'عدد عمليات الدفع لكل شهر' : 'Number of payments per month'}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ChartContainer config={{ payments: { label: isRTL ? 'دفعات' : 'Payments', color: 'hsl(var(--secondary))' } }} className="h-[250px] w-full">
-                    <BarChart data={monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                      <XAxis dataKey="month" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="payments" fill="hsl(var(--secondary))" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ChartContainer>
-                </CardContent>
-              </Card>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
