@@ -526,18 +526,19 @@ export default function AttendancePage() {
                   <TableHead className="text-center">{t.attendance.absent}</TableHead>
                   <TableHead className="text-center">{t.attendance.late}</TableHead>
                   <TableHead className="text-center">{t.attendance.excused}</TableHead>
+                  {canManage && <TableHead className="text-center">{isRTL ? 'تعويض' : 'Makeup'}</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={canManage ? 6 : 5} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : students.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={canManage ? 6 : 5} className="text-center py-8">
                       <UserCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <p className="text-muted-foreground">
                         {isRTL ? 'لا يوجد طلاب في هذه المجموعة' : 'No students in this group'}
@@ -582,6 +583,21 @@ export default function AttendancePage() {
                             )}
                           </TableCell>
                         ))}
+                        {canManage && (
+                          <TableCell className="text-center">
+                            {currentStatus === 'absent' && record?.id && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                                onClick={() => handleCreateMakeupSession(student.user_id)}
+                              >
+                                <RefreshCw className="h-3 w-3 mr-1" />
+                                {isRTL ? 'تعويض' : 'Makeup'}
+                              </Button>
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })

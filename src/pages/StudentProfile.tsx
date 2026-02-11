@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Award, AlertTriangle, BookOpen, 
-  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus
+  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +25,7 @@ interface StudentData {
   quizSubmissions: any[];
   assignmentSubmissions: any[];
   warnings: any[];
+  makeupSessions: any[];
 }
 
 export default function StudentProfile() {
@@ -97,6 +98,13 @@ export default function StudentProfile() {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
+      // Fetch makeup sessions
+      const { data: makeupSessions } = await supabase
+        .from('makeup_sessions')
+        .select('*, groups(name, name_ar), levels(name, name_ar)')
+        .eq('student_id', studentId!)
+        .order('created_at', { ascending: false });
+
       setData({
         profile,
         subscription,
@@ -105,6 +113,7 @@ export default function StudentProfile() {
         quizSubmissions: quizSubmissions || [],
         assignmentSubmissions: assignmentSubmissions || [],
         warnings: warnings || [],
+        makeupSessions: makeupSessions || [],
       });
     } catch (error) {
       console.error('Error fetching student data:', error);
@@ -364,10 +373,11 @@ export default function StudentProfile() {
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="attendance" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="attendance">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
             <TabsTrigger value="quizzes">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
             <TabsTrigger value="assignments">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
+            <TabsTrigger value="makeup">{isRTL ? 'التعويضات' : 'Makeup'}</TabsTrigger>
             <TabsTrigger value="warnings">{isRTL ? 'الإنذارات' : 'Warnings'}</TabsTrigger>
           </TabsList>
 
@@ -500,6 +510,82 @@ export default function StudentProfile() {
                             {language === 'ar' ? submission.feedback_ar || submission.feedback : submission.feedback}
                           </p>
                         )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Makeup Sessions Tab */}
+          <TabsContent value="makeup">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <RefreshCw className="h-5 w-5" />
+                  {isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions'}
+                </CardTitle>
+                <CardDescription>
+                  {(() => {
+                    const freeUsed = data.makeupSessions.filter((m: any) => m.is_free).length;
+                    const freeRemaining = Math.max(0, 2 - freeUsed);
+                    return isRTL 
+                      ? `الرصيد المجاني: ${freeRemaining}/2 سيشن متبقية`
+                      : `Free balance: ${freeRemaining}/2 sessions remaining`;
+                  })()}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4 p-3 rounded-lg border bg-muted/50">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      {isRTL ? 'السيشنات المجانية المستخدمة' : 'Free sessions used'}
+                    </span>
+                    <Badge variant={data.makeupSessions.filter((m: any) => m.is_free).length >= 2 ? 'destructive' : 'secondary'}>
+                      {data.makeupSessions.filter((m: any) => m.is_free).length} / 2
+                    </Badge>
+                  </div>
+                </div>
+                {data.makeupSessions.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    <RefreshCw className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                    {isRTL ? 'لا توجد سيشنات تعويضية' : 'No makeup sessions'}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {data.makeupSessions.map((ms: any) => (
+                      <div key={ms.id} className="p-4 rounded-lg border">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge className={ms.reason === 'group_cancelled' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'}>
+                              {ms.reason === 'group_cancelled' ? (isRTL ? 'إلغاء مجموعة' : 'Group Cancelled') : (isRTL ? 'غياب' : 'Absent')}
+                            </Badge>
+                            <Badge variant={ms.is_free ? 'secondary' : 'outline'}>
+                              {ms.is_free ? (isRTL ? 'مجانية' : 'Free') : (isRTL ? 'مدفوعة' : 'Paid')}
+                            </Badge>
+                          </div>
+                          <Badge className={
+                            ms.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            ms.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                            ms.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            'bg-muted text-muted-foreground'
+                          }>
+                            {ms.status === 'pending' ? (isRTL ? 'معلق' : 'Pending') :
+                             ms.status === 'scheduled' ? (isRTL ? 'مجدول' : 'Scheduled') :
+                             ms.status === 'completed' ? (isRTL ? 'مكتمل' : 'Completed') :
+                             (isRTL ? 'منتهي' : 'Expired')}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-muted-foreground space-y-1">
+                          {ms.groups && (
+                            <p>{isRTL ? 'المجموعة: ' : 'Group: '}{language === 'ar' ? ms.groups.name_ar : ms.groups.name}</p>
+                          )}
+                          {ms.scheduled_date && (
+                            <p>{isRTL ? 'الموعد: ' : 'Scheduled: '}{formatDate(ms.scheduled_date)}</p>
+                          )}
+                          <p>{isRTL ? 'تاريخ الإنشاء: ' : 'Created: '}{formatDate(ms.created_at)}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
