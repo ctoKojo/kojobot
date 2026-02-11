@@ -1,129 +1,90 @@
-# خطة إصلاح عيوب مشروع Kojobot
 
-## الحالة: ✅ تم التنفيذ
+
+# تنظيم عرض المواد التعليمية للمدير
+
+## المشكلة
+عرض المواد كقائمة مسطحة (آخر حاجة اتضافت تظهر الأول) يكون عشوائي وصعب التنقل فيه خصوصاً لما المواد تكتر.
+
+## الحل: عرض هرمي منظم
+
+### هيكل العرض
+المواد هتظهر مجمّعة ومنظمة بالشكل ده:
+
+```text
++-- الفئة العمرية: أطفال (6-9)
+|   +-- المستوى 0
+|   |   +-- [مادة 1] [مادة 2] ...
+|   +-- المستوى 1
+|   |   +-- [مادة 1] [مادة 2] ...
+|   +-- كل المستويات (مواد مش محددة للفل معين)
+|       +-- [مادة 1] ...
+|
++-- الفئة العمرية: ناشئين (10-13)
+|   +-- المستوى 0
+|   |   +-- [مادة 1] ...
+|   ...
+|
++-- كل الفئات (مواد عامة مش محددة لفئة)
+    +-- [مادة 1] ...
+```
+
+### طريقة العرض في الواجهة
+
+1. **Accordion/Collapsible Sections** - كل فئة عمرية تكون قسم قابل للفتح والإغلاق
+2. جوا كل فئة، الليفلات تظهر كأقسام فرعية مرتبة بترتيب الليفل (`level_order`)
+3. جوا كل ليفل، المواد تظهر كبطاقات (Cards) مرتبة بتاريخ الإضافة (الأحدث الأول)
+4. المواد اللي محددة لـ "كل الفئات" أو "كل اللفلات" تظهر في قسم خاص بعنوان "عام / General"
+5. كل بطاقة مادة تعرض: الاسم، النوع (PDF/فيديو/لينك...)، تاريخ الرفع، وأزرار التعديل والحذف
+
+### فلاتر إضافية في أعلى الصفحة
+- فلتر سريع بالفئة العمرية (لإخفاء/إظهار أقسام معينة)
+- فلتر بالباقة (kojo_squad / kojo_core / kojo_x)
+- فلتر بالوضع (أونلاين / أوفلاين)
+- بحث بالاسم
 
 ---
 
-## ملخص ما تم تنفيذه
+## التفاصيل التقنية
 
-### ✅ المرحلة 1: الإصلاحات الأمنية
-- **RLS على profiles**: تم التأكد من تفعيل Row Level Security والسياسات الحالية تتطلب المصادقة
-- **⚠️ Leaked Password Protection**: يحتاج تفعيل يدوي من Cloud View > Authentication > Settings
+### الملفات المتأثرة
 
-### ✅ المرحلة 2: تحسينات الأداء
-- **Rate Limiting**: تم إضافة حماية ضد الاستخدام المفرط لـ Edge Functions:
-  - `create-user`: 5 طلبات/دقيقة
-  - `grade-quiz`: 20 طلب/دقيقة  
-  - `delete-users`: 2 طلب/دقيقة
-  - `send-notification`: 30 طلب/دقيقة
+1. **`src/pages/Materials.tsx`** (ملف جديد) - صفحة إدارة المواد للمدير
+   - جلب المواد من جدول `materials` مع join على `age_groups` و `levels`
+   - تجميع المواد في هيكل بيانات هرمي: `Map<age_group_id, Map<level_id, Material[]>>`
+   - ترتيب الفئات حسب `min_age` والليفلات حسب `level_order`
+   - استخدام مكون `Collapsible` من Radix UI لكل مجموعة
+   - المواد اللي `age_group_id = null` تظهر تحت قسم "عام"
+   - المواد اللي `level_id = null` داخل فئة معينة تظهر تحت "كل المستويات"
 
-- **مكون Pagination جاهز**: تم إنشاء:
-  - `src/hooks/usePaginatedQuery.ts`
-  - `src/components/ui/data-table-pagination.tsx`
+2. **`src/App.tsx`** - إضافة Route `/materials`
+3. **`src/components/AppSidebar.tsx`** - إضافة رابط "المواد التعليمية" للمدير
 
-### ✅ المرحلة 3: تحسينات جودة الكود
-- **Error Boundary**: تم إنشاء `src/components/ErrorBoundary.tsx` وإضافته للتطبيق
-- **Table Skeleton**: تم إنشاء `src/components/ui/table-skeleton.tsx`
-- **Error Handler**: تم إنشاء `src/lib/errorHandler.ts`
-- **Unit Tests**: تم إنشاء `src/lib/validationUtils.test.ts`
+### هيكل البيانات في الكود
 
----
-
-## كيفية استخدام المكونات الجديدة
-
-### استخدام Pagination
-```typescript
-import { usePaginatedQuery } from '@/hooks/usePaginatedQuery';
-import { DataTablePagination } from '@/components/ui/data-table-pagination';
-
-function MyPage() {
-  const {
-    data,
-    loading,
-    page,
-    pageSize,
-    totalCount,
-    totalPages,
-    hasNextPage,
-    hasPreviousPage,
-    goToPage,
-    setPageSize,
-    fetchPage,
-  } = usePaginatedQuery<Student>('profiles', { initialPageSize: 20 });
-
-  useEffect(() => {
-    fetchPage((query) => query.order('full_name'));
-  }, [page]);
-
-  return (
-    <>
-      <Table>...</Table>
-      <DataTablePagination
-        currentPage={page}
-        totalPages={totalPages}
-        pageSize={pageSize}
-        totalCount={totalCount}
-        hasNextPage={hasNextPage}
-        hasPreviousPage={hasPreviousPage}
-        onPageChange={goToPage}
-        onPageSizeChange={setPageSize}
-      />
-    </>
-  );
+```text
+groupedMaterials = {
+  "age-group-id-1": {
+    ageGroup: { id, name, name_ar, min_age },
+    levels: {
+      "level-id-1": {
+        level: { id, name, name_ar, level_order },
+        materials: [...]
+      },
+      "all": {  // materials with level_id = null
+        materials: [...]
+      }
+    }
+  },
+  "all": {  // materials with age_group_id = null
+    levels: { ... }
+  }
 }
 ```
 
-### استخدام Table Skeleton
-```typescript
-import { TableSkeleton } from '@/components/ui/table-skeleton';
+### Migration SQL
+- إنشاء جدول `materials` (كما هو موضح في الخطة السابقة)
+- إنشاء Storage bucket
+- إضافة RLS policies
 
-{loading ? <TableSkeleton rows={5} columns={5} /> : <Table>...</Table>}
-```
-
-### استخدام Error Handler
-```typescript
-import { handleSupabaseError, createErrorToast } from '@/lib/errorHandler';
-
-try {
-  // ...
-} catch (error) {
-  toast(createErrorToast(error, isRTL));
-}
-```
-
----
-
-## المهام المتبقية للتطبيق اليدوي
-
-### 1. تفعيل Leaked Password Protection
-اذهب إلى: Cloud View > Authentication > Settings > تفعيل "Leaked Password Protection"
-
-### 2. تطبيق Pagination على الصفحات
-الصفحات التي تحتاج تحديث:
-- `src/pages/Students.tsx`
-- `src/pages/Groups.tsx`
-- `src/pages/Instructors.tsx`
-- `src/pages/Sessions.tsx`
-
-### 3. استبدال Loading بـ Skeleton
-استبدل `{loading ? <p>Loading...</p> : ...}` بـ `{loading ? <TableSkeleton /> : ...}`
-
----
-
-## الملفات المُنشأة/المُعدلة
-
-### ملفات جديدة:
-- `src/components/ErrorBoundary.tsx`
-- `src/components/ui/table-skeleton.tsx`
-- `src/components/ui/data-table-pagination.tsx`
-- `src/hooks/usePaginatedQuery.ts`
-- `src/lib/errorHandler.ts`
-- `src/lib/validationUtils.test.ts`
-- `supabase/functions/_shared/rateLimit.ts`
-
-### ملفات معدلة:
-- `src/App.tsx` - تم إضافة ErrorBoundary
-- `supabase/functions/create-user/index.ts` - تم إضافة Rate Limiting
-- `supabase/functions/grade-quiz/index.ts` - تم إضافة Rate Limiting
-- `supabase/functions/delete-users/index.ts` - تم إضافة Rate Limiting
-- `supabase/functions/send-notification/index.ts` - تم إضافة Rate Limiting
+### ملاحظة
+هذا التخطيط يشمل فقط **طريقة عرض المواد للمدير**. صفحة الطالب (`MyMaterials.tsx`) ستُبنى بعد ذلك بعرض مبسط للمواد المتاحة له فقط.
