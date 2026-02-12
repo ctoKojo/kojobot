@@ -432,6 +432,7 @@ export type Database = {
           created_at: string
           duration_minutes: number
           group_type: Database["public"]["Enums"]["group_type"]
+          has_started: boolean | null
           id: string
           instructor_id: string
           is_active: boolean | null
@@ -452,6 +453,7 @@ export type Database = {
           created_at?: string
           duration_minutes?: number
           group_type?: Database["public"]["Enums"]["group_type"]
+          has_started?: boolean | null
           id?: string
           instructor_id: string
           is_active?: boolean | null
@@ -472,6 +474,7 @@ export type Database = {
           created_at?: string
           duration_minutes?: number
           group_type?: Database["public"]["Enums"]["group_type"]
+          has_started?: boolean | null
           id?: string
           instructor_id?: string
           is_active?: boolean | null
