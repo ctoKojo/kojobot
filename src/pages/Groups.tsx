@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye, TrendingUp, CalendarIcon, Snowflake, Play } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye, TrendingUp, CalendarIcon, Snowflake, Play, Rocket, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -71,6 +71,7 @@ interface Group {
   attendance_mode: AttendanceMode | null;
   session_link: string | null;
   status: GroupStatus;
+  has_started: boolean;
 }
 
 interface AgeGroup {
@@ -145,11 +146,18 @@ export default function GroupsPage() {
     group_type: 'kojo_squad' as GroupType,
     attendance_mode: 'offline' as AttendanceMode,
     session_link: '',
-    is_existing_group: false,
-    next_session_number: 1,
-    next_session_date: null as Date | null,
   });
   const [groupStudentCounts, setGroupStudentCounts] = useState<GroupStudentCount>({});
+  
+  // Start Group Dialog state
+  const [isStartGroupDialogOpen, setIsStartGroupDialogOpen] = useState(false);
+  const [selectedGroupForStart, setSelectedGroupForStart] = useState<Group | null>(null);
+  const [startGroupData, setStartGroupData] = useState({
+    is_existing_group: false,
+    starting_session_number: 1,
+    start_date: null as Date | null,
+  });
+  const [startGroupLoading, setStartGroupLoading] = useState(false);
 
   const groupTypes: { value: GroupType; label: string; labelAr: string; maxStudents: number }[] = [
     { value: 'kojo_squad', label: 'Kojo Squad', labelAr: 'كوجو سكواد', maxStudents: 8 },
@@ -369,33 +377,6 @@ export default function GroupsPage() {
 
   const handleSubmit = async () => {
     try {
-      // Validate: if existing group with today's date, check time is not in the past
-      if (!editingGroup && formData.is_existing_group && formData.next_session_date) {
-        const today = new Date();
-        const selectedDate = new Date(formData.next_session_date);
-        today.setHours(0, 0, 0, 0);
-        selectedDate.setHours(0, 0, 0, 0);
-        
-        if (selectedDate.getTime() === today.getTime()) {
-          // Check if the schedule time is in the past
-          const now = new Date();
-          const [hours, minutes] = formData.schedule_time.split(':').map(Number);
-          const sessionTime = new Date();
-          sessionTime.setHours(hours, minutes, 0, 0);
-          
-          if (sessionTime < now) {
-            toast({
-              title: isRTL ? 'خطأ' : 'Error',
-              description: isRTL 
-                ? 'لا يمكن تحديد وقت السيشن في الماضي. اختر وقتاً بعد الوقت الحالي أو اختر تاريخاً آخر.'
-                : 'Session time cannot be in the past. Choose a time after the current time or select another date.',
-              variant: 'destructive',
-            });
-            return;
-          }
-        }
-      }
-
       const payload: any = {
         name: formData.name,
         name_ar: formData.name,
@@ -410,12 +391,6 @@ export default function GroupsPage() {
         session_link: formData.attendance_mode === 'online' ? formData.session_link || null : null,
       };
 
-      // If creating new group and it's an existing group, set starting session number and date
-      if (!editingGroup && formData.is_existing_group) {
-        payload.starting_session_number = formData.next_session_number;
-        payload.start_date = formData.next_session_date ? format(formData.next_session_date, 'yyyy-MM-dd') : null;
-      }
-
       const previousInstructorId = editingGroup?.instructor_id;
       const isNewInstructor = !editingGroup || previousInstructorId !== formData.instructor_id;
 
@@ -427,7 +402,6 @@ export default function GroupsPage() {
 
         if (error) throw error;
         
-        // Notify new instructor if changed
         if (isNewInstructor) {
           await notificationService.notifyGroupAssigned(
             formData.instructor_id,
@@ -443,7 +417,7 @@ export default function GroupsPage() {
           description: isRTL ? 'تم تحديث المجموعة' : 'Group updated successfully',
         });
       } else {
-        const { data: newGroup, error } = await supabase
+        const { error } = await supabase
           .from('groups')
           .insert([payload])
           .select('id')
@@ -451,7 +425,6 @@ export default function GroupsPage() {
 
         if (error) throw error;
         
-        // Notify instructor about new group assignment
         await notificationService.notifyGroupAssigned(
           formData.instructor_id,
           formData.name,
@@ -459,23 +432,6 @@ export default function GroupsPage() {
           formData.schedule_day,
           formData.schedule_time
         );
-
-        // If it's an existing group with completed sessions, populate their data
-        if (formData.is_existing_group && formData.next_session_number > 1 && newGroup?.id) {
-          console.log('Populating completed sessions for existing group...');
-          try {
-            const { error: populateError } = await supabase.functions.invoke('populate-completed-sessions', {
-              body: { group_id: newGroup.id },
-            });
-            if (populateError) {
-              console.error('Failed to populate completed sessions:', populateError);
-            } else {
-              console.log('Successfully populated completed sessions');
-            }
-          } catch (populateErr) {
-            console.error('Error populating completed sessions:', populateErr);
-          }
-        }
         
         toast({
           title: t.common.success,
@@ -510,9 +466,6 @@ export default function GroupsPage() {
       group_type: 'kojo_squad',
       attendance_mode: 'offline',
       session_link: '',
-      is_existing_group: false,
-      next_session_number: 1,
-      next_session_date: null,
     });
   };
 
@@ -530,9 +483,6 @@ export default function GroupsPage() {
       group_type: group.group_type || 'kojo_squad',
       attendance_mode: group.attendance_mode || 'offline',
       session_link: group.session_link || '',
-      is_existing_group: false,
-      next_session_number: 1,
-      next_session_date: null,
     });
     setIsDialogOpen(true);
   };
@@ -602,14 +552,52 @@ export default function GroupsPage() {
     }
   };
 
-  const getStatusBadge = (status: GroupStatus) => {
-    switch (status) {
+  const handleStartGroup = async () => {
+    if (!selectedGroupForStart) return;
+    setStartGroupLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('start-group', {
+        body: {
+          group_id: selectedGroupForStart.id,
+          start_date: startGroupData.start_date ? format(startGroupData.start_date, 'yyyy-MM-dd') : null,
+          starting_session_number: startGroupData.is_existing_group ? startGroupData.starting_session_number : 1,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: t.common.success,
+        description: isRTL ? 'تم بدء المجموعة وإنشاء الحصص' : 'Group started and sessions created',
+      });
+
+      setIsStartGroupDialogOpen(false);
+      setSelectedGroupForStart(null);
+      setStartGroupData({ is_existing_group: false, starting_session_number: 1, start_date: null });
+      fetchData();
+    } catch (error) {
+      console.error('Error starting group:', error);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: isRTL ? 'فشل في بدء المجموعة' : 'Failed to start group',
+      });
+    } finally {
+      setStartGroupLoading(false);
+    }
+  };
+
+  const getStatusBadge = (group: Group) => {
+    if (!group.has_started) {
+      return { className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400', label: isRTL ? 'لم تبدأ' : 'Not Started' };
+    }
+    switch (group.status) {
       case 'active':
         return { className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400', label: isRTL ? 'نشط' : 'Active' };
       case 'frozen':
         return { className: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400', label: isRTL ? 'مجمد' : 'Frozen' };
       default:
-        return { className: '', label: status };
+        return { className: '', label: group.status };
     }
   };
 
@@ -727,122 +715,6 @@ export default function GroupsPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
-              {/* Group Status Section - Only show when creating new group */}
-              {!editingGroup && (
-                <div className="grid gap-4 pb-4 border-b">
-                  <Label className="font-semibold">{isRTL ? 'حالة المجموعة' : 'Group Status'}</Label>
-                  <RadioGroup
-                    value={formData.is_existing_group ? 'existing' : 'new'}
-                    onValueChange={(value) => setFormData({ 
-                      ...formData, 
-                      is_existing_group: value === 'existing',
-                      next_session_number: value === 'new' ? 1 : formData.next_session_number,
-                      next_session_date: value === 'new' ? null : formData.next_session_date
-                    })}
-                    className="flex flex-col gap-3"
-                  >
-                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                      <RadioGroupItem value="new" id="new-group" />
-                      <Label htmlFor="new-group" className="cursor-pointer font-normal">
-                        {isRTL ? 'مجموعة جديدة - تبدأ من السيشن 1' : 'New Group - Starts from Session 1'}
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                      <RadioGroupItem value="existing" id="existing-group" />
-                      <Label htmlFor="existing-group" className="cursor-pointer font-normal">
-                        {isRTL ? 'مجموعة قائمة - بدأت مسبقاً' : 'Existing Group - Already Started'}
-                      </Label>
-                    </div>
-                  </RadioGroup>
-
-                  {formData.is_existing_group && (
-                    <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
-                      <div className="grid gap-2">
-                        <Label>{isRTL ? 'السيشن القادم سيكون رقم' : 'Next Session Number'}</Label>
-                        <Select
-                          value={formData.next_session_number.toString()}
-                          onValueChange={(value) => setFormData({ ...formData, next_session_number: parseInt(value) })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-                              <SelectItem key={num} value={num.toString()}>
-                                {isRTL ? `السيشن ${num}` : `Session ${num}`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Progress Summary */}
-                      <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                        <div className="p-2 rounded bg-background">
-                          <div className="font-semibold text-muted-foreground">
-                            {formData.next_session_number - 1}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {isRTL ? 'سيشنات فاتت' : 'Passed'}
-                          </div>
-                        </div>
-                        <div className="p-2 rounded bg-background">
-                          <div className="font-semibold text-primary">
-                            {12 - formData.next_session_number + 1}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {isRTL ? 'سيشنات باقية' : 'Remaining'}
-                          </div>
-                        </div>
-                        <div className="p-2 rounded bg-background">
-                          <div className="font-semibold text-green-600">
-                            {Math.round(((formData.next_session_number - 1) / 12) * 100)}%
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {isRTL ? 'التقدم' : 'Progress'}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label>{isRTL ? 'تاريخ السيشن القادم' : 'Next Session Date'}</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !formData.next_session_date && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4 rtl:ml-2 rtl:mr-0" />
-                              {formData.next_session_date ? (
-                                format(formData.next_session_date, "PPP", { locale: isRTL ? ar : enUS })
-                              ) : (
-                                <span>{isRTL ? 'اختر التاريخ' : 'Select date'}</span>
-                              )}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={formData.next_session_date || undefined}
-                              onSelect={(date) => setFormData({ ...formData, next_session_date: date || null })}
-                              disabled={(date) => {
-                                const today = new Date();
-                                today.setHours(0, 0, 0, 0);
-                                return date < today;
-                              }}
-                              initialFocus
-                              className={cn("p-3 pointer-events-auto")}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
 
               <div className="grid gap-2">
                 <Label>{t.groups.groupName}</Label>
@@ -1178,11 +1050,9 @@ export default function GroupsPage() {
                               : (isRTL ? 'حضوري' : 'Offline')}
                           </Badge>
                           {/* Status Badge */}
-                          {group.status && group.status !== 'active' && (
-                            <Badge className={`text-xs ${getStatusBadge(group.status).className}`}>
-                              {getStatusBadge(group.status).label}
-                            </Badge>
-                          )}
+                          <Badge className={`text-xs ${getStatusBadge(group).className}`}>
+                            {getStatusBadge(group).label}
+                          </Badge>
                         </div>
                         
                         <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
@@ -1232,6 +1102,17 @@ export default function GroupsPage() {
                                 <Users className="h-4 w-4 mr-2" />
                                 {isRTL ? 'إدارة الطلاب' : 'Manage Students'}
                               </DropdownMenuItem>
+                              {/* Start Group - only for groups not yet started */}
+                              {!group.has_started && (
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedGroupForStart(group);
+                                  setStartGroupData({ is_existing_group: false, starting_session_number: 1, start_date: null });
+                                  setIsStartGroupDialogOpen(true);
+                                }}>
+                                  <Rocket className="h-4 w-4 mr-2 text-primary" />
+                                  {isRTL ? 'بدء المجموعة' : 'Start Group'}
+                                </DropdownMenuItem>
+                              )}
                               {/* Status Change Options */}
                               {group.status !== 'active' && (
                                 <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'active')}>
@@ -1328,8 +1209,8 @@ export default function GroupsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={getStatusBadge(group.status || 'active').className}>
-                            {getStatusBadge(group.status || 'active').label}
+                          <Badge className={getStatusBadge(group).className}>
+                            {getStatusBadge(group).label}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -1402,6 +1283,17 @@ export default function GroupsPage() {
                                     <Users className="h-4 w-4 mr-2" />
                                     {isRTL ? 'إدارة الطلاب' : 'Manage Students'}
                                   </DropdownMenuItem>
+                                  {/* Start Group */}
+                                  {!group.has_started && (
+                                    <DropdownMenuItem onClick={() => {
+                                      setSelectedGroupForStart(group);
+                                      setStartGroupData({ is_existing_group: false, starting_session_number: 1, start_date: null });
+                                      setIsStartGroupDialogOpen(true);
+                                    }}>
+                                      <Rocket className="h-4 w-4 mr-2 text-primary" />
+                                      {isRTL ? 'بدء المجموعة' : 'Start Group'}
+                                    </DropdownMenuItem>
+                                  )}
                                   {/* Status Change Options */}
                                   {group.status !== 'active' && (
                                     <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'active')}>
@@ -1444,6 +1336,145 @@ export default function GroupsPage() {
             </Table>
           </CardContent>
         </Card>
+        {/* Start Group Dialog */}
+        <Dialog open={isStartGroupDialogOpen} onOpenChange={setIsStartGroupDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Rocket className="h-5 w-5 text-primary" />
+                {isRTL ? 'بدء المجموعة' : 'Start Group'}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedGroupForStart && (
+                  <span className="font-medium">
+                    {language === 'ar' ? selectedGroupForStart.name_ar : selectedGroupForStart.name}
+                  </span>
+                )}
+                {' - '}
+                {isRTL ? 'سيتم إنشاء الحصص عند البدء' : 'Sessions will be created when you start'}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              {/* Group type: new or existing */}
+              <div className="grid gap-2">
+                <Label className="font-semibold">{isRTL ? 'نوع المجموعة' : 'Group Type'}</Label>
+                <RadioGroup
+                  value={startGroupData.is_existing_group ? 'existing' : 'new'}
+                  onValueChange={(value) => setStartGroupData({ 
+                    ...startGroupData, 
+                    is_existing_group: value === 'existing',
+                    starting_session_number: value === 'new' ? 1 : startGroupData.starting_session_number,
+                  })}
+                  className="flex flex-col gap-3"
+                >
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <RadioGroupItem value="new" id="start-new-group" />
+                    <Label htmlFor="start-new-group" className="cursor-pointer font-normal">
+                      {isRTL ? 'مجموعة جديدة - تبدأ من السيشن 1' : 'New Group - Starts from Session 1'}
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <RadioGroupItem value="existing" id="start-existing-group" />
+                    <Label htmlFor="start-existing-group" className="cursor-pointer font-normal">
+                      {isRTL ? 'مجموعة قائمة - بدأت مسبقاً' : 'Existing Group - Already Started'}
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Existing group options */}
+              {startGroupData.is_existing_group && (
+                <div className="space-y-4 p-4 rounded-lg border bg-muted/30">
+                  <div className="grid gap-2">
+                    <Label>{isRTL ? 'السيشن القادم سيكون رقم' : 'Next Session Number'}</Label>
+                    <Select
+                      value={startGroupData.starting_session_number.toString()}
+                      onValueChange={(value) => setStartGroupData({ ...startGroupData, starting_session_number: parseInt(value) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                          <SelectItem key={num} value={num.toString()}>
+                            {isRTL ? `السيشن ${num}` : `Session ${num}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                    <div className="p-2 rounded bg-background">
+                      <div className="font-semibold text-muted-foreground">
+                        {startGroupData.starting_session_number - 1}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{isRTL ? 'سيشنات فاتت' : 'Passed'}</div>
+                    </div>
+                    <div className="p-2 rounded bg-background">
+                      <div className="font-semibold text-primary">
+                        {12 - startGroupData.starting_session_number + 1}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{isRTL ? 'سيشنات باقية' : 'Remaining'}</div>
+                    </div>
+                    <div className="p-2 rounded bg-background">
+                      <div className="font-semibold text-primary">
+                        {Math.round(((startGroupData.starting_session_number - 1) / 12) * 100)}%
+                      </div>
+                      <div className="text-xs text-muted-foreground">{isRTL ? 'التقدم' : 'Progress'}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Start date picker */}
+              <div className="grid gap-2">
+                <Label>{isRTL ? 'تاريخ بداية الحصص' : 'Sessions Start Date'}</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !startGroupData.start_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4 rtl:ml-2 rtl:mr-0" />
+                      {startGroupData.start_date ? (
+                        format(startGroupData.start_date, "PPP", { locale: isRTL ? ar : enUS })
+                      ) : (
+                        <span>{isRTL ? 'اختياري - سيتم تحديد أقرب يوم تلقائياً' : 'Optional - defaults to next scheduled day'}</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startGroupData.start_date || undefined}
+                      onSelect={(date) => setStartGroupData({ ...startGroupData, start_date: date || null })}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return date < today;
+                      }}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsStartGroupDialogOpen(false)}>
+                {t.common.cancel}
+              </Button>
+              <Button className="kojo-gradient" onClick={handleStartGroup} disabled={startGroupLoading}>
+                {startGroupLoading 
+                  ? (isRTL ? 'جاري البدء...' : 'Starting...') 
+                  : (isRTL ? 'بدء المجموعة' : 'Start Group')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

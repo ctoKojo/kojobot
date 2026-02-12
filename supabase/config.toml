@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.check-payment-dues]
 verify_jwt = false
+
+[functions.start-group]
+verify_jwt = false
