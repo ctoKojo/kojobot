@@ -688,13 +688,15 @@ export default function InstructorsPage() {
                           <Pencil className="h-4 w-4 mr-2" />
                           {t.common.edit}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openSalaryDialog(instructor); }}>
-                          <DollarSign className="h-4 w-4 mr-2" />
-                          {isRTL ? 'تحديد راتب' : 'Set Salary'}
-                          {salaries[instructor.user_id] != null && (
-                            <Badge variant="outline" className="ml-2 text-xs">{salaries[instructor.user_id]} {isRTL ? 'ج.م' : 'EGP'}</Badge>
-                          )}
-                        </DropdownMenuItem>
+                        {instructor.employment_status === 'permanent' && (
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openSalaryDialog(instructor); }}>
+                            <DollarSign className="h-4 w-4 mr-2" />
+                            {isRTL ? 'تحديد راتب' : 'Set Salary'}
+                            {salaries[instructor.user_id] != null && (
+                              <Badge variant="outline" className="ml-2 text-xs">{salaries[instructor.user_id]} {isRTL ? 'ج.م' : 'EGP'}</Badge>
+                            )}
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -852,13 +854,15 @@ export default function InstructorsPage() {
                                 <Pencil className="h-4 w-4 mr-2" />
                                 {t.common.edit}
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => openSalaryDialog(instructor)}>
-                                <DollarSign className="h-4 w-4 mr-2" />
-                                {isRTL ? 'تحديد راتب' : 'Set Salary'}
-                                {salaries[instructor.user_id] != null && (
-                                  <Badge variant="outline" className="ml-2 text-xs">{salaries[instructor.user_id]} {isRTL ? 'ج.م' : 'EGP'}</Badge>
-                                )}
-                              </DropdownMenuItem>
+                              {instructor.employment_status === 'permanent' && (
+                                <DropdownMenuItem onClick={() => openSalaryDialog(instructor)}>
+                                  <DollarSign className="h-4 w-4 mr-2" />
+                                  {isRTL ? 'تحديد راتب' : 'Set Salary'}
+                                  {salaries[instructor.user_id] != null && (
+                                    <Badge variant="outline" className="ml-2 text-xs">{salaries[instructor.user_id]} {isRTL ? 'ج.م' : 'EGP'}</Badge>
+                                  )}
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
