@@ -31,6 +31,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,6 +60,7 @@ interface Instructor {
   work_type: string | null;
   is_paid_trainee: boolean | null;
   hourly_rate: number | null;
+  role: 'instructor' | 'reception';
 }
 
 export default function InstructorsPage() {
@@ -70,6 +72,7 @@ export default function InstructorsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'instructor' | 'reception'>('all');
   const [formData, setFormData] = useState({
     full_name: '',
     full_name_ar: '',
@@ -82,6 +85,7 @@ export default function InstructorsPage() {
     work_type: 'full_time' as 'full_time' | 'part_time',
     is_paid_trainee: false,
     hourly_rate: '' as string | number,
+    employee_type: 'instructor' as 'instructor' | 'reception',
   });
   const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -119,7 +123,7 @@ export default function InstructorsPage() {
       return baseValid;
     }
     
-    // For new instructors, also validate email and password
+    // For new employees, also validate email and password
     return baseValid && 
            !validationErrors.email && 
            validationErrors.passwordDetails.isValid;
@@ -131,23 +135,44 @@ export default function InstructorsPage() {
 
   const fetchInstructors = async () => {
     try {
+      // Fetch both instructors and reception roles
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
-        .select('user_id')
-        .eq('role', 'instructor');
+        .select('user_id, role')
+        .in('role', ['instructor', 'reception']);
 
       if (rolesError) throw rolesError;
 
-      const instructorUserIds = rolesData?.map((r) => r.user_id) || [];
+      const employeeUserIds = rolesData?.map((r) => r.user_id) || [];
+      const roleMap = new Map<string, 'instructor' | 'reception'>();
+      rolesData?.forEach((r) => {
+        roleMap.set(r.user_id, r.role as 'instructor' | 'reception');
+      });
 
-      if (instructorUserIds.length > 0) {
+      if (employeeUserIds.length > 0) {
         const [profilesRes, salariesRes] = await Promise.all([
-          supabase.from('profiles').select('*').in('user_id', instructorUserIds),
-          supabase.from('employee_salaries').select('employee_id, base_salary').eq('is_active', true).in('employee_id', instructorUserIds),
+          supabase.from('profiles').select('*').in('user_id', employeeUserIds),
+          supabase.from('employee_salaries').select('employee_id, base_salary').eq('is_active', true).in('employee_id', employeeUserIds),
         ]);
 
         if (profilesRes.error) throw profilesRes.error;
-        setInstructors(profilesRes.data || []);
+        
+        // Merge role into profiles with defensive handling
+        const employees: Instructor[] = (profilesRes.data || [])
+          .filter((profile) => {
+            if (!roleMap.has(profile.user_id)) {
+              console.warn(`Profile ${profile.user_id} has no matching role, skipping`);
+              return false;
+            }
+            return true;
+          })
+          .map((profile) => ({
+            ...profile,
+            role: roleMap.get(profile.user_id)!,
+          }))
+          .sort((a, b) => a.full_name.localeCompare(b.full_name));
+
+        setInstructors(employees);
         
         const salMap: Record<string, number> = {};
         (salariesRes.data || []).forEach((s: any) => { salMap[s.employee_id] = s.base_salary; });
@@ -156,11 +181,11 @@ export default function InstructorsPage() {
         setInstructors([]);
       }
     } catch (error) {
-      console.error('Error fetching instructors:', error);
+      console.error('Error fetching employees:', error);
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: isRTL ? 'فشل في تحميل المدربين' : 'Failed to load instructors',
+        description: isRTL ? 'فشل في تحميل الموظفين' : 'Failed to load employees',
       });
     } finally {
       setLoading(false);
@@ -180,7 +205,7 @@ export default function InstructorsPage() {
       await supabase.from('employee_salaries').update({ is_active: false } as any).eq('employee_id', salaryTarget.user_id).eq('is_active', true);
       const { error } = await supabase.from('employee_salaries').insert({
         employee_id: salaryTarget.user_id,
-        employee_type: 'instructor',
+        employee_type: salaryTarget.role,
         base_salary: Number(salaryForm.base_salary),
         effective_from: salaryForm.effective_from,
       } as any);
@@ -241,45 +266,55 @@ export default function InstructorsPage() {
           avatarUrl = null;
         }
 
+        const updateData: any = {
+          full_name: formData.full_name,
+          full_name_ar: formData.full_name_ar || null,
+          phone: formData.phone || null,
+          employment_status: formData.employment_status,
+          work_type: formData.work_type,
+          is_paid_trainee: formData.employment_status === 'training' ? formData.is_paid_trainee : false,
+          hourly_rate: formData.employment_status === 'training' && formData.is_paid_trainee ? (Number(formData.hourly_rate) || null) : null,
+          avatar_url: avatarUrl,
+        };
+
+        // Only include specialization for instructors
+        if (editingInstructor.role === 'instructor') {
+          updateData.specialization = formData.specialization || null;
+          updateData.specialization_ar = formData.specialization_ar || null;
+        }
+
         const { error } = await supabase
           .from('profiles')
-          .update({
-            full_name: formData.full_name,
-            full_name_ar: formData.full_name_ar || null,
-            phone: formData.phone || null,
-            specialization: formData.specialization || null,
-            specialization_ar: formData.specialization_ar || null,
-            employment_status: formData.employment_status,
-            work_type: formData.work_type,
-            is_paid_trainee: formData.employment_status === 'training' ? formData.is_paid_trainee : false,
-            hourly_rate: formData.employment_status === 'training' && formData.is_paid_trainee ? (Number(formData.hourly_rate) || null) : null,
-            avatar_url: avatarUrl,
-          } as any)
+          .update(updateData)
           .eq('id', editingInstructor.id);
 
         if (error) throw error;
         toast({
           title: t.common.success,
-          description: isRTL ? 'تم تحديث بيانات المدرب' : 'Instructor updated successfully',
+          description: isRTL ? 'تم تحديث بيانات الموظف' : 'Employee updated successfully',
         });
       } else {
-        // Create new instructor via edge function
-        const { data, error } = await supabase.functions.invoke('create-user', {
-          body: {
-            email: formData.email,
-            password: formData.password,
-            full_name: formData.full_name,
-            full_name_ar: formData.full_name_ar || undefined,
-            phone: formData.phone || undefined,
-            role: 'instructor',
-            specialization: formData.specialization || undefined,
-            specialization_ar: formData.specialization_ar || undefined,
-            employment_status: formData.employment_status,
-            work_type: formData.work_type,
-            is_paid_trainee: formData.employment_status === 'training' ? formData.is_paid_trainee : false,
-            hourly_rate: formData.employment_status === 'training' && formData.is_paid_trainee ? (Number(formData.hourly_rate) || undefined) : undefined,
-          }
-        });
+        // Create new employee via edge function
+        const body: any = {
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.full_name,
+          full_name_ar: formData.full_name_ar || undefined,
+          phone: formData.phone || undefined,
+          role: formData.employee_type,
+          employment_status: formData.employment_status,
+          work_type: formData.work_type,
+          is_paid_trainee: formData.employment_status === 'training' ? formData.is_paid_trainee : false,
+          hourly_rate: formData.employment_status === 'training' && formData.is_paid_trainee ? (Number(formData.hourly_rate) || undefined) : undefined,
+        };
+
+        // Only include specialization for instructors
+        if (formData.employee_type === 'instructor') {
+          body.specialization = formData.specialization || undefined;
+          body.specialization_ar = formData.specialization_ar || undefined;
+        }
+
+        const { data, error } = await supabase.functions.invoke('create-user', { body });
 
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -294,7 +329,7 @@ export default function InstructorsPage() {
 
         toast({
           title: t.common.success,
-          description: isRTL ? 'تم إنشاء المدرب بنجاح' : 'Instructor created successfully',
+          description: isRTL ? 'تم إنشاء الموظف بنجاح' : 'Employee created successfully',
         });
       }
 
@@ -303,11 +338,11 @@ export default function InstructorsPage() {
       resetForm();
       fetchInstructors();
     } catch (error: any) {
-      console.error('Error saving instructor:', error);
+      console.error('Error saving employee:', error);
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: error.message || (isRTL ? 'فشل في حفظ بيانات المدرب' : 'Failed to save instructor'),
+        description: error.message || (isRTL ? 'فشل في حفظ بيانات الموظف' : 'Failed to save employee'),
       });
     } finally {
       setSaving(false);
@@ -327,6 +362,7 @@ export default function InstructorsPage() {
       work_type: 'full_time',
       is_paid_trainee: false,
       hourly_rate: '',
+      employee_type: 'instructor',
     });
     setFormTouched({});
     setAvatarFile(null);
@@ -347,6 +383,7 @@ export default function InstructorsPage() {
       work_type: (instructor.work_type as 'full_time' | 'part_time') || 'full_time',
       is_paid_trainee: instructor.is_paid_trainee || false,
       hourly_rate: instructor.hourly_rate || '',
+      employee_type: instructor.role,
     });
     setAvatarFile(null);
     setAvatarPreview(instructor.avatar_url || null);
@@ -359,8 +396,28 @@ export default function InstructorsPage() {
     instructor.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const filteredByCategory = useMemo(() => {
+    if (categoryFilter === 'all') return filteredInstructors;
+    return filteredInstructors.filter((emp) => emp.role === categoryFilter);
+  }, [filteredInstructors, categoryFilter]);
+
+  const getRoleBadge = (role: 'instructor' | 'reception') => {
+    if (role === 'instructor') {
+      return (
+        <Badge variant="outline" className="border-blue-500 text-blue-600 text-xs">
+          {isRTL ? 'مدرب' : 'Instructor'}
+        </Badge>
+      );
+    }
+    return (
+      <Badge variant="outline" className="border-purple-500 text-purple-600 text-xs">
+        {isRTL ? 'ريسيبشن' : 'Reception'}
+      </Badge>
+    );
+  };
+
   return (
-    <DashboardLayout title={t.instructors.title}>
+    <DashboardLayout title={t.instructors.employeesTitle}>
       <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
@@ -380,26 +437,71 @@ export default function InstructorsPage() {
             setIsDialogOpen(true);
           }}>
             <UserPlus className="h-4 w-4 mr-2" />
-            {t.instructors.addInstructor}
+            {t.instructors.addEmployee}
           </Button>
         </div>
+
+        {/* Category Tabs */}
+        <Tabs value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
+          <TabsList>
+            <TabsTrigger value="all">{t.instructors.allEmployees}</TabsTrigger>
+            <TabsTrigger value="instructor">{t.instructors.instructorsOnly}</TabsTrigger>
+            <TabsTrigger value="reception">{t.instructors.receptionOnly}</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>
-                {editingInstructor ? t.instructors.editInstructor : t.instructors.addInstructor}
+                {editingInstructor ? t.instructors.editEmployee : t.instructors.addEmployee}
               </DialogTitle>
               <DialogDescription>
-                {isRTL ? 'أدخل بيانات المدرب' : 'Enter instructor details'}
+                {isRTL ? 'أدخل بيانات الموظف' : 'Enter employee details'}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+              {/* Employee Type - only for new employees */}
+              {!editingInstructor ? (
+                <div className="grid gap-2">
+                  <Label>{t.instructors.employeeType} <span className="text-destructive">*</span></Label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="employee_type"
+                        value="instructor"
+                        checked={formData.employee_type === 'instructor'}
+                        onChange={() => setFormData({ ...formData, employee_type: 'instructor' })}
+                        className="h-4 w-4 text-primary"
+                      />
+                      <span className="text-sm">{isRTL ? 'مدرب' : 'Instructor'}</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="employee_type"
+                        value="reception"
+                        checked={formData.employee_type === 'reception'}
+                        onChange={() => setFormData({ ...formData, employee_type: 'reception', specialization: '', specialization_ar: '' })}
+                        className="h-4 w-4 text-primary"
+                      />
+                      <span className="text-sm">{isRTL ? 'ريسيبشن' : 'Reception'}</span>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Label>{t.instructors.employeeType}:</Label>
+                  {getRoleBadge(editingInstructor.role)}
+                </div>
+              )}
+
               {/* Avatar Upload */}
               <AvatarUpload
                 currentUrl={editingInstructor?.avatar_url}
-                name={formData.full_name || 'IN'}
+                name={formData.full_name || 'EM'}
                 previewUrl={avatarPreview}
                 onFileSelect={(file) => {
                   setAvatarFile(file);
@@ -559,25 +661,31 @@ export default function InstructorsPage() {
                   </p>
                 )}
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="specialization">{t.instructors.specializations} (English)</Label>
-                <Input
-                  id="specialization"
-                  value={formData.specialization}
-                  onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                  placeholder="e.g., Python, Scratch"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="specialization_ar">{t.instructors.specializations} (عربي)</Label>
-                <Input
-                  id="specialization_ar"
-                  value={formData.specialization_ar}
-                  onChange={(e) => setFormData({ ...formData, specialization_ar: e.target.value })}
-                  placeholder="مثال: بايثون، سكراتش"
-                  dir="rtl"
-                />
-              </div>
+
+              {/* Specialization - only for instructors */}
+              {((editingInstructor && editingInstructor.role === 'instructor') || (!editingInstructor && formData.employee_type === 'instructor')) && (
+                <>
+                  <div className="grid gap-2">
+                    <Label htmlFor="specialization">{t.instructors.specializations} (English)</Label>
+                    <Input
+                      id="specialization"
+                      value={formData.specialization}
+                      onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                      placeholder="e.g., Python, Scratch"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="specialization_ar">{t.instructors.specializations} (عربي)</Label>
+                    <Input
+                      id="specialization_ar"
+                      value={formData.specialization_ar}
+                      onChange={(e) => setFormData({ ...formData, specialization_ar: e.target.value })}
+                      placeholder="مثال: بايثون، سكراتش"
+                      dir="rtl"
+                    />
+                  </div>
+                </>
+              )}
               
               {/* Employment Status */}
               <div className="grid gap-2">
@@ -692,14 +800,14 @@ export default function InstructorsPage() {
                 {t.common.loading}
               </CardContent>
             </Card>
-          ) : filteredInstructors.length === 0 ? (
+          ) : filteredByCategory.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
-                {isRTL ? 'لا يوجد مدربين' : 'No instructors found'}
+                {isRTL ? 'لا يوجد موظفين' : 'No employees found'}
               </CardContent>
             </Card>
           ) : (
-            filteredInstructors.map((instructor) => (
+            filteredByCategory.map((instructor) => (
               <Card 
                 key={instructor.id} 
                 className="cursor-pointer hover:bg-muted/50 transition-colors"
@@ -755,7 +863,8 @@ export default function InstructorsPage() {
                     </DropdownMenu>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {instructor.specialization && (
+                    {getRoleBadge(instructor.role)}
+                    {instructor.role === 'instructor' && instructor.specialization && (
                       <Badge variant="secondary" className="text-xs">
                         {language === 'ar' && instructor.specialization_ar 
                           ? instructor.specialization_ar 
@@ -809,6 +918,7 @@ export default function InstructorsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t.students.fullName}</TableHead>
+                  <TableHead>{t.instructors.employeeType}</TableHead>
                   <TableHead>{t.auth.email}</TableHead>
                   <TableHead>{t.instructors.specializations}</TableHead>
                   <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
@@ -818,18 +928,18 @@ export default function InstructorsPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
-                ) : filteredInstructors.length === 0 ? (
+                ) : filteredByCategory.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      {isRTL ? 'لا يوجد مدربين' : 'No instructors found'}
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      {isRTL ? 'لا يوجد موظفين' : 'No employees found'}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredInstructors.map((instructor) => (
+                  filteredByCategory.map((instructor) => (
                     <TableRow key={instructor.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -846,9 +956,10 @@ export default function InstructorsPage() {
                           </span>
                         </div>
                       </TableCell>
+                      <TableCell>{getRoleBadge(instructor.role)}</TableCell>
                       <TableCell>{instructor.email}</TableCell>
                       <TableCell>
-                        {instructor.specialization ? (
+                        {instructor.role === 'instructor' && instructor.specialization ? (
                           <Badge variant="secondary">
                             {language === 'ar' && instructor.specialization_ar 
                               ? instructor.specialization_ar 

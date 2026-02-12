@@ -105,6 +105,13 @@ interface Translations {
     editInstructor: string;
     specializations: string;
     assignedGroups: string;
+    employeesTitle: string;
+    addEmployee: string;
+    editEmployee: string;
+    employeeType: string;
+    allEmployees: string;
+    instructorsOnly: string;
+    receptionOnly: string;
   };
   groups: {
     title: string;
@@ -289,7 +296,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       dashboard: 'Dashboard',
       students: 'Students',
-      instructors: 'Instructors',
+      instructors: 'Employees',
       groups: 'Groups',
       quizzes: 'Quizzes',
       assignments: 'Assignments',
@@ -344,6 +351,13 @@ export const translations: Record<Language, Translations> = {
       editInstructor: 'Edit Instructor',
       specializations: 'Specializations',
       assignedGroups: 'Assigned Groups',
+      employeesTitle: 'Employees',
+      addEmployee: 'Add Employee',
+      editEmployee: 'Edit Employee',
+      employeeType: 'Employee Type',
+      allEmployees: 'All',
+      instructorsOnly: 'Instructors',
+      receptionOnly: 'Reception',
     },
 
     // Groups
@@ -545,7 +559,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       dashboard: 'لوحة التحكم',
       students: 'الطلاب',
-      instructors: 'المدربين',
+      instructors: 'الموظفين',
       groups: 'المجموعات',
       quizzes: 'الاختبارات',
       assignments: 'الواجبات',
@@ -600,6 +614,13 @@ export const translations: Record<Language, Translations> = {
       editInstructor: 'تعديل المدرب',
       specializations: 'التخصصات',
       assignedGroups: 'المجموعات المسندة',
+      employeesTitle: 'الموظفين',
+      addEmployee: 'إضافة موظف',
+      editEmployee: 'تعديل موظف',
+      employeeType: 'نوع الموظف',
+      allEmployees: 'الكل',
+      instructorsOnly: 'المدربين',
+      receptionOnly: 'الريسيبشن',
     },
 
     // Groups
