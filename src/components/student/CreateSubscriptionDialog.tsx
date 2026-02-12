@@ -26,19 +26,56 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
   const [plans, setPlans] = useState<any[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [paymentType, setPaymentType] = useState<'full' | 'installment'>('full');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState('');
   const [paidAmount, setPaidAmount] = useState(0);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [loadingCheck, setLoadingCheck] = useState(true);
 
   useEffect(() => {
     if (open) {
-      supabase.from('pricing_plans').select('*').eq('is_active', true).then(({ data }) => setPlans((data as any) || []));
+      setLoadingCheck(true);
+      setHasActiveSubscription(false);
+      setStartDate('');
+
+      // Check for existing active subscription, fetch plans, and fetch first session date in parallel
+      Promise.all([
+        supabase.from('subscriptions').select('id').eq('student_id', studentId).eq('status', 'active').limit(1),
+        supabase.from('pricing_plans').select('*').eq('is_active', true),
+        // Get student's group, then first session
+        supabase.from('group_students').select('group_id').eq('student_id', studentId).eq('is_active', true).limit(1),
+      ]).then(async ([subRes, plansRes, groupRes]) => {
+        setHasActiveSubscription((subRes.data?.length || 0) > 0);
+        setPlans((plansRes.data as any) || []);
+
+        // Auto-set start date from first session
+        const groupId = groupRes.data?.[0]?.group_id;
+        if (groupId) {
+          const { data: firstSession } = await supabase
+            .from('sessions')
+            .select('session_date')
+            .eq('group_id', groupId)
+            .order('session_date', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          
+          if (firstSession?.session_date) {
+            setStartDate(firstSession.session_date);
+          } else {
+            setStartDate(new Date().toISOString().split('T')[0]);
+          }
+        } else {
+          setStartDate(new Date().toISOString().split('T')[0]);
+        }
+
+        setLoadingCheck(false);
+      });
     }
-  }, [open]);
+  }, [open, studentId]);
 
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
-  const totalAmount = selectedPlan ? (paymentType === 'full' ? selectedPlan.price_3_months : selectedPlan.price_3_months) : 0;
+  const totalAmount = selectedPlan ? selectedPlan.price_3_months : 0;
   const installmentAmount = selectedPlan ? selectedPlan.price_1_month : 0;
   const endDate = startDate ? new Date(new Date(startDate).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : '';
   const remaining = Math.max(0, totalAmount - paidAmount);
@@ -60,8 +97,6 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
       const nextPaymentDate = calcNextPaymentDate();
       const isSuspended = nextPaymentDate && new Date(nextPaymentDate) < new Date() && remaining > 0;
 
-      // Create subscription
-      // Note: remaining_amount is a generated column (total_amount - paid_amount), don't insert it
       const { data: sub, error } = await supabase.from('subscriptions').insert({
         student_id: studentId,
         pricing_plan_id: selectedPlanId,
@@ -79,7 +114,6 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
 
       if (error) throw error;
 
-      // Record initial payment if any
       if (paidAmount > 0 && sub) {
         await supabase.from('payments').insert({
           subscription_id: sub.id,
@@ -103,101 +137,133 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
     }
   };
 
+  // Show warning if already has active subscription
+  if (open && !loadingCheck && hasActiveSubscription) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isRTL ? 'لا يمكن إنشاء اشتراك' : 'Cannot Create Subscription'}</DialogTitle>
+          </DialogHeader>
+          <div className="py-6 text-center space-y-3">
+            <Badge variant="destructive" className="text-sm px-4 py-1">
+              {isRTL ? '⚠️ يوجد اشتراك فعال بالفعل' : '⚠️ Active subscription already exists'}
+            </Badge>
+            <p className="text-muted-foreground text-sm">
+              {isRTL 
+                ? `الطالب ${studentName} لديه اشتراك فعال حالياً. لا يمكن إنشاء اشتراك جديد إلا بعد انتهاء الاشتراك الحالي.`
+                : `Student ${studentName} already has an active subscription. A new one can only be created after the current one expires.`}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => onOpenChange(false)}>{isRTL ? 'حسناً' : 'OK'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{isRTL ? 'إنشاء اشتراك جديد' : 'Create Subscription'}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="p-3 rounded-lg border bg-muted/50">
-            <p className="font-medium">{studentName}</p>
-          </div>
+        {loadingCheck ? (
+          <div className="py-8 text-center text-muted-foreground">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+        ) : (
+          <>
+            <div className="space-y-4 py-4">
+              <div className="p-3 rounded-lg border bg-muted/50">
+                <p className="font-medium">{studentName}</p>
+              </div>
 
-          <div>
-            <Label>{isRTL ? 'الباقة' : 'Pricing Plan'}</Label>
-            <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
-              <SelectTrigger><SelectValue placeholder={isRTL ? 'اختر الباقة' : 'Select plan'} /></SelectTrigger>
-              <SelectContent>
-                {plans.map(p => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {language === 'ar' ? p.name_ar : p.name} ({p.attendance_mode}) - {p.price_3_months} {isRTL ? 'ج.م' : 'EGP'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <div>
+                <Label>{isRTL ? 'الباقة' : 'Pricing Plan'}</Label>
+                <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+                  <SelectTrigger><SelectValue placeholder={isRTL ? 'اختر الباقة' : 'Select plan'} /></SelectTrigger>
+                  <SelectContent>
+                    {plans.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {language === 'ar' ? p.name_ar : p.name} ({p.attendance_mode}) - {p.price_3_months} {isRTL ? 'ج.م' : 'EGP'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div>
-            <Label>{isRTL ? 'نوع الدفع' : 'Payment Type'}</Label>
-            <Select value={paymentType} onValueChange={v => setPaymentType(v as 'full' | 'installment')}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="full">{isRTL ? 'كامل (3 شهور)' : 'Full (3 months)'}</SelectItem>
-                <SelectItem value="installment">{isRTL ? 'تقسيط شهري' : 'Monthly Installment'}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              <div>
+                <Label>{isRTL ? 'نوع الدفع' : 'Payment Type'}</Label>
+                <Select value={paymentType} onValueChange={v => setPaymentType(v as 'full' | 'installment')}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="full">{isRTL ? 'كامل (3 شهور)' : 'Full (3 months)'}</SelectItem>
+                    <SelectItem value="installment">{isRTL ? 'تقسيط شهري' : 'Monthly Installment'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div>
-            <Label>{isRTL ? 'تاريخ البداية' : 'Start Date'}</Label>
-            <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-          </div>
+              <div>
+                <Label>{isRTL ? 'تاريخ البداية (تلقائي من أول سيشن)' : 'Start Date (auto from first session)'}</Label>
+                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+              </div>
 
-          <div>
-            <Label>{isRTL ? 'المبلغ المدفوع فعلاً' : 'Amount Already Paid'}</Label>
-            <Input type="number" value={paidAmount} onChange={e => setPaidAmount(+e.target.value)} min={0} max={totalAmount} />
-          </div>
+              <div>
+                <Label>{isRTL ? 'المبلغ المدفوع فعلاً' : 'Amount Already Paid'}</Label>
+                <Input type="number" value={paidAmount} onChange={e => setPaidAmount(+e.target.value)} min={0} max={totalAmount} />
+              </div>
 
-          <div>
-            <Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>
-            <Input value={notes} onChange={e => setNotes(e.target.value)} />
-          </div>
+              <div>
+                <Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>
+                <Input value={notes} onChange={e => setNotes(e.target.value)} />
+              </div>
 
-          {selectedPlan && (
-            <Card className="bg-muted/30">
-              <CardContent className="pt-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>{isRTL ? 'المبلغ الإجمالي' : 'Total Amount'}</span>
-                  <span className="font-bold">{totalAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
-                </div>
-                {paymentType === 'installment' && (
-                  <div className="flex justify-between">
-                    <span>{isRTL ? 'القسط الشهري' : 'Monthly Installment'}</span>
-                    <span>{installmentAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span>{isRTL ? 'المدفوع' : 'Paid'}</span>
-                  <span className="text-green-600">{paidAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{isRTL ? 'المتبقي' : 'Remaining'}</span>
-                  <span className={remaining > 0 ? 'text-orange-600' : 'text-green-600'}>{remaining} {isRTL ? 'ج.م' : 'EGP'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>{isRTL ? 'تاريخ النهاية' : 'End Date'}</span>
-                  <span>{endDate}</span>
-                </div>
-                {calcNextPaymentDate() && (
-                  <div className="flex justify-between">
-                    <span>{isRTL ? 'الدفع القادم' : 'Next Payment'}</span>
-                    <span>{calcNextPaymentDate()}</span>
-                  </div>
-                )}
-                {calcNextPaymentDate() && new Date(calcNextPaymentDate()!) < new Date() && remaining > 0 && (
-                  <Badge variant="destructive" className="w-full justify-center mt-2">
-                    {isRTL ? '⚠️ الطالب متأخر - سيتم إيقاف الحساب' : '⚠️ Overdue - Account will be suspended'}
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-          <Button onClick={handleSave} disabled={saving}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'إنشاء الاشتراك' : 'Create Subscription')}</Button>
-        </DialogFooter>
+              {selectedPlan && (
+                <Card className="bg-muted/30">
+                  <CardContent className="pt-4 space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>{isRTL ? 'المبلغ الإجمالي' : 'Total Amount'}</span>
+                      <span className="font-bold">{totalAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
+                    </div>
+                    {paymentType === 'installment' && (
+                      <div className="flex justify-between">
+                        <span>{isRTL ? 'القسط الشهري' : 'Monthly Installment'}</span>
+                        <span>{installmentAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>{isRTL ? 'المدفوع' : 'Paid'}</span>
+                      <span className="text-green-600">{paidAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{isRTL ? 'المتبقي' : 'Remaining'}</span>
+                      <span className={remaining > 0 ? 'text-orange-600' : 'text-green-600'}>{remaining} {isRTL ? 'ج.م' : 'EGP'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>{isRTL ? 'تاريخ النهاية' : 'End Date'}</span>
+                      <span>{endDate}</span>
+                    </div>
+                    {calcNextPaymentDate() && (
+                      <div className="flex justify-between">
+                        <span>{isRTL ? 'الدفع القادم' : 'Next Payment'}</span>
+                        <span>{calcNextPaymentDate()}</span>
+                      </div>
+                    )}
+                    {calcNextPaymentDate() && new Date(calcNextPaymentDate()!) < new Date() && remaining > 0 && (
+                      <Badge variant="destructive" className="w-full justify-center mt-2">
+                        {isRTL ? '⚠️ الطالب متأخر - سيتم إيقاف الحساب' : '⚠️ Overdue - Account will be suspended'}
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+              <Button onClick={handleSave} disabled={saving}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'إنشاء الاشتراك' : 'Create Subscription')}</Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
