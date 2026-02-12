@@ -47,7 +47,7 @@ interface NavItem {
   title: string;
   url: string;
   icon: React.ComponentType<{ className?: string }>;
-  roles: ('admin' | 'instructor' | 'student')[];
+  roles: ('admin' | 'instructor' | 'student' | 'reception')[];
 }
 
 export function AppSidebar() {
@@ -61,21 +61,20 @@ export function AppSidebar() {
 
   // Main navigation - different per role
   const mainNavItems: NavItem[] = [
-    { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'instructor', 'student'] },
-    { title: t.nav.students, url: '/students', icon: GraduationCap, roles: ['admin'] },
+    { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'instructor', 'student', 'reception'] },
+    { title: t.nav.students, url: '/students', icon: GraduationCap, roles: ['admin', 'reception'] },
     { title: t.nav.instructors, url: '/instructors', icon: Users, roles: ['admin'] },
-    { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['admin', 'instructor'] },
-    { title: isRTL ? 'جدول العمل' : 'My Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['instructor'] },
+    { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['admin', 'instructor', 'reception'] },
+    { title: isRTL ? 'جدول العمل' : 'My Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['instructor', 'reception'] },
     { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-instructor-warnings', icon: AlertTriangle, roles: ['instructor'] },
-    { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['admin', 'instructor', 'student'] },
+    { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['admin', 'instructor', 'student', 'reception'] },
   ];
 
-  // Groups & Sessions category (Admin & Instructor)
-  // Note: Attendance is only in sidebar for admin - instructors access it from within session page
+  // Groups & Sessions category (Admin & Instructor & Reception)
   const sessionsNavItems: NavItem[] = [
-    { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin', 'instructor'] },
-    { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['admin'] },
-    { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['admin', 'instructor'] },
+    { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin', 'instructor', 'reception'] },
+    { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['admin', 'reception'] },
+    { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['admin', 'instructor', 'reception'] },
     { title: isRTL ? 'سيشناتي التعويضية' : 'My Makeup Sessions', url: '/my-makeup-sessions', icon: RefreshCw, roles: ['student'] },
   ];
 
@@ -98,20 +97,20 @@ export function AppSidebar() {
     { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['student'] },
   ];
 
-  // Finance category (Admin only)
+  // Finance category (Admin + Reception)
   const financeNavItems: NavItem[] = [
-    { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['admin'] },
+    { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['admin', 'reception'] },
     { title: isRTL ? 'قواعد الخصم' : 'Deduction Rules', url: '/deduction-rules', icon: AlertTriangle, roles: ['admin'] },
-    { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['admin'] },
+    { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['admin', 'reception'] },
   ];
 
-  // Settings category (Admin only mostly)
+  // Settings category (Admin only) + Reception personal items
   const settingsNavItems: NavItem[] = [
     { title: t.nav.ageGroups, url: '/age-groups', icon: Layers, roles: ['admin'] },
     { title: t.nav.levels, url: '/levels', icon: BookOpen, roles: ['admin'] },
     { title: isRTL ? 'إنذارات المدربين' : 'Instructor Warnings', url: '/instructor-warnings', icon: AlertTriangle, roles: ['admin'] },
     { title: t.nav.activityLog, url: '/activity-log', icon: Activity, roles: ['admin'] },
-    { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['admin'] },
+    { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['admin', 'reception'] },
     { title: t.nav.settings, url: '/settings', icon: Settings, roles: ['admin'] },
   ];
 

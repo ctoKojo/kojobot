@@ -1680,9 +1680,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_student: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "instructor" | "student"
+      app_role: "admin" | "instructor" | "student" | "reception"
       employment_status: "permanent" | "training"
       group_type: "kojo_squad" | "kojo_core" | "kojo_x"
       subscription_type: "kojo_squad" | "kojo_core" | "kojo_x"
@@ -1813,7 +1814,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "instructor", "student"],
+      app_role: ["admin", "instructor", "student", "reception"],
       employment_status: ["permanent", "training"],
       group_type: ["kojo_squad", "kojo_core", "kojo_x"],
       subscription_type: ["kojo_squad", "kojo_core", "kojo_x"],

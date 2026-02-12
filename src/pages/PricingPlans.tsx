@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -36,7 +37,9 @@ const emptyPlan = {
 
 export default function PricingPlans() {
   const { isRTL, language } = useLanguage();
+  const { role } = useAuth();
   const { toast } = useToast();
+  const isReadOnly = role === 'reception';
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -112,7 +115,7 @@ export default function PricingPlans() {
               <TableHead>{isRTL ? '3 شهور' : '3 Months'}</TableHead>
               <TableHead>{isRTL ? 'شهري' : 'Monthly'}</TableHead>
               <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-              <TableHead>{isRTL ? 'إجراءات' : 'Actions'}</TableHead>
+              {!isReadOnly && <TableHead>{isRTL ? 'إجراءات' : 'Actions'}</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -129,12 +132,14 @@ export default function PricingPlans() {
                     {plan.is_active ? (isRTL ? 'فعال' : 'Active') : (isRTL ? 'غير فعال' : 'Inactive')}
                   </Badge>
                 </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(plan)}><Edit className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(plan.id)}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                </TableCell>
+                {!isReadOnly && (
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button size="icon" variant="ghost" onClick={() => openEdit(plan)}><Edit className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(plan.id)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
@@ -148,7 +153,7 @@ export default function PricingPlans() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">{isRTL ? 'إدارة خطط التسعير' : 'Manage Pricing Plans'}</h2>
-          <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />{isRTL ? 'إضافة باقة' : 'Add Plan'}</Button>
+          {!isReadOnly && <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />{isRTL ? 'إضافة باقة' : 'Add Plan'}</Button>}
         </div>
 
         {renderTable(offlinePlans, isRTL ? 'أوفلاين (حضوري)' : 'Offline (In-Person)')}

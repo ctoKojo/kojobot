@@ -51,6 +51,7 @@ interface Translations {
     admin: string;
     instructor: string;
     student: string;
+    reception: string;
   };
   nav: {
     dashboard: string;
@@ -281,6 +282,7 @@ export const translations: Record<Language, Translations> = {
       admin: 'Admin',
       instructor: 'Instructor',
       student: 'Student',
+      reception: 'Reception',
     },
 
     // Navigation
@@ -536,6 +538,7 @@ export const translations: Record<Language, Translations> = {
       admin: 'مدير',
       instructor: 'مدرب',
       student: 'طالب',
+      reception: 'ريسيبشن',
     },
 
     // Navigation
