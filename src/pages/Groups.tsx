@@ -62,7 +62,7 @@ interface Group {
   name_ar: string;
   age_group_id: string | null;
   level_id: string | null;
-  instructor_id: string;
+  instructor_id: string | null;
   schedule_day: string;
   schedule_time: string;
   duration_minutes: number;
@@ -90,6 +90,14 @@ interface Instructor {
   user_id: string;
   full_name: string;
   full_name_ar: string | null;
+}
+
+interface InstructorScheduleData {
+  instructor_id: string;
+  day_of_week: string;
+  is_working_day: boolean;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 interface Student {
@@ -131,6 +139,7 @@ export default function GroupsPage() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [groupStudents, setGroupStudents] = useState<GroupStudent[]>([]);
   const [allGroupStudentsData, setAllGroupStudentsData] = useState<GroupStudent[]>([]);
+  const [instructorSchedules, setInstructorSchedules] = useState<InstructorScheduleData[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(false);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
@@ -259,6 +268,13 @@ export default function GroupsPage() {
           .select('user_id, full_name, full_name_ar')
           .in('user_id', instructorIds);
         setInstructors(profilesData || []);
+
+        // Fetch instructor schedules
+        const { data: schedulesData } = await supabase
+          .from('instructor_schedules')
+          .select('instructor_id, day_of_week, is_working_day, start_time, end_time')
+          .in('instructor_id', instructorIds);
+        setInstructorSchedules((schedulesData || []) as InstructorScheduleData[]);
       }
 
       // Fetch student profiles with subscription_type, age_group_id and level_id
@@ -382,7 +398,7 @@ export default function GroupsPage() {
         name_ar: formData.name,
         age_group_id: formData.age_group_id || null,
         level_id: formData.level_id || null,
-        instructor_id: formData.instructor_id,
+        instructor_id: formData.instructor_id || null,
         schedule_day: formData.schedule_day,
         schedule_time: formData.schedule_time,
         duration_minutes: formData.duration_minutes,
@@ -392,7 +408,7 @@ export default function GroupsPage() {
       };
 
       const previousInstructorId = editingGroup?.instructor_id;
-      const isNewInstructor = !editingGroup || previousInstructorId !== formData.instructor_id;
+      const isNewInstructor = formData.instructor_id && (!editingGroup || previousInstructorId !== formData.instructor_id);
 
       if (editingGroup) {
         const { error } = await supabase
@@ -425,13 +441,15 @@ export default function GroupsPage() {
 
         if (error) throw error;
         
-        await notificationService.notifyGroupAssigned(
-          formData.instructor_id,
-          formData.name,
-          formData.name_ar,
-          formData.schedule_day,
-          formData.schedule_time
-        );
+        if (formData.instructor_id) {
+          await notificationService.notifyGroupAssigned(
+            formData.instructor_id,
+            formData.name,
+            formData.name_ar,
+            formData.schedule_day,
+            formData.schedule_time
+          );
+        }
         
         toast({
           title: t.common.success,
@@ -476,7 +494,7 @@ export default function GroupsPage() {
       name_ar: group.name_ar,
       age_group_id: group.age_group_id || '',
       level_id: group.level_id || '',
-      instructor_id: group.instructor_id,
+      instructor_id: group.instructor_id || '',
       schedule_day: group.schedule_day,
       schedule_time: group.schedule_time,
       duration_minutes: group.duration_minutes,
@@ -606,12 +624,46 @@ export default function GroupsPage() {
     group.name_ar.includes(searchQuery)
   );
 
-  const getInstructorName = (id: string) => {
+  const getInstructorName = (id: string | null) => {
+    if (!id) return isRTL ? 'لم يتم التعيين' : 'Not Assigned';
     const instructor = instructors.find((i) => i.user_id === id);
     if (!instructor) return '-';
     return language === 'ar' && instructor.full_name_ar 
       ? instructor.full_name_ar 
       : instructor.full_name;
+  };
+
+  const getInstructorAvailability = (instructorId: string) => {
+    if (!formData.schedule_day || !formData.schedule_time) return 'unknown';
+    
+    const schedule = instructorSchedules.find(
+      s => s.instructor_id === instructorId && s.day_of_week === formData.schedule_day
+    );
+    
+    // No schedule record = default working day
+    if (!schedule) return 'available';
+    
+    // Day off
+    if (!schedule.is_working_day) return 'day_off';
+    
+    // Check if time is within working hours
+    if (schedule.start_time && schedule.end_time && formData.schedule_time) {
+      const groupTime = formData.schedule_time;
+      if (groupTime < schedule.start_time || groupTime >= schedule.end_time) {
+        return 'outside_hours';
+      }
+    }
+    
+    // Check if already assigned to another group at this day/time
+    const conflictingGroup = groups.find(g => 
+      g.instructor_id === instructorId && 
+      g.schedule_day === formData.schedule_day &&
+      g.schedule_time === formData.schedule_time &&
+      g.id !== editingGroup?.id
+    );
+    if (conflictingGroup) return 'busy';
+    
+    return 'available';
   };
 
   const getAgeGroupName = (id: string | null) => {
@@ -725,22 +777,51 @@ export default function GroupsPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label>{t.groups.instructor}</Label>
+                <Label>{t.groups.instructor} <span className="text-muted-foreground text-xs">({isRTL ? 'اختياري' : 'Optional'})</span></Label>
                 <Select
-                  value={formData.instructor_id}
-                  onValueChange={(value) => setFormData({ ...formData, instructor_id: value })}
+                  value={formData.instructor_id || 'none'}
+                  onValueChange={(value) => setFormData({ ...formData, instructor_id: value === 'none' ? '' : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={isRTL ? 'اختر المدرب' : 'Select instructor'} />
                   </SelectTrigger>
                   <SelectContent>
-                    {instructors.map((instructor) => (
-                      <SelectItem key={instructor.user_id} value={instructor.user_id}>
-                        {language === 'ar' && instructor.full_name_ar 
+                    <SelectItem value="none">
+                      {isRTL ? '-- بدون مدرب --' : '-- No Instructor --'}
+                    </SelectItem>
+                    {(() => {
+                      // Sort: available first, then others
+                      const sorted = [...instructors].sort((a, b) => {
+                        const aAvail = getInstructorAvailability(a.user_id);
+                        const bAvail = getInstructorAvailability(b.user_id);
+                        if (aAvail === 'available' && bAvail !== 'available') return -1;
+                        if (aAvail !== 'available' && bAvail === 'available') return 1;
+                        return 0;
+                      });
+                      return sorted.map((instructor) => {
+                        const availability = getInstructorAvailability(instructor.user_id);
+                        const name = language === 'ar' && instructor.full_name_ar 
                           ? instructor.full_name_ar 
-                          : instructor.full_name}
-                      </SelectItem>
-                    ))}
+                          : instructor.full_name;
+                        const statusLabel = availability === 'day_off' 
+                          ? (isRTL ? '🔴 إجازة' : '🔴 Day Off')
+                          : availability === 'outside_hours'
+                          ? (isRTL ? '🟡 خارج ساعات العمل' : '🟡 Outside Hours')
+                          : availability === 'busy'
+                          ? (isRTL ? '🟠 مشغول' : '🟠 Busy')
+                          : availability === 'available'
+                          ? (isRTL ? '🟢 متاح' : '🟢 Available')
+                          : '';
+                        return (
+                          <SelectItem key={instructor.user_id} value={instructor.user_id}>
+                            <span className="flex items-center gap-2">
+                              <span>{name}</span>
+                              {statusLabel && <span className="text-xs text-muted-foreground">{statusLabel}</span>}
+                            </span>
+                          </SelectItem>
+                        );
+                      });
+                    })()}
                   </SelectContent>
                 </Select>
               </div>
@@ -1462,12 +1543,22 @@ export default function GroupsPage() {
                   </PopoverContent>
                 </Popover>
               </div>
+              {/* Warning if no instructor */}
+              {selectedGroupForStart && !selectedGroupForStart.instructor_id && (
+                <div className="p-3 rounded-lg border border-destructive/50 bg-destructive/10 text-destructive text-sm">
+                  {isRTL ? '⚠️ يجب تعيين مدرب للمجموعة قبل بدئها. قم بتعديل المجموعة أولاً.' : '⚠️ An instructor must be assigned before starting the group. Edit the group first.'}
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsStartGroupDialogOpen(false)}>
                 {t.common.cancel}
               </Button>
-              <Button className="kojo-gradient" onClick={handleStartGroup} disabled={startGroupLoading}>
+              <Button 
+                className="kojo-gradient" 
+                onClick={handleStartGroup} 
+                disabled={startGroupLoading || !selectedGroupForStart?.instructor_id}
+              >
                 {startGroupLoading 
                   ? (isRTL ? 'جاري البدء...' : 'Starting...') 
                   : (isRTL ? 'بدء المجموعة' : 'Start Group')}

@@ -80,6 +80,12 @@ Deno.serve(async (req) => {
       })
     }
 
+    if (!group.instructor_id) {
+      return new Response(JSON.stringify({ error: 'Group must have an instructor assigned before starting' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // Calculate start date
     const targetDay = dayMap[group.schedule_day]
     let sessionStartDate: Date
