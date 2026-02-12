@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Users, BookOpen, 
-  FileText, ArrowLeft, Mail, Phone, Award, BarChart3, AlertTriangle, X
+  FileText, ArrowLeft, Mail, Phone, Award, BarChart3, AlertTriangle, X, DollarSign
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -60,6 +60,8 @@ interface InstructorData {
   assignmentStats: AssignmentStats;
   attendanceTrend: { date: string; rate: number }[];
   warnings: InstructorWarning[];
+  salaryPayments: any[];
+  currentSalary: any | null;
 }
 
 export default function InstructorProfile() {
@@ -282,6 +284,21 @@ export default function InstructorProfile() {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
+      // Fetch salary info
+      const { data: currentSalary } = await supabase
+        .from('employee_salaries')
+        .select('*')
+        .eq('employee_id', instructorId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      const { data: salaryPayments } = await supabase
+        .from('salary_payments')
+        .select('*')
+        .eq('employee_id', instructorId!)
+        .order('month', { ascending: false })
+        .limit(50);
+
       setData({
         profile,
         groups: groups || [],
@@ -295,6 +312,8 @@ export default function InstructorProfile() {
         assignmentStats,
         attendanceTrend,
         warnings: (warnings || []) as InstructorWarning[],
+        salaryPayments: salaryPayments || [],
+        currentSalary,
       });
     } catch (error) {
       console.error('Error fetching instructor data:', error);
@@ -543,10 +562,14 @@ export default function InstructorProfile() {
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="reports" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="reports" className="gap-2">
               <BarChart3 className="h-4 w-4" />
               {isRTL ? 'التقارير' : 'Reports'}
+            </TabsTrigger>
+            <TabsTrigger value="finance" className="gap-2">
+              <DollarSign className="h-4 w-4" />
+              {isRTL ? 'المالية' : 'Finance'}
             </TabsTrigger>
             <TabsTrigger value="groups">{isRTL ? 'المجموعات' : 'Groups'}</TabsTrigger>
             <TabsTrigger value="sessions">{isRTL ? 'الجلسات' : 'Sessions'}</TabsTrigger>
@@ -563,6 +586,87 @@ export default function InstructorProfile() {
               assignmentStats={data.assignmentStats}
               attendanceTrend={data.attendanceTrend}
             />
+          </TabsContent>
+
+          {/* Finance Tab */}
+          <TabsContent value="finance">
+            <div className="space-y-4">
+              {/* Salary Summary */}
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground">{isRTL ? 'الراتب الأساسي' : 'Base Salary'}</p>
+                    <p className="text-2xl font-bold">
+                      {data.currentSalary ? `${data.currentSalary.base_salary} ${isRTL ? 'ج.م' : 'EGP'}` : (isRTL ? 'غير محدد' : 'Not set')}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground">{isRTL ? 'إجمالي المدفوع' : 'Total Paid'}</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {data.salaryPayments.reduce((sum, p) => sum + Number(p.net_amount || 0), 0)} {isRTL ? 'ج.م' : 'EGP'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground">{isRTL ? 'عدد الدفعات' : 'Payments Count'}</p>
+                    <p className="text-2xl font-bold">{data.salaryPayments.length}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Payment History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    {isRTL ? 'سجل الرواتب' : 'Salary History'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {data.salaryPayments.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      {isRTL ? 'لا يوجد سجلات رواتب' : 'No salary records'}
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {data.salaryPayments.map((payment: any) => (
+                        <div key={payment.id} className="flex items-center justify-between p-4 rounded-lg border">
+                          <div>
+                            <p className="font-medium">
+                              {new Date(payment.month).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long' })}
+                            </p>
+                            <div className="flex gap-3 mt-1 text-sm">
+                              <span className="text-muted-foreground">{isRTL ? 'أساسي:' : 'Base:'} {payment.base_amount}</span>
+                              {Number(payment.deductions) > 0 && (
+                                <span className="text-destructive">
+                                  {isRTL ? 'خصم:' : 'Ded:'} -{payment.deductions}
+                                  {payment.deduction_reason && <span className="text-xs ml-1">({language === 'ar' && payment.deduction_reason_ar ? payment.deduction_reason_ar : payment.deduction_reason})</span>}
+                                </span>
+                              )}
+                              {Number(payment.bonus) > 0 && (
+                                <span className="text-green-600">
+                                  {isRTL ? 'بونص:' : 'Bonus:'} +{payment.bonus}
+                                  {payment.bonus_reason && <span className="text-xs ml-1">({language === 'ar' && payment.bonus_reason_ar ? payment.bonus_reason_ar : payment.bonus_reason})</span>}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold">{payment.net_amount} {isRTL ? 'ج.م' : 'EGP'}</p>
+                            <Badge className={payment.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}>
+                              {payment.status === 'paid' ? (isRTL ? 'مصروف' : 'Paid') : (isRTL ? 'معلق' : 'Pending')}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           {/* Groups Tab */}
