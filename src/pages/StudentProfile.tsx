@@ -19,6 +19,7 @@ import { notificationService } from '@/lib/notificationService';
 import { StudentPerformanceCharts } from '@/components/student/StudentPerformanceCharts';
 import { IssueWarningDialog } from '@/components/student/IssueWarningDialog';
 import { CreateSubscriptionDialog } from '@/components/student/CreateSubscriptionDialog';
+import { EditSubscriptionDialog } from '@/components/student/EditSubscriptionDialog';
 
 interface StudentData {
   profile: any;
@@ -41,6 +42,7 @@ export default function StudentProfile() {
   const [data, setData] = useState<StudentData | null>(null);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
+  const [showEditSubscriptionDialog, setShowEditSubscriptionDialog] = useState(false);
 
   useEffect(() => {
     if (studentId) fetchStudentData();
@@ -288,6 +290,11 @@ export default function StudentProfile() {
                     )}
                     {data.subscription.is_suspended && (
                       <Badge variant="destructive">{isRTL ? 'موقوف' : 'Suspended'}</Badge>
+                    )}
+                    {role === 'admin' && (
+                      <Button size="sm" variant="outline" className="mt-2" onClick={() => setShowEditSubscriptionDialog(true)}>
+                        {isRTL ? 'تعديل الاشتراك' : 'Edit Subscription'}
+                      </Button>
                     )}
                   </div>
                 ) : (
@@ -754,6 +761,17 @@ export default function StudentProfile() {
         studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
         onSuccess={fetchStudentData}
       />
+
+      {/* Edit Subscription Dialog */}
+      {data.subscription && (
+        <EditSubscriptionDialog
+          open={showEditSubscriptionDialog}
+          onOpenChange={setShowEditSubscriptionDialog}
+          subscription={data.subscription}
+          studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+          onSuccess={fetchStudentData}
+        />
+      )}
     </DashboardLayout>
   );
 }
