@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserPlus, Eye, CalendarDays, AlertCircle, Check, DollarSign } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { AvatarUpload } from '@/components/AvatarUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -83,6 +84,8 @@ export default function InstructorsPage() {
     hourly_rate: '' as string | number,
   });
   const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   // Salary dialog state
   const [salaryDialogOpen, setSalaryDialogOpen] = useState(false);
@@ -216,8 +219,29 @@ export default function InstructorsPage() {
 
     setSaving(true);
     try {
+      // Helper to upload avatar
+      const uploadAvatar = async (userId: string): Promise<string | null> => {
+        if (!avatarFile) return null;
+        const fileExt = avatarFile.name.split('.').pop();
+        const filePath = `${userId}/${userId}-${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, avatarFile, { cacheControl: '3600', upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+        return urlData.publicUrl;
+      };
+
       if (editingInstructor) {
-          const { error } = await supabase
+        let avatarUrl = editingInstructor.avatar_url;
+        if (avatarFile) {
+          avatarUrl = await uploadAvatar(editingInstructor.user_id);
+        } else if (!avatarPreview && editingInstructor.avatar_url) {
+          // Avatar was removed
+          avatarUrl = null;
+        }
+
+        const { error } = await supabase
           .from('profiles')
           .update({
             full_name: formData.full_name,
@@ -229,6 +253,7 @@ export default function InstructorsPage() {
             work_type: formData.work_type,
             is_paid_trainee: formData.employment_status === 'training' ? formData.is_paid_trainee : false,
             hourly_rate: formData.employment_status === 'training' && formData.is_paid_trainee ? (Number(formData.hourly_rate) || null) : null,
+            avatar_url: avatarUrl,
           } as any)
           .eq('id', editingInstructor.id);
 
@@ -258,6 +283,14 @@ export default function InstructorsPage() {
 
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
+
+        // Upload avatar for new user
+        if (avatarFile && data?.user_id) {
+          const avatarUrl = await uploadAvatar(data.user_id);
+          if (avatarUrl) {
+            await supabase.from('profiles').update({ avatar_url: avatarUrl } as any).eq('user_id', data.user_id);
+          }
+        }
 
         toast({
           title: t.common.success,
@@ -296,6 +329,8 @@ export default function InstructorsPage() {
       hourly_rate: '',
     });
     setFormTouched({});
+    setAvatarFile(null);
+    setAvatarPreview(null);
   };
 
   const handleEdit = (instructor: Instructor) => {
@@ -313,6 +348,8 @@ export default function InstructorsPage() {
       is_paid_trainee: instructor.is_paid_trainee || false,
       hourly_rate: instructor.hourly_rate || '',
     });
+    setAvatarFile(null);
+    setAvatarPreview(instructor.avatar_url || null);
     setIsDialogOpen(true);
   };
 
@@ -359,6 +396,21 @@ export default function InstructorsPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+              {/* Avatar Upload */}
+              <AvatarUpload
+                currentUrl={editingInstructor?.avatar_url}
+                name={formData.full_name || 'IN'}
+                previewUrl={avatarPreview}
+                onFileSelect={(file) => {
+                  setAvatarFile(file);
+                  setAvatarPreview(URL.createObjectURL(file));
+                }}
+                onRemove={() => {
+                  setAvatarFile(null);
+                  setAvatarPreview(null);
+                }}
+              />
+
               {/* Full Name (English) */}
               <div className="grid gap-2">
                 <Label htmlFor="full_name" className={cn(formTouched.full_name && validationErrors.full_name && 'text-destructive')}>
