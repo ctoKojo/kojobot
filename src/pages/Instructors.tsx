@@ -556,34 +556,36 @@ export default function InstructorsPage() {
                 </div>
               </div>
 
-              {/* Work Type */}
-              <div className="grid gap-2">
-                <Label>{isRTL ? 'نوع العمل' : 'Work Type'} <span className="text-destructive">*</span></Label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="work_type"
-                      value="full_time"
-                      checked={formData.work_type === 'full_time'}
-                      onChange={() => setFormData({ ...formData, work_type: 'full_time' })}
-                      className="h-4 w-4 text-primary"
-                    />
-                    <span className="text-sm">{isRTL ? 'فول تايم' : 'Full-time'}</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="work_type"
-                      value="part_time"
-                      checked={formData.work_type === 'part_time'}
-                      onChange={() => setFormData({ ...formData, work_type: 'part_time' })}
-                      className="h-4 w-4 text-primary"
-                    />
-                    <span className="text-sm">{isRTL ? 'بارت تايم' : 'Part-time'}</span>
-                  </label>
+              {/* Work Type - only for permanent employees */}
+              {formData.employment_status === 'permanent' && (
+                <div className="grid gap-2">
+                  <Label>{isRTL ? 'نوع العمل' : 'Work Type'} <span className="text-destructive">*</span></Label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="work_type"
+                        value="full_time"
+                        checked={formData.work_type === 'full_time'}
+                        onChange={() => setFormData({ ...formData, work_type: 'full_time' })}
+                        className="h-4 w-4 text-primary"
+                      />
+                      <span className="text-sm">{isRTL ? 'فول تايم' : 'Full-time'}</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="work_type"
+                        value="part_time"
+                        checked={formData.work_type === 'part_time'}
+                        onChange={() => setFormData({ ...formData, work_type: 'part_time' })}
+                        className="h-4 w-4 text-primary"
+                      />
+                      <span className="text-sm">{isRTL ? 'بارت تايم' : 'Part-time'}</span>
+                    </label>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Paid Trainee (only for training status) */}
               {formData.employment_status === 'training' && (
@@ -721,19 +723,21 @@ export default function InstructorsPage() {
                         ? (isRTL ? 'مثبت' : 'Permanent')
                         : (isRTL ? 'تدريب' : 'Training')}
                     </Badge>
-                    <Badge 
-                      variant="outline"
-                      className={cn(
-                        "text-xs",
-                        instructor.work_type === 'full_time' 
-                          ? "border-blue-500 text-blue-600" 
-                          : "border-purple-500 text-purple-600"
-                      )}
-                    >
-                      {instructor.work_type === 'full_time' 
-                        ? (isRTL ? 'فول تايم' : 'Full-time')
-                        : (isRTL ? 'بارت تايم' : 'Part-time')}
-                    </Badge>
+                    {instructor.employment_status === 'permanent' && (
+                      <Badge 
+                        variant="outline"
+                        className={cn(
+                          "text-xs",
+                          instructor.work_type === 'full_time' 
+                            ? "border-blue-500 text-blue-600" 
+                            : "border-purple-500 text-purple-600"
+                        )}
+                      >
+                        {instructor.work_type === 'full_time' 
+                          ? (isRTL ? 'فول تايم' : 'Full-time')
+                          : (isRTL ? 'بارت تايم' : 'Part-time')}
+                      </Badge>
+                    )}
                     {instructor.employment_status === 'training' && instructor.is_paid_trainee && (
                       <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-600">
                         {isRTL ? `متدرب بمقابل (${instructor.hourly_rate} ج.م/ساعة)` : `Paid Trainee (${instructor.hourly_rate} EGP/hr)`}
@@ -814,18 +818,20 @@ export default function InstructorsPage() {
                               ? (isRTL ? 'مثبت' : 'Permanent')
                               : (isRTL ? 'تدريب' : 'Training')}
                           </Badge>
-                          <Badge 
-                            variant="outline"
-                            className={cn(
-                              instructor.work_type === 'full_time' 
-                                ? "border-blue-500 text-blue-600" 
-                                : "border-purple-500 text-purple-600"
-                            )}
-                          >
-                            {instructor.work_type === 'full_time' 
-                              ? (isRTL ? 'فول تايم' : 'Full-time')
-                              : (isRTL ? 'بارت تايم' : 'Part-time')}
-                          </Badge>
+                          {instructor.employment_status === 'permanent' && (
+                            <Badge 
+                              variant="outline"
+                              className={cn(
+                                instructor.work_type === 'full_time' 
+                                  ? "border-blue-500 text-blue-600" 
+                                  : "border-purple-500 text-purple-600"
+                              )}
+                            >
+                              {instructor.work_type === 'full_time' 
+                                ? (isRTL ? 'فول تايم' : 'Full-time')
+                                : (isRTL ? 'بارت تايم' : 'Part-time')}
+                            </Badge>
+                          )}
                           {instructor.employment_status === 'training' && instructor.is_paid_trainee && (
                             <Badge variant="outline" className="border-emerald-500 text-emerald-600">
                               {isRTL ? `بمقابل` : `Paid`}
