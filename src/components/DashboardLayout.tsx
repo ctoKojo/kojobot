@@ -59,9 +59,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         <SidebarInset className="flex-1 flex flex-col min-w-0">
           {/* Header - fixed height, doesn't scroll with content */}
           <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:px-6">
-            <SidebarTrigger className="-ml-2">
-              <Menu className="h-5 w-5" />
-            </SidebarTrigger>
+            <SidebarTrigger className="-ml-2" />
             
             {/* Mobile Logo - shows only on small screens */}
             <div className="md:hidden flex items-center">
