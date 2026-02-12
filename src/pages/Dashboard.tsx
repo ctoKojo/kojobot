@@ -4,6 +4,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
 import { InstructorDashboard } from '@/components/dashboard/InstructorDashboard';
 import { StudentDashboard } from '@/components/dashboard/StudentDashboard';
+import { ReceptionDashboard } from '@/components/dashboard/ReceptionDashboard';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function Dashboard() {
@@ -21,6 +22,7 @@ export default function Dashboard() {
         case 'admin': return 'إدارة منصتك التعليمية';
         case 'instructor': return 'تابع مجموعاتك وطلابك';
         case 'student': return 'شاهد دوراتك ومهامك';
+        case 'reception': return 'إدارة العمليات اليومية';
         default: return '';
       }
     }
@@ -28,6 +30,7 @@ export default function Dashboard() {
       case 'admin': return 'Manage your educational platform';
       case 'instructor': return 'Track your groups and students';
       case 'student': return 'View your courses and assignments';
+      case 'reception': return 'Manage daily operations';
       default: return '';
     }
   };
@@ -40,6 +43,8 @@ export default function Dashboard() {
         return <InstructorDashboard />;
       case 'student':
         return <StudentDashboard />;
+      case 'reception':
+        return <ReceptionDashboard />;
       default:
         return (
           <Card>

@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logLogin, logLogout } from '@/lib/activityLogger';
 
-type AppRole = 'admin' | 'instructor' | 'student';
+type AppRole = 'admin' | 'instructor' | 'student' | 'reception';
 
 interface AuthContextType {
   user: User | null;

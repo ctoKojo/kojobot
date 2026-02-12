@@ -16,7 +16,7 @@ interface CreateUserRequest {
   full_name: string
   full_name_ar?: string
   phone?: string
-  role: 'admin' | 'student' | 'instructor'
+  role: 'admin' | 'student' | 'instructor' | 'reception'
   // Student-specific fields
   date_of_birth?: string
   age_group_id?: string
@@ -104,10 +104,20 @@ serve(async (req) => {
         .eq('user_id', userId)
         .single()
 
-      if (roleError || roleData?.role !== 'admin') {
-        console.error('User is not an admin:', roleError)
+      const requesterRole = roleData?.role
+      if (roleError || !requesterRole || !['admin', 'reception'].includes(requesterRole)) {
+        console.error('User is not authorized:', roleError)
         return new Response(
-          JSON.stringify({ error: 'Only admins can create users' }),
+          JSON.stringify({ error: 'Only admins and reception can create users' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Reception can only create students
+      if (requesterRole === 'reception' && body.role !== 'student') {
+        console.error('Reception attempted to create non-student role:', body.role)
+        return new Response(
+          JSON.stringify({ error: 'Reception can only create student accounts' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }

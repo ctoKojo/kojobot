@@ -25,7 +25,7 @@ import { NetProfitTab } from '@/components/finance/NetProfitTab';
 
 export default function Finance() {
   const { isRTL, language } = useLanguage();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -253,8 +253,8 @@ export default function Finance() {
             <TabsTrigger value="subscriptions">{isRTL ? 'الاشتراكات' : 'Subscriptions'}</TabsTrigger>
             <TabsTrigger value="payments">{isRTL ? 'سجل المدفوعات' : 'Payment History'}</TabsTrigger>
             <TabsTrigger value="expenses">{isRTL ? 'المصروفات' : 'Expenses'}</TabsTrigger>
-            <TabsTrigger value="salaries">{isRTL ? 'الرواتب' : 'Salaries'}</TabsTrigger>
-            <TabsTrigger value="profit">{isRTL ? 'صافي الربح' : 'Net Profit'}</TabsTrigger>
+            {role === 'admin' && <TabsTrigger value="salaries">{isRTL ? 'الرواتب' : 'Salaries'}</TabsTrigger>}
+            {role === 'admin' && <TabsTrigger value="profit">{isRTL ? 'صافي الربح' : 'Net Profit'}</TabsTrigger>}
             <TabsTrigger value="reports">{isRTL ? 'التقارير' : 'Reports'}</TabsTrigger>
           </TabsList>
 

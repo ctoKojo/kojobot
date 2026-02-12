@@ -127,6 +127,7 @@ export default function GroupsPage() {
   const { role } = useAuth();
   const navigate = useNavigate();
   const isAdmin = role === 'admin';
+  const canDelete = role === 'admin';
   const [groups, setGroups] = useState<Group[]>([]);
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
@@ -1207,13 +1208,15 @@ export default function GroupsPage() {
                                   {isRTL ? 'تجميد' : 'Freeze'}
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem 
-                                onClick={() => handleDelete(group.id)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                                {t.common.delete}
-                              </DropdownMenuItem>
+                              {canDelete && (
+                                <DropdownMenuItem 
+                                  onClick={() => handleDelete(group.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                                  {t.common.delete}
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         ) : (
@@ -1388,14 +1391,16 @@ export default function GroupsPage() {
                                       {isRTL ? 'تجميد' : 'Freeze'}
                                     </DropdownMenuItem>
                                   )}
-                                  <DropdownMenuItem 
-                                    onClick={() => handleDelete(group.id)}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
-                                    {t.common.delete}
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
+                                   {canDelete && (
+                                     <DropdownMenuItem 
+                                       onClick={() => handleDelete(group.id)}
+                                       className="text-destructive"
+                                     >
+                                       <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                                       {t.common.delete}
+                                     </DropdownMenuItem>
+                                   )}
+                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
                           ) : (
