@@ -768,6 +768,7 @@ export default function StudentProfile() {
           open={showEditSubscriptionDialog}
           onOpenChange={setShowEditSubscriptionDialog}
           subscription={data.subscription}
+          studentId={studentId!}
           studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
           onSuccess={fetchStudentData}
         />
