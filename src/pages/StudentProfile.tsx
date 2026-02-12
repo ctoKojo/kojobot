@@ -193,13 +193,22 @@ export default function StudentProfile() {
           
           {(role === 'admin' || role === 'instructor') && (
             <div className="flex gap-2">
-              {role === 'admin' && (
+              {role === 'admin' && !data?.subscription && (
                 <Button 
                   variant="outline"
                   onClick={() => setShowSubscriptionDialog(true)}
                 >
                   <DollarSign className="h-4 w-4 mr-2" />
                   {isRTL ? 'إنشاء اشتراك' : 'Create Subscription'}
+                </Button>
+              )}
+              {role === 'admin' && data?.subscription && (
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowEditSubscriptionDialog(true)}
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  {isRTL ? 'تعديل الاشتراك' : 'Edit Subscription'}
                 </Button>
               )}
               <Button 
@@ -290,11 +299,6 @@ export default function StudentProfile() {
                     )}
                     {data.subscription.is_suspended && (
                       <Badge variant="destructive">{isRTL ? 'موقوف' : 'Suspended'}</Badge>
-                    )}
-                    {role === 'admin' && (
-                      <Button size="sm" variant="outline" className="mt-2" onClick={() => setShowEditSubscriptionDialog(true)}>
-                        {isRTL ? 'تعديل الاشتراك' : 'Edit Subscription'}
-                      </Button>
                     )}
                   </div>
                 ) : (
