@@ -1482,6 +1482,36 @@ export type Database = {
         }
         Relationships: []
       }
+      warning_deduction_rules: {
+        Row: {
+          created_at: string
+          deduction_amount: number
+          id: string
+          is_active: boolean
+          updated_at: string
+          warning_count: number
+          warning_type: string
+        }
+        Insert: {
+          created_at?: string
+          deduction_amount?: number
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          warning_count?: number
+          warning_type: string
+        }
+        Update: {
+          created_at?: string
+          deduction_amount?: number
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          warning_count?: number
+          warning_type?: string
+        }
+        Relationships: []
+      }
       warnings: {
         Row: {
           assignment_id: string | null

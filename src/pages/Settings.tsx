@@ -10,8 +10,9 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, Plus, Trash2, Save, Clock } from 'lucide-react';
+import { AlertTriangle, Plus, Trash2, Save, Clock, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface WarningType {
   id: string;
@@ -19,6 +20,14 @@ interface WarningType {
   labelEn: string;
   labelAr: string;
   isSystem: boolean;
+}
+
+interface DeductionRule {
+  id?: string;
+  warning_type: string;
+  warning_count: number;
+  deduction_amount: number;
+  is_active: boolean;
 }
 
 // System warning types that cannot be deleted
@@ -38,6 +47,47 @@ export default function SettingsPage() {
   const [newTypeAr, setNewTypeAr] = useState('');
   const [autoWarningEnabled, setAutoWarningEnabled] = useState(true);
   const [warningThresholdDays, setWarningThresholdDays] = useState(1);
+
+  // Deduction rules
+  const [deductionRules, setDeductionRules] = useState<DeductionRule[]>([]);
+  const [newRule, setNewRule] = useState<DeductionRule>({ warning_type: 'attendance', warning_count: 1, deduction_amount: 0, is_active: true });
+  const [savingRules, setSavingRules] = useState(false);
+
+  useEffect(() => {
+    if (role === 'admin') fetchDeductionRules();
+  }, [role]);
+
+  const fetchDeductionRules = async () => {
+    const { data } = await supabase.from('warning_deduction_rules').select('*').order('warning_type').order('warning_count');
+    setDeductionRules((data || []) as any);
+  };
+
+  const addDeductionRule = async () => {
+    if (!newRule.deduction_amount) {
+      toast.error(isRTL ? 'أدخل مبلغ الخصم' : 'Enter deduction amount');
+      return;
+    }
+    setSavingRules(true);
+    const { error } = await supabase.from('warning_deduction_rules').insert({
+      warning_type: newRule.warning_type,
+      warning_count: newRule.warning_count,
+      deduction_amount: newRule.deduction_amount,
+    } as any);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(isRTL ? 'تم إضافة قاعدة الخصم' : 'Deduction rule added');
+      setNewRule({ warning_type: 'attendance', warning_count: 1, deduction_amount: 0, is_active: true });
+      fetchDeductionRules();
+    }
+    setSavingRules(false);
+  };
+
+  const deleteDeductionRule = async (id: string) => {
+    await supabase.from('warning_deduction_rules').delete().eq('id', id);
+    toast.success(isRTL ? 'تم حذف القاعدة' : 'Rule deleted');
+    fetchDeductionRules();
+  };
 
   const addWarningType = () => {
     if (!newTypeEn.trim()) {
@@ -200,6 +250,76 @@ export default function SettingsPage() {
                   <Button onClick={addWarningType} className="w-full">
                     <Plus className="h-4 w-4 mr-2" />
                     {isRTL ? 'إضافة' : 'Add'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Auto Deduction Rules - Admin Only */}
+        {role === 'admin' && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-destructive" />
+                <CardTitle>{isRTL ? 'قواعد الخصم التلقائي' : 'Auto Deduction Rules'}</CardTitle>
+              </div>
+              <CardDescription>
+                {isRTL ? 'حدد مبلغ الخصم التلقائي بناءً على عدد ونوع الإنذارات' : 'Set automatic deduction amounts based on warning type and count'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {deductionRules.length > 0 && (
+                <div className="space-y-2">
+                  {deductionRules.map(rule => {
+                    const wt = systemWarningTypes.find(t => t.value === rule.warning_type);
+                    return (
+                      <div key={rule.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline">{isRTL && wt ? wt.labelAr : wt?.labelEn || rule.warning_type}</Badge>
+                          <span className="text-sm">×{rule.warning_count}</span>
+                          <span className="font-medium text-destructive">= {rule.deduction_amount} {isRTL ? 'ج.م' : 'EGP'}</span>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => deleteDeductionRule(rule.id!)} className="text-destructive hover:bg-destructive/10">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="border-t pt-4">
+                <Label className="text-base mb-3 block">{isRTL ? 'إضافة قاعدة جديدة' : 'Add New Rule'}</Label>
+                <div className="grid gap-3">
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <Label className="text-xs">{isRTL ? 'نوع الإنذار' : 'Warning Type'}</Label>
+                      <select
+                        className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                        value={newRule.warning_type}
+                        onChange={e => setNewRule({ ...newRule, warning_type: e.target.value })}
+                      >
+                        {systemWarningTypes.map(wt => (
+                          <option key={wt.value} value={wt.value}>{isRTL ? wt.labelAr : wt.labelEn}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">{isRTL ? 'عدد الإنذارات' : 'Count'}</Label>
+                      <Input type="number" min={1} value={newRule.warning_count} onChange={e => setNewRule({ ...newRule, warning_count: +e.target.value })} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">{isRTL ? 'الخصم (ج.م)' : 'Deduction (EGP)'}</Label>
+                      <Input type="number" min={0} value={newRule.deduction_amount} onChange={e => setNewRule({ ...newRule, deduction_amount: +e.target.value })} />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {isRTL ? 'مثال: 3 إنذارات حضور = خصم 200 ج.م تلقائياً' : 'Example: 3 attendance warnings = auto 200 EGP deduction'}
+                  </p>
+                  <Button onClick={addDeductionRule} disabled={savingRules} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    {isRTL ? 'إضافة قاعدة' : 'Add Rule'}
                   </Button>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserPlus, Eye, CalendarDays, AlertCircle, Check } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserPlus, Eye, CalendarDays, AlertCircle, Check, DollarSign } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog as SalaryDialog, DialogContent as SalaryDialogContent, DialogHeader as SalaryDialogHeader, DialogTitle as SalaryDialogTitle, DialogFooter as SalaryDialogFooter } from '@/components/ui/dialog';
 import {
   validateMobileNumber,
   validatePassword,
@@ -83,6 +84,13 @@ export default function InstructorsPage() {
   });
   const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
 
+  // Salary dialog state
+  const [salaryDialogOpen, setSalaryDialogOpen] = useState(false);
+  const [salaryTarget, setSalaryTarget] = useState<Instructor | null>(null);
+  const [salaryForm, setSalaryForm] = useState({ base_salary: '', effective_from: new Date().toISOString().split('T')[0] });
+  const [salaryLoading, setSalaryLoading] = useState(false);
+  const [salaries, setSalaries] = useState<Record<string, number>>({});
+
   // Validation results computed from form data
   const validationErrors = useMemo(() => {
     const nameResult = validateEnglishName(formData.full_name);
@@ -130,13 +138,17 @@ export default function InstructorsPage() {
       const instructorUserIds = rolesData?.map((r) => r.user_id) || [];
 
       if (instructorUserIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('*')
-          .in('user_id', instructorUserIds);
+        const [profilesRes, salariesRes] = await Promise.all([
+          supabase.from('profiles').select('*').in('user_id', instructorUserIds),
+          supabase.from('employee_salaries').select('employee_id, base_salary').eq('is_active', true).in('employee_id', instructorUserIds),
+        ]);
 
-        if (profilesError) throw profilesError;
-        setInstructors(profilesData || []);
+        if (profilesRes.error) throw profilesRes.error;
+        setInstructors(profilesRes.data || []);
+        
+        const salMap: Record<string, number> = {};
+        (salariesRes.data || []).forEach((s: any) => { salMap[s.employee_id] = s.base_salary; });
+        setSalaries(salMap);
       } else {
         setInstructors([]);
       }
@@ -149,6 +161,34 @@ export default function InstructorsPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openSalaryDialog = (instructor: Instructor) => {
+    setSalaryTarget(instructor);
+    setSalaryForm({ base_salary: salaries[instructor.user_id]?.toString() || '', effective_from: new Date().toISOString().split('T')[0] });
+    setSalaryDialogOpen(true);
+  };
+
+  const handleSetSalary = async () => {
+    if (!salaryTarget || !salaryForm.base_salary) return;
+    setSalaryLoading(true);
+    try {
+      await supabase.from('employee_salaries').update({ is_active: false } as any).eq('employee_id', salaryTarget.user_id).eq('is_active', true);
+      const { error } = await supabase.from('employee_salaries').insert({
+        employee_id: salaryTarget.user_id,
+        employee_type: 'instructor',
+        base_salary: Number(salaryForm.base_salary),
+        effective_from: salaryForm.effective_from,
+      } as any);
+      if (error) throw error;
+      toast({ title: isRTL ? 'تم تحديد الراتب بنجاح' : 'Salary set successfully' });
+      setSalaryDialogOpen(false);
+      fetchInstructors();
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: error.message });
+    } finally {
+      setSalaryLoading(false);
     }
   };
 
@@ -648,6 +688,13 @@ export default function InstructorsPage() {
                           <Pencil className="h-4 w-4 mr-2" />
                           {t.common.edit}
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openSalaryDialog(instructor); }}>
+                          <DollarSign className="h-4 w-4 mr-2" />
+                          {isRTL ? 'تحديد راتب' : 'Set Salary'}
+                          {salaries[instructor.user_id] != null && (
+                            <Badge variant="outline" className="ml-2 text-xs">{salaries[instructor.user_id]} {isRTL ? 'ج.م' : 'EGP'}</Badge>
+                          )}
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -805,6 +852,13 @@ export default function InstructorsPage() {
                                 <Pencil className="h-4 w-4 mr-2" />
                                 {t.common.edit}
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openSalaryDialog(instructor)}>
+                                <DollarSign className="h-4 w-4 mr-2" />
+                                {isRTL ? 'تحديد راتب' : 'Set Salary'}
+                                {salaries[instructor.user_id] != null && (
+                                  <Badge variant="outline" className="ml-2 text-xs">{salaries[instructor.user_id]} {isRTL ? 'ج.م' : 'EGP'}</Badge>
+                                )}
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -817,6 +871,35 @@ export default function InstructorsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Set Salary Dialog */}
+      <SalaryDialog open={salaryDialogOpen} onOpenChange={setSalaryDialogOpen}>
+        <SalaryDialogContent>
+          <SalaryDialogHeader>
+            <SalaryDialogTitle>{isRTL ? 'تحديد راتب' : 'Set Salary'}</SalaryDialogTitle>
+          </SalaryDialogHeader>
+          {salaryTarget && (
+            <div className="space-y-4 py-4">
+              <div className="p-3 rounded-lg border bg-muted/50">
+                <p className="font-medium">{language === 'ar' && salaryTarget.full_name_ar ? salaryTarget.full_name_ar : salaryTarget.full_name}</p>
+                <p className="text-sm text-muted-foreground">{salaryTarget.email}</p>
+              </div>
+              <div>
+                <Label>{isRTL ? 'الراتب الأساسي (ج.م)' : 'Base Salary (EGP)'} *</Label>
+                <Input type="number" value={salaryForm.base_salary} onChange={e => setSalaryForm({ ...salaryForm, base_salary: e.target.value })} />
+              </div>
+              <div>
+                <Label>{isRTL ? 'ساري من تاريخ' : 'Effective From'}</Label>
+                <Input type="date" value={salaryForm.effective_from} onChange={e => setSalaryForm({ ...salaryForm, effective_from: e.target.value })} />
+              </div>
+            </div>
+          )}
+          <SalaryDialogFooter>
+            <Button variant="outline" onClick={() => setSalaryDialogOpen(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+            <Button onClick={handleSetSalary} disabled={salaryLoading}>{salaryLoading ? '...' : (isRTL ? 'حفظ' : 'Save')}</Button>
+          </SalaryDialogFooter>
+        </SalaryDialogContent>
+      </SalaryDialog>
     </DashboardLayout>
   );
 }
