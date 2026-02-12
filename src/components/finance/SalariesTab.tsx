@@ -39,6 +39,8 @@ export function SalariesTab() {
     employee_id: '', salary_id: '', month: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
     base_amount: 0, payment_method: 'cash', notes: '',
   });
+  const [autoDeductions, setAutoDeductions] = useState<{ warning_type: string; count: number; amount: number }[]>([]);
+  const [loadingDeductions, setLoadingDeductions] = useState(false);
 
   // Adjustment form (bonus or deduction - separate from payment)
   const [adjustForm, setAdjustForm] = useState({
@@ -88,10 +90,14 @@ export function SalariesTab() {
   const handlePaySalary = async () => {
     if (!payForm.employee_id) return;
     setSaving(true);
+    const totalAutoDeduction = autoDeductions.reduce((sum, d) => sum + d.amount, 0);
+    const deductionReasons = autoDeductions.map(d => `${d.warning_type}(×${d.count}): -${d.amount}`).join(', ');
     const { error } = await supabase.from('salary_payments').insert({
       employee_id: payForm.employee_id, salary_id: payForm.salary_id || null,
       month: payForm.month, base_amount: payForm.base_amount,
-      deductions: 0, bonus: 0,
+      deductions: totalAutoDeduction, bonus: 0,
+      deduction_reason: deductionReasons || null,
+      deduction_reason_ar: deductionReasons || null,
       status: 'paid', paid_date: new Date().toISOString().split('T')[0],
       paid_by: user?.id, payment_method: payForm.payment_method, notes: payForm.notes || null,
     } as any);
@@ -124,14 +130,39 @@ export function SalariesTab() {
     setSaving(false);
   };
 
-  const openPayDialog = (emp: any) => {
+  const openPayDialog = async (emp: any) => {
     const salary = getEmployeeSalary(emp.user_id);
     setPayForm({
       employee_id: emp.user_id, salary_id: salary?.id || '', month: currentMonth,
       base_amount: salary?.base_salary || 0, payment_method: 'cash', notes: '',
     });
     setSelectedEmployee(emp);
+    setAutoDeductions([]);
     setPayDialog(true);
+
+    // Fetch warnings and rules to auto-calculate deductions
+    setLoadingDeductions(true);
+    const [warningsRes, rulesRes] = await Promise.all([
+      supabase.from('instructor_warnings').select('warning_type').eq('instructor_id', emp.user_id).eq('is_active', true),
+      supabase.from('warning_deduction_rules').select('*').eq('is_active', true),
+    ]);
+    const warnings = warningsRes.data || [];
+    const rules = (rulesRes.data || []) as any[];
+
+    // Count warnings by type
+    const countByType: Record<string, number> = {};
+    warnings.forEach(w => { countByType[w.warning_type] = (countByType[w.warning_type] || 0) + 1; });
+
+    // Match against rules
+    const matched: { warning_type: string; count: number; amount: number }[] = [];
+    rules.forEach(rule => {
+      const actualCount = countByType[rule.warning_type] || 0;
+      if (actualCount >= rule.warning_count) {
+        matched.push({ warning_type: rule.warning_type, count: actualCount, amount: rule.deduction_amount });
+      }
+    });
+    setAutoDeductions(matched);
+    setLoadingDeductions(false);
   };
 
   const openAdjustDialog = (emp: any, type: 'deduction' | 'bonus') => {
@@ -332,7 +363,7 @@ export function SalariesTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Pay Salary Dialog (simplified) */}
+      {/* Pay Salary Dialog (with auto-deductions) */}
       <Dialog open={payDialog} onOpenChange={setPayDialog}>
         <DialogContent>
           <DialogHeader><DialogTitle>{isRTL ? 'صرف راتب' : 'Pay Salary'}</DialogTitle></DialogHeader>
@@ -345,9 +376,33 @@ export function SalariesTab() {
             <div><Label>{isRTL ? 'الشهر' : 'Month'}</Label>
               <Input type="date" value={payForm.month} onChange={e => setPayForm({ ...payForm, month: e.target.value })} />
             </div>
-            <div><Label>{isRTL ? 'المبلغ' : 'Amount'}</Label>
+            <div><Label>{isRTL ? 'المبلغ الأساسي' : 'Base Amount'}</Label>
               <Input type="number" value={payForm.base_amount} onChange={e => setPayForm({ ...payForm, base_amount: +e.target.value })} />
             </div>
+
+            {/* Auto Deductions from Warning Rules */}
+            {loadingDeductions ? (
+              <p className="text-sm text-muted-foreground">{isRTL ? 'جاري حساب الخصومات...' : 'Calculating deductions...'}</p>
+            ) : autoDeductions.length > 0 && (
+              <div className="p-3 rounded-lg border border-destructive/30 bg-destructive/5 space-y-2">
+                <p className="text-sm font-semibold text-destructive">{isRTL ? 'خصومات تلقائية من الإنذارات:' : 'Auto deductions from warnings:'}</p>
+                {autoDeductions.map((d, i) => (
+                  <div key={i} className="flex justify-between text-sm">
+                    <span>{d.warning_type} (×{d.count})</span>
+                    <span className="text-destructive font-medium">-{d.amount} {isRTL ? 'ج.م' : 'EGP'}</span>
+                  </div>
+                ))}
+                <div className="border-t pt-2 flex justify-between font-bold text-sm">
+                  <span>{isRTL ? 'إجمالي الخصم' : 'Total Deduction'}</span>
+                  <span className="text-destructive">-{autoDeductions.reduce((s, d) => s + d.amount, 0)} {isRTL ? 'ج.م' : 'EGP'}</span>
+                </div>
+                <div className="border-t pt-2 flex justify-between font-bold">
+                  <span>{isRTL ? 'الصافي' : 'Net Pay'}</span>
+                  <span>{payForm.base_amount - autoDeductions.reduce((s, d) => s + d.amount, 0)} {isRTL ? 'ج.م' : 'EGP'}</span>
+                </div>
+              </div>
+            )}
+
             <div><Label>{isRTL ? 'طريقة الدفع' : 'Payment Method'}</Label>
               <Select value={payForm.payment_method} onValueChange={v => setPayForm({ ...payForm, payment_method: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
