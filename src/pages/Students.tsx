@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, UserPlus, AlertCircle, Check } from 'lucide-react';
+import { AvatarUpload } from '@/components/AvatarUpload';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -118,6 +119,8 @@ export default function StudentsPage() {
     attendance_mode: 'offline' as AttendanceMode,
   });
   const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   // Validation results computed from form data
   const validationErrors = useMemo(() => {
@@ -252,8 +255,27 @@ export default function StudentsPage() {
 
     setSaving(true);
     try {
+      // Helper to upload avatar
+      const uploadAvatar = async (userId: string): Promise<string | null> => {
+        if (!avatarFile) return null;
+        const fileExt = avatarFile.name.split('.').pop();
+        const filePath = `${userId}/${userId}-${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, avatarFile, { cacheControl: '3600', upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+        return urlData.publicUrl;
+      };
+
       if (editingStudent) {
-        // Update existing student profile
+        let avatarUrl = editingStudent.avatar_url;
+        if (avatarFile) {
+          avatarUrl = await uploadAvatar(editingStudent.user_id);
+        } else if (!avatarPreview && editingStudent.avatar_url) {
+          avatarUrl = null;
+        }
+
         const { error } = await supabase
           .from('profiles')
           .update({
@@ -265,6 +287,7 @@ export default function StudentsPage() {
             level_id: formData.level_id || null,
             subscription_type: formData.subscription_type || null,
             attendance_mode: formData.attendance_mode,
+            avatar_url: avatarUrl,
           })
           .eq('id', editingStudent.id);
 
@@ -274,8 +297,6 @@ export default function StudentsPage() {
           description: isRTL ? 'تم تحديث بيانات الطالب' : 'Student updated successfully',
         });
       } else {
-        // Create new student via edge function
-
         const { data, error } = await supabase.functions.invoke('create-user', {
           body: {
             email: formData.email,
@@ -294,6 +315,14 @@ export default function StudentsPage() {
 
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
+
+        // Upload avatar for new user
+        if (avatarFile && data?.user_id) {
+          const avatarUrl = await uploadAvatar(data.user_id);
+          if (avatarUrl) {
+            await supabase.from('profiles').update({ avatar_url: avatarUrl } as any).eq('user_id', data.user_id);
+          }
+        }
 
         toast({
           title: t.common.success,
@@ -331,6 +360,8 @@ export default function StudentsPage() {
       attendance_mode: 'offline',
     });
     setFormTouched({});
+    setAvatarFile(null);
+    setAvatarPreview(null);
   };
 
   const handleEdit = (student: Student) => {
@@ -347,6 +378,8 @@ export default function StudentsPage() {
       subscription_type: student.subscription_type || '',
       attendance_mode: student.attendance_mode || 'offline',
     });
+    setAvatarFile(null);
+    setAvatarPreview(student.avatar_url || null);
     setIsDialogOpen(true);
   };
 
@@ -426,6 +459,21 @@ export default function StudentsPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+              {/* Avatar Upload */}
+              <AvatarUpload
+                currentUrl={editingStudent?.avatar_url}
+                name={formData.full_name || 'ST'}
+                previewUrl={avatarPreview}
+                onFileSelect={(file) => {
+                  setAvatarFile(file);
+                  setAvatarPreview(URL.createObjectURL(file));
+                }}
+                onRemove={() => {
+                  setAvatarFile(null);
+                  setAvatarPreview(null);
+                }}
+              />
+
               {/* Full Name (English) */}
               <div className="grid gap-2">
                 <Label htmlFor="full_name" className={cn(formTouched.full_name && validationErrors.full_name && 'text-destructive')}>

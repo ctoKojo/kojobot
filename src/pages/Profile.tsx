@@ -211,32 +211,38 @@ export default function Profile() {
                     </AvatarFallback>
                   </Avatar>
                   
-                  {/* Upload overlay */}
-                  <button
-                    onClick={handleAvatarClick}
-                    disabled={uploadingAvatar}
-                    className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
-                  >
-                    {uploadingAvatar ? (
-                      <Loader2 className="h-6 w-6 text-white animate-spin" />
-                    ) : (
-                      <Camera className="h-6 w-6 text-white" />
-                    )}
-                  </button>
-                  
-                  {/* Hidden file input */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleAvatarChange}
-                    className="hidden"
-                  />
+                  {/* Upload overlay - only for admin */}
+                  {role === 'admin' && (
+                    <>
+                      <button
+                        onClick={handleAvatarClick}
+                        disabled={uploadingAvatar}
+                        className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                      >
+                        {uploadingAvatar ? (
+                          <Loader2 className="h-6 w-6 text-white animate-spin" />
+                        ) : (
+                          <Camera className="h-6 w-6 text-white" />
+                        )}
+                      </button>
+                      
+                      {/* Hidden file input */}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarChange}
+                        className="hidden"
+                      />
+                    </>
+                  )}
                 </div>
 
-                <p className="text-xs text-muted-foreground mb-2">
-                  {isRTL ? 'انقر على الصورة لتغييرها' : 'Click on image to change'}
-                </p>
+                {role === 'admin' && (
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {isRTL ? 'انقر على الصورة لتغييرها' : 'Click on image to change'}
+                  </p>
+                )}
 
                 <h2 className="text-xl font-semibold">
                   {isRTL ? profile?.full_name_ar || profile?.full_name : profile?.full_name}
