@@ -69,11 +69,24 @@ export default function MonthlyReports() {
   }, [user, userRole, currentMonth, currentYear, selectedInstructor]);
 
   const fetchInstructors = async () => {
-    const { data } = await supabase
+    const { data: roleData } = await supabase
       .from('user_roles')
-      .select('user_id, profiles!inner(full_name, full_name_ar)')
+      .select('user_id')
       .eq('role', 'instructor');
-    setInstructors(data || []);
+
+    const instructorIds = (roleData || []).map(r => r.user_id);
+    if (instructorIds.length > 0) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, full_name_ar')
+        .in('user_id', instructorIds);
+      setInstructors((profileData || []).map(p => ({
+        user_id: p.user_id,
+        profiles: { full_name: p.full_name, full_name_ar: p.full_name_ar }
+      })));
+    } else {
+      setInstructors([]);
+    }
   };
 
   const fetchReportData = async () => {
