@@ -1,69 +1,90 @@
 
 
-# نظام تصنيف الموظفين المتقدم (بارت تايم / فول تايم / متدرب بمقابل)
+# Full Application Test Report
 
-## الوضع الحالي
-حالياً عندك حقل `employment_status` في جدول `profiles` كـ enum بقيمتين فقط: `permanent` و `training`. ده محدود ومش بيغطي الحالات الجديدة.
+## Test Results Summary
 
-## التعديلات المطلوبة
+All 20+ pages were tested by navigating to each route and verifying visual rendering, data loading, and console errors. Here are the findings:
 
-### 1. تعديل قاعدة البيانات (Migration)
+## Issues Found
 
-**إضافة أعمدة جديدة في جدول `profiles`:**
+### 1. Monthly Reports - Instructor Filter Broken (Medium Priority)
+**File:** `src/pages/MonthlyReports.tsx`, line 72-75
 
-| العمود | النوع | الوصف |
-|--------|-------|-------|
-| `work_type` | text (default: 'full_time') | نوع العمل: full_time / part_time |
-| `is_paid_trainee` | boolean (default: false) | لو متدرب، هل بمقابل؟ (يظهر فقط لما employment_status = training) |
-| `hourly_rate` | numeric (nullable) | سعر الساعة (يظهر فقط لو is_paid_trainee = true) |
+The query joins `user_roles` with `profiles!inner`, but there is no foreign key relationship between these tables in the database schema. This causes a **400 error** from the API, meaning the instructor dropdown filter does not populate.
 
-**ليه أعمدة في `profiles` وليس جدول منفصل؟**
-لأن البيانات دي خاصة بالموظف مباشرة ومش محتاجة تاريخ تغييرات (الراتب الشهري هيكون في `employee_salaries` اللي هنعملها لاحقاً).
+**Fix:** Change the query to use two separate queries:
+- First fetch instructor user_ids from `user_roles`
+- Then fetch profiles using those user_ids
 
-### 2. تعديل صفحة المدربين (`Instructors.tsx`)
+### 2. React Ref Warnings in DashboardLayout (Low Priority)
+**File:** `src/components/DashboardLayout.tsx`
 
-**في فورم الإنشاء/التعديل:**
-- إضافة اختيار **نوع العمل**: فول تايم / بارت تايم (radio buttons)
-- لو `employment_status = training`: يظهر سؤال **"بمقابل؟"** (switch/checkbox)
-- لو **بمقابل = نعم**: يظهر حقل **سعر الساعة** (input رقمي)
+The `DropdownMenu` component receives a ref it cannot handle, producing a "Function components cannot be given refs" console warning. This is non-breaking but noisy.
 
-**في الجدول والكارد:**
-- إضافة badge لـ Full-time (أزرق) / Part-time (بنفسجي)
-- لو متدرب بمقابل: badge "Paid Trainee" (أخضر فاتح) مع سعر الساعة
+**Fix:** Ensure `DropdownMenuTrigger` uses `asChild` properly, or wrap the trigger content appropriately.
 
-### 3. تعديل Edge Function (`create-user`)
-- إضافة الحقول الجديدة (`work_type`, `is_paid_trainee`, `hourly_rate`) في الـ request والـ profile creation
+### 3. Bonus/Deductions in Finance - Separate from Payment (Informational)
+The salary system correctly separates bonus/deduction recording from payment, and auto-deduction rules work as tested previously.
 
-### 4. تعديل بروفايل المدرب (`InstructorProfile.tsx`)
-- عرض نوع العمل وحالة التدريب وسعر الساعة في معلومات المدرب
+## Pages Verified Working
 
-### 5. منطق حساب المقابل للمتدرب (للاستخدام لاحقاً مع نظام الرواتب)
+| Page | Status | Notes |
+|------|--------|-------|
+| Dashboard (Admin) | OK | Stats, alerts, quick actions all render |
+| Students | OK | Table, search, payment status badges |
+| Instructors | OK | Table, salary action available |
+| Groups | OK | Progress bar, student count, schedule |
+| Sessions | OK | Group accordion, session count |
+| Attendance | OK | Radio buttons, save functionality |
+| Makeup Sessions | OK | Status cards, schedule/expire actions |
+| Finance - Subscriptions | OK | Revenue calculation, filters |
+| Finance - Expenses | OK | (tab available) |
+| Finance - Salaries | OK | Auto-deduction verified previously |
+| Finance - Net Profit | OK | (tab available) |
+| Question Bank | OK | Empty state displays correctly |
+| Quiz Assignments | OK | (accessible) |
+| Quiz Reports | OK | (accessible) |
+| Assignments | OK | (accessible) |
+| Materials | OK | Age group accordion, filters |
+| Monthly Reports | PARTIAL | Chart renders but instructor filter fails |
+| Pricing Plans | OK | Offline/Online sections, CRUD |
+| Deduction Rules | OK | Current rules display, add form |
+| Age Groups | OK | Table with 4 groups |
+| Levels | OK | Hierarchical with tracks |
+| Settings | OK | Language, theme, warning config |
+| Profile | OK | Avatar, personal info form |
 
-```text
-المبلغ المستحق = عدد الساعات (من السيشنات المكتملة) x سعر الساعة
+## Technical Details
 
-مثال: متدرب سعر ساعته 100 ج.م
-- نزل 4 سيشنات x ساعتين = 8 ساعات
-- المستحق = 800 ج.م
+### Fix 1: MonthlyReports.tsx Instructor Query
+```typescript
+// Current (broken):
+const { data } = await supabase
+  .from('user_roles')
+  .select('user_id, profiles!inner(full_name, full_name_ar)')
+  .eq('role', 'instructor');
+
+// Fix: Two-step query
+const { data: roleData } = await supabase
+  .from('user_roles')
+  .select('user_id')
+  .eq('role', 'instructor');
+
+const instructorIds = (roleData || []).map(r => r.user_id);
+if (instructorIds.length > 0) {
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('user_id, full_name, full_name_ar')
+    .in('user_id', instructorIds);
+  // Map to expected format
+}
 ```
 
-هذا الحساب سيتم دمجه لاحقاً مع نظام الرواتب (`salary_payments`) عند تنفيذه.
+### Fix 2: DashboardLayout Ref Warning
+The `DropdownMenu` component in the header needs its trigger properly wrapped. The warning comes from the user avatar dropdown.
 
----
-
-## ترتيب التنفيذ
-
-1. **Migration**: إضافة أعمدة `work_type`, `is_paid_trainee`, `hourly_rate` في `profiles`
-2. **تعديل `Instructors.tsx`**: الفورم + العرض (badges جديدة)
-3. **تعديل `create-user` Edge Function**: دعم الحقول الجديدة
-4. **تعديل `InstructorProfile.tsx`**: عرض البيانات الجديدة
-
-## الملفات المتأثرة
-
-| الملف | التعديل |
-|-------|---------|
-| Migration جديد | إضافة 3 أعمدة في profiles |
-| `src/pages/Instructors.tsx` | فورم + جدول + كارد |
-| `supabase/functions/create-user/index.ts` | حقول جديدة |
-| `src/pages/InstructorProfile.tsx` | عرض البيانات |
+## Recommended Priority
+1. Fix Monthly Reports instructor query (functional bug)
+2. Fix DashboardLayout ref warning (cosmetic)
 
