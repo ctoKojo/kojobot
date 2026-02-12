@@ -54,6 +54,9 @@ interface Instructor {
   specialization: string | null;
   specialization_ar: string | null;
   employment_status: 'permanent' | 'training' | null;
+  work_type: string | null;
+  is_paid_trainee: boolean | null;
+  hourly_rate: number | null;
 }
 
 export default function InstructorsPage() {
@@ -74,6 +77,9 @@ export default function InstructorsPage() {
     specialization_ar: '',
     password: '',
     employment_status: 'training' as 'permanent' | 'training',
+    work_type: 'full_time' as 'full_time' | 'part_time',
+    is_paid_trainee: false,
+    hourly_rate: '' as string | number,
   });
   const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
 
@@ -171,7 +177,7 @@ export default function InstructorsPage() {
     setSaving(true);
     try {
       if (editingInstructor) {
-        const { error } = await supabase
+          const { error } = await supabase
           .from('profiles')
           .update({
             full_name: formData.full_name,
@@ -180,7 +186,10 @@ export default function InstructorsPage() {
             specialization: formData.specialization || null,
             specialization_ar: formData.specialization_ar || null,
             employment_status: formData.employment_status,
-          })
+            work_type: formData.work_type,
+            is_paid_trainee: formData.employment_status === 'training' ? formData.is_paid_trainee : false,
+            hourly_rate: formData.employment_status === 'training' && formData.is_paid_trainee ? (Number(formData.hourly_rate) || null) : null,
+          } as any)
           .eq('id', editingInstructor.id);
 
         if (error) throw error;
@@ -201,6 +210,9 @@ export default function InstructorsPage() {
             specialization: formData.specialization || undefined,
             specialization_ar: formData.specialization_ar || undefined,
             employment_status: formData.employment_status,
+            work_type: formData.work_type,
+            is_paid_trainee: formData.employment_status === 'training' ? formData.is_paid_trainee : false,
+            hourly_rate: formData.employment_status === 'training' && formData.is_paid_trainee ? (Number(formData.hourly_rate) || undefined) : undefined,
           }
         });
 
@@ -239,6 +251,9 @@ export default function InstructorsPage() {
       specialization_ar: '',
       password: '',
       employment_status: 'training',
+      work_type: 'full_time',
+      is_paid_trainee: false,
+      hourly_rate: '',
     });
     setFormTouched({});
   };
@@ -254,6 +269,9 @@ export default function InstructorsPage() {
       specialization_ar: instructor.specialization_ar || '',
       password: '',
       employment_status: instructor.employment_status || 'training',
+      work_type: (instructor.work_type as 'full_time' | 'part_time') || 'full_time',
+      is_paid_trainee: instructor.is_paid_trainee || false,
+      hourly_rate: instructor.hourly_rate || '',
     });
     setIsDialogOpen(true);
   };
@@ -479,7 +497,7 @@ export default function InstructorsPage() {
                       name="employment_status"
                       value="permanent"
                       checked={formData.employment_status === 'permanent'}
-                      onChange={() => setFormData({ ...formData, employment_status: 'permanent' })}
+                      onChange={() => setFormData({ ...formData, employment_status: 'permanent', is_paid_trainee: false, hourly_rate: '' })}
                       className="h-4 w-4 text-primary"
                     />
                     <span className="text-sm">{isRTL ? 'مثبت' : 'Permanent'}</span>
@@ -497,6 +515,69 @@ export default function InstructorsPage() {
                   </label>
                 </div>
               </div>
+
+              {/* Work Type */}
+              <div className="grid gap-2">
+                <Label>{isRTL ? 'نوع العمل' : 'Work Type'} <span className="text-destructive">*</span></Label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="work_type"
+                      value="full_time"
+                      checked={formData.work_type === 'full_time'}
+                      onChange={() => setFormData({ ...formData, work_type: 'full_time' })}
+                      className="h-4 w-4 text-primary"
+                    />
+                    <span className="text-sm">{isRTL ? 'فول تايم' : 'Full-time'}</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="work_type"
+                      value="part_time"
+                      checked={formData.work_type === 'part_time'}
+                      onChange={() => setFormData({ ...formData, work_type: 'part_time' })}
+                      className="h-4 w-4 text-primary"
+                    />
+                    <span className="text-sm">{isRTL ? 'بارت تايم' : 'Part-time'}</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Paid Trainee (only for training status) */}
+              {formData.employment_status === 'training' && (
+                <div className="grid gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.is_paid_trainee}
+                      onChange={(e) => setFormData({ ...formData, is_paid_trainee: e.target.checked, hourly_rate: e.target.checked ? formData.hourly_rate : '' })}
+                      className="h-4 w-4 rounded border-primary text-primary"
+                    />
+                    <span className="text-sm font-medium">{isRTL ? 'متدرب بمقابل' : 'Paid Trainee'}</span>
+                  </label>
+                </div>
+              )}
+
+              {/* Hourly Rate (only for paid trainees) */}
+              {formData.employment_status === 'training' && formData.is_paid_trainee && (
+                <div className="grid gap-2">
+                  <Label htmlFor="hourly_rate">{isRTL ? 'سعر الساعة (ج.م)' : 'Hourly Rate (EGP)'}</Label>
+                  <Input
+                    id="hourly_rate"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.hourly_rate}
+                    onChange={(e) => setFormData({ ...formData, hourly_rate: e.target.value })}
+                    placeholder={isRTL ? 'مثال: 100' : 'e.g., 100'}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {isRTL ? 'سعر الساعة اللي هيتحاسب بيه على كل سيشن' : 'Rate per hour for completed sessions'}
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
@@ -591,6 +672,24 @@ export default function InstructorsPage() {
                         ? (isRTL ? 'مثبت' : 'Permanent')
                         : (isRTL ? 'تدريب' : 'Training')}
                     </Badge>
+                    <Badge 
+                      variant="outline"
+                      className={cn(
+                        "text-xs",
+                        instructor.work_type === 'full_time' 
+                          ? "border-blue-500 text-blue-600" 
+                          : "border-purple-500 text-purple-600"
+                      )}
+                    >
+                      {instructor.work_type === 'full_time' 
+                        ? (isRTL ? 'فول تايم' : 'Full-time')
+                        : (isRTL ? 'بارت تايم' : 'Part-time')}
+                    </Badge>
+                    {instructor.employment_status === 'training' && instructor.is_paid_trainee && (
+                      <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-600">
+                        {isRTL ? `متدرب بمقابل (${instructor.hourly_rate} ج.م/ساعة)` : `Paid Trainee (${instructor.hourly_rate} EGP/hr)`}
+                      </Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -653,18 +752,37 @@ export default function InstructorsPage() {
                         ) : '-'}
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          variant={instructor.employment_status === 'permanent' ? 'default' : 'outline'}
-                          className={cn(
-                            instructor.employment_status === 'permanent' 
-                              ? "bg-green-600 hover:bg-green-700" 
-                              : "border-amber-500 text-amber-600"
+                        <div className="flex flex-wrap gap-1">
+                          <Badge 
+                            variant={instructor.employment_status === 'permanent' ? 'default' : 'outline'}
+                            className={cn(
+                              instructor.employment_status === 'permanent' 
+                                ? "bg-green-600 hover:bg-green-700" 
+                                : "border-amber-500 text-amber-600"
+                            )}
+                          >
+                            {instructor.employment_status === 'permanent' 
+                              ? (isRTL ? 'مثبت' : 'Permanent')
+                              : (isRTL ? 'تدريب' : 'Training')}
+                          </Badge>
+                          <Badge 
+                            variant="outline"
+                            className={cn(
+                              instructor.work_type === 'full_time' 
+                                ? "border-blue-500 text-blue-600" 
+                                : "border-purple-500 text-purple-600"
+                            )}
+                          >
+                            {instructor.work_type === 'full_time' 
+                              ? (isRTL ? 'فول تايم' : 'Full-time')
+                              : (isRTL ? 'بارت تايم' : 'Part-time')}
+                          </Badge>
+                          {instructor.employment_status === 'training' && instructor.is_paid_trainee && (
+                            <Badge variant="outline" className="border-emerald-500 text-emerald-600">
+                              {isRTL ? `بمقابل` : `Paid`}
+                            </Badge>
                           )}
-                        >
-                          {instructor.employment_status === 'permanent' 
-                            ? (isRTL ? 'مثبت' : 'Permanent')
-                            : (isRTL ? 'تدريب' : 'Training')}
-                        </Badge>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div>

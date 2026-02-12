@@ -396,6 +396,23 @@ export default function InstructorProfile() {
                       {language === 'ar' ? data.profile.specialization_ar || data.profile.specialization : data.profile.specialization}
                     </Badge>
                   )}
+                  <Badge 
+                    variant="outline"
+                    className={data.profile.employment_status === 'permanent' ? "bg-green-600 text-white border-green-600" : "border-amber-500 text-amber-600"}
+                  >
+                    {data.profile.employment_status === 'permanent' ? (isRTL ? 'مثبت' : 'Permanent') : (isRTL ? 'تدريب' : 'Training')}
+                  </Badge>
+                  <Badge 
+                    variant="outline"
+                    className={data.profile.work_type === 'full_time' ? "border-blue-500 text-blue-600" : "border-purple-500 text-purple-600"}
+                  >
+                    {data.profile.work_type === 'full_time' ? (isRTL ? 'فول تايم' : 'Full-time') : (isRTL ? 'بارت تايم' : 'Part-time')}
+                  </Badge>
+                  {data.profile.employment_status === 'training' && data.profile.is_paid_trainee && (
+                    <Badge variant="outline" className="border-emerald-500 text-emerald-600">
+                      {isRTL ? `متدرب بمقابل (${data.profile.hourly_rate} ج.م/ساعة)` : `Paid Trainee (${data.profile.hourly_rate} EGP/hr)`}
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-4 mt-3 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">

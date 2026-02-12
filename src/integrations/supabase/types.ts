@@ -873,7 +873,9 @@ export type Database = {
             | null
           full_name: string
           full_name_ar: string | null
+          hourly_rate: number | null
           id: string
+          is_paid_trainee: boolean | null
           level_id: string | null
           phone: string | null
           specialization: string | null
@@ -883,6 +885,7 @@ export type Database = {
             | null
           updated_at: string
           user_id: string
+          work_type: string | null
         }
         Insert: {
           age_group_id?: string | null
@@ -896,7 +899,9 @@ export type Database = {
             | null
           full_name: string
           full_name_ar?: string | null
+          hourly_rate?: number | null
           id?: string
+          is_paid_trainee?: boolean | null
           level_id?: string | null
           phone?: string | null
           specialization?: string | null
@@ -906,6 +911,7 @@ export type Database = {
             | null
           updated_at?: string
           user_id: string
+          work_type?: string | null
         }
         Update: {
           age_group_id?: string | null
@@ -919,7 +925,9 @@ export type Database = {
             | null
           full_name?: string
           full_name_ar?: string | null
+          hourly_rate?: number | null
           id?: string
+          is_paid_trainee?: boolean | null
           level_id?: string | null
           phone?: string | null
           specialization?: string | null
@@ -929,6 +937,7 @@ export type Database = {
             | null
           updated_at?: string
           user_id?: string
+          work_type?: string | null
         }
         Relationships: [
           {

@@ -27,6 +27,9 @@ interface CreateUserRequest {
   specialization?: string
   specialization_ar?: string
   employment_status?: 'permanent' | 'training'
+  work_type?: 'full_time' | 'part_time'
+  is_paid_trainee?: boolean
+  hourly_rate?: number
 }
 
 serve(async (req) => {
@@ -178,6 +181,9 @@ serve(async (req) => {
       profileData.specialization = body.specialization || null
       profileData.specialization_ar = body.specialization_ar || null
       profileData.employment_status = body.employment_status || 'training'
+      profileData.work_type = body.work_type || 'full_time'
+      profileData.is_paid_trainee = body.employment_status === 'training' ? (body.is_paid_trainee || false) : false
+      profileData.hourly_rate = body.employment_status === 'training' && body.is_paid_trainee ? (body.hourly_rate || null) : null
     }
 
     const { error: profileError } = await adminSupabase
