@@ -203,8 +203,8 @@ export default function Profile() {
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center">
                 {/* Avatar with upload button */}
-                <div className="relative group">
-                  <Avatar className="h-24 w-24 mb-4">
+                <div className="relative group mb-4">
+                  <Avatar className="h-24 w-24">
                     <AvatarImage src={profile?.avatar_url || ''} />
                     <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
                       {profile ? getInitials(profile.full_name) : 'U'}
