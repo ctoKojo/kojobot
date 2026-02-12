@@ -19,6 +19,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/lib/notificationService';
+import { ExpensesTab } from '@/components/finance/ExpensesTab';
+import { SalariesTab } from '@/components/finance/SalariesTab';
+import { NetProfitTab } from '@/components/finance/NetProfitTab';
 
 export default function Finance() {
   const { isRTL, language } = useLanguage();
@@ -237,9 +240,12 @@ export default function Finance() {
         </div>
 
         <Tabs defaultValue="subscriptions">
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="subscriptions">{isRTL ? 'الاشتراكات' : 'Subscriptions'}</TabsTrigger>
             <TabsTrigger value="payments">{isRTL ? 'سجل المدفوعات' : 'Payment History'}</TabsTrigger>
+            <TabsTrigger value="expenses">{isRTL ? 'المصروفات' : 'Expenses'}</TabsTrigger>
+            <TabsTrigger value="salaries">{isRTL ? 'الرواتب' : 'Salaries'}</TabsTrigger>
+            <TabsTrigger value="profit">{isRTL ? 'صافي الربح' : 'Net Profit'}</TabsTrigger>
             <TabsTrigger value="reports">{isRTL ? 'التقارير' : 'Reports'}</TabsTrigger>
           </TabsList>
 
@@ -377,6 +383,10 @@ export default function Finance() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="expenses"><ExpensesTab /></TabsContent>
+          <TabsContent value="salaries"><SalariesTab /></TabsContent>
+          <TabsContent value="profit"><NetProfitTab /></TabsContent>
 
           <TabsContent value="reports">
             <div className="space-y-4">

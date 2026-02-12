@@ -270,6 +270,81 @@ export type Database = {
           },
         ]
       }
+      employee_salaries: {
+        Row: {
+          base_salary: number
+          created_at: string
+          effective_from: string
+          employee_id: string
+          employee_type: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          base_salary: number
+          created_at?: string
+          effective_from?: string
+          employee_id: string
+          employee_type?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          base_salary?: number
+          created_at?: string
+          effective_from?: string
+          employee_id?: string
+          employee_type?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string
+          description_ar: string | null
+          expense_date: string
+          id: string
+          is_recurring: boolean
+          notes: string | null
+          recorded_by: string
+        }
+        Insert: {
+          amount: number
+          category?: string
+          created_at?: string
+          description: string
+          description_ar?: string | null
+          expense_date?: string
+          id?: string
+          is_recurring?: boolean
+          notes?: string | null
+          recorded_by: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string
+          description_ar?: string | null
+          expense_date?: string
+          id?: string
+          is_recurring?: boolean
+          notes?: string | null
+          recorded_by?: string
+        }
+        Relationships: []
+      }
       group_level_progress: {
         Row: {
           completed_at: string | null
@@ -1193,6 +1268,77 @@ export type Database = {
             columns: ["level_id"]
             isOneToOne: false
             referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_payments: {
+        Row: {
+          base_amount: number
+          bonus: number
+          bonus_reason: string | null
+          bonus_reason_ar: string | null
+          created_at: string
+          deduction_reason: string | null
+          deduction_reason_ar: string | null
+          deductions: number
+          employee_id: string
+          id: string
+          month: string
+          net_amount: number | null
+          notes: string | null
+          paid_by: string | null
+          paid_date: string | null
+          payment_method: string | null
+          salary_id: string | null
+          status: string
+        }
+        Insert: {
+          base_amount?: number
+          bonus?: number
+          bonus_reason?: string | null
+          bonus_reason_ar?: string | null
+          created_at?: string
+          deduction_reason?: string | null
+          deduction_reason_ar?: string | null
+          deductions?: number
+          employee_id: string
+          id?: string
+          month: string
+          net_amount?: number | null
+          notes?: string | null
+          paid_by?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          salary_id?: string | null
+          status?: string
+        }
+        Update: {
+          base_amount?: number
+          bonus?: number
+          bonus_reason?: string | null
+          bonus_reason_ar?: string | null
+          created_at?: string
+          deduction_reason?: string | null
+          deduction_reason_ar?: string | null
+          deductions?: number
+          employee_id?: string
+          id?: string
+          month?: string
+          net_amount?: number | null
+          notes?: string | null
+          paid_by?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          salary_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_payments_salary_id_fkey"
+            columns: ["salary_id"]
+            isOneToOne: false
+            referencedRelation: "employee_salaries"
             referencedColumns: ["id"]
           },
         ]
