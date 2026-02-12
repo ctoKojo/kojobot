@@ -239,9 +239,16 @@ export function SalariesTab() {
                         <Badge variant="outline">{emp.role === 'admin' ? (isRTL ? 'مدير' : 'Admin') : (isRTL ? 'مدرب' : 'Instructor')}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={emp.work_type === 'part_time' ? 'border-purple-500 text-purple-600' : 'border-blue-500 text-blue-600'}>
-                          {emp.work_type === 'part_time' ? (isRTL ? 'بارت تايم' : 'Part-time') : (isRTL ? 'فول تايم' : 'Full-time')}
-                        </Badge>
+                        {emp.employment_status === 'permanent' ? (
+                          <Badge variant="outline" className={emp.work_type === 'part_time' ? 'border-purple-500 text-purple-600' : 'border-blue-500 text-blue-600'}>
+                            {emp.work_type === 'part_time' ? (isRTL ? 'بارت تايم' : 'Part-time') : (isRTL ? 'فول تايم' : 'Full-time')}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-amber-500 text-amber-600">
+                            {isRTL ? 'تدريب' : 'Training'}
+                            {emp.is_paid_trainee && ` (${emp.hourly_rate} ${isRTL ? 'ج.م/ساعة' : 'EGP/hr'})`}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         {salary ? (
@@ -259,9 +266,11 @@ export function SalariesTab() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1 flex-wrap">
-                          <Button size="sm" variant="outline" onClick={() => openSalaryDialog(emp)}>
-                            {isRTL ? 'تحديد راتب' : 'Set Salary'}
-                          </Button>
+                          {emp.employment_status === 'permanent' && (
+                            <Button size="sm" variant="outline" onClick={() => openSalaryDialog(emp)}>
+                              {isRTL ? 'تحديد راتب' : 'Set Salary'}
+                            </Button>
+                          )}
                           {salary && !paid && (
                             <Button size="sm" onClick={() => openPayDialog(emp)}>
                               <DollarSign className="h-3 w-3 mr-1" />{isRTL ? 'صرف' : 'Pay'}
