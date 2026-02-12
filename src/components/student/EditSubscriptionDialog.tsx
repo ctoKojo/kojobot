@@ -14,11 +14,12 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   subscription: any;
+  studentId: string;
   studentName: string;
   onSuccess: () => void;
 }
 
-export function EditSubscriptionDialog({ open, onOpenChange, subscription, studentName, onSuccess }: Props) {
+export function EditSubscriptionDialog({ open, onOpenChange, subscription, studentId, studentName, onSuccess }: Props) {
   const { isRTL, language } = useLanguage();
   const { toast } = useToast();
   const [plans, setPlans] = useState<any[]>([]);
@@ -49,9 +50,31 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
       setStatus(subscription.status || 'active');
       setNotes(subscription.notes || '');
 
-      supabase.from('pricing_plans').select('*').eq('is_active', true).then(({ data }) => {
-        setPlans((data as any) || []);
-      });
+      const loadData = async () => {
+        const [plansRes, groupRes] = await Promise.all([
+          supabase.from('pricing_plans').select('*').eq('is_active', true),
+          supabase.from('group_students').select('group_id').eq('student_id', studentId).eq('is_active', true).limit(1),
+        ]);
+        setPlans((plansRes.data as any) || []);
+
+        // Auto-set start date from first session if not already set
+        if (!subscription.start_date) {
+          const groupId = groupRes.data?.[0]?.group_id;
+          if (groupId) {
+            const { data: firstSession } = await supabase
+              .from('sessions')
+              .select('session_date')
+              .eq('group_id', groupId)
+              .order('session_date', { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            if (firstSession?.session_date) {
+              setStartDate(firstSession.session_date);
+            }
+          }
+        }
+      };
+      loadData();
     }
   }, [open, subscription]);
 
