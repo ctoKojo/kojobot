@@ -749,7 +749,7 @@ export default function GroupsPage() {
               resetForm();
               setIsDialogOpen(true);
             }}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
               {t.groups.addGroup}
             </Button>
           )}
@@ -1172,15 +1172,15 @@ export default function GroupsPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
                               <DropdownMenuItem onClick={() => navigate(`/group/${group.id}`)}>
-                                <Eye className="h-4 w-4 mr-2" />
+                                <Eye className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                                 {isRTL ? 'عرض التفاصيل' : 'View Details'}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleEdit(group)}>
-                                <Pencil className="h-4 w-4 mr-2" />
+                                <Pencil className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                                 {t.common.edit}
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleManageStudents(group)}>
-                                <Users className="h-4 w-4 mr-2" />
+                                <Users className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                                 {isRTL ? 'إدارة الطلاب' : 'Manage Students'}
                               </DropdownMenuItem>
                               {/* Start Group - only for groups not yet started */}
@@ -1190,20 +1190,20 @@ export default function GroupsPage() {
                                   setStartGroupData({ is_existing_group: false, starting_session_number: 1, start_date: null });
                                   setIsStartGroupDialogOpen(true);
                                 }}>
-                                  <Rocket className="h-4 w-4 mr-2 text-primary" />
+                                  <Rocket className="h-4 w-4 ltr:mr-2 rtl:ml-2 text-primary" />
                                   {isRTL ? 'بدء المجموعة' : 'Start Group'}
                                 </DropdownMenuItem>
                               )}
                               {/* Status Change Options */}
                               {group.status !== 'active' && (
                                 <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'active')}>
-                                  <Play className="h-4 w-4 mr-2 text-green-600" />
+                                  <Play className="h-4 w-4 ltr:mr-2 rtl:ml-2 text-green-600" />
                                   {isRTL ? 'تفعيل' : 'Activate'}
                                 </DropdownMenuItem>
                               )}
                               {group.status !== 'frozen' && (
                                 <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'frozen')}>
-                                  <Snowflake className="h-4 w-4 mr-2 text-sky-600" />
+                                  <Snowflake className="h-4 w-4 ltr:mr-2 rtl:ml-2 text-sky-600" />
                                   {isRTL ? 'تجميد' : 'Freeze'}
                                 </DropdownMenuItem>
                               )}
@@ -1211,7 +1211,7 @@ export default function GroupsPage() {
                                 onClick={() => handleDelete(group.id)}
                                 className="text-destructive"
                               >
-                                <Trash2 className="h-4 w-4 mr-2" />
+                                <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                                 {t.common.delete}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -1353,15 +1353,15 @@ export default function GroupsPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
                                   <DropdownMenuItem onClick={() => navigate(`/group/${group.id}`)}>
-                                    <Eye className="h-4 w-4 mr-2" />
+                                    <Eye className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                                     {isRTL ? 'عرض التفاصيل' : 'View Details'}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleEdit(group)}>
-                                    <Pencil className="h-4 w-4 mr-2" />
+                                    <Pencil className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                                     {t.common.edit}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleManageStudents(group)}>
-                                    <Users className="h-4 w-4 mr-2" />
+                                    <Users className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                                     {isRTL ? 'إدارة الطلاب' : 'Manage Students'}
                                   </DropdownMenuItem>
                                   {/* Start Group */}
@@ -1371,20 +1371,20 @@ export default function GroupsPage() {
                                       setStartGroupData({ is_existing_group: false, starting_session_number: 1, start_date: null });
                                       setIsStartGroupDialogOpen(true);
                                     }}>
-                                      <Rocket className="h-4 w-4 mr-2 text-primary" />
+                                      <Rocket className="h-4 w-4 ltr:mr-2 rtl:ml-2 text-primary" />
                                       {isRTL ? 'بدء المجموعة' : 'Start Group'}
                                     </DropdownMenuItem>
                                   )}
                                   {/* Status Change Options */}
                                   {group.status !== 'active' && (
                                     <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'active')}>
-                                      <Play className="h-4 w-4 mr-2 text-green-600" />
+                                      <Play className="h-4 w-4 ltr:mr-2 rtl:ml-2 text-green-600" />
                                       {isRTL ? 'تفعيل' : 'Activate'}
                                     </DropdownMenuItem>
                                   )}
                                   {group.status !== 'frozen' && (
                                     <DropdownMenuItem onClick={() => handleChangeStatus(group.id, 'frozen')}>
-                                      <Snowflake className="h-4 w-4 mr-2 text-sky-600" />
+                                      <Snowflake className="h-4 w-4 ltr:mr-2 rtl:ml-2 text-sky-600" />
                                       {isRTL ? 'تجميد' : 'Freeze'}
                                     </DropdownMenuItem>
                                   )}
@@ -1392,7 +1392,7 @@ export default function GroupsPage() {
                                     onClick={() => handleDelete(group.id)}
                                     className="text-destructive"
                                   >
-                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    <Trash2 className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                                     {t.common.delete}
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -1519,7 +1519,7 @@ export default function GroupsPage() {
                         !startGroupData.start_date && "text-muted-foreground"
                       )}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4 rtl:ml-2 rtl:mr-0" />
+                      <CalendarIcon className="h-4 w-4 ltr:mr-2 rtl:ml-2" />
                       {startGroupData.start_date ? (
                         format(startGroupData.start_date, "PPP", { locale: isRTL ? ar : enUS })
                       ) : (
