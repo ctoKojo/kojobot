@@ -79,9 +79,18 @@ export default function Finance() {
       .limit(50);
     setPayments(payData || []);
 
-    // Calc stats
+    // Calc stats - exclude students overdue by 2+ months from revenue
     const active = enriched.filter((s: any) => s.status === 'active');
-    const totalRevenue = active.reduce((sum: number, s: any) => sum + Number(s.paid_amount || 0), 0);
+    const now = new Date();
+    const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, now.getDate());
+    
+    const totalRevenue = active.reduce((sum: number, s: any) => {
+      // If overdue by 2+ months, don't count in revenue
+      if (s.next_payment_date && new Date(s.next_payment_date) < twoMonthsAgo && Number(s.remaining_amount) > 0) {
+        return sum;
+      }
+      return sum + Number(s.paid_amount || 0);
+    }, 0);
     const totalOutstanding = active.reduce((sum: number, s: any) => sum + Number(s.remaining_amount || 0), 0);
     const suspendedCount = active.filter((s: any) => s.is_suspended).length;
     const overdueCount = active.filter((s: any) => s.next_payment_date && new Date(s.next_payment_date) < new Date() && Number(s.remaining_amount) > 0).length;
