@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit, getClientIP, rateLimitResponse } from "../_shared/rateLimit.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,49 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Rate limiting - max 5 requests per minute
+    const clientIP = getClientIP(req);
+    const rateLimitResult = checkRateLimit(`check-payment-dues:${clientIP}`, { maxRequests: 5, windowMs: 60000 });
+    if (!rateLimitResult.allowed) {
+      return rateLimitResponse(rateLimitResult, corsHeaders);
+    }
+
+    // Authentication: require a valid JWT and verify caller is admin
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const userId = claimsData.claims.sub;
+
+    // Verify caller is admin
+    const { data: roleData } = await supabaseAuth.from('user_roles').select('role').eq('user_id', userId).single();
+    if (!roleData || roleData.role !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Forbidden: admin access required' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Use service role for privileged operations
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -30,13 +74,11 @@ Deno.serve(async (req) => {
     let suspendedCount = 0;
 
     for (const sub of overdueSubs || []) {
-      // Suspend the subscription
       await supabase
         .from('subscriptions')
         .update({ is_suspended: true })
         .eq('id', sub.id);
 
-      // Notify the student
       await supabase.from('notifications').insert({
         user_id: sub.student_id,
         title: 'Account Suspended',
@@ -47,7 +89,6 @@ Deno.serve(async (req) => {
         category: 'payment',
       });
 
-      // Notify admins
       const { data: admins } = await supabase
         .from('user_roles')
         .select('user_id')
@@ -75,7 +116,7 @@ Deno.serve(async (req) => {
       suspendedCount++;
     }
 
-    // Also check for upcoming payments (5 days warning)
+    // Check for upcoming payments (5 days warning)
     const fiveDaysFromNow = new Date();
     fiveDaysFromNow.setDate(fiveDaysFromNow.getDate() + 5);
     const warningDate = fiveDaysFromNow.toISOString().split('T')[0];
@@ -109,7 +150,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
