@@ -54,6 +54,19 @@ import {
 import { cn } from '@/lib/utils';
 
 type SubscriptionType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
+type PaymentType = 'full' | 'installment';
+
+interface PricingPlan {
+  id: string;
+  name: string;
+  name_ar: string;
+  group_type: string;
+  attendance_mode: string;
+  price_1_month: number;
+  price_3_months: number;
+  price_before_discount: number;
+  discount_percentage: number;
+}
 type AttendanceMode = 'online' | 'offline';
 
 interface Student {
@@ -101,6 +114,7 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [subscriptions, setSubscriptions] = useState<StudentSubscription[]>([]);
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -117,6 +131,12 @@ export default function StudentsPage() {
     password: '',
     subscription_type: '' as SubscriptionType | '',
     attendance_mode: 'offline' as AttendanceMode,
+    // Subscription fields
+    pricing_plan_id: '',
+    payment_type: 'full' as PaymentType,
+    sub_start_date: new Date().toISOString().split('T')[0],
+    sub_paid_amount: 0,
+    sub_notes: '',
   });
   const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -217,6 +237,13 @@ export default function StudentsPage() {
         .select('id, name, name_ar')
         .eq('is_active', true);
       setLevels(levelsData || []);
+
+      // Fetch pricing plans
+      const { data: plansData } = await supabase
+        .from('pricing_plans')
+        .select('*')
+        .eq('is_active', true);
+      setPricingPlans((plansData || []) as PricingPlan[]);
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -324,6 +351,56 @@ export default function StudentsPage() {
           }
         }
 
+        // Auto-create subscription if pricing plan selected
+        if (formData.pricing_plan_id && data?.user_id) {
+          const selectedPlan = pricingPlans.find(p => p.id === formData.pricing_plan_id);
+          if (selectedPlan) {
+            const totalAmount = selectedPlan.price_3_months;
+            const installmentAmount = selectedPlan.price_1_month;
+            const startDate = formData.sub_start_date;
+            const endDate = new Date(new Date(startDate).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            const remaining = Math.max(0, totalAmount - formData.sub_paid_amount);
+            
+            let nextPaymentDate: string | null = null;
+            if (formData.payment_type === 'installment' && remaining > 0) {
+              const paidInstallments = Math.floor(formData.sub_paid_amount / installmentAmount);
+              const start = new Date(startDate);
+              nextPaymentDate = new Date(start.getTime() + paidInstallments * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            }
+            const isSuspended = nextPaymentDate && new Date(nextPaymentDate) < new Date() && remaining > 0;
+
+            const { data: sub, error: subError } = await supabase.from('subscriptions').insert({
+              student_id: data.user_id,
+              pricing_plan_id: formData.pricing_plan_id,
+              payment_type: formData.payment_type,
+              start_date: startDate,
+              end_date: endDate,
+              total_amount: totalAmount,
+              paid_amount: formData.sub_paid_amount,
+              installment_amount: formData.payment_type === 'installment' ? installmentAmount : null,
+              next_payment_date: nextPaymentDate,
+              is_suspended: !!isSuspended,
+              status: 'active',
+              notes: formData.sub_notes || null,
+            } as any).select().single();
+
+            if (subError) {
+              console.error('Error creating subscription:', subError);
+            } else if (formData.sub_paid_amount > 0 && sub) {
+              await supabase.from('payments').insert({
+                subscription_id: sub.id,
+                student_id: data.user_id,
+                amount: formData.sub_paid_amount,
+                payment_date: new Date().toISOString().split('T')[0],
+                payment_method: 'cash',
+                payment_type: 'prior_payment',
+                notes: isRTL ? 'دفعة مسبقة عند إنشاء الاشتراك' : 'Prior payment on subscription creation',
+                recorded_by: user?.id,
+              } as any);
+            }
+          }
+        }
+
         toast({
           title: t.common.success,
           description: isRTL ? 'تم إنشاء الطالب بنجاح' : 'Student created successfully',
@@ -358,6 +435,11 @@ export default function StudentsPage() {
       password: '',
       subscription_type: '',
       attendance_mode: 'offline',
+      pricing_plan_id: '',
+      payment_type: 'full',
+      sub_start_date: new Date().toISOString().split('T')[0],
+      sub_paid_amount: 0,
+      sub_notes: '',
     });
     setFormTouched({});
     setAvatarFile(null);
@@ -377,6 +459,11 @@ export default function StudentsPage() {
       password: '',
       subscription_type: student.subscription_type || '',
       attendance_mode: student.attendance_mode || 'offline',
+      pricing_plan_id: '',
+      payment_type: 'full',
+      sub_start_date: new Date().toISOString().split('T')[0],
+      sub_paid_amount: 0,
+      sub_notes: '',
     });
     setAvatarFile(null);
     setAvatarPreview(student.avatar_url || null);
@@ -686,7 +773,7 @@ export default function StudentsPage() {
                 <Label>{isRTL ? 'نوع الاشتراك' : 'Subscription Type'} *</Label>
                 <Select
                   value={formData.subscription_type}
-                  onValueChange={(value) => setFormData({ ...formData, subscription_type: value as SubscriptionType })}
+                  onValueChange={(value) => setFormData({ ...formData, subscription_type: value as SubscriptionType, pricing_plan_id: '' })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={isRTL ? 'اختر نوع الاشتراك' : 'Select subscription type'} />
@@ -704,7 +791,7 @@ export default function StudentsPage() {
                 <Label>{isRTL ? 'نوع الحضور' : 'Attendance Mode'} *</Label>
                 <Select
                   value={formData.attendance_mode}
-                  onValueChange={(value) => setFormData({ ...formData, attendance_mode: value as AttendanceMode })}
+                  onValueChange={(value) => setFormData({ ...formData, attendance_mode: value as AttendanceMode, pricing_plan_id: '' })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={isRTL ? 'اختر نوع الحضور' : 'Select attendance mode'} />
@@ -718,6 +805,114 @@ export default function StudentsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Subscription Section - Only for new students */}
+              {!editingStudent && (
+                <>
+                  <div className="border-t pt-4 mt-2">
+                    <h4 className="font-semibold text-sm mb-3">{isRTL ? '📋 بيانات الاشتراك' : '📋 Subscription Details'}</h4>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>{isRTL ? 'الباقة' : 'Pricing Plan'}</Label>
+                    <Select
+                      value={formData.pricing_plan_id}
+                      onValueChange={(value) => setFormData({ ...formData, pricing_plan_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isRTL ? 'اختر الباقة' : 'Select plan'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pricingPlans
+                          .filter(p => {
+                            // Filter plans matching subscription type & attendance mode
+                            const matchType = !formData.subscription_type || p.group_type === formData.subscription_type;
+                            const matchMode = !formData.attendance_mode || p.attendance_mode === formData.attendance_mode;
+                            return matchType && matchMode;
+                          })
+                          .map(p => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {language === 'ar' ? p.name_ar : p.name} - {p.price_3_months} {isRTL ? 'ج.م' : 'EGP'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.pricing_plan_id && (
+                    <>
+                      <div className="grid gap-2">
+                        <Label>{isRTL ? 'نوع الدفع' : 'Payment Type'}</Label>
+                        <Select
+                          value={formData.payment_type}
+                          onValueChange={(v) => setFormData({ ...formData, payment_type: v as PaymentType })}
+                        >
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="full">{isRTL ? 'كامل (3 شهور)' : 'Full (3 months)'}</SelectItem>
+                            <SelectItem value="installment">{isRTL ? 'تقسيط شهري' : 'Monthly Installment'}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label>{isRTL ? 'تاريخ البداية' : 'Start Date'}</Label>
+                        <Input
+                          type="date"
+                          value={formData.sub_start_date}
+                          onChange={(e) => setFormData({ ...formData, sub_start_date: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label>{isRTL ? 'المبلغ المدفوع فعلاً' : 'Amount Already Paid'}</Label>
+                        <Input
+                          type="number"
+                          value={formData.sub_paid_amount}
+                          onChange={(e) => setFormData({ ...formData, sub_paid_amount: +e.target.value })}
+                          min={0}
+                          max={pricingPlans.find(p => p.id === formData.pricing_plan_id)?.price_3_months || 0}
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>
+                        <Input
+                          value={formData.sub_notes}
+                          onChange={(e) => setFormData({ ...formData, sub_notes: e.target.value })}
+                          placeholder={isRTL ? 'ملاحظات اختيارية' : 'Optional notes'}
+                        />
+                      </div>
+
+                      {/* Summary Card */}
+                      {(() => {
+                        const plan = pricingPlans.find(p => p.id === formData.pricing_plan_id);
+                        if (!plan) return null;
+                        const total = plan.price_3_months;
+                        const remaining = Math.max(0, total - formData.sub_paid_amount);
+                        return (
+                          <Card className="bg-muted/30">
+                            <CardContent className="pt-4 space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span>{isRTL ? 'المبلغ الإجمالي' : 'Total'}</span>
+                                <span className="font-bold">{total} {isRTL ? 'ج.م' : 'EGP'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>{isRTL ? 'المدفوع' : 'Paid'}</span>
+                                <span className="text-green-600">{formData.sub_paid_amount} {isRTL ? 'ج.م' : 'EGP'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>{isRTL ? 'المتبقي' : 'Remaining'}</span>
+                                <span className={remaining > 0 ? 'text-orange-600' : 'text-green-600'}>{remaining} {isRTL ? 'ج.م' : 'EGP'}</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })()}
+                    </>
+                  )}
+                </>
+              )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={saving}>
