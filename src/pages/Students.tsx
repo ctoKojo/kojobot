@@ -134,7 +134,6 @@ export default function StudentsPage() {
     // Subscription fields
     pricing_plan_id: '',
     payment_type: 'full' as PaymentType,
-    sub_start_date: new Date().toISOString().split('T')[0],
     sub_paid_amount: 0,
     sub_notes: '',
   });
@@ -357,29 +356,19 @@ export default function StudentsPage() {
           if (selectedPlan) {
             const totalAmount = selectedPlan.price_3_months;
             const installmentAmount = selectedPlan.price_1_month;
-            const startDate = formData.sub_start_date;
-            const endDate = new Date(new Date(startDate).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-            const remaining = Math.max(0, totalAmount - formData.sub_paid_amount);
-            
-            let nextPaymentDate: string | null = null;
-            if (formData.payment_type === 'installment' && remaining > 0) {
-              const paidInstallments = Math.floor(formData.sub_paid_amount / installmentAmount);
-              const start = new Date(startDate);
-              nextPaymentDate = new Date(start.getTime() + paidInstallments * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-            }
-            const isSuspended = nextPaymentDate && new Date(nextPaymentDate) < new Date() && remaining > 0;
 
+            // Create subscription with null dates - will be set automatically by RPC when assigned to a started group
             const { data: sub, error: subError } = await supabase.from('subscriptions').insert({
               student_id: data.user_id,
               pricing_plan_id: formData.pricing_plan_id,
               payment_type: formData.payment_type,
-              start_date: startDate,
-              end_date: endDate,
+              start_date: null,
+              end_date: null,
               total_amount: totalAmount,
               paid_amount: formData.sub_paid_amount,
               installment_amount: formData.payment_type === 'installment' ? installmentAmount : null,
-              next_payment_date: nextPaymentDate,
-              is_suspended: !!isSuspended,
+              next_payment_date: null,
+              is_suspended: false,
               status: 'active',
               notes: formData.sub_notes || null,
             } as any).select().single();
@@ -437,7 +426,6 @@ export default function StudentsPage() {
       attendance_mode: 'offline',
       pricing_plan_id: '',
       payment_type: 'full',
-      sub_start_date: new Date().toISOString().split('T')[0],
       sub_paid_amount: 0,
       sub_notes: '',
     });
@@ -461,7 +449,6 @@ export default function StudentsPage() {
       attendance_mode: student.attendance_mode || 'offline',
       pricing_plan_id: '',
       payment_type: 'full',
-      sub_start_date: new Date().toISOString().split('T')[0],
       sub_paid_amount: 0,
       sub_notes: '',
     });
@@ -856,12 +843,9 @@ export default function StudentsPage() {
                       </div>
 
                       <div className="grid gap-2">
-                        <Label>{isRTL ? 'تاريخ البداية' : 'Start Date'}</Label>
-                        <Input
-                          type="date"
-                          value={formData.sub_start_date}
-                          onChange={(e) => setFormData({ ...formData, sub_start_date: e.target.value })}
-                        />
+                        <p className="text-xs text-muted-foreground">
+                          {isRTL ? '📌 تاريخ البداية يتحدد تلقائياً عند إسناد الطالب لمجموعة' : '📌 Start date is set automatically when the student is assigned to a group'}
+                        </p>
                       </div>
 
                       <div className="grid gap-2">

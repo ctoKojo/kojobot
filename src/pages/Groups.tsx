@@ -356,6 +356,14 @@ export default function GroupsPage() {
             .from('group_students')
             .insert({ group_id: selectedGroup.id, student_id: studentId });
         }
+
+        // If group has started, auto-assign subscription dates via RPC
+        if (selectedGroup.has_started) {
+          await supabase.rpc('assign_subscription_dates', {
+            p_student_id: studentId,
+            p_group_id: selectedGroup.id,
+          } as any);
+        }
       }
 
       // Deactivate removed students

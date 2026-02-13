@@ -191,6 +191,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Auto-assign subscription dates for all students in the group
+    try {
+      const { data: bulkResult, error: bulkError } = await adminSupabase
+        .rpc('assign_subscription_dates_bulk', { p_group_id: group_id })
+
+      if (bulkError) {
+        console.error('Error assigning subscription dates:', bulkError)
+      } else {
+        console.log('Subscription dates assigned:', bulkResult)
+      }
+    } catch (e) {
+      console.error('Failed to assign subscription dates:', e)
+    }
+
     return new Response(JSON.stringify({
       success: true,
       message: `Created ${sessions.length} sessions for group`,

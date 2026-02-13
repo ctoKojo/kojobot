@@ -32,41 +32,37 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
   const [saving, setSaving] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [loadingCheck, setLoadingCheck] = useState(true);
+  const [studentGroupInfo, setStudentGroupInfo] = useState<{ groupId: string; hasStarted: boolean; firstSessionDate: string | null } | null>(null);
 
   useEffect(() => {
     if (open) {
       setLoadingCheck(true);
       setHasActiveSubscription(false);
       setStartDate('');
+      setStudentGroupInfo(null);
 
-      // Check for existing active subscription, fetch plans, and fetch first session date in parallel
       Promise.all([
         supabase.from('subscriptions').select('id').eq('student_id', studentId).eq('status', 'active').limit(1),
         supabase.from('pricing_plans').select('*').eq('is_active', true),
-        // Get student's group, then first session
         supabase.from('group_students').select('group_id').eq('student_id', studentId).eq('is_active', true).limit(1),
       ]).then(async ([subRes, plansRes, groupRes]) => {
         setHasActiveSubscription((subRes.data?.length || 0) > 0);
         setPlans((plansRes.data as any) || []);
 
-        // Auto-set start date from first session
         const groupId = groupRes.data?.[0]?.group_id;
         if (groupId) {
-          const { data: firstSession } = await supabase
-            .from('sessions')
-            .select('session_date')
-            .eq('group_id', groupId)
-            .order('session_date', { ascending: true })
-            .limit(1)
-            .maybeSingle();
+          const [groupInfo, firstSession] = await Promise.all([
+            supabase.from('groups').select('has_started').eq('id', groupId).single(),
+            supabase.from('sessions').select('session_date').eq('group_id', groupId).order('session_date', { ascending: true }).limit(1).maybeSingle(),
+          ]);
           
-          if (firstSession?.session_date) {
-            setStartDate(firstSession.session_date);
-          } else {
-            setStartDate(new Date().toISOString().split('T')[0]);
+          const hasStarted = groupInfo.data?.has_started || false;
+          const firstDate = firstSession.data?.session_date || null;
+          setStudentGroupInfo({ groupId, hasStarted, firstSessionDate: firstDate });
+          
+          if (firstDate) {
+            setStartDate(firstDate);
           }
-        } else {
-          setStartDate(new Date().toISOString().split('T')[0]);
         }
 
         setLoadingCheck(false);
@@ -77,37 +73,27 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
   const totalAmount = selectedPlan ? selectedPlan.price_3_months : 0;
   const installmentAmount = selectedPlan ? selectedPlan.price_1_month : 0;
-  const endDate = startDate ? new Date(new Date(startDate).getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : '';
   const remaining = Math.max(0, totalAmount - paidAmount);
 
-  const calcNextPaymentDate = () => {
-    if (paymentType === 'full' || remaining <= 0) return null;
-    const paidInstallments = Math.floor(paidAmount / installmentAmount);
-    const start = new Date(startDate);
-    return new Date(start.getTime() + paidInstallments * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-  };
-
   const handleSave = async () => {
-    if (!selectedPlanId || !startDate) {
-      toast({ title: isRTL ? 'يرجى ملء جميع الحقول' : 'Please fill all fields', variant: 'destructive' });
+    if (!selectedPlanId) {
+      toast({ title: isRTL ? 'يرجى اختيار الباقة' : 'Please select a plan', variant: 'destructive' });
       return;
     }
     setSaving(true);
     try {
-      const nextPaymentDate = calcNextPaymentDate();
-      const isSuspended = nextPaymentDate && new Date(nextPaymentDate) < new Date() && remaining > 0;
-
+      // Create subscription with null dates - RPC will set them when student is in a started group
       const { data: sub, error } = await supabase.from('subscriptions').insert({
         student_id: studentId,
         pricing_plan_id: selectedPlanId,
         payment_type: paymentType,
-        start_date: startDate,
-        end_date: endDate,
+        start_date: null,
+        end_date: null,
         total_amount: totalAmount,
         paid_amount: paidAmount,
         installment_amount: paymentType === 'installment' ? installmentAmount : null,
-        next_payment_date: nextPaymentDate,
-        is_suspended: !!isSuspended,
+        next_payment_date: null,
+        is_suspended: false,
         status: 'active',
         notes,
       } as any).select().single();
@@ -124,6 +110,14 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
           payment_type: 'prior_payment',
           notes: isRTL ? 'دفعة مسبقة عند إنشاء الاشتراك' : 'Prior payment on subscription creation',
           recorded_by: user?.id,
+        } as any);
+      }
+
+      // If student is in a started group, call RPC to auto-assign dates
+      if (studentGroupInfo?.hasStarted && studentGroupInfo.groupId) {
+        await supabase.rpc('assign_subscription_dates', {
+          p_student_id: studentId,
+          p_group_id: studentGroupInfo.groupId,
         } as any);
       }
 
@@ -203,10 +197,21 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
                 </Select>
               </div>
 
-              <div>
-                <Label>{isRTL ? 'تاريخ البداية (تلقائي من أول سيشن)' : 'Start Date (auto from first session)'}</Label>
-                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-              </div>
+              {studentGroupInfo?.hasStarted && studentGroupInfo.firstSessionDate ? (
+                <div className="p-3 rounded-lg border bg-muted/30 text-sm">
+                  <p className="text-muted-foreground">
+                    {isRTL ? '📌 تاريخ البداية:' : '📌 Start Date:'}{' '}
+                    <span className="font-medium text-foreground">{studentGroupInfo.firstSessionDate}</span>
+                    {isRTL ? ' (تلقائي من أول سيشن)' : ' (auto from first session)'}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg border bg-muted/30 text-sm">
+                  <p className="text-muted-foreground">
+                    {isRTL ? '📌 تاريخ البداية يتحدد تلقائياً عند إسناد الطالب لمجموعة' : '📌 Start date is set automatically when the student is assigned to a group'}
+                  </p>
+                </div>
+              )}
 
               <div>
                 <Label>{isRTL ? 'المبلغ المدفوع فعلاً' : 'Amount Already Paid'}</Label>
@@ -233,27 +238,12 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
                     )}
                     <div className="flex justify-between">
                       <span>{isRTL ? 'المدفوع' : 'Paid'}</span>
-                      <span className="text-green-600">{paidAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
+                      <span className="text-emerald-600">{paidAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>{isRTL ? 'المتبقي' : 'Remaining'}</span>
-                      <span className={remaining > 0 ? 'text-orange-600' : 'text-green-600'}>{remaining} {isRTL ? 'ج.م' : 'EGP'}</span>
+                      <span className={remaining > 0 ? 'text-amber-600' : 'text-emerald-600'}>{remaining} {isRTL ? 'ج.م' : 'EGP'}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>{isRTL ? 'تاريخ النهاية' : 'End Date'}</span>
-                      <span>{endDate}</span>
-                    </div>
-                    {calcNextPaymentDate() && (
-                      <div className="flex justify-between">
-                        <span>{isRTL ? 'الدفع القادم' : 'Next Payment'}</span>
-                        <span>{calcNextPaymentDate()}</span>
-                      </div>
-                    )}
-                    {calcNextPaymentDate() && new Date(calcNextPaymentDate()!) < new Date() && remaining > 0 && (
-                      <Badge variant="destructive" className="w-full justify-center mt-2">
-                        {isRTL ? '⚠️ الطالب متأخر - سيتم إيقاف الحساب' : '⚠️ Overdue - Account will be suspended'}
-                      </Badge>
-                    )}
                   </CardContent>
                 </Card>
               )}

@@ -1548,7 +1548,7 @@ export type Database = {
       subscriptions: {
         Row: {
           created_at: string
-          end_date: string
+          end_date: string | null
           id: string
           installment_amount: number | null
           is_suspended: boolean
@@ -1558,7 +1558,7 @@ export type Database = {
           payment_type: string
           pricing_plan_id: string | null
           remaining_amount: number | null
-          start_date: string
+          start_date: string | null
           status: string
           student_id: string
           total_amount: number
@@ -1566,7 +1566,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          end_date: string
+          end_date?: string | null
           id?: string
           installment_amount?: number | null
           is_suspended?: boolean
@@ -1576,7 +1576,7 @@ export type Database = {
           payment_type?: string
           pricing_plan_id?: string | null
           remaining_amount?: number | null
-          start_date: string
+          start_date?: string | null
           status?: string
           student_id: string
           total_amount: number
@@ -1584,7 +1584,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          end_date?: string
+          end_date?: string | null
           id?: string
           installment_amount?: number | null
           is_suspended?: boolean
@@ -1594,7 +1594,7 @@ export type Database = {
           payment_type?: string
           pricing_plan_id?: string | null
           remaining_amount?: number | null
-          start_date?: string
+          start_date?: string | null
           status?: string
           student_id?: string
           total_amount?: number
@@ -1802,6 +1802,14 @@ export type Database = {
       }
     }
     Functions: {
+      assign_subscription_dates: {
+        Args: { p_group_id: string; p_student_id: string }
+        Returns: Json
+      }
+      assign_subscription_dates_bulk: {
+        Args: { p_group_id: string }
+        Returns: Json
+      }
       get_group_max_students: {
         Args: { g_type: Database["public"]["Enums"]["group_type"] }
         Returns: number
