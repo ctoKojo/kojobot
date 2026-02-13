@@ -12,6 +12,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { User, Mail, Phone, Calendar, Save, ArrowLeft, Camera, Loader2 } from 'lucide-react';
+import { ImageCropDialog } from '@/components/ImageCropDialog';
 
 export default function Profile() {
   const { isRTL } = useLanguage();
@@ -21,6 +22,7 @@ export default function Profile() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     full_name: '',
     full_name_ar: '',
@@ -40,11 +42,10 @@ export default function Profile() {
     fileInputRef.current?.click();
   };
 
-  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user || !profile) return;
+    if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         title: isRTL ? 'خطأ' : 'Error',
@@ -54,7 +55,6 @@ export default function Profile() {
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: isRTL ? 'خطأ' : 'Error',
@@ -64,15 +64,20 @@ export default function Profile() {
       return;
     }
 
-    setUploadingAvatar(true);
+    const objectUrl = URL.createObjectURL(file);
+    setCropSrc(objectUrl);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
+  const handleCroppedAvatar = async (croppedFile: File) => {
+    if (!user || !profile) return;
+
+    setUploadingAvatar(true);
     try {
-      // Generate unique file name
-      const fileExt = file.name.split('.').pop();
+      const fileExt = 'jpg';
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
 
-      // Delete old avatar if exists
       if (profile.avatar_url) {
         const oldPath = profile.avatar_url.split('/avatars/')[1];
         if (oldPath) {
@@ -80,26 +85,21 @@ export default function Profile() {
         }
       }
 
-      // Upload new avatar
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, {
+        .upload(filePath, croppedFile, {
           cacheControl: '3600',
           upsert: true,
         });
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
       const avatarUrl = urlData.publicUrl;
-
-      // Update profile with new avatar URL - this will trigger realtime update
       const { error } = await updateProfile({ avatar_url: avatarUrl });
-
       if (error) throw error;
 
       toast({
@@ -115,10 +115,6 @@ export default function Profile() {
       });
     } finally {
       setUploadingAvatar(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
   };
 
@@ -370,6 +366,18 @@ export default function Profile() {
           </Card>
         </div>
       </div>
+
+      {cropSrc && (
+        <ImageCropDialog
+          open={!!cropSrc}
+          imageSrc={cropSrc}
+          onClose={() => {
+            URL.revokeObjectURL(cropSrc);
+            setCropSrc(null);
+          }}
+          onCropComplete={handleCroppedAvatar}
+        />
+      )}
     </DashboardLayout>
   );
 }
