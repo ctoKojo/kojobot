@@ -50,8 +50,8 @@ export default function InstructorSchedulePage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingDay, setEditingDay] = useState<string | null>(null);
 
-  // Determine which instructor to show
-  const targetInstructorId = role === 'instructor' ? user?.id : instructorId;
+  // Determine which instructor/employee to show
+  const targetInstructorId = (role === 'instructor' || role === 'reception') ? user?.id : instructorId;
 
   useEffect(() => {
     if (targetInstructorId) {
