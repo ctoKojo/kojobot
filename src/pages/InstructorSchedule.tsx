@@ -33,6 +33,7 @@ interface Group {
 interface InstructorProfile {
   full_name: string;
   full_name_ar: string | null;
+  role?: 'instructor' | 'reception';
 }
 
 export default function InstructorSchedulePage() {
@@ -63,15 +64,26 @@ export default function InstructorSchedulePage() {
     
     setLoading(true);
     try {
-      // Fetch instructor profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('full_name, full_name_ar')
-        .eq('user_id', targetInstructorId)
-        .maybeSingle();
+      // Fetch instructor profile and role
+      const [profileRes, roleRes] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('full_name, full_name_ar')
+          .eq('user_id', targetInstructorId)
+          .maybeSingle(),
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', targetInstructorId)
+          .in('role', ['instructor', 'reception'])
+          .maybeSingle(),
+      ]);
 
-      if (profileError) throw profileError;
-      setInstructor(profileData);
+      if (profileRes.error) throw profileRes.error;
+      setInstructor(profileRes.data ? {
+        ...profileRes.data,
+        role: (roleRes.data?.role as 'instructor' | 'reception') || 'instructor',
+      } : null);
 
       // Fetch schedules
       const { data: scheduleData, error: scheduleError } = await supabase
@@ -208,13 +220,14 @@ export default function InstructorSchedulePage() {
     }
   };
 
+  const isReception = instructor?.role === 'reception';
   const instructorName = instructor
     ? (language === 'ar' && instructor.full_name_ar ? instructor.full_name_ar : instructor.full_name)
     : '';
 
   const pageTitle = isRTL
-    ? `جدول عمل المدرب${instructorName ? `: ${instructorName}` : ''}`
-    : `Instructor Schedule${instructorName ? `: ${instructorName}` : ''}`;
+    ? `جدول العمل${instructorName ? `: ${instructorName}` : ''}`
+    : `Work Schedule${instructorName ? `: ${instructorName}` : ''}`;
 
   const currentSchedule = editingDay
     ? schedules.find(s => s.day_of_week === editingDay)
@@ -242,6 +255,7 @@ export default function InstructorSchedulePage() {
           loading={loading}
           isAdmin={role === 'admin'}
           onEditDay={handleEditDay}
+          showGroups={!isReception}
         />
 
         {/* Edit Dialog */}

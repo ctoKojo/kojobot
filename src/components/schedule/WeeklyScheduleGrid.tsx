@@ -30,6 +30,7 @@ interface WeeklyScheduleGridProps {
   loading: boolean;
   isAdmin: boolean;
   onEditDay: (dayOfWeek: string) => void;
+  showGroups?: boolean;
 }
 
 const DAYS_OF_WEEK = [
@@ -57,6 +58,7 @@ export function WeeklyScheduleGrid({
   loading,
   isAdmin,
   onEditDay,
+  showGroups = true,
 }: WeeklyScheduleGridProps) {
   const { isRTL, language } = useLanguage();
 
@@ -136,37 +138,56 @@ export function WeeklyScheduleGrid({
                 <>
                   {/* Working Hours */}
                   {schedule?.start_time && schedule?.end_time && (
-                    <div className="text-xs text-muted-foreground pb-2 border-b">
-                      {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
+                    <div className={cn(
+                      "text-xs text-muted-foreground pb-2",
+                      showGroups && "border-b"
+                    )}>
+                      <div className="flex items-center gap-1.5">
+                        <span className="inline-block w-2 h-2 rounded-full bg-primary/60" />
+                        {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
+                      </div>
                     </div>
                   )}
 
-                  {/* Groups */}
-                  {dayGroups.length > 0 ? (
-                    <div className="space-y-2">
-                      {dayGroups.map((group, groupIndex) => (
-                        <div
-                          key={group.id}
-                          className={cn(
-                            'p-2 rounded-md border text-xs',
-                            getGroupColor(groupIndex)
-                          )}
-                        >
-                          <p className="font-medium truncate">
-                            {language === 'ar' ? group.name_ar : group.name}
-                          </p>
-                          <p className="opacity-75">
-                            {formatTime(group.schedule_time)} ({group.duration_minutes}{isRTL ? 'د' : 'm'})
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
+                  {/* No schedule set message for reception */}
+                  {!showGroups && !schedule?.start_time && !schedule?.end_time && (
                     <div className="h-16 flex items-center justify-center">
                       <p className="text-muted-foreground text-xs text-center">
-                        {isRTL ? 'لا توجد مجموعات' : 'No groups'}
+                        {isRTL ? 'لم تُحدد ساعات العمل' : 'No hours set'}
                       </p>
                     </div>
+                  )}
+
+                  {/* Groups - only for instructors */}
+                  {showGroups && (
+                    <>
+                      {dayGroups.length > 0 ? (
+                        <div className="space-y-2">
+                          {dayGroups.map((group, groupIndex) => (
+                            <div
+                              key={group.id}
+                              className={cn(
+                                'p-2 rounded-md border text-xs',
+                                getGroupColor(groupIndex)
+                              )}
+                            >
+                              <p className="font-medium truncate">
+                                {language === 'ar' ? group.name_ar : group.name}
+                              </p>
+                              <p className="opacity-75">
+                                {formatTime(group.schedule_time)} ({group.duration_minutes}{isRTL ? 'د' : 'm'})
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="h-16 flex items-center justify-center">
+                          <p className="text-muted-foreground text-xs text-center">
+                            {isRTL ? 'لا توجد مجموعات' : 'No groups'}
+                          </p>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* Notes */}
