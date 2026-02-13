@@ -55,6 +55,13 @@ interface InstructorWarning {
   is_active: boolean;
 }
 
+interface HourlyCalc {
+  totalHours: number;
+  roundedHours: number;
+  totalPay: number;
+  hasInferred: boolean;
+}
+
 interface InstructorData {
   profile: any;
   groups: any[];
@@ -70,6 +77,7 @@ interface InstructorData {
   warnings: InstructorWarning[];
   salaryPayments: any[];
   currentSalary: any | null;
+  hourlyCalc: HourlyCalc | null;
 }
 
 export default function InstructorProfile() {
@@ -110,6 +118,37 @@ export default function InstructorProfile() {
       const isReception = detectedRole === 'reception';
 
       // For reception, skip teaching-related fetches
+      // Helper to fetch hourly calculation for paid trainees
+      const fetchHourlyCalc = async (prof: any): Promise<HourlyCalc | null> => {
+        if (!prof?.is_paid_trainee || !prof?.hourly_rate) return null;
+        const now = new Date();
+        const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+        const { data: attData } = await supabase
+          .from('session_staff_attendance')
+          .select('actual_hours, status, session_id')
+          .eq('staff_id', instructorId!)
+          .in('status', ['confirmed', 'inferred']);
+
+        const sIds = [...new Set((attData || []).map(a => a.session_id))];
+        const { data: sessData } = await supabase
+          .from('sessions').select('id, session_date')
+          .in('id', sIds.length > 0 ? sIds : ['none'])
+          .gte('session_date', monthStart).lte('session_date', monthEnd);
+
+        const validSessions = new Set((sessData || []).map(s => s.id));
+        const filtered = (attData || []).filter(a => validSessions.has(a.session_id));
+        const totalHours = filtered.reduce((sum, a) => sum + Number(a.actual_hours), 0);
+        const roundedHours = Math.round(totalHours * 4) / 4;
+        return {
+          totalHours,
+          roundedHours,
+          totalPay: roundedHours * Number(prof.hourly_rate),
+          hasInferred: filtered.some(a => a.status === 'inferred'),
+        };
+      };
+
       if (isReception) {
         // Only fetch salary info
         const [salaryRes, paymentsRes] = await Promise.all([
@@ -132,6 +171,7 @@ export default function InstructorProfile() {
           warnings: [],
           salaryPayments: paymentsRes.data || [],
           currentSalary: salaryRes.data,
+          hourlyCalc: null,
         });
       } else {
         // Full instructor data fetch (existing logic)
@@ -266,11 +306,12 @@ export default function InstructorProfile() {
           submissionRate: expectedSubmissions > 0 ? ((assignmentSubmissions?.length || 0) / expectedSubmissions) * 100 : 0,
         };
 
-        // Fetch warnings and salary in parallel
-        const [warningsRes, salaryRes, paymentsRes] = await Promise.all([
+        // Fetch warnings, salary, and hourly calc in parallel
+        const [warningsRes, salaryRes, paymentsRes, hourlyCalc] = await Promise.all([
           supabase.from('instructor_warnings').select('*').eq('instructor_id', instructorId).eq('is_active', true).order('created_at', { ascending: false }),
           supabase.from('employee_salaries').select('*').eq('employee_id', instructorId!).eq('is_active', true).maybeSingle(),
           supabase.from('salary_payments').select('*').eq('employee_id', instructorId!).order('month', { ascending: false }).limit(50),
+          fetchHourlyCalc(profile),
         ]);
 
         setData({
@@ -288,6 +329,7 @@ export default function InstructorProfile() {
           warnings: (warningsRes.data || []) as InstructorWarning[],
           salaryPayments: paymentsRes.data || [],
           currentSalary: salaryRes.data,
+          hourlyCalc,
         });
       }
     } catch (error) {
@@ -591,10 +633,20 @@ export default function InstructorProfile() {
                 <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                   <Card>
                     <CardContent className="pt-6">
-                      <p className="text-sm text-muted-foreground">{isRTL ? 'الراتب الأساسي' : 'Base Salary'}</p>
-                      <p className="text-2xl font-bold">
-                        {data.currentSalary ? `${data.currentSalary.base_salary} ${isRTL ? 'ج.م' : 'EGP'}` : (isRTL ? 'غير محدد' : 'Not set')}
+                      <p className="text-sm text-muted-foreground">
+                        {data.hourlyCalc ? (isRTL ? 'الراتب (بالساعة)' : 'Salary (Hourly)') : (isRTL ? 'الراتب الأساسي' : 'Base Salary')}
                       </p>
+                      <p className="text-2xl font-bold">
+                        {data.hourlyCalc 
+                          ? `${data.hourlyCalc.roundedHours} ${isRTL ? 'ساعة' : 'hrs'} = ${data.hourlyCalc.totalPay} ${isRTL ? 'ج.م' : 'EGP'}`
+                          : data.currentSalary ? `${data.currentSalary.base_salary} ${isRTL ? 'ج.م' : 'EGP'}` : (isRTL ? 'غير محدد' : 'Not set')}
+                      </p>
+                      {data.hourlyCalc && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {data.profile.hourly_rate} {isRTL ? 'ج.م/ساعة' : 'EGP/hr'} × {data.hourlyCalc.roundedHours} {isRTL ? 'ساعة' : 'hrs'}
+                          {data.hourlyCalc.hasInferred && <span className="text-amber-500 ml-2">⚠ {isRTL ? 'يشمل ساعات تقديرية' : 'Includes inferred hours'}</span>}
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                   <Card>
