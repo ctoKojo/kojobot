@@ -98,6 +98,8 @@ interface AgeGroup {
   id: string;
   name: string;
   name_ar: string;
+  min_age: number;
+  max_age: number;
 }
 
 interface Level {
@@ -226,7 +228,7 @@ export default function StudentsPage() {
       // Fetch age groups
       const { data: ageGroupsData } = await supabase
         .from('age_groups')
-        .select('id, name, name_ar')
+        .select('id, name, name_ar, min_age, max_age')
         .eq('is_active', true);
       setAgeGroups(ageGroupsData || []);
 
@@ -462,6 +464,37 @@ export default function StudentsPage() {
     (student.full_name_ar && student.full_name_ar.includes(searchQuery)) ||
     student.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Calculate age from date of birth
+  const calculateAge = (dob: string): number | null => {
+    if (!dob) return null;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  // Find the most specific age group matching the given age
+  const findMatchingAgeGroup = (age: number): string => {
+    // Sort by range size (smallest first) to pick the most specific match
+    const sorted = [...ageGroups]
+      .filter(g => age >= g.min_age && age <= g.max_age)
+      .sort((a, b) => (a.max_age - a.min_age) - (b.max_age - b.min_age));
+    return sorted[0]?.id || '';
+  };
+
+  // Handle date of birth change with auto age group detection
+  const handleDobChange = (dob: string) => {
+    const age = calculateAge(dob);
+    const ageGroupId = age !== null ? findMatchingAgeGroup(age) : '';
+    setFormData(prev => ({ ...prev, date_of_birth: dob, age_group_id: ageGroupId }));
+  };
+
+  const calculatedAge = calculateAge(formData.date_of_birth);
 
   const getAgeGroupName = (id: string | null) => {
     if (!id) return '-';
@@ -706,7 +739,10 @@ export default function StudentsPage() {
                   id="dob"
                   type="date"
                   value={formData.date_of_birth}
-                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                  onChange={(e) => {
+                    handleDobChange(e.target.value);
+                    setFormTouched({ ...formTouched, date_of_birth: true });
+                  }}
                   onBlur={() => setFormTouched({ ...formTouched, date_of_birth: true })}
                   max={new Date().toISOString().split('T')[0]}
                   className={cn(
@@ -719,24 +755,25 @@ export default function StudentsPage() {
                     {validationErrors.date_of_birth}
                   </p>
                 )}
+                {calculatedAge !== null && (
+                  <p className="text-sm text-muted-foreground">
+                    {isRTL ? `العمر: ${calculatedAge} سنة` : `Age: ${calculatedAge} years`}
+                  </p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label>{t.students.ageGroup}</Label>
-                <Select
-                  value={formData.age_group_id}
-                  onValueChange={(value) => setFormData({ ...formData, age_group_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={isRTL ? 'اختر الفئة العمرية' : 'Select age group'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ageGroups.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {language === 'ar' ? group.name_ar : group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  readOnly
+                  value={formData.age_group_id ? getAgeGroupName(formData.age_group_id) : (isRTL ? 'يتحدد تلقائياً من تاريخ الميلاد' : 'Auto-detected from date of birth')}
+                  className="bg-muted cursor-not-allowed"
+                />
+                {formData.date_of_birth && !formData.age_group_id && calculatedAge !== null && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {isRTL ? `لا توجد فئة عمرية مناسبة للعمر ${calculatedAge}` : `No age group matches age ${calculatedAge}`}
+                  </p>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label>{t.students.level}</Label>
