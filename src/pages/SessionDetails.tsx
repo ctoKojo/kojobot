@@ -180,6 +180,55 @@ export default function SessionDetails() {
   const [assignmentSubmissionsDialogOpen, setAssignmentSubmissionsDialogOpen] = useState(false);
   const [savingAttendance, setSavingAttendance] = useState(false);
 
+  // Auto-confirm instructor attendance when they perform any activity on the session
+  const autoConfirmInstructorAttendance = async () => {
+    if (!user || !group || !session) return;
+    // Only for instructors who own this group
+    if (user.id !== group.instructor_id) return;
+    // Don't auto-confirm cancelled sessions
+    if (session.status === 'cancelled') return;
+
+    try {
+      // Check if a staff attendance record already exists (don't override manual decisions)
+      const { data: existing } = await supabase
+        .from('session_staff_attendance')
+        .select('id')
+        .eq('session_id', session.id)
+        .eq('staff_id', user.id)
+        .maybeSingle();
+
+      if (existing) return; // Record exists, don't override
+
+      // Insert auto-confirmed attendance
+      const actualHours = session.duration_minutes / 60;
+      await supabase
+        .from('session_staff_attendance')
+        .insert({
+          session_id: session.id,
+          staff_id: user.id,
+          status: 'confirmed',
+          actual_hours: actualHours,
+        });
+
+      // Auto-complete session if time has passed
+      if (session.status === 'scheduled') {
+        const sessionDateTime = new Date(`${session.session_date}T${session.session_time}`);
+        const sessionEndTime = new Date(sessionDateTime.getTime() + session.duration_minutes * 60 * 1000);
+        if (new Date() >= sessionEndTime) {
+          await supabase
+            .from('sessions')
+            .update({ status: 'completed' })
+            .eq('id', session.id);
+        }
+      }
+
+      // Refresh data to reflect changes
+      fetchSessionData();
+    } catch (error) {
+      console.error('Auto-confirm instructor attendance error:', error);
+    }
+  };
+
   // Check and update session status based on time
   const checkAndUpdateSessionStatus = useCallback(async () => {
     if (!session || session.status === 'completed') return;
@@ -417,6 +466,8 @@ export default function SessionDetails() {
       setSelectedQuizId('');
       setQuizStartTime('');
       fetchSessionData();
+      // Auto-confirm instructor attendance
+      autoConfirmInstructorAttendance();
     } catch (error: any) {
       toast({
         title: isRTL ? 'خطأ' : 'Error',
@@ -526,6 +577,8 @@ export default function SessionDetails() {
       setAssignmentForm({ title: '', description: '', max_score: 100, due_date: '' });
       setAssignmentFile(null);
       fetchSessionData();
+      // Auto-confirm instructor attendance
+      autoConfirmInstructorAttendance();
     } catch (error: any) {
       toast({
         title: isRTL ? 'خطأ' : 'Error',
@@ -702,6 +755,8 @@ export default function SessionDetails() {
       
       setAttendanceDialogOpen(false);
       fetchSessionData();
+      // Auto-confirm instructor attendance
+      autoConfirmInstructorAttendance();
     } catch (error: any) {
       toast({
         title: isRTL ? 'خطأ' : 'Error',
