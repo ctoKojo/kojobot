@@ -274,7 +274,9 @@ export function SalariesTab() {
   };
 
   const getName = (emp: any) => language === 'ar' && emp.full_name_ar ? emp.full_name_ar : emp.full_name;
-  const totalMonthlySalaries = salaries.reduce((sum, s) => sum + Number(s.base_salary), 0);
+  const totalFixedSalaries = salaries.reduce((sum, s) => sum + Number(s.base_salary), 0);
+  const totalHourlySalaries = Object.values(hourlyDataMap).reduce((sum, d) => sum + (d.totalPay || 0), 0);
+  const totalMonthlySalaries = totalFixedSalaries + totalHourlySalaries;
 
   const getBaseSalaryDisplay = (emp: any) => {
     const salary = getEmployeeSalary(emp.user_id);
