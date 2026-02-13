@@ -52,7 +52,7 @@ export function SalariesTab() {
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
-    const { data: roles } = await supabase.from('user_roles').select('user_id, role').in('role', ['instructor', 'admin', 'reception']);
+    const { data: roles } = await supabase.from('user_roles').select('user_id, role').in('role', ['instructor', 'reception']);
     const userIds = (roles || []).map(r => r.user_id);
     const { data: profiles } = await supabase.from('profiles').select('*').in('user_id', userIds.length > 0 ? userIds : ['none']);
     
