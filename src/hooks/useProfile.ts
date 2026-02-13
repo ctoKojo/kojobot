@@ -12,6 +12,8 @@ interface ProfileData {
   date_of_birth: string | null;
   specialization: string | null;
   specialization_ar: string | null;
+  is_paid_trainee: boolean | null;
+  hourly_rate: number | null;
 }
 
 export function useProfile() {
