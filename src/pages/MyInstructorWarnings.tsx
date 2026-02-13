@@ -83,6 +83,36 @@ export default function MyInstructorWarnings() {
           color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
           icon: ClipboardList,
         };
+      case 'behavior':
+        return {
+          label: isRTL ? 'سلوك' : 'Behavior',
+          color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+          icon: AlertTriangle,
+        };
+      case 'non_compliance':
+        return {
+          label: isRTL ? 'عدم التزام' : 'Non-Compliance',
+          color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+          icon: AlertTriangle,
+        };
+      case 'poor_performance':
+        return {
+          label: isRTL ? 'أداء ضعيف' : 'Poor Performance',
+          color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+          icon: AlertTriangle,
+        };
+      case 'attendance':
+        return {
+          label: isRTL ? 'حضور' : 'Attendance',
+          color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+          icon: UserCheck,
+        };
+      case 'late_submission':
+        return {
+          label: isRTL ? 'تأخر في التسليم' : 'Late Submission',
+          color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+          icon: Clock,
+        };
       default:
         return {
           label: type,
