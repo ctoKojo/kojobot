@@ -45,6 +45,7 @@ interface Session {
   session_time: string;
   status: string;
   session_number: number | null;
+  duration_minutes: number;
 }
 
 interface Student {
@@ -196,6 +197,52 @@ export default function AttendancePage() {
     );
   };
 
+  // Auto-confirm instructor attendance when they save student attendance
+  const autoConfirmInstructorAttendance = async () => {
+    if (!user || !selectedSession || !selectedGroup) return;
+    const groupData = groups.find(g => g.id === selectedGroup);
+    if (!groupData || user.id !== groupData.instructor_id) return;
+
+    const sessionData = sessions.find(s => s.id === selectedSession);
+    if (!sessionData || sessionData.status === 'cancelled') return;
+
+    try {
+      // Check if record already exists
+      const { data: existing } = await supabase
+        .from('session_staff_attendance')
+        .select('id')
+        .eq('session_id', selectedSession)
+        .eq('staff_id', user.id)
+        .maybeSingle();
+
+      if (existing) return;
+
+      const actualHours = sessionData.duration_minutes / 60;
+      await supabase
+        .from('session_staff_attendance')
+        .insert({
+          session_id: selectedSession,
+          staff_id: user.id,
+          status: 'confirmed',
+          actual_hours: actualHours,
+        });
+
+      // Auto-complete session if time has passed
+      if (sessionData.status === 'scheduled') {
+        const sessionDateTime = new Date(`${sessionData.session_date}T${sessionData.session_time}`);
+        const sessionEndTime = new Date(sessionDateTime.getTime() + sessionData.duration_minutes * 60 * 1000);
+        if (new Date() >= sessionEndTime) {
+          await supabase
+            .from('sessions')
+            .update({ status: 'completed' })
+            .eq('id', selectedSession);
+        }
+      }
+    } catch (error) {
+      console.error('Auto-confirm instructor attendance error:', error);
+    }
+  };
+
   const saveAttendance = async () => {
     if (!user || !selectedSession) return;
     setSaving(true);
@@ -227,6 +274,9 @@ export default function AttendancePage() {
         title: t.common.success,
         description: isRTL ? 'تم حفظ الحضور' : 'Attendance saved successfully',
       });
+
+      // Auto-confirm instructor attendance
+      await autoConfirmInstructorAttendance();
 
       fetchAttendance();
     } catch (error) {
