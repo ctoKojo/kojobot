@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,16 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { User, Mail, Phone, Calendar, Save, ArrowLeft, Camera, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Save, ArrowLeft, Camera, Loader2, DollarSign } from 'lucide-react';
 import { ImageCropDialog } from '@/components/ImageCropDialog';
 
 export default function Profile() {
-  const { isRTL } = useLanguage();
+  const { isRTL, language } = useLanguage();
   const { user, role } = useAuth();
   const { profile, loading, updateProfile } = useProfile();
   const navigate = useNavigate();
@@ -28,6 +29,12 @@ export default function Profile() {
     full_name_ar: '',
     phone: '',
   });
+  const [salaryData, setSalaryData] = useState<{
+    currentSalary: any | null;
+    payments: any[];
+    hourlyCalc: { totalHours: number; roundedHours: number; totalPay: number; hasInferred: boolean } | null;
+  }>({ currentSalary: null, payments: [], hourlyCalc: null });
+  const [salaryLoading, setSalaryLoading] = useState(false);
 
   // Sync form data when profile loads
   if (profile && !formData.full_name && profile.full_name) {
@@ -37,6 +44,55 @@ export default function Profile() {
       phone: profile.phone || '',
     });
   }
+
+  // Fetch salary data for instructor/reception
+  useEffect(() => {
+    if (!user || !role || !profile) return;
+    if (role !== 'instructor' && role !== 'reception') return;
+    
+    const fetchSalary = async () => {
+      setSalaryLoading(true);
+      const [salaryRes, paymentsRes] = await Promise.all([
+        supabase.from('employee_salaries').select('*').eq('employee_id', user.id).eq('is_active', true).maybeSingle(),
+        supabase.from('salary_payments').select('*').eq('employee_id', user.id).order('month', { ascending: false }).limit(12),
+      ]);
+
+      let hourlyCalc = null;
+      if (profile.is_paid_trainee && profile.hourly_rate) {
+        const now = new Date();
+        const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        const { data: attData } = await supabase
+          .from('session_staff_attendance')
+          .select('actual_hours, status, session_id')
+          .eq('staff_id', user.id)
+          .in('status', ['confirmed', 'inferred']);
+        const sIds = [...new Set((attData || []).map(a => a.session_id))];
+        const { data: sessData } = await supabase
+          .from('sessions').select('id, session_date')
+          .in('id', sIds.length > 0 ? sIds : ['none'])
+          .gte('session_date', monthStart).lte('session_date', monthEnd);
+        const validSessions = new Set((sessData || []).map(s => s.id));
+        const filtered = (attData || []).filter(a => validSessions.has(a.session_id));
+        const totalHours = filtered.reduce((sum, a) => sum + Number(a.actual_hours), 0);
+        const roundedHours = Math.round(totalHours * 4) / 4;
+        hourlyCalc = {
+          totalHours,
+          roundedHours,
+          totalPay: roundedHours * Number(profile.hourly_rate),
+          hasInferred: filtered.some(a => a.status === 'inferred'),
+        };
+      }
+
+      setSalaryData({
+        currentSalary: salaryRes.data,
+        payments: paymentsRes.data || [],
+        hourlyCalc,
+      });
+      setSalaryLoading(false);
+    };
+    fetchSalary();
+  }, [user, role, profile]);
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -170,10 +226,95 @@ export default function Profile() {
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </DashboardLayout>
-    );
-  }
+        {/* Finance Section for Instructor/Reception */}
+        {(role === 'instructor' || role === 'reception') && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                {isRTL ? 'المالية' : 'Finance'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {salaryLoading ? (
+                <p className="text-center text-muted-foreground py-4">{isRTL ? 'جاري التحميل...' : 'Loading...'}</p>
+              ) : (
+                <div className="space-y-4">
+                  {/* Current Salary */}
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                    <div className="p-4 rounded-lg border">
+                      <p className="text-sm text-muted-foreground">
+                        {salaryData.hourlyCalc ? (isRTL ? 'الراتب (بالساعة)' : 'Salary (Hourly)') : (isRTL ? 'الراتب الأساسي' : 'Base Salary')}
+                      </p>
+                      <p className="text-xl font-bold mt-1">
+                        {salaryData.hourlyCalc 
+                          ? `${salaryData.hourlyCalc.roundedHours} ${isRTL ? 'ساعة' : 'hrs'} = ${salaryData.hourlyCalc.totalPay} ${isRTL ? 'ج.م' : 'EGP'}`
+                          : salaryData.currentSalary ? `${salaryData.currentSalary.base_salary} ${isRTL ? 'ج.م' : 'EGP'}` : (isRTL ? 'غير محدد' : 'Not set')}
+                      </p>
+                      {salaryData.hourlyCalc && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {profile?.hourly_rate} {isRTL ? 'ج.م/ساعة' : 'EGP/hr'} × {salaryData.hourlyCalc.roundedHours} {isRTL ? 'ساعة' : 'hrs'}
+                          {salaryData.hourlyCalc.hasInferred && <span className="text-amber-500 ms-2">⚠ {isRTL ? 'يشمل ساعات تقديرية' : 'Includes inferred hours'}</span>}
+                        </p>
+                      )}
+                    </div>
+                    <div className="p-4 rounded-lg border">
+                      <p className="text-sm text-muted-foreground">{isRTL ? 'إجمالي المدفوع' : 'Total Paid'}</p>
+                      <p className="text-xl font-bold text-green-600 mt-1">
+                        {salaryData.payments.reduce((sum, p) => sum + Number(p.net_amount || 0), 0)} {isRTL ? 'ج.م' : 'EGP'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment History */}
+                  {salaryData.payments.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="font-medium text-sm text-muted-foreground">{isRTL ? 'سجل الرواتب' : 'Salary History'}</h3>
+                      {salaryData.payments.map((payment: any) => (
+                        <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg border">
+                          <div>
+                            <p className="font-medium text-sm">
+                              {new Date(payment.month).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long' })}
+                            </p>
+                            <div className="flex gap-3 mt-1 text-xs flex-wrap">
+                              <span className="text-muted-foreground">{isRTL ? 'أساسي:' : 'Base:'} {payment.base_amount}</span>
+                              {Number(payment.deductions) > 0 && (
+                                <span className="text-destructive">
+                                  {isRTL ? 'خصم:' : 'Ded:'} -{payment.deductions}
+                                  {payment.deduction_reason && <span className="ms-1">({language === 'ar' && payment.deduction_reason_ar ? payment.deduction_reason_ar : payment.deduction_reason})</span>}
+                                </span>
+                              )}
+                              {Number(payment.bonus) > 0 && (
+                                <span className="text-green-600">
+                                  {isRTL ? 'بونص:' : 'Bonus:'} +{payment.bonus}
+                                  {payment.bonus_reason && <span className="ms-1">({language === 'ar' && payment.bonus_reason_ar ? payment.bonus_reason_ar : payment.bonus_reason})</span>}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-sm">{payment.net_amount} {isRTL ? 'ج.م' : 'EGP'}</p>
+                            <Badge className={payment.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}>
+                              {payment.status === 'paid' ? (isRTL ? 'مصروف' : 'Paid') : (isRTL ? 'معلق' : 'Pending')}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {salaryData.payments.length === 0 && !salaryData.currentSalary && !salaryData.hourlyCalc && (
+                    <p className="text-center text-muted-foreground py-4">{isRTL ? 'لا توجد بيانات مالية بعد' : 'No financial data yet'}</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </DashboardLayout>
+  );
+}
 
   return (
     <DashboardLayout>
