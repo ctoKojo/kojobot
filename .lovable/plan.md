@@ -1,92 +1,91 @@
 
 
-# النظام المالي - النسخة العملية المبسطة
+# تتبع حضور المدرب التلقائي + إكمال السيشن تلقائياً
 
-## الفلسفة
+## الفكرة
 
-نبني اللي محتاجينه فعلا دلوقتي، مش اللي ممكن نحتاجه بعد سنتين. جدول حضور + حساب ساعات + صرف رواتب. خلاص.
-
----
-
-## المرحلة 1: حضور الموظفين وحساب الراتب بالساعة
-
-### 1.1 جدول جديد: `session_staff_attendance`
-
-| العمود | النوع | ملاحظات |
-|--------|-------|---------|
-| id | uuid PK | |
-| session_id | uuid NOT NULL | FK -> sessions |
-| staff_id | uuid NOT NULL | |
-| status | text NOT NULL DEFAULT 'confirmed' | confirmed / absent / inferred |
-| actual_hours | numeric NOT NULL | |
-| created_at | timestamptz DEFAULT now() | |
-
-- UNIQUE على (session_id, staff_id)
-- RLS: الادمن ALL، المدرب SELECT+UPDATE على سيشناته، الريسيبشن SELECT+INSERT+UPDATE
-- Migration script يعلم السيشنات القديمة المكتملة بـ `inferred` مع `actual_hours = duration_minutes / 60.0`
-
-### 1.2 تعديل `SessionDetails.tsx`
-
-- قسم "حضور المدرب" للسيشنات المكتملة
-- زر تاكيد حضور / غياب
-- حقل ساعات فعلية (افتراضي = مدة السيشن)
-- Badge ملونة (اخضر=مؤكد، احمر=غائب، رمادي=تقديري)
-
-### 1.3 تعديل `SalariesTab.tsx`
-
-- المتدرب بالساعة يعرض: "X ساعة = Y ج.م" بدل "غير محدد"
-- الحساب: جلب attendance حيث status IN (confirmed, inferred) للشهر، جمع actual_hours، تقريب لاقرب ربع ساعة، ضرب في hourly_rate
-- ايقونة تحذير بجانب بيانات inferred
-- دايلوج الصرف يعرض تفصيل السيشنات + pipeline بسيط (اساسي - خصومات + بونص = صافي)
+بدل ما الادمن يسجل حضور المدرب يدوي لكل سيشن، النظام هيكتشف تلقائي إن المدرب حضر بناء على نشاطه (تسجيل حضور طلاب، رفع كويز، رفع واجب، إلخ). مع الاحتفاظ بإمكانية التعديل اليدوي للادمن والريسيبشن.
 
 ---
 
-## المرحلة 2 (لاحقا بعد الاستقرار): snapshots وقفل الشهر
+## التغييرات المطلوبة
 
-### 2.1 جدول `payroll_periods`
+### 1. تعديل `src/pages/SessionDetails.tsx` - الحضور التلقائي للمدرب
 
-| العمود | النوع |
-|--------|-------|
-| id | uuid PK |
-| start_date | date |
-| end_date | date |
-| status | text | open / locked |
-| locked_at | timestamptz |
-| locked_by | uuid |
+**المنطق:** عند حفظ أي نشاط مرتبط بالسيشن (حضور طلاب، كويز، واجب)، النظام يتحقق:
+- هل المستخدم الحالي هو مدرب المجموعة؟
+- هل يوجد سجل حضور مدرب لهذه السيشن بالفعل؟
+- إذا لا، يتم إنشاء سجل تلقائي بحالة `confirmed` وعدد ساعات = `duration_minutes / 60`
 
-### 2.2 جدول `payroll_items`
+**الأماكن المتأثرة في الملف:**
+- `handleSaveAttendance` (حفظ حضور الطلاب) - بعد الحفظ الناجح، يتم استدعاء دالة الحضور التلقائي
+- `handleImportQuiz` (إضافة كويز) - نفس المنطق
+- `handleSaveAssignment` (إنشاء/تعديل واجب) - نفس المنطق
 
-- يخزن snapshot لبنود الراتب وقت الصرف
-- يربط بـ salary_payment_id
-- بعد القفل = read only (trigger بسيط)
+**دالة جديدة `autoConfirmInstructorAttendance`:**
+- تتحقق إن المستخدم الحالي هو مدرب المجموعة
+- تتحقق إن مفيش سجل حضور مدرب موجود أصلا (عشان ما نعملش override لقرار الادمن)
+- لو مفيش، تعمل insert بحالة `confirmed` وساعات = `duration_minutes / 60`
 
-### 2.3 ربط period_id بـ salary_payments
+### 2. تعديل `src/pages/SessionDetails.tsx` - إكمال السيشن تلقائياً
 
-- الشهر المقفول لا يتأثر بتعديلات لاحقة
+**الوضع الحالي:** فيه بالفعل `checkAndUpdateSessionStatus` اللي بيحول السيشن لـ `completed` لما الوقت يعدي. ده شغال.
+
+**التحسين:** عند تأكيد حضور المدرب التلقائي، لو السيشن لسه `scheduled` ووقتها عدى، يتم تحويلها لـ `completed` تلقائياً أيضاً.
+
+### 3. تعديل `src/pages/Attendance.tsx` - نفس المنطق من صفحة الحضور
+
+**المنطق:** عند حفظ الحضور من صفحة Attendance المستقلة، نفس الخطوة:
+- لو المستخدم مدرب ومدرب المجموعة = المستخدم الحالي
+- أنشئ سجل حضور مدرب تلقائي إن مكانش موجود
+
+### 4. عدد الساعات الفعلية
+
+**المنطق:** `actual_hours` يتحسب تلقائي من `duration_minutes` بتاعة السيشن (اللي اتحددت عند إنشاء المجموعة):
+- `actual_hours = session.duration_minutes / 60`
+- الادمن والريسيبشن يقدروا يعدلوا العدد يدوي من صفحة تفاصيل السيشن (موجود بالفعل)
+
+### 5. الاحتفاظ بالتحكم اليدوي
+
+- قسم حضور المدرب في `SessionDetails` يفضل موجود زي ما هو
+- الادمن والريسيبشن يقدروا يغيروا الحالة (confirmed/absent/inferred) والساعات يدوي
+- لو الادمن عدل الحالة لـ `absent`، الحضور التلقائي مش هيعمل override (لأنه بيتحقق إن مفيش سجل أصلا قبل ما يضيف)
 
 ---
 
-## ملخص الملفات - المرحلة 1 فقط
+## التفاصيل التقنية
 
-### Database
-1. جدول `session_staff_attendance` + RLS + UNIQUE constraint
-2. Migration script للسيشنات القديمة
+### دالة `autoConfirmInstructorAttendance` الجديدة (في SessionDetails.tsx)
 
-### تعديل
-1. `src/pages/SessionDetails.tsx` - قسم حضور المدرب
-2. `src/components/finance/SalariesTab.tsx` - حساب ساعات + عرض محسن + تفصيل في دايلوج الصرف
+```text
+async function autoConfirmInstructorAttendance():
+  1. if user.id !== group.instructor_id -> return (مش المدرب)
+  2. if session.status === 'cancelled' -> return
+  3. check session_staff_attendance for (session_id, staff_id)
+  4. if record exists -> return (مش هنعمل override)
+  5. INSERT { session_id, staff_id, status: 'confirmed', actual_hours: duration_minutes/60 }
+  6. if session time has passed AND status === 'scheduled':
+     UPDATE session SET status = 'completed'
+  7. refresh data
+```
 
-### ملف جديد محتمل
-1. `src/components/finance/PayrollDialog.tsx` - دايلوج صرف محسن (ملخص + تفصيل سيشنات + pipeline)
+### نقاط الاستدعاء
+
+| الدالة | الملف | متى |
+|--------|-------|------|
+| handleSaveAttendance | SessionDetails.tsx | بعد حفظ حضور الطلاب بنجاح |
+| handleImportQuiz | SessionDetails.tsx | بعد إضافة كويز بنجاح |
+| handleSaveAssignment | SessionDetails.tsx | بعد إنشاء/تعديل واجب بنجاح |
+| saveAttendance | Attendance.tsx | بعد حفظ الحضور بنجاح |
+
+### لا تغييرات على قاعدة البيانات
+
+الجدول `session_staff_attendance` موجود بالفعل بكل الأعمدة المطلوبة والـ RLS policies صحيحة.
 
 ---
 
-## القواعد
+## الملفات المتأثرة
 
-| القاعدة | التفاصيل |
-|---------|----------|
-| التقريب | اقرب ربع ساعة |
-| السيشنات القديمة | inferred مع تحذير |
-| Pipeline | اساسي - خصومات + بونص = صافي |
-| الصلاحيات | الادمن فقط يصرف |
+1. `src/pages/SessionDetails.tsx` - إضافة دالة الحضور التلقائي + استدعائها من 3 أماكن + تحسين auto-complete
+2. `src/pages/Attendance.tsx` - إضافة نفس المنطق عند حفظ الحضور
 
