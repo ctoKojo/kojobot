@@ -67,7 +67,7 @@ export function AppSidebar() {
     { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['admin', 'instructor', 'reception'] },
     { title: isRTL ? 'جدول العمل' : 'My Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['instructor', 'reception'] },
     { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-instructor-warnings', icon: AlertTriangle, roles: ['instructor'] },
-    { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['admin', 'instructor', 'student', 'reception'] },
+    { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['admin', 'student'] },
   ];
 
   // Groups & Sessions category (Admin & Instructor & Reception)
