@@ -1115,6 +1115,11 @@ export default function SessionDetails() {
                 <Button
                   onClick={() => {
                     fetchAvailableQuizzes();
+                    // Auto-suggest start time based on session date + time
+                    if (session) {
+                      const suggestedStart = `${session.session_date}T${session.session_time.slice(0, 5)}`;
+                      setQuizStartTime(suggestedStart);
+                    }
                     setImportDialogOpen(true);
                   }}
                   className="flex items-center gap-2"
@@ -1128,7 +1133,13 @@ export default function SessionDetails() {
                   variant="outline"
                   onClick={() => {
                     setEditingAssignment(false);
-                    setAssignmentForm({ title: '', description: '', max_score: 100, due_date: '' });
+                    // Auto-suggest due date: session date + 7 days at session time
+                    const suggestedDue = session ? (() => {
+                      const d = new Date(session.session_date + 'T' + session.session_time.slice(0, 5));
+                      d.setDate(d.getDate() + 7);
+                      return d.toISOString().slice(0, 16);
+                    })() : '';
+                    setAssignmentForm({ title: '', description: '', max_score: 100, due_date: suggestedDue });
                     setAssignmentDialogOpen(true);
                   }}
                   className="flex items-center gap-2"
