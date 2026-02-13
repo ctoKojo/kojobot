@@ -1275,6 +1275,110 @@ export type Database = {
           },
         ]
       }
+      salary_events: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          description_ar: string | null
+          employee_id: string
+          event_type: string
+          id: string
+          is_reversal: boolean
+          metadata: Json
+          month: string
+          reference_id: string | null
+          reversed_event_id: string | null
+          source: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          description_ar?: string | null
+          employee_id: string
+          event_type: string
+          id?: string
+          is_reversal?: boolean
+          metadata?: Json
+          month: string
+          reference_id?: string | null
+          reversed_event_id?: string | null
+          source: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          description_ar?: string | null
+          employee_id?: string
+          event_type?: string
+          id?: string
+          is_reversal?: boolean
+          metadata?: Json
+          month?: string
+          reference_id?: string | null
+          reversed_event_id?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_events_reversed_event_id_fkey"
+            columns: ["reversed_event_id"]
+            isOneToOne: false
+            referencedRelation: "salary_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_month_snapshots: {
+        Row: {
+          base_amount: number
+          employee_id: string
+          finalized_at: string | null
+          finalized_by: string | null
+          id: string
+          month: string
+          net_amount: number
+          status: string
+          total_bonuses: number
+          total_deductions: number
+          total_earnings: number
+          updated_at: string
+        }
+        Insert: {
+          base_amount?: number
+          employee_id: string
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          month: string
+          net_amount?: number
+          status?: string
+          total_bonuses?: number
+          total_deductions?: number
+          total_earnings?: number
+          updated_at?: string
+        }
+        Update: {
+          base_amount?: number
+          employee_id?: string
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          month?: string
+          net_amount?: number
+          status?: string
+          total_bonuses?: number
+          total_deductions?: number
+          total_earnings?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       salary_payments: {
         Row: {
           base_amount: number
@@ -1723,6 +1827,10 @@ export type Database = {
         Returns: boolean
       }
       is_student: { Args: { _user_id: string }; Returns: boolean }
+      rebuild_salary_snapshot: {
+        Args: { p_employee_id: string; p_month: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "instructor" | "student" | "reception"
