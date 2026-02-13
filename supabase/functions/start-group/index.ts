@@ -55,8 +55,24 @@ Deno.serve(async (req) => {
 
     const { group_id, start_date, starting_session_number } = await req.json()
 
-    if (!group_id) {
-      return new Response(JSON.stringify({ error: 'group_id is required' }), {
+    // Validate group_id
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!group_id || typeof group_id !== 'string' || !uuidRegex.test(group_id)) {
+      return new Response(JSON.stringify({ error: 'Valid group_id (UUID) is required' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Validate start_date format if provided
+    if (start_date && (typeof start_date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(start_date))) {
+      return new Response(JSON.stringify({ error: 'start_date must be in YYYY-MM-DD format' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Validate starting_session_number if provided
+    if (starting_session_number !== undefined && (typeof starting_session_number !== 'number' || starting_session_number < 1 || starting_session_number > 12)) {
+      return new Response(JSON.stringify({ error: 'starting_session_number must be between 1 and 12' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
@@ -186,9 +202,8 @@ Deno.serve(async (req) => {
     })
 
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : 'Unknown error'
     console.error('Error in start-group:', error)
-    return new Response(JSON.stringify({ error: msg }), {
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }

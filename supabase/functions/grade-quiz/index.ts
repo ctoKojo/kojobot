@@ -61,6 +61,31 @@ serve(async (req) => {
       )
     }
 
+    // Validate quiz_assignment_id is UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (typeof quiz_assignment_id !== 'string' || !uuidRegex.test(quiz_assignment_id)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid quiz_assignment_id format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate answers is an object with reasonable size
+    if (typeof answers !== 'object' || answers === null || Array.isArray(answers)) {
+      return new Response(
+        JSON.stringify({ error: 'Answers must be a JSON object' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const answerKeys = Object.keys(answers)
+    if (answerKeys.length === 0 || answerKeys.length > 200) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid number of answers' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Use service role to access correct answers
     const adminSupabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false }

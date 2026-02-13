@@ -143,9 +143,59 @@ serve(async (req) => {
       )
     }
 
-    if (body.password.length < 6) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(body.email) || body.email.length > 255) {
       return new Response(
-        JSON.stringify({ error: 'Password must be at least 6 characters' }),
+        JSON.stringify({ error: 'Invalid email format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate password strength
+    if (body.password.length < 8 || body.password.length > 128) {
+      return new Response(
+        JSON.stringify({ error: 'Password must be between 8 and 128 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate name length
+    if (body.full_name.trim().length < 2 || body.full_name.length > 200) {
+      return new Response(
+        JSON.stringify({ error: 'Full name must be between 2 and 200 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate role
+    const validRoles = ['admin', 'student', 'instructor', 'reception']
+    if (!validRoles.includes(body.role)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid role. Must be one of: admin, student, instructor, reception' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate phone format if provided (Egyptian format)
+    if (body.phone && !/^01[0-9]{9}$/.test(body.phone)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid phone number format. Must be 11 digits starting with 01' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate optional fields
+    if (body.full_name_ar && body.full_name_ar.length > 200) {
+      return new Response(
+        JSON.stringify({ error: 'Arabic name must not exceed 200 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (body.hourly_rate !== undefined && (typeof body.hourly_rate !== 'number' || body.hourly_rate < 0 || body.hourly_rate > 100000)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid hourly rate' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

@@ -64,9 +64,11 @@ Deno.serve(async (req) => {
 
     const { group_id } = await req.json()
     
-    if (!group_id) {
+    // Validate group_id format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!group_id || typeof group_id !== 'string' || !uuidRegex.test(group_id)) {
       return new Response(
-        JSON.stringify({ error: 'group_id is required' }),
+        JSON.stringify({ error: 'Valid group_id (UUID) is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -187,10 +189,9 @@ Deno.serve(async (req) => {
     )
 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     console.error('Error:', error)
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
