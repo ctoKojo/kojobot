@@ -226,95 +226,12 @@ export default function Profile() {
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        {/* Finance Section for Instructor/Reception */}
-        {(role === 'instructor' || role === 'reception') && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                {isRTL ? 'المالية' : 'Finance'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {salaryLoading ? (
-                <p className="text-center text-muted-foreground py-4">{isRTL ? 'جاري التحميل...' : 'Loading...'}</p>
-              ) : (
-                <div className="space-y-4">
-                  {/* Current Salary */}
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                    <div className="p-4 rounded-lg border">
-                      <p className="text-sm text-muted-foreground">
-                        {salaryData.hourlyCalc ? (isRTL ? 'الراتب (بالساعة)' : 'Salary (Hourly)') : (isRTL ? 'الراتب الأساسي' : 'Base Salary')}
-                      </p>
-                      <p className="text-xl font-bold mt-1">
-                        {salaryData.hourlyCalc 
-                          ? `${salaryData.hourlyCalc.roundedHours} ${isRTL ? 'ساعة' : 'hrs'} = ${salaryData.hourlyCalc.totalPay} ${isRTL ? 'ج.م' : 'EGP'}`
-                          : salaryData.currentSalary ? `${salaryData.currentSalary.base_salary} ${isRTL ? 'ج.م' : 'EGP'}` : (isRTL ? 'غير محدد' : 'Not set')}
-                      </p>
-                      {salaryData.hourlyCalc && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {profile?.hourly_rate} {isRTL ? 'ج.م/ساعة' : 'EGP/hr'} × {salaryData.hourlyCalc.roundedHours} {isRTL ? 'ساعة' : 'hrs'}
-                          {salaryData.hourlyCalc.hasInferred && <span className="text-amber-500 ms-2">⚠ {isRTL ? 'يشمل ساعات تقديرية' : 'Includes inferred hours'}</span>}
-                        </p>
-                      )}
-                    </div>
-                    <div className="p-4 rounded-lg border">
-                      <p className="text-sm text-muted-foreground">{isRTL ? 'إجمالي المدفوع' : 'Total Paid'}</p>
-                      <p className="text-xl font-bold text-green-600 mt-1">
-                        {salaryData.payments.reduce((sum, p) => sum + Number(p.net_amount || 0), 0)} {isRTL ? 'ج.م' : 'EGP'}
-                      </p>
-                    </div>
-                  </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-                  {/* Payment History */}
-                  {salaryData.payments.length > 0 && (
-                    <div className="space-y-2">
-                      <h3 className="font-medium text-sm text-muted-foreground">{isRTL ? 'سجل الرواتب' : 'Salary History'}</h3>
-                      {salaryData.payments.map((payment: any) => (
-                        <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg border">
-                          <div>
-                            <p className="font-medium text-sm">
-                              {new Date(payment.month).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long' })}
-                            </p>
-                            <div className="flex gap-3 mt-1 text-xs flex-wrap">
-                              <span className="text-muted-foreground">{isRTL ? 'أساسي:' : 'Base:'} {payment.base_amount}</span>
-                              {Number(payment.deductions) > 0 && (
-                                <span className="text-destructive">
-                                  {isRTL ? 'خصم:' : 'Ded:'} -{payment.deductions}
-                                  {payment.deduction_reason && <span className="ms-1">({language === 'ar' && payment.deduction_reason_ar ? payment.deduction_reason_ar : payment.deduction_reason})</span>}
-                                </span>
-                              )}
-                              {Number(payment.bonus) > 0 && (
-                                <span className="text-green-600">
-                                  {isRTL ? 'بونص:' : 'Bonus:'} +{payment.bonus}
-                                  {payment.bonus_reason && <span className="ms-1">({language === 'ar' && payment.bonus_reason_ar ? payment.bonus_reason_ar : payment.bonus_reason})</span>}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-sm">{payment.net_amount} {isRTL ? 'ج.م' : 'EGP'}</p>
-                            <Badge className={payment.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}>
-                              {payment.status === 'paid' ? (isRTL ? 'مصروف' : 'Paid') : (isRTL ? 'معلق' : 'Pending')}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
 
-                  {salaryData.payments.length === 0 && !salaryData.currentSalary && !salaryData.hourlyCalc && (
-                    <p className="text-center text-muted-foreground py-4">{isRTL ? 'لا توجد بيانات مالية بعد' : 'No financial data yet'}</p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </DashboardLayout>
-  );
-}
 
   return (
     <DashboardLayout>
@@ -506,6 +423,90 @@ export default function Profile() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Finance Section for Instructor/Reception */}
+        {(role === 'instructor' || role === 'reception') && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                {isRTL ? 'المالية' : 'Finance'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {salaryLoading ? (
+                <p className="text-center text-muted-foreground py-4">{isRTL ? 'جاري التحميل...' : 'Loading...'}</p>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                    <div className="p-4 rounded-lg border">
+                      <p className="text-sm text-muted-foreground">
+                        {salaryData.hourlyCalc ? (isRTL ? 'الراتب (بالساعة)' : 'Salary (Hourly)') : (isRTL ? 'الراتب الأساسي' : 'Base Salary')}
+                      </p>
+                      <p className="text-xl font-bold mt-1">
+                        {salaryData.hourlyCalc 
+                          ? `${salaryData.hourlyCalc.roundedHours} ${isRTL ? 'ساعة' : 'hrs'} = ${salaryData.hourlyCalc.totalPay} ${isRTL ? 'ج.م' : 'EGP'}`
+                          : salaryData.currentSalary ? `${salaryData.currentSalary.base_salary} ${isRTL ? 'ج.م' : 'EGP'}` : (isRTL ? 'غير محدد' : 'Not set')}
+                      </p>
+                      {salaryData.hourlyCalc && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {profile?.hourly_rate} {isRTL ? 'ج.م/ساعة' : 'EGP/hr'} × {salaryData.hourlyCalc.roundedHours} {isRTL ? 'ساعة' : 'hrs'}
+                          {salaryData.hourlyCalc.hasInferred && <span className="text-amber-500 ms-2">⚠ {isRTL ? 'يشمل ساعات تقديرية' : 'Includes inferred hours'}</span>}
+                        </p>
+                      )}
+                    </div>
+                    <div className="p-4 rounded-lg border">
+                      <p className="text-sm text-muted-foreground">{isRTL ? 'إجمالي المدفوع' : 'Total Paid'}</p>
+                      <p className="text-xl font-bold text-green-600 mt-1">
+                        {salaryData.payments.reduce((sum, p) => sum + Number(p.net_amount || 0), 0)} {isRTL ? 'ج.م' : 'EGP'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {salaryData.payments.length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="font-medium text-sm text-muted-foreground">{isRTL ? 'سجل الرواتب' : 'Salary History'}</h3>
+                      {salaryData.payments.map((payment: any) => (
+                        <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg border">
+                          <div>
+                            <p className="font-medium text-sm">
+                              {new Date(payment.month).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long' })}
+                            </p>
+                            <div className="flex gap-3 mt-1 text-xs flex-wrap">
+                              <span className="text-muted-foreground">{isRTL ? 'أساسي:' : 'Base:'} {payment.base_amount}</span>
+                              {Number(payment.deductions) > 0 && (
+                                <span className="text-destructive">
+                                  {isRTL ? 'خصم:' : 'Ded:'} -{payment.deductions}
+                                  {payment.deduction_reason && <span className="ms-1">({language === 'ar' && payment.deduction_reason_ar ? payment.deduction_reason_ar : payment.deduction_reason})</span>}
+                                </span>
+                              )}
+                              {Number(payment.bonus) > 0 && (
+                                <span className="text-green-600">
+                                  {isRTL ? 'بونص:' : 'Bonus:'} +{payment.bonus}
+                                  {payment.bonus_reason && <span className="ms-1">({language === 'ar' && payment.bonus_reason_ar ? payment.bonus_reason_ar : payment.bonus_reason})</span>}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-sm">{payment.net_amount} {isRTL ? 'ج.م' : 'EGP'}</p>
+                            <Badge className={payment.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}>
+                              {payment.status === 'paid' ? (isRTL ? 'مصروف' : 'Paid') : (isRTL ? 'معلق' : 'Pending')}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {salaryData.payments.length === 0 && !salaryData.currentSalary && !salaryData.hourlyCalc && (
+                    <p className="text-center text-muted-foreground py-4">{isRTL ? 'لا توجد بيانات مالية بعد' : 'No financial data yet'}</p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {cropSrc && (
