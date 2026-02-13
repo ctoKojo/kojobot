@@ -784,7 +784,7 @@ export default function SessionDetails() {
         session_id: session.id,
         staff_id: group.instructor_id,
         status: staffAttendanceForm.status,
-        actual_hours: staffAttendanceForm.actual_hours,
+        actual_hours: session!.duration_minutes / 60,
       };
 
       if (staffAttendance) {
@@ -1188,14 +1188,7 @@ export default function SessionDetails() {
                   </Select>
                   <div className="flex items-center gap-2">
                     <Label className="text-sm whitespace-nowrap">{isRTL ? 'ساعات فعلية:' : 'Actual hrs:'}</Label>
-                    <Input
-                      type="number"
-                      step="0.25"
-                      min="0"
-                      className="w-20"
-                      value={staffAttendanceForm.actual_hours}
-                      onChange={(e) => setStaffAttendanceForm(prev => ({ ...prev, actual_hours: parseFloat(e.target.value) || 0 }))}
-                    />
+                    <span className="text-sm font-medium">{session ? (session.duration_minutes / 60).toFixed(2) : 0}</span>
                   </div>
                   <Button size="sm" onClick={handleSaveStaffAttendance} disabled={savingStaffAttendance}>
                     {savingStaffAttendance ? '...' : (isRTL ? 'حفظ' : 'Save')}
