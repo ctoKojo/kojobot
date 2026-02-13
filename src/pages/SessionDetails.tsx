@@ -70,6 +70,15 @@ import {
   Eye,
 } from 'lucide-react';
 
+interface StaffAttendance {
+  id: string;
+  session_id: string;
+  staff_id: string;
+  status: string;
+  actual_hours: number;
+  created_at: string;
+}
+
 interface Session {
   id: string;
   session_number: number | null;
@@ -86,6 +95,7 @@ interface Group {
   id: string;
   name: string;
   name_ar: string;
+  instructor_id?: string | null;
   attendance_mode?: string;
   session_link?: string | null;
 }
@@ -157,6 +167,12 @@ export default function SessionDetails() {
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, string>>({});
   
+  // Staff attendance
+  const [staffAttendance, setStaffAttendance] = useState<StaffAttendance | null>(null);
+  const [staffAttendanceForm, setStaffAttendanceForm] = useState({ status: 'confirmed', actual_hours: 0 });
+  const [savingStaffAttendance, setSavingStaffAttendance] = useState(false);
+  const [instructorProfile, setInstructorProfile] = useState<any>(null);
+
   // Quiz results dialog
   const [quizResultsDialogOpen, setQuizResultsDialogOpen] = useState(false);
   
@@ -222,7 +238,7 @@ export default function SessionDetails() {
       // Fetch group with attendance mode and session link
       const { data: groupData } = await supabase
         .from('groups')
-        .select('id, name, name_ar, attendance_mode, session_link')
+        .select('id, name, name_ar, instructor_id, attendance_mode, session_link')
         .eq('id', sessionData.group_id)
         .single();
       setGroup(groupData);
@@ -319,6 +335,30 @@ export default function SessionDetails() {
       });
       
       setStudents(combinedStudents);
+      // Fetch staff attendance for this session
+      if (groupData?.instructor_id) {
+        const { data: staffAtt } = await supabase
+          .from('session_staff_attendance')
+          .select('*')
+          .eq('session_id', sessionId)
+          .eq('staff_id', groupData.instructor_id)
+          .maybeSingle();
+        
+        setStaffAttendance(staffAtt as StaffAttendance | null);
+        setStaffAttendanceForm({
+          status: staffAtt?.status || 'confirmed',
+          actual_hours: staffAtt?.actual_hours ?? (sessionData.duration_minutes / 60),
+        });
+
+        // Fetch instructor profile for display
+        const { data: instrProfile } = await supabase
+          .from('profiles')
+          .select('full_name, full_name_ar')
+          .eq('user_id', groupData.instructor_id)
+          .maybeSingle();
+        setInstructorProfile(instrProfile);
+      }
+
     } catch (error) {
       console.error('Error fetching session data:', error);
       toast({
@@ -681,6 +721,55 @@ export default function SessionDetails() {
     setAttendanceRecords(newRecords);
   };
 
+  const handleSaveStaffAttendance = async () => {
+    if (!session || !group?.instructor_id || !user) return;
+    setSavingStaffAttendance(true);
+    try {
+      const record = {
+        session_id: session.id,
+        staff_id: group.instructor_id,
+        status: staffAttendanceForm.status,
+        actual_hours: staffAttendanceForm.actual_hours,
+      };
+
+      if (staffAttendance) {
+        const { error } = await supabase
+          .from('session_staff_attendance')
+          .update({ status: record.status, actual_hours: record.actual_hours } as any)
+          .eq('id', staffAttendance.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('session_staff_attendance')
+          .insert(record as any);
+        if (error) throw error;
+      }
+
+      toast({
+        title: isRTL ? 'تم الحفظ' : 'Saved',
+        description: isRTL ? 'تم حفظ حضور المدرب' : 'Instructor attendance saved',
+      });
+      fetchSessionData();
+    } catch (error: any) {
+      toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setSavingStaffAttendance(false);
+    }
+  };
+
+  const getStaffAttendanceBadge = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return <Badge className="bg-green-500">{isRTL ? 'مؤكد' : 'Confirmed'}</Badge>;
+      case 'absent':
+        return <Badge variant="destructive">{isRTL ? 'غائب' : 'Absent'}</Badge>;
+      case 'inferred':
+        return <Badge variant="secondary">{isRTL ? 'تقديري' : 'Inferred'}</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   const getAttendanceBadge = (status: string | null) => {
     if (!status) return <Badge variant="outline" className="text-muted-foreground">{isRTL ? 'غير مسجل' : 'Not recorded'}</Badge>;
     
@@ -992,6 +1081,71 @@ export default function SessionDetails() {
                   <Plus className="h-4 w-4" />
                   {isRTL ? 'إنشاء واجب' : 'Create Assignment'}
                 </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Instructor Attendance Card */}
+        {group?.instructor_id && (role === 'admin' || role === 'reception' || (role === 'instructor' && user?.id === group.instructor_id)) && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <UserCheck className="h-5 w-5" />
+                {isRTL ? 'حضور المدرب' : 'Instructor Attendance'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">{isRTL ? 'المدرب:' : 'Instructor:'}</span>
+                  <span className="font-medium">
+                    {language === 'ar' ? (instructorProfile?.full_name_ar || instructorProfile?.full_name) : instructorProfile?.full_name}
+                  </span>
+                  {staffAttendance && getStaffAttendanceBadge(staffAttendance.status)}
+                  {staffAttendance?.status === 'inferred' && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {isRTL ? 'تقديري' : 'Estimated'}
+                    </span>
+                  )}
+                </div>
+                {staffAttendance && (
+                  <div className="text-sm text-muted-foreground">
+                    {staffAttendance.actual_hours} {isRTL ? 'ساعة' : 'hrs'}
+                  </div>
+                )}
+              </div>
+
+              {(role === 'admin' || role === 'reception') && (
+                <div className="flex items-center gap-3 mt-4 pt-4 border-t flex-wrap">
+                  <Select 
+                    value={staffAttendanceForm.status} 
+                    onValueChange={(v) => setStaffAttendanceForm(prev => ({ ...prev, status: v }))}
+                  >
+                    <SelectTrigger className="w-36">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="confirmed">{isRTL ? 'مؤكد' : 'Confirmed'}</SelectItem>
+                      <SelectItem value="absent">{isRTL ? 'غائب' : 'Absent'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm whitespace-nowrap">{isRTL ? 'ساعات فعلية:' : 'Actual hrs:'}</Label>
+                    <Input
+                      type="number"
+                      step="0.25"
+                      min="0"
+                      className="w-20"
+                      value={staffAttendanceForm.actual_hours}
+                      onChange={(e) => setStaffAttendanceForm(prev => ({ ...prev, actual_hours: parseFloat(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <Button size="sm" onClick={handleSaveStaffAttendance} disabled={savingStaffAttendance}>
+                    {savingStaffAttendance ? '...' : (isRTL ? 'حفظ' : 'Save')}
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
