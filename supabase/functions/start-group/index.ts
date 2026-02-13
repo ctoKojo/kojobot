@@ -119,9 +119,9 @@ Deno.serve(async (req) => {
 
     const startingNum = starting_session_number || 1
 
-    // Generate 12 sessions
+    // Generate sessions only up to starting_session_number (not all 12)
     const sessions = []
-    for (let i = 1; i <= 12; i++) {
+    for (let i = 1; i <= startingNum; i++) {
       let sessionDate: Date
       let status: string
 
@@ -132,10 +132,8 @@ Deno.serve(async (req) => {
         sessionDate.setDate(sessionDate.getDate() - weeksBack * 7)
         status = 'completed'
       } else {
-        // Future sessions: calculate forwards
-        const weeksForward = i - startingNum
+        // The starting session itself
         sessionDate = new Date(sessionStartDate)
-        sessionDate.setDate(sessionDate.getDate() + weeksForward * 7)
         status = 'scheduled'
       }
 
