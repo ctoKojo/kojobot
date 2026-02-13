@@ -378,7 +378,7 @@ export function SalariesTab() {
                     <TableRow key={emp.id}>
                       <TableCell className="font-medium">{getName(emp)}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{emp.role === 'admin' ? (isRTL ? 'مدير' : 'Admin') : emp.role === 'reception' ? (isRTL ? 'ريسيبشن' : 'Reception') : (isRTL ? 'مدرب' : 'Instructor')}</Badge>
+                        <Badge>{emp.role === 'admin' ? (isRTL ? 'مدير' : 'Admin') : emp.role === 'reception' ? (isRTL ? 'ريسيبشن' : 'Reception') : (isRTL ? 'مدرب' : 'Instructor')}</Badge>
                       </TableCell>
                       <TableCell>
                         {emp.employment_status === 'permanent' ? (
