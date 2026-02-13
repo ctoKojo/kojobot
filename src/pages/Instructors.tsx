@@ -914,15 +914,15 @@ export default function InstructorsPage() {
         {/* Desktop Table View */}
         <Card className="hidden md:block">
           <CardContent className="p-0">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t.students.fullName}</TableHead>
-                  <TableHead>{t.instructors.employeeType}</TableHead>
-                  <TableHead>{t.auth.email}</TableHead>
-                  <TableHead>{t.instructors.specializations}</TableHead>
-                  <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                  <TableHead className="w-[100px]">{t.common.actions}</TableHead>
+                  <TableHead className="w-[25%]">{t.students.fullName}</TableHead>
+                  <TableHead className="w-[12%]">{t.instructors.employeeType}</TableHead>
+                  <TableHead className="w-[22%]">{t.auth.email}</TableHead>
+                  <TableHead className="w-[15%]">{t.instructors.specializations}</TableHead>
+                  <TableHead className="w-[18%]">{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                  <TableHead className="w-[8%]">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -949,7 +949,7 @@ export default function InstructorsPage() {
                               {instructor.full_name.slice(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium">
+                          <span className="font-medium truncate">
                             {language === 'ar' && instructor.full_name_ar 
                               ? instructor.full_name_ar 
                               : instructor.full_name}
@@ -957,7 +957,7 @@ export default function InstructorsPage() {
                         </div>
                       </TableCell>
                       <TableCell>{getRoleBadge(instructor.role)}</TableCell>
-                      <TableCell>{instructor.email}</TableCell>
+                      <TableCell className="truncate">{instructor.email}</TableCell>
                       <TableCell>
                         {instructor.role === 'instructor' && instructor.specialization ? (
                           <Badge variant="secondary">
