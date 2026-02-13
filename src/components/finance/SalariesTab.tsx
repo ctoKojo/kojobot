@@ -52,7 +52,7 @@ export function SalariesTab() {
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
-    const { data: roles } = await supabase.from('user_roles').select('user_id, role').in('role', ['instructor', 'admin']);
+    const { data: roles } = await supabase.from('user_roles').select('user_id, role').in('role', ['instructor', 'admin', 'reception']);
     const userIds = (roles || []).map(r => r.user_id);
     const { data: profiles } = await supabase.from('profiles').select('*').in('user_id', userIds.length > 0 ? userIds : ['none']);
     
@@ -236,7 +236,7 @@ export function SalariesTab() {
                     <TableRow key={emp.id}>
                       <TableCell className="font-medium">{getName(emp)}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{emp.role === 'admin' ? (isRTL ? 'مدير' : 'Admin') : (isRTL ? 'مدرب' : 'Instructor')}</Badge>
+                        <Badge variant="outline">{emp.role === 'admin' ? (isRTL ? 'مدير' : 'Admin') : emp.role === 'reception' ? (isRTL ? 'ريسيبشن' : 'Reception') : (isRTL ? 'مدرب' : 'Instructor')}</Badge>
                       </TableCell>
                       <TableCell>
                         {emp.employment_status === 'permanent' ? (
