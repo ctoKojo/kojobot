@@ -192,7 +192,6 @@ export function SalariesTab() {
       base_amount: snapshot.base_amount,
       bonus: snapshot.total_bonuses,
       deductions: snapshot.total_deductions,
-      net_amount: snapshot.net_amount,
       status: 'paid',
       paid_date: new Date().toISOString().split('T')[0],
       paid_by: user?.id,
