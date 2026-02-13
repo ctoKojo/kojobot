@@ -33,6 +33,8 @@ export function SalariesTab() {
   const [salaryPayments, setSalaryPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hourlyDataMap, setHourlyDataMap] = useState<Record<string, HourlyData>>({});
+  const [warningDeductionsMap, setWarningDeductionsMap] = useState<Record<string, { total: number; details: { type: string; count: number; amount: number }[] }>>({});
+  const [monthAdjustmentsMap, setMonthAdjustmentsMap] = useState<Record<string, { totalDeductions: number; totalBonuses: number }>>({});
 
   // Dialogs
   const [salaryDialog, setSalaryDialog] = useState(false);
@@ -82,7 +84,53 @@ export function SalariesTab() {
       await fetchHourlyData(paidTrainees);
     }
 
+    // Precompute warning-based deductions for all employees
+    await fetchWarningDeductions(userIds);
+
+    // Compute current month manual adjustments (deductions/bonuses)
+    const cm = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
+    const adjMap: Record<string, { totalDeductions: number; totalBonuses: number }> = {};
+    (pays || []).forEach((p: any) => {
+      if (p.month !== cm) return;
+      if (!adjMap[p.employee_id]) adjMap[p.employee_id] = { totalDeductions: 0, totalBonuses: 0 };
+      // Only count adjustment records (base_amount = 0) for manual adjustments
+      if (Number(p.base_amount) === 0) {
+        adjMap[p.employee_id].totalDeductions += Number(p.deductions || 0);
+        adjMap[p.employee_id].totalBonuses += Number(p.bonus || 0);
+      }
+    });
+    setMonthAdjustmentsMap(adjMap);
+
     setLoading(false);
+  };
+
+  const fetchWarningDeductions = async (userIds: string[]) => {
+    if (userIds.length === 0) return;
+    const [warningsRes, rulesRes] = await Promise.all([
+      supabase.from('instructor_warnings').select('instructor_id, warning_type').eq('is_active', true).in('instructor_id', userIds),
+      supabase.from('warning_deduction_rules').select('*').eq('is_active', true),
+    ]);
+    const warnings = warningsRes.data || [];
+    const rules = (rulesRes.data || []) as any[];
+
+    const map: Record<string, { total: number; details: { type: string; count: number; amount: number }[] }> = {};
+    userIds.forEach(uid => {
+      const myWarnings = warnings.filter(w => w.instructor_id === uid);
+      const countByType: Record<string, number> = {};
+      myWarnings.forEach(w => { countByType[w.warning_type] = (countByType[w.warning_type] || 0) + 1; });
+
+      const details: { type: string; count: number; amount: number }[] = [];
+      rules.forEach(rule => {
+        const actualCount = countByType[rule.warning_type] || 0;
+        if (actualCount >= rule.warning_count) {
+          details.push({ type: rule.warning_type, count: actualCount, amount: rule.deduction_amount });
+        }
+      });
+      if (details.length > 0) {
+        map[uid] = { total: details.reduce((s, d) => s + d.amount, 0), details };
+      }
+    });
+    setWarningDeductionsMap(map);
   };
 
   const fetchHourlyData = async (paidTrainees: any[]) => {
@@ -226,30 +274,15 @@ export function SalariesTab() {
       base_amount: baseAmount, payment_method: 'cash', notes: '',
     });
     setSelectedEmployee(emp);
-    setAutoDeductions([]);
-    setPayDialog(true);
-
-    // Fetch warnings and rules to auto-calculate deductions
-    setLoadingDeductions(true);
-    const [warningsRes, rulesRes] = await Promise.all([
-      supabase.from('instructor_warnings').select('warning_type').eq('instructor_id', emp.user_id).eq('is_active', true),
-      supabase.from('warning_deduction_rules').select('*').eq('is_active', true),
-    ]);
-    const warnings = warningsRes.data || [];
-    const rules = (rulesRes.data || []) as any[];
-
-    const countByType: Record<string, number> = {};
-    warnings.forEach(w => { countByType[w.warning_type] = (countByType[w.warning_type] || 0) + 1; });
-
-    const matched: { warning_type: string; count: number; amount: number }[] = [];
-    rules.forEach(rule => {
-      const actualCount = countByType[rule.warning_type] || 0;
-      if (actualCount >= rule.warning_count) {
-        matched.push({ warning_type: rule.warning_type, count: actualCount, amount: rule.deduction_amount });
-      }
-    });
-    setAutoDeductions(matched);
+    // Use precomputed warning deductions
+    const warnData = warningDeductionsMap[emp.user_id];
+    if (warnData) {
+      setAutoDeductions(warnData.details.map(d => ({ warning_type: d.type, count: d.count, amount: d.amount })));
+    } else {
+      setAutoDeductions([]);
+    }
     setLoadingDeductions(false);
+    setPayDialog(true);
   };
 
   const openAdjustDialog = (emp: any, type: 'deduction' | 'bonus') => {
@@ -366,16 +399,27 @@ export function SalariesTab() {
                   <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
                   <TableHead>{isRTL ? 'الدور' : 'Role'}</TableHead>
                   <TableHead>{isRTL ? 'نوع العمل' : 'Work Type'}</TableHead>
-                  <TableHead>{isRTL ? 'الراتب الأساسي' : 'Base Salary'}</TableHead>
-                  <TableHead>{isRTL ? 'حالة الشهر' : 'This Month'}</TableHead>
-                  <TableHead>{isRTL ? 'إجراءات' : 'Actions'}</TableHead>
+                   <TableHead>{isRTL ? 'الراتب الأساسي' : 'Base Salary'}</TableHead>
+                   <TableHead>{isRTL ? 'صافي تقديري' : 'Est. Net'}</TableHead>
+                   <TableHead>{isRTL ? 'حالة الشهر' : 'This Month'}</TableHead>
+                   <TableHead>{isRTL ? 'إجراءات' : 'Actions'}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8">{isRTL ? 'جاري التحميل...' : 'Loading...'}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-8">{isRTL ? 'جاري التحميل...' : 'Loading...'}</TableCell></TableRow>
                 ) : employees.map(emp => {
                   const paid = getEmployeePayment(emp.user_id, currentMonth);
+                  const salary = getEmployeeSalary(emp.user_id);
+                  const isHourly = emp.is_paid_trainee && emp.hourly_rate;
+                  const hourlyData = hourlyDataMap[emp.user_id];
+                  const baseAmount = isHourly ? (hourlyData?.totalPay || 0) : (salary?.base_salary || 0);
+                  const warnDeductions = warningDeductionsMap[emp.user_id];
+                  const manualAdj = monthAdjustmentsMap[emp.user_id];
+                  const autoDeductionTotal = warnDeductions?.total || 0;
+                  const manualDeductions = manualAdj?.totalDeductions || 0;
+                  const manualBonuses = manualAdj?.totalBonuses || 0;
+                  const estimatedNet = baseAmount - autoDeductionTotal - manualDeductions + manualBonuses;
                   return (
                     <TableRow key={emp.id}>
                       <TableCell className="font-medium">{getName(emp)}</TableCell>
@@ -396,6 +440,39 @@ export function SalariesTab() {
                       </TableCell>
                       <TableCell>
                         {getBaseSalaryDisplay(emp)}
+                      </TableCell>
+                      <TableCell>
+                        {baseAmount > 0 ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="space-y-0.5">
+                                  <span className={`font-bold text-sm ${estimatedNet < baseAmount ? 'text-destructive' : 'text-green-600'}`}>
+                                    {estimatedNet} {isRTL ? 'ج.م' : 'EGP'}
+                                  </span>
+                                  {(autoDeductionTotal > 0 || manualDeductions > 0 || manualBonuses > 0) && (
+                                    <div className="flex gap-1 flex-wrap">
+                                      {autoDeductionTotal > 0 && <Badge variant="outline" className="text-[10px] px-1 py-0 text-destructive border-destructive/30">-{autoDeductionTotal}</Badge>}
+                                      {manualDeductions > 0 && <Badge variant="outline" className="text-[10px] px-1 py-0 text-destructive border-destructive/30">-{manualDeductions}</Badge>}
+                                      {manualBonuses > 0 && <Badge variant="outline" className="text-[10px] px-1 py-0 text-green-600 border-green-500/30">+{manualBonuses}</Badge>}
+                                    </div>
+                                  )}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="max-w-xs text-xs space-y-1">
+                                <p>{isRTL ? 'الأساسي' : 'Base'}: {baseAmount} {isRTL ? 'ج.م' : 'EGP'}</p>
+                                {warnDeductions && warnDeductions.details.map((d, i) => (
+                                  <p key={i} className="text-destructive">{d.type} (×{d.count}): -{d.amount}</p>
+                                ))}
+                                {manualDeductions > 0 && <p className="text-destructive">{isRTL ? 'خصم يدوي' : 'Manual deduction'}: -{manualDeductions}</p>}
+                                {manualBonuses > 0 && <p className="text-green-600">{isRTL ? 'بونص' : 'Bonus'}: +{manualBonuses}</p>}
+                                <p className="font-bold border-t pt-1">{isRTL ? 'الصافي' : 'Net'}: {estimatedNet} {isRTL ? 'ج.م' : 'EGP'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">{isRTL ? 'غير محدد' : 'N/A'}</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {paid ? (
