@@ -821,17 +821,17 @@ export default function StudentsPage() {
         {/* Desktop Table View */}
         <Card className="hidden lg:block">
           <CardContent className="p-0">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t.students.fullName}</TableHead>
-                  <TableHead>{t.auth.email}</TableHead>
-                  <TableHead>{t.students.ageGroup}</TableHead>
-                  <TableHead>{t.students.level}</TableHead>
-                  <TableHead>{isRTL ? 'الاشتراك' : 'Subscription'}</TableHead>
-                  <TableHead>{isRTL ? 'حالة الدفع' : 'Payment'}</TableHead>
-                  <TableHead>{isRTL ? 'نوع الحضور' : 'Attendance'}</TableHead>
-                  <TableHead className="w-[100px]">{t.common.actions}</TableHead>
+                  <TableHead className="w-[18%]">{t.students.fullName}</TableHead>
+                  <TableHead className="w-[18%]">{t.auth.email}</TableHead>
+                  <TableHead className="w-[12%]">{t.students.ageGroup}</TableHead>
+                  <TableHead className="w-[12%]">{t.students.level}</TableHead>
+                  <TableHead className="w-[13%]">{isRTL ? 'الاشتراك' : 'Subscription'}</TableHead>
+                  <TableHead className="w-[12%]">{isRTL ? 'حالة الدفع' : 'Payment'}</TableHead>
+                  <TableHead className="w-[10%]">{isRTL ? 'نوع الحضور' : 'Attendance'}</TableHead>
+                  <TableHead className="w-[5%]">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -865,7 +865,7 @@ export default function StudentsPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>{student.email}</TableCell>
+                      <TableCell className="truncate">{student.email}</TableCell>
                       <TableCell>{getAgeGroupName(student.age_group_id)}</TableCell>
                       <TableCell>{getLevelName(student.level_id)}</TableCell>
                       <TableCell>
