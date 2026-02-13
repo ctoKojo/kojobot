@@ -1346,6 +1346,48 @@ export type Database = {
           },
         ]
       }
+      session_staff_attendance: {
+        Row: {
+          actual_hours: number
+          created_at: string
+          id: string
+          session_id: string
+          staff_id: string
+          status: string
+        }
+        Insert: {
+          actual_hours: number
+          created_at?: string
+          id?: string
+          session_id: string
+          staff_id: string
+          status?: string
+        }
+        Update: {
+          actual_hours?: number
+          created_at?: string
+          id?: string
+          session_id?: string
+          staff_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_staff_attendance_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "session_staff_attendance_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sessions: {
         Row: {
           created_at: string

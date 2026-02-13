@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, Check, Clock, Plus, Minus, Gift } from 'lucide-react';
+import { DollarSign, Check, Clock, Plus, Minus, Gift, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,10 +10,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
+interface HourlyData {
+  totalHours: number;
+  roundedHours: number;
+  totalPay: number;
+  hasInferred: boolean;
+  sessions: { date: string; groupName: string; hours: number; status: string }[];
+}
 
 export function SalariesTab() {
   const { isRTL, language } = useLanguage();
@@ -23,6 +32,7 @@ export function SalariesTab() {
   const [salaries, setSalaries] = useState<any[]>([]);
   const [salaryPayments, setSalaryPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hourlyDataMap, setHourlyDataMap] = useState<Record<string, HourlyData>>({});
 
   // Dialogs
   const [salaryDialog, setSalaryDialog] = useState(false);
@@ -34,7 +44,7 @@ export function SalariesTab() {
   // Salary form
   const [salaryForm, setSalaryForm] = useState({ employee_id: '', employee_type: 'instructor', base_salary: '', effective_from: new Date().toISOString().split('T')[0] });
 
-  // Pay form (simplified - just pay the salary)
+  // Pay form
   const [payForm, setPayForm] = useState({
     employee_id: '', salary_id: '', month: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
     base_amount: 0, payment_method: 'cash', notes: '',
@@ -42,7 +52,7 @@ export function SalariesTab() {
   const [autoDeductions, setAutoDeductions] = useState<{ warning_type: string; count: number; amount: number }[]>([]);
   const [loadingDeductions, setLoadingDeductions] = useState(false);
 
-  // Adjustment form (bonus or deduction - separate from payment)
+  // Adjustment form
   const [adjustForm, setAdjustForm] = useState({
     employee_id: '', salary_id: '', month: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`,
     type: 'deduction' as 'deduction' | 'bonus',
@@ -66,7 +76,82 @@ export function SalariesTab() {
     const { data: pays } = await supabase.from('salary_payments').select('*').order('month', { ascending: false }).limit(100);
     setSalaryPayments(pays || []);
 
+    // Fetch hourly data for paid trainees
+    const paidTrainees = enriched.filter(e => e.is_paid_trainee && e.hourly_rate);
+    if (paidTrainees.length > 0) {
+      await fetchHourlyData(paidTrainees);
+    }
+
     setLoading(false);
+  };
+
+  const fetchHourlyData = async (paidTrainees: any[]) => {
+    const now = new Date();
+    const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+    const staffIds = paidTrainees.map(t => t.user_id);
+    
+    // Fetch attendance records for all paid trainees this month
+    const { data: attendanceData } = await supabase
+      .from('session_staff_attendance')
+      .select('staff_id, actual_hours, status, session_id')
+      .in('staff_id', staffIds)
+      .in('status', ['confirmed', 'inferred']);
+
+    // Fetch session dates to filter by month
+    const sessionIds = [...new Set((attendanceData || []).map(a => a.session_id))];
+    const { data: sessions } = await supabase
+      .from('sessions')
+      .select('id, session_date, group_id')
+      .in('id', sessionIds.length > 0 ? sessionIds : ['none'])
+      .gte('session_date', monthStart)
+      .lte('session_date', monthEnd);
+
+    const sessionMap = new Map((sessions || []).map(s => [s.id, s]));
+
+    // Fetch group names
+    const groupIds = [...new Set((sessions || []).map(s => s.group_id))];
+    const { data: groups } = await supabase
+      .from('groups')
+      .select('id, name, name_ar')
+      .in('id', groupIds.length > 0 ? groupIds : ['none']);
+    const groupMap = new Map((groups || []).map(g => [g.id, g]));
+
+    const dataMap: Record<string, HourlyData> = {};
+    
+    paidTrainees.forEach(trainee => {
+      const myAttendance = (attendanceData || []).filter(a => {
+        if (a.staff_id !== trainee.user_id) return false;
+        const sess = sessionMap.get(a.session_id);
+        return !!sess; // Only sessions in current month range
+      });
+
+      const totalHours = myAttendance.reduce((sum, a) => sum + Number(a.actual_hours), 0);
+      const roundedHours = Math.round(totalHours * 4) / 4;
+      const hasInferred = myAttendance.some(a => a.status === 'inferred');
+
+      const sessionDetails = myAttendance.map(a => {
+        const sess = sessionMap.get(a.session_id);
+        const grp = sess ? groupMap.get(sess.group_id) : null;
+        return {
+          date: sess?.session_date || '',
+          groupName: language === 'ar' ? (grp?.name_ar || grp?.name || '') : (grp?.name || ''),
+          hours: Number(a.actual_hours),
+          status: a.status,
+        };
+      }).sort((a, b) => a.date.localeCompare(b.date));
+
+      dataMap[trainee.user_id] = {
+        totalHours,
+        roundedHours,
+        totalPay: roundedHours * (trainee.hourly_rate || 0),
+        hasInferred,
+        sessions: sessionDetails,
+      };
+    });
+
+    setHourlyDataMap(dataMap);
   };
 
   const getEmployeeSalary = (employeeId: string) => salaries.find(s => s.employee_id === employeeId);
@@ -132,9 +217,13 @@ export function SalariesTab() {
 
   const openPayDialog = async (emp: any) => {
     const salary = getEmployeeSalary(emp.user_id);
+    const isHourly = emp.is_paid_trainee && emp.hourly_rate;
+    const hourlyData = hourlyDataMap[emp.user_id];
+    const baseAmount = isHourly ? (hourlyData?.totalPay || 0) : (salary?.base_salary || 0);
+
     setPayForm({
       employee_id: emp.user_id, salary_id: salary?.id || '', month: currentMonth,
-      base_amount: salary?.base_salary || 0, payment_method: 'cash', notes: '',
+      base_amount: baseAmount, payment_method: 'cash', notes: '',
     });
     setSelectedEmployee(emp);
     setAutoDeductions([]);
@@ -149,11 +238,9 @@ export function SalariesTab() {
     const warnings = warningsRes.data || [];
     const rules = (rulesRes.data || []) as any[];
 
-    // Count warnings by type
     const countByType: Record<string, number> = {};
     warnings.forEach(w => { countByType[w.warning_type] = (countByType[w.warning_type] || 0) + 1; });
 
-    // Match against rules
     const matched: { warning_type: string; count: number; amount: number }[] = [];
     rules.forEach(rule => {
       const actualCount = countByType[rule.warning_type] || 0;
@@ -189,6 +276,62 @@ export function SalariesTab() {
   const getName = (emp: any) => language === 'ar' && emp.full_name_ar ? emp.full_name_ar : emp.full_name;
   const totalMonthlySalaries = salaries.reduce((sum, s) => sum + Number(s.base_salary), 0);
 
+  const getBaseSalaryDisplay = (emp: any) => {
+    const salary = getEmployeeSalary(emp.user_id);
+    const isHourly = emp.is_paid_trainee && emp.hourly_rate;
+
+    if (isHourly) {
+      const hourlyData = hourlyDataMap[emp.user_id];
+      if (hourlyData) {
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium">
+                    {hourlyData.roundedHours} {isRTL ? 'س' : 'hrs'} = {hourlyData.totalPay} {isRTL ? 'ج.م' : 'EGP'}
+                  </span>
+                  {hourlyData.hasInferred && (
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                  )}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <div className="text-xs space-y-1">
+                  <p>{isRTL ? `سعر الساعة: ${emp.hourly_rate} ج.م` : `Rate: ${emp.hourly_rate} EGP/hr`}</p>
+                  <p>{isRTL ? `إجمالي الساعات: ${hourlyData.totalHours}` : `Total hours: ${hourlyData.totalHours}`}</p>
+                  <p>{isRTL ? `بعد التقريب: ${hourlyData.roundedHours}` : `Rounded: ${hourlyData.roundedHours}`}</p>
+                  {hourlyData.hasInferred && (
+                    <p className="text-amber-500">{isRTL ? '⚠ يتضمن بيانات تقديرية' : '⚠ Includes estimated data'}</p>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      }
+      return <span className="text-muted-foreground">{emp.hourly_rate} {isRTL ? 'ج.م/ساعة' : 'EGP/hr'}</span>;
+    }
+
+    if (salary) {
+      return <span className="font-medium">{salary.base_salary} {isRTL ? 'ج.م' : 'EGP'}</span>;
+    }
+
+    return <span className="text-muted-foreground">{isRTL ? 'غير محدد' : 'Not set'}</span>;
+  };
+
+  const canPay = (emp: any) => {
+    const salary = getEmployeeSalary(emp.user_id);
+    const isHourly = emp.is_paid_trainee && emp.hourly_rate;
+    const paid = getEmployeePayment(emp.user_id, currentMonth);
+    if (paid) return false;
+    if (isHourly) {
+      const hourlyData = hourlyDataMap[emp.user_id];
+      return hourlyData && hourlyData.roundedHours > 0;
+    }
+    return !!salary;
+  };
+
   return (
     <div className="space-y-4">
       {/* Summary */}
@@ -203,7 +346,7 @@ export function SalariesTab() {
         </CardContent></Card>
         <Card><CardContent className="pt-6">
           <p className="text-sm text-muted-foreground">{isRTL ? 'بدون راتب محدد' : 'No Salary Set'}</p>
-          <p className="text-2xl font-bold text-orange-600">{employees.filter(e => !getEmployeeSalary(e.user_id)).length}</p>
+          <p className="text-2xl font-bold text-orange-600">{employees.filter(e => !getEmployeeSalary(e.user_id) && !(e.is_paid_trainee && e.hourly_rate)).length}</p>
         </CardContent></Card>
       </div>
 
@@ -230,7 +373,6 @@ export function SalariesTab() {
                 {loading ? (
                   <TableRow><TableCell colSpan={6} className="text-center py-8">{isRTL ? 'جاري التحميل...' : 'Loading...'}</TableCell></TableRow>
                 ) : employees.map(emp => {
-                  const salary = getEmployeeSalary(emp.user_id);
                   const paid = getEmployeePayment(emp.user_id, currentMonth);
                   return (
                     <TableRow key={emp.id}>
@@ -251,11 +393,7 @@ export function SalariesTab() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {salary ? (
-                          <span className="font-medium">{salary.base_salary} {isRTL ? 'ج.م' : 'EGP'}</span>
-                        ) : (
-                          <span className="text-muted-foreground">{isRTL ? 'غير محدد' : 'Not set'}</span>
-                        )}
+                        {getBaseSalaryDisplay(emp)}
                       </TableCell>
                       <TableCell>
                         {paid ? (
@@ -271,7 +409,7 @@ export function SalariesTab() {
                               {isRTL ? 'تحديد راتب' : 'Set Salary'}
                             </Button>
                           )}
-                          {salary && !paid && (
+                          {canPay(emp) && (
                             <Button size="sm" onClick={() => openPayDialog(emp)}>
                               <DollarSign className="h-3 w-3 mr-1" />{isRTL ? 'صرف' : 'Pay'}
                             </Button>
@@ -372,9 +510,9 @@ export function SalariesTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Pay Salary Dialog (with auto-deductions) */}
+      {/* Pay Salary Dialog (with auto-deductions + hourly breakdown) */}
       <Dialog open={payDialog} onOpenChange={setPayDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{isRTL ? 'صرف راتب' : 'Pay Salary'}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
             {selectedEmployee && (
@@ -382,6 +520,35 @@ export function SalariesTab() {
                 <p className="font-medium">{getName(selectedEmployee)}</p>
               </div>
             )}
+
+            {/* Hourly breakdown for paid trainees */}
+            {selectedEmployee?.is_paid_trainee && selectedEmployee?.hourly_rate && hourlyDataMap[selectedEmployee.user_id] && (
+              <div className="p-3 rounded-lg border bg-muted/30 space-y-2">
+                <p className="text-sm font-semibold">{isRTL ? 'تفصيل الساعات:' : 'Hours Breakdown:'}</p>
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {hourlyDataMap[selectedEmployee.user_id].sessions.map((s, i) => (
+                    <div key={i} className="flex justify-between text-xs">
+                      <span className="flex items-center gap-1">
+                        {s.date} - {s.groupName}
+                        {s.status === 'inferred' && <AlertCircle className="h-3 w-3 text-amber-500" />}
+                      </span>
+                      <span>{s.hours} {isRTL ? 'س' : 'hrs'}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t pt-2 flex justify-between text-sm font-medium">
+                  <span>{isRTL ? 'الإجمالي' : 'Total'}: {hourlyDataMap[selectedEmployee.user_id].roundedHours} {isRTL ? 'ساعة' : 'hrs'}</span>
+                  <span>× {selectedEmployee.hourly_rate} = {hourlyDataMap[selectedEmployee.user_id].totalPay} {isRTL ? 'ج.م' : 'EGP'}</span>
+                </div>
+                {hourlyDataMap[selectedEmployee.user_id].hasInferred && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {isRTL ? 'يتضمن بيانات تقديرية - يرجى مراجعة حضور المدرب' : 'Includes estimated data - please review instructor attendance'}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div><Label>{isRTL ? 'الشهر' : 'Month'}</Label>
               <Input type="date" value={payForm.month} onChange={e => setPayForm({ ...payForm, month: e.target.value })} />
             </div>
