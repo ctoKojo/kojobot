@@ -105,7 +105,7 @@ const App = () => (
                   <Route path="/instructor-warnings" element={<ProtectedRoute allowedRoles={['admin']}><InstructorWarnings /></ProtectedRoute>} />
                   <Route path="/my-warnings" element={<ProtectedRoute allowedRoles={['student']}><StudentWarnings /></ProtectedRoute>} />
                   <Route path="/my-instructor-warnings" element={<ProtectedRoute allowedRoles={['instructor']}><MyInstructorWarningsPage /></ProtectedRoute>} />
-                  <Route path="/monthly-reports" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception']}><MonthlyReports /></ProtectedRoute>} />
+                  <Route path="/monthly-reports" element={<ProtectedRoute allowedRoles={['admin', 'student']}><MonthlyReports /></ProtectedRoute>} />
                   <Route path="/materials" element={<ProtectedRoute allowedRoles={['admin']}><Materials /></ProtectedRoute>} />
                   <Route path="/my-materials" element={<ProtectedRoute allowedRoles={['student']}><MyMaterials /></ProtectedRoute>} />
                   <Route path="/makeup-sessions" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'reception']}><MakeupSessions /></ProtectedRoute>} />
