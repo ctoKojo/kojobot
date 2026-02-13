@@ -24,6 +24,12 @@ const warningTypes = [
   { value: 'no_attendance', labelEn: 'No Attendance', labelAr: 'عدم تسجيل حضور' },
   { value: 'no_quiz', labelEn: 'No Quiz', labelAr: 'عدم إضافة كويز' },
   { value: 'no_assignment', labelEn: 'No Assignment', labelAr: 'عدم إضافة واجب' },
+  { value: 'behavior', labelEn: 'Behavior', labelAr: 'سلوك' },
+  { value: 'non_compliance', labelEn: 'Non-Compliance', labelAr: 'عدم التزام' },
+  { value: 'poor_performance', labelEn: 'Poor Performance', labelAr: 'أداء ضعيف' },
+  { value: 'attendance', labelEn: 'Attendance', labelAr: 'حضور' },
+  { value: 'late_submission', labelEn: 'Late Submission', labelAr: 'تأخر في التسليم' },
+  { value: 'other', labelEn: 'Other', labelAr: 'أخرى' },
 ];
 
 export default function DeductionRules() {
