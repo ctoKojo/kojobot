@@ -37,13 +37,7 @@ serve(async (req) => {
     }
 
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    if (!authHeader) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -85,6 +79,53 @@ serve(async (req) => {
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
     const payload: NotificationPayload = await req.json();
+
+    // Validate required fields
+    if (!payload.title || !payload.title_ar || !payload.message || !payload.message_ar) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: title, title_ar, message, message_ar' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate lengths
+    if (payload.title.length > 500 || payload.title_ar.length > 500 || payload.message.length > 2000 || payload.message_ar.length > 2000) {
+      return new Response(
+        JSON.stringify({ error: 'Title must be under 500 chars, message under 2000 chars' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate UUID format for user_id/group_id if provided
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (payload.user_id && !uuidRegex.test(payload.user_id)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid user_id format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    if (payload.group_id && !uuidRegex.test(payload.group_id)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid group_id format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!payload.user_id && !payload.group_id) {
+      return new Response(
+        JSON.stringify({ error: 'Either user_id or group_id is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate type if provided
+    const validTypes = ['info', 'success', 'warning', 'error'];
+    if (payload.type && !validTypes.includes(payload.type)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid type. Must be one of: info, success, warning, error' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const notifications: any[] = [];
 
@@ -151,9 +192,8 @@ serve(async (req) => {
     );
   } catch (error: unknown) {
     console.error('Error sending notification:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
