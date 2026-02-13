@@ -1,228 +1,124 @@
 
 
-# نظام المحفظة المالية (Salary Wallet) - خطة التنفيذ الكاملة
+# تحديث تاريخ الاشتراك تلقائياً - التصميم المركزي النهائي
 
-## ملخص المشروع
-
-تحويل نظام الرواتب الحالي من نظام "payment-based" (كل بونص/خصم = سجل دفع منفصل) الى نظام "event-driven ledger" (محفظة مالية لحظية لكل موظف).
-
----
-
-## الوضع الحالي
-
-- البونص والخصومات بتتسجل في `salary_payments` بـ `base_amount = 0` وبتظهر كأنها "مدفوعة"
-- مفيش تتبع لحظي للرصيد
-- سلمى عندها بونص 200 ج.م مسجل كـ payment مدفوع بالفعل
-- بسمة عندها راتب ثابت 4000 ج.م
-- قواعد خصم موجودة (non_compliance x2 = 200 ج.م) بس مبتتطبقش تلقائي
+## الفكرة
+تاريخ بداية الاشتراك يتحدد تلقائياً من اول سيشن في المجموعة. المنطق كله في الـ Database عبر function واحدة.
 
 ---
 
-## Sprint 1: قاعدة البيانات + Triggers
+## 1. Migration: تعديل الجدول + إنشاء الـ Functions
 
-### 1.1 جدول `salary_events` (دفتر القيود - Immutable)
+### تعديلات جدول `subscriptions`
+- `ALTER COLUMN start_date DROP NOT NULL` - السماح بـ NULL مؤقتاً حتى يُسند الطالب لمجموعة
+- `ALTER COLUMN end_date DROP NOT NULL` - نفس السبب
+- الـ unique index الحالي على `student_id` موجود بالفعل ويكفي (مفيش soft delete فمش محتاجين partial index)
+
+### Function 1: `assign_subscription_dates(p_student_id UUID, p_group_id UUID)`
 
 ```text
-salary_events
---------------
-id               UUID PK DEFAULT gen_random_uuid()
-employee_id      UUID NOT NULL
-month            DATE NOT NULL (اول يوم في الشهر)
-event_type       TEXT NOT NULL
-                 ('base_salary' | 'hourly_earning' | 'bonus' | 'deduction' | 'warning_deduction')
-amount           NUMERIC NOT NULL (موجب دائما)
-description      TEXT
-description_ar   TEXT
-source           TEXT NOT NULL ('system' | 'manual' | 'warning_rule' | 'session')
-reference_id     UUID (nullable)
-is_reversal      BOOLEAN DEFAULT false
-reversed_event_id UUID (nullable)
-metadata         JSONB DEFAULT '{}'
-created_by       UUID
-created_at       TIMESTAMPTZ DEFAULT now()
+المنطق:
+1. التحقق من ان المجموعة started فعلاً:
+   SELECT has_started FROM groups WHERE id = p_group_id FOR UPDATE
+   -> لو false: return { updated: false, reason: 'group_not_started' }
+
+2. جلب اول session date:
+   SELECT session_date FROM sessions WHERE group_id = p_group_id
+   ORDER BY session_date LIMIT 1
+   -> لو مفيش: RAISE EXCEPTION 'No sessions found'
+
+3. قفل الاشتراك (row locking):
+   SELECT id INTO v_sub_id FROM subscriptions
+   WHERE student_id = p_student_id AND status = 'active' AND start_date IS NULL
+   FOR UPDATE
+   -> لو مفيش: return { updated: false, reason: 'no_pending_subscription' }
+
+4. تحديث الاشتراك:
+   UPDATE subscriptions SET
+     start_date = v_first_date,
+     end_date = v_first_date + 90,
+     next_payment_date = (لو installment: v_first_date + (paid_installments * 30))
+   WHERE id = v_sub_id
+
+5. RETURN jsonb { updated: true, start_date, end_date }
 ```
 
-- **قيود مهمة**: لا UPDATE ولا DELETE على هذا الجدول (enforced بـ trigger)
-- **Indexes**: (employee_id, month), (created_at), partial index على الشهور المفتوحة
-- **RLS**: Admin full access, Employee SELECT own records
+- كل التواريخ DATE-based (مش timestamp) لتجنب مشاكل timezone
+- الـ function نفسها atomic في Postgres (transaction واحدة)
+- `FOR UPDATE` يمنع race conditions
 
-### 1.2 جدول `salary_month_snapshots` (كاش)
+### Function 2: `assign_subscription_dates_bulk(p_group_id UUID)`
 
 ```text
-salary_month_snapshots
------------------------
-id               UUID PK DEFAULT gen_random_uuid()
-employee_id      UUID NOT NULL
-month            DATE NOT NULL
-base_amount      NUMERIC DEFAULT 0
-total_earnings   NUMERIC DEFAULT 0
-total_bonuses    NUMERIC DEFAULT 0
-total_deductions NUMERIC DEFAULT 0
-net_amount       NUMERIC DEFAULT 0
-status           TEXT DEFAULT 'open' CHECK (status IN ('open', 'locked', 'paid'))
-finalized_at     TIMESTAMPTZ
-finalized_by     UUID
-updated_at       TIMESTAMPTZ DEFAULT now()
-UNIQUE(employee_id, month)
+المنطق:
+1. التحقق من ان المجموعة started
+2. جلب اول session date
+3. UPDATE set-based واحد (مش loop):
+   UPDATE subscriptions s
+   SET start_date = v_first_date,
+       end_date = v_first_date + 90
+   FROM group_students gs
+   WHERE gs.group_id = p_group_id
+     AND gs.is_active = true
+     AND s.student_id = gs.student_id
+     AND s.status = 'active'
+     AND s.start_date IS NULL
+
+4. تحديث next_payment_date للتقسيط في نفس الـ UPDATE
+5. RETURN عدد الاشتراكات المحدثة
 ```
 
-- **RLS**: Admin full access, Employee SELECT own records
-
-### 1.3 Database Triggers
-
-**Trigger 1: `prevent_salary_events_mutation`** (BEFORE UPDATE/DELETE on salary_events)
-- يرفض اي UPDATE او DELETE - الجدول append-only فقط
-
-**Trigger 2: `enforce_month_lock`** (BEFORE INSERT on salary_events)
-- لو snapshot.status = 'paid': يرفض العملية تماما
-- لو snapshot.status = 'locked': يسمح فقط بـ reversal events
-- يستخدم `SELECT ... FOR UPDATE` على snapshot row لمنع race conditions
-
-**Trigger 3: `recalculate_salary_snapshot`** (AFTER INSERT on salary_events)
-- يعيد حساب snapshot من كل events الشهر (مش incremental - اعاده حساب كامل)
-- يضم الراتب الاساسي من `employee_salaries`
-- Upsert في `salary_month_snapshots`
-
-**Trigger 4: `auto_warning_deduction`** (AFTER INSERT on instructor_warnings)
-- يحسب عدد الانذارات النشطة من نفس النوع للموظف
-- يشيك على `warning_deduction_rules`
-- لو وصل للعدد المطلوب ومفيش event خصم مكرر: يضيف `warning_deduction` event
-- يبعت notification بالرصيد الجديد
-
-**Function: `rebuild_salary_snapshot(p_employee_id UUID, p_month DATE)`**
-- تعيد حساب snapshot من الصفر من events
-- تستخدم للـ debugging و data repair و audits
-
-### 1.4 ترحيل البيانات
-
-- سجل بونص سلمى الحالي (200 ج.م في salary_payments) يترحل كـ salary_event من نوع `bonus`
-- الـ salary_payments record القديم يفضل مكانه كـ archive
+- عملية واحدة بدل loop - اسرع بكثير مع مجموعات كبيرة
 
 ---
 
-## Sprint 2: واجهة الادمن (SalariesTab.tsx) - اعادة بناء كاملة
+## 2. تغييرات الملفات
 
-### التغييرات الرئيسية
+### `src/pages/Students.tsx`
+- **حذف** حقل `sub_start_date` من الـ form والـ UI
+- **حذف** حساب `endDate`, `nextPaymentDate`
+- إنشاء الاشتراك بـ `start_date: null`, `end_date: null`, `next_payment_date: null`
+- عرض ملاحظة: "تاريخ البداية يتحدد تلقائياً عند إسناد الطالب لمجموعة"
 
-**تاب الموظفين:**
-- عمود "الرصيد الحالي" يقرأ من `salary_month_snapshots` (سريع)
-- عمود "الحالة" يعرض: open / locked / paid
-- ازرار "بونص" و "خصم" تضيف event في `salary_events` (بدل salary_payments)
-- زر "قفل الشهر" (Lock): يغير status الى locked
-- زر "صرف" (Pay): بعد القفل، يحول snapshot لـ salary_payments record نهائي ويغير status الى paid
+### `src/pages/Groups.tsx` - `handleSaveStudents`
+- بعد إضافة كل طالب جديد + لو المجموعة `has_started`:
+  - استدعاء `supabase.rpc('assign_subscription_dates', { p_student_id, p_group_id })`
+- لا يحسب اي تواريخ في الـ frontend
 
-**تاب سجل الحركات (جديد):**
-- كل salary_events مفلترة بالشهر
-- امكانية عكس حركة (reversal event)
-- Running balance يتحسب بـ window function مش stored
+### `supabase/functions/start-group/index.ts`
+- بعد إنشاء السيشنات وتحديث المجموعة:
+  - استدعاء `adminSupabase.rpc('assign_subscription_dates_bulk', { p_group_id })`
+  - استدعاء واحد بدل loop على كل طالب
 
-**تاب سجل الصرف:**
-- يعرض salary_payments النهائية فقط (اللي base_amount > 0)
-
-### الحذف
-- حذف منطق الـ adjustment الحالي اللي بيسجل في salary_payments بـ base_amount = 0
-
----
-
-## Sprint 3: واجهة الموظف (Profile.tsx) - شكل بنكي
-
-### التصميم الجديد لقسم المالية
-
-**بطاقة الرصيد الكبيرة:**
-```text
-+------------------------------------------+
-|       راتبك الحالي - فبراير 2026          |
-|            3,800 ج.م                      |
-|       الراتب الاساسي: 4,000 ج.م           |
-|        الحالة: مفتوح                      |
-+------------------------------------------+
-```
-
-**Timeline الحركات:**
-- كل event يعرض بشكل زمني مع الوصف والمبلغ
-- Running balance بعد كل حركة (يتحسب بـ SQL window function، مش stored)
-- الوان مختلفة: اخضر للزيادات، احمر للخصومات
-
-**سجل المدفوعات السابقة:**
-- الشهور المصروفة فقط من salary_payments
+### `src/components/student/CreateSubscriptionDialog.tsx`
+- **حذف** حقل تاريخ البداية اليدوي
+- **حذف** حساب `endDate`, `nextPaymentDate`
+- إنشاء الاشتراك بـ `start_date: null`, `end_date: null`
+- بعد الإنشاء: لو الطالب في مجموعة بدأت -> استدعاء RPC
+- لو لا: عرض رسالة "سيتحدد تلقائياً"
 
 ---
 
-## Sprint 4: الربط التلقائي + الاشعارات
+## 3. قواعد الـ Edge Cases
 
-### ربط الانذارات بالخصومات (IssueEmployeeWarningDialog.tsx)
-
-بعد اصدار انذار:
-1. الـ DB trigger `auto_warning_deduction` يشيك على القواعد تلقائيا
-2. لو وصل للعدد المطلوب: يضيف warning_deduction event
-3. يبعت notification: "خصم انذار 200 ج.م - رصيدك الحالي: X ج.م"
-
-### اشعارات فورية
-
-كل event مالي يبعت notification:
-- بونص: "تم اضافة بونص 200 ج.م - رصيدك: 4,200 ج.م"
-- خصم: "خصم 150 ج.م بسبب... - رصيدك: 3,850 ج.م"
+| الحالة | السلوك |
+|--------|--------|
+| مفيش sessions في المجموعة | الـ function ترفض (exception) |
+| مفيش اشتراك نشط بـ `start_date = null` | ترجع `{ updated: false }` بدون exception |
+| `start_date` محدد مسبقاً | لا يتغير (الشرط `start_date IS NULL`) |
+| المجموعة لم تبدأ بعد | ترجع `{ updated: false, reason: 'group_not_started' }` |
+| طالب في مجموعتين | اول مجموعة تبدأ هي اللي تحدد التاريخ |
+| Race condition (إسناد متزامن) | `FOR UPDATE` يضمن function واحدة بس تكسب |
 
 ---
 
-## الملفات المتأثرة
+## ملخص التغييرات
 
-| الملف | التغيير |
-|-------|---------|
-| Migration جديد | جداول salary_events + salary_month_snapshots + 4 triggers + rebuild function + indexes + RLS + ترحيل بيانات |
-| `src/components/finance/SalariesTab.tsx` | اعادة بناء كاملة: قراءة من salary_events/snapshots، ازرار تضيف events، نظام lock/pay، تاب حركات جديد |
-| `src/pages/Profile.tsx` | قسم المالية: بطاقة رصيد بنكية + timeline حركات + سجل مدفوعات |
-| `src/components/instructor/IssueEmployeeWarningDialog.tsx` | الـ trigger في DB هيتكفل بالخصم التلقائي - مش محتاج تعديل في الكود لأن المنطق كله في الـ trigger |
-
----
-
-## التفاصيل التقنية للأمان
-
-### Atomicity (منع race conditions)
-- كل INSERT في salary_events يعمل `SELECT ... FOR UPDATE` على snapshot row الاول
-- ده يضمن ان كل حساب يتم بشكل متسلسل لنفس الموظف/الشهر
-
-### Immutable Ledger
-- trigger يمنع UPDATE/DELETE على salary_events تماما
-- التصحيح يتم بـ reversal event فقط (is_reversal = true)
-
-### Month Locking
-- `open`: يستقبل اي events
-- `locked`: reversal events فقط
-- `paid`: ممنوع اي event (enforced في DB trigger)
-
-### Performance
-- Indexes على (employee_id, month) و (created_at)
-- snapshot كـ cache يمنع اعادة الحساب من الصفر كل مرة
-- rebuild function متاحة للصيانة
-
-### تدفق النظام
-
-```text
-حدث (انذار/بونص/خصم يدوي)
-        |
-        v
-  enforce_month_lock (BEFORE INSERT)
-        |-- لو paid: رفض
-        |-- لو locked: reversal فقط
-        |
-        v
-  salary_events (INSERT - append only)
-        |
-        v
-  recalculate_salary_snapshot (AFTER INSERT)
-        |-- SELECT FOR UPDATE على snapshot
-        |-- اعادة حساب كامل من events
-        |-- UPSERT في snapshots
-        |
-        v
-  UI يعرض الرصيد لحظيا
-        |
-        v
-  نهاية الشهر: Lock --> Review --> Pay
-        |
-        v
-  salary_payments (سجل نهائي)
-  snapshot.status = 'paid'
-```
+| الملف | نوع التغيير |
+|-------|-------------|
+| Migration SQL | `ALTER` عمودين + function `assign_subscription_dates` + function `assign_subscription_dates_bulk` |
+| `src/pages/Students.tsx` | حذف حقل التاريخ، إنشاء اشتراك بـ null dates |
+| `src/pages/Groups.tsx` | استدعاء RPC بعد إسناد طالب لمجموعة بدأت |
+| `supabase/functions/start-group/index.ts` | استدعاء `assign_subscription_dates_bulk` بدل loop |
+| `src/components/student/CreateSubscriptionDialog.tsx` | حذف التاريخ اليدوي + استدعاء RPC لو في مجموعة بدأت |
 
