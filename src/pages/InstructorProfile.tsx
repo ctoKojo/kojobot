@@ -15,6 +15,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatTime12Hour } from '@/lib/timeUtils';
 import { InstructorPerformanceCharts } from '@/components/instructor/InstructorPerformanceCharts';
+import { IssueEmployeeWarningDialog } from '@/components/instructor/IssueEmployeeWarningDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Capability-based section config
 const EMPLOYEE_SECTIONS = {
@@ -85,10 +87,12 @@ export default function InstructorProfile() {
   const navigate = useNavigate();
   const { isRTL, language } = useLanguage();
   const { toast } = useToast();
+  const { role } = useAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<InstructorData | null>(null);
   const [dismissingWarningId, setDismissingWarningId] = useState<string | null>(null);
   const [employeeRole, setEmployeeRole] = useState<'instructor' | 'reception' | null>(null);
+  const [showWarningDialog, setShowWarningDialog] = useState(false);
 
   const visibleSections = useMemo(() => {
     if (!employeeRole) return DEFAULT_SECTIONS;
@@ -408,11 +412,22 @@ export default function InstructorProfile() {
   return (
     <DashboardLayout title={pageTitle}>
       <div className="space-y-6">
-        {/* Back Button */}
-        <Button variant="ghost" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          {isRTL ? 'رجوع' : 'Back'}
-        </Button>
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            {isRTL ? 'رجوع' : 'Back'}
+          </Button>
+          {role === 'admin' && (
+            <Button
+              variant="outline"
+              className="border-warning text-warning hover:bg-warning/10"
+              onClick={() => setShowWarningDialog(true)}
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              {isRTL ? 'إصدار إنذار' : 'Issue Warning'}
+            </Button>
+          )}
+        </div>
 
         {/* Profile Header */}
         <Card>
@@ -946,6 +961,16 @@ export default function InstructorProfile() {
           )}
         </Tabs>
       </div>
+
+      {data?.profile && (
+        <IssueEmployeeWarningDialog
+          open={showWarningDialog}
+          onOpenChange={setShowWarningDialog}
+          employeeId={instructorId!}
+          employeeName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+          onSuccess={fetchInstructorData}
+        />
+      )}
     </DashboardLayout>
   );
 }
