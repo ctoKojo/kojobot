@@ -1,124 +1,107 @@
 
 
-# تحديث تاريخ الاشتراك تلقائياً - التصميم المركزي النهائي
+# تطوير نظام السيشنات والسيشنات التعويضية
 
-## الفكرة
-تاريخ بداية الاشتراك يتحدد تلقائياً من اول سيشن في المجموعة. المنطق كله في الـ Database عبر function واحدة.
+## المشاكل الحالية
+
+1. **إنشاء التعويضية يدوي**: لازم تدوس "إنشاء تعويض" لكل طالب غايب واحد واحد
+2. **مفيش ربط تلقائي بين الحضور والتعويضية**: لما تسجل طالب غايب وتحفظ، مفيش حاجة بتحصل تلقائي
+3. **جدولة التعويضية صعبة**: لازم تختار المدرب والوقت والتاريخ من غير أي اقتراحات ذكية
+4. **تتبع الحالات معقد**: الجدول مش بيوضح بسهولة مين أكد ومين رفض ومين لسه معلق
+5. **مفيش timeline واضح**: صعب تلاقي سيشن اليوم أو الأسبوع ده بسرعة
+6. **إدارة الإلغاء محتاجة تحسين**: الخطوات كتير ومش واضحة
+7. **الإكمال التلقائي بطيء**: السيشن مش بتتحول لـ completed بسرعة
 
 ---
 
-## 1. Migration: تعديل الجدول + إنشاء الـ Functions
+## الخطة
 
-### تعديلات جدول `subscriptions`
-- `ALTER COLUMN start_date DROP NOT NULL` - السماح بـ NULL مؤقتاً حتى يُسند الطالب لمجموعة
-- `ALTER COLUMN end_date DROP NOT NULL` - نفس السبب
-- الـ unique index الحالي على `student_id` موجود بالفعل ويكفي (مفيش soft delete فمش محتاجين partial index)
+### 1. إنشاء تعويضية تلقائي عند حفظ الحضور
 
-### Function 1: `assign_subscription_dates(p_student_id UUID, p_group_id UUID)`
+عند حفظ الحضور، أي طالب حالته "absent" يتم إنشاء سيشن تعويضية تلقائياً بدون ما المستخدم يدوس زرار منفصل.
+
+- في `saveAttendance` بصفحة `Attendance.tsx`: بعد حفظ الحضور بنجاح، يتم فحص كل طالب حالته absent
+- يتحقق هل فيه تعويضية موجودة لنفس الطالب ونفس السيشن (لمنع التكرار)
+- لو مفيش: يتم إنشاؤها تلقائي مع حساب `is_free` من الرصيد
+- عرض رسالة توضح عدد التعويضيات اللي اتعملت
+
+### 2. اقتراحات ذكية عند جدولة التعويضية
+
+بدل ما المدير يدخل كل حاجة يدوي:
+
+- **اقتراح المدرب**: يتم اقتراح مدرب المجموعة الأصلي تلقائياً كـ default
+- **اقتراح التاريخ**: يتم اقتراح أقرب يوم فاضي للمدرب (أول يوم عمل مش عنده سيشن في نفس الوقت)
+- **اقتراح الوقت**: يتم استخدام وقت المجموعة الأصلي كـ default
+- **عرض الأيام الفاضية**: قائمة بأقرب 5 أيام فاضية للمدرب المختار
+
+### 3. تحسين عرض الحالات في صفحة التعويضية
+
+صفحة `MakeupSessions.tsx` هتتطور:
+
+- **تقسيم بصري واضح**: 3 أقسام - "تحتاج إجراء" (pending + awaiting confirmation) / "مجدولة" / "مكتملة ومنتهية"
+- **Color-coded rows**: كل حالة لون مختلف واضح في الصف نفسه
+- **عرض الوقت المتبقي**: "منذ 3 أيام" بدل التاريخ الخام
+- **أزرار إجراء مباشرة**: بدل ما تفتح dialog، الأزرار الأساسية (جدولة/إكمال/إنهاء) ظاهرة مباشرة
+- **إحصائيات محسنة**: إضافة نسبة الاستجابة ومتوسط وقت الانتظار
+
+### 4. Timeline واضح للسيشنات
+
+صفحة `Sessions.tsx` هتتطور:
+
+- **شريط "اليوم" بارز**: السيشنات اللي النهاردة تكون في أعلى الصفحة في كارت خاص مميز
+- **Quick filters**: أزرار سريعة: "اليوم" / "هذا الأسبوع" / "القادم" / "الكل"
+- **Progress bar لكل مجموعة**: يوضح session X/12 بشكل بصري أوضح
+- **Color coding أقوى**: السيشنات المتأخرة (scheduled بس تاريخها فات) تظهر بلون تحذيري
+
+### 5. تحسين تدفق الإلغاء
+
+لما المدير يلغي سيشن:
+
+- **خطوة واحدة بدل اتنين**: dialog واحد فيه checkbox "إنشاء تعويضيات لكل الطلاب" (مفعل افتراضياً)
+- **عرض عدد الطلاب المتأثرين**: "سيتم إنشاء 5 سيشنات تعويضية"
+- **عرض رصيد كل طالب**: جدول صغير يوضح مين هيكون مجاني ومين مدفوع
+- **إنشاء السيشن التالية تلقائي**: لما تلغي سيشن، السيشن اللي بعدها تتولد بتاريخ جديد
+
+### 6. تحسين الإكمال التلقائي
+
+- **Database trigger** بدل polling في الـ frontend: trigger على جدول sessions يغير الحالة لـ completed لما التاريخ والوقت يعدوا
+- أو **Cron job عبر edge function** كل 15 دقيقة يفحص السيشنات اللي وقتها عدى ويحولها completed
+- إزالة الـ `setInterval` من الـ frontend (اللي بيعمل check كل 60 ثانية)
+
+---
+
+## التفاصيل التقنية
+
+### Migration (قاعدة البيانات)
 
 ```text
-المنطق:
-1. التحقق من ان المجموعة started فعلاً:
-   SELECT has_started FROM groups WHERE id = p_group_id FOR UPDATE
-   -> لو false: return { updated: false, reason: 'group_not_started' }
+1. Edge Function: auto-complete-sessions (cron كل 15 دقيقة)
+   - UPDATE sessions SET status = 'completed'
+     WHERE status = 'scheduled'
+     AND (session_date + session_time + duration) < NOW()
 
-2. جلب اول session date:
-   SELECT session_date FROM sessions WHERE group_id = p_group_id
-   ORDER BY session_date LIMIT 1
-   -> لو مفيش: RAISE EXCEPTION 'No sessions found'
-
-3. قفل الاشتراك (row locking):
-   SELECT id INTO v_sub_id FROM subscriptions
-   WHERE student_id = p_student_id AND status = 'active' AND start_date IS NULL
-   FOR UPDATE
-   -> لو مفيش: return { updated: false, reason: 'no_pending_subscription' }
-
-4. تحديث الاشتراك:
-   UPDATE subscriptions SET
-     start_date = v_first_date,
-     end_date = v_first_date + 90,
-     next_payment_date = (لو installment: v_first_date + (paid_installments * 30))
-   WHERE id = v_sub_id
-
-5. RETURN jsonb { updated: true, start_date, end_date }
+2. Database Function: auto_create_makeup_on_absence
+   - تُستدعى من الـ frontend بعد حفظ الحضور
+   - تفحص الطلاب الغياب وتنشئ تعويضيات مع حساب is_free
 ```
 
-- كل التواريخ DATE-based (مش timestamp) لتجنب مشاكل timezone
-- الـ function نفسها atomic في Postgres (transaction واحدة)
-- `FOR UPDATE` يمنع race conditions
+### الملفات اللي هتتعدل
 
-### Function 2: `assign_subscription_dates_bulk(p_group_id UUID)`
+| الملف | التغيير |
+|-------|---------|
+| `src/pages/Attendance.tsx` | إضافة إنشاء تعويضية تلقائي بعد حفظ الحضور |
+| `src/pages/MakeupSessions.tsx` | إعادة تصميم الصفحة: أقسام واضحة + أزرار مباشرة + اقتراحات ذكية |
+| `src/pages/Sessions.tsx` | إضافة شريط "اليوم" + quick filters + إزالة polling |
+| `src/pages/MyMakeupSessions.tsx` | تحسين عرض الحالات للطالب |
+| `supabase/functions/auto-complete-sessions/index.ts` | Edge function جديدة للإكمال التلقائي |
+| `supabase/config.toml` | إضافة cron schedule للـ function |
 
-```text
-المنطق:
-1. التحقق من ان المجموعة started
-2. جلب اول session date
-3. UPDATE set-based واحد (مش loop):
-   UPDATE subscriptions s
-   SET start_date = v_first_date,
-       end_date = v_first_date + 90
-   FROM group_students gs
-   WHERE gs.group_id = p_group_id
-     AND gs.is_active = true
-     AND s.student_id = gs.student_id
-     AND s.status = 'active'
-     AND s.start_date IS NULL
+### ترتيب التنفيذ
 
-4. تحديث next_payment_date للتقسيط في نفس الـ UPDATE
-5. RETURN عدد الاشتراكات المحدثة
-```
-
-- عملية واحدة بدل loop - اسرع بكثير مع مجموعات كبيرة
-
----
-
-## 2. تغييرات الملفات
-
-### `src/pages/Students.tsx`
-- **حذف** حقل `sub_start_date` من الـ form والـ UI
-- **حذف** حساب `endDate`, `nextPaymentDate`
-- إنشاء الاشتراك بـ `start_date: null`, `end_date: null`, `next_payment_date: null`
-- عرض ملاحظة: "تاريخ البداية يتحدد تلقائياً عند إسناد الطالب لمجموعة"
-
-### `src/pages/Groups.tsx` - `handleSaveStudents`
-- بعد إضافة كل طالب جديد + لو المجموعة `has_started`:
-  - استدعاء `supabase.rpc('assign_subscription_dates', { p_student_id, p_group_id })`
-- لا يحسب اي تواريخ في الـ frontend
-
-### `supabase/functions/start-group/index.ts`
-- بعد إنشاء السيشنات وتحديث المجموعة:
-  - استدعاء `adminSupabase.rpc('assign_subscription_dates_bulk', { p_group_id })`
-  - استدعاء واحد بدل loop على كل طالب
-
-### `src/components/student/CreateSubscriptionDialog.tsx`
-- **حذف** حقل تاريخ البداية اليدوي
-- **حذف** حساب `endDate`, `nextPaymentDate`
-- إنشاء الاشتراك بـ `start_date: null`, `end_date: null`
-- بعد الإنشاء: لو الطالب في مجموعة بدأت -> استدعاء RPC
-- لو لا: عرض رسالة "سيتحدد تلقائياً"
-
----
-
-## 3. قواعد الـ Edge Cases
-
-| الحالة | السلوك |
-|--------|--------|
-| مفيش sessions في المجموعة | الـ function ترفض (exception) |
-| مفيش اشتراك نشط بـ `start_date = null` | ترجع `{ updated: false }` بدون exception |
-| `start_date` محدد مسبقاً | لا يتغير (الشرط `start_date IS NULL`) |
-| المجموعة لم تبدأ بعد | ترجع `{ updated: false, reason: 'group_not_started' }` |
-| طالب في مجموعتين | اول مجموعة تبدأ هي اللي تحدد التاريخ |
-| Race condition (إسناد متزامن) | `FOR UPDATE` يضمن function واحدة بس تكسب |
-
----
-
-## ملخص التغييرات
-
-| الملف | نوع التغيير |
-|-------|-------------|
-| Migration SQL | `ALTER` عمودين + function `assign_subscription_dates` + function `assign_subscription_dates_bulk` |
-| `src/pages/Students.tsx` | حذف حقل التاريخ، إنشاء اشتراك بـ null dates |
-| `src/pages/Groups.tsx` | استدعاء RPC بعد إسناد طالب لمجموعة بدأت |
-| `supabase/functions/start-group/index.ts` | استدعاء `assign_subscription_dates_bulk` بدل loop |
-| `src/components/student/CreateSubscriptionDialog.tsx` | حذف التاريخ اليدوي + استدعاء RPC لو في مجموعة بدأت |
+1. Edge function للإكمال التلقائي (أساس النظام)
+2. إنشاء التعويضية التلقائي عند حفظ الحضور
+3. اقتراحات ذكية في dialog الجدولة
+4. تحسين عرض صفحة التعويضية
+5. Timeline وshريط "اليوم" في السيشنات
+6. تحسين تدفق الإلغاء
 
