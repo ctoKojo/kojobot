@@ -1,1 +1,4 @@
 project_id = "jwkoqnvkvlyqbwydehfm"
+
+[functions.auto-complete-sessions]
+verify_jwt = false
