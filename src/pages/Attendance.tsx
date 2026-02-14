@@ -243,6 +243,58 @@ export default function AttendancePage() {
     }
   };
 
+  const autoCreateMakeupSessions = async (absentStudentIds: string[]) => {
+    if (!selectedSession || !selectedGroup || absentStudentIds.length === 0) return 0;
+
+    try {
+      const { data: groupData } = await supabase.from('groups').select('level_id').eq('id', selectedGroup).single();
+      const levelId = groupData?.level_id || null;
+
+      // Check which absent students already have a makeup session for this session
+      const { data: existingMakeups } = await supabase
+        .from('makeup_sessions')
+        .select('student_id')
+        .eq('original_session_id', selectedSession)
+        .in('student_id', absentStudentIds);
+
+      const existingStudentIds = new Set((existingMakeups || []).map(m => m.student_id));
+      const newAbsentIds = absentStudentIds.filter(id => !existingStudentIds.has(id));
+
+      if (newAbsentIds.length === 0) return 0;
+
+      // For each new absent student, check free quota and create makeup
+      let created = 0;
+      for (const studentId of newAbsentIds) {
+        let isFree = true;
+        if (levelId) {
+          const { count } = await supabase
+            .from('makeup_sessions')
+            .select('id', { count: 'exact' })
+            .eq('student_id', studentId)
+            .eq('level_id', levelId)
+            .eq('is_free', true);
+          isFree = (count || 0) < 2;
+        }
+
+        const { error } = await supabase.from('makeup_sessions').insert({
+          student_id: studentId,
+          original_session_id: selectedSession,
+          group_id: selectedGroup,
+          level_id: levelId,
+          reason: 'student_absent',
+          is_free: isFree,
+        });
+
+        if (!error) created++;
+      }
+
+      return created;
+    } catch (error) {
+      console.error('Error auto-creating makeup sessions:', error);
+      return 0;
+    }
+  };
+
   const saveAttendance = async () => {
     if (!user || !selectedSession) return;
     setSaving(true);
@@ -270,9 +322,18 @@ export default function AttendancePage() {
         }
       }
 
+      // Auto-create makeup sessions for absent students
+      const absentStudentIds = attendanceRecords
+        .filter(r => r.status === 'absent')
+        .map(r => r.student_id);
+
+      const makeupCount = await autoCreateMakeupSessions(absentStudentIds);
+
       toast({
         title: t.common.success,
-        description: isRTL ? 'تم حفظ الحضور' : 'Attendance saved successfully',
+        description: makeupCount > 0
+          ? (isRTL ? `تم حفظ الحضور وإنشاء ${makeupCount} سيشن تعويضية تلقائياً` : `Attendance saved and ${makeupCount} makeup sessions auto-created`)
+          : (isRTL ? 'تم حفظ الحضور' : 'Attendance saved successfully'),
       });
 
       // Auto-confirm instructor attendance

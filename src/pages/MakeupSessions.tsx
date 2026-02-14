@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Search, Filter, CheckCircle, XCircle, AlertTriangle, Users, GraduationCap, RefreshCw, UserCheck } from 'lucide-react';
+import { Calendar, Clock, Search, Filter, CheckCircle, XCircle, AlertTriangle, Users, GraduationCap, RefreshCw, UserCheck, Timer } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -200,13 +200,71 @@ export default function MakeupSessionsPage() {
     }
   };
 
-  const handleSchedule = (session: EnrichedMakeupSession) => {
+  const handleSchedule = async (session: EnrichedMakeupSession) => {
     setSelectedSession(session);
+    
+    // Smart defaults: suggest original group's instructor, time
+    let defaultInstructorId = session.assigned_instructor_id || '';
+    let defaultTime = session.scheduled_time || '';
+    
+    // Get group's instructor and schedule time as defaults
+    if (!defaultInstructorId || !defaultTime) {
+      const { data: groupData } = await supabase
+        .from('groups')
+        .select('instructor_id, schedule_time')
+        .eq('id', session.group_id)
+        .single();
+      
+      if (groupData) {
+        if (!defaultInstructorId) defaultInstructorId = groupData.instructor_id || '';
+        if (!defaultTime) defaultTime = groupData.schedule_time || '';
+      }
+    }
+
+    // Suggest next available date (tomorrow onwards)
+    let suggestedDate = session.scheduled_date || '';
+    if (!suggestedDate && defaultInstructorId) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      // Find first day without conflicts for the instructor
+      for (let i = 0; i < 14; i++) {
+        const checkDate = new Date(tomorrow);
+        checkDate.setDate(checkDate.getDate() + i);
+        const dateStr = checkDate.toISOString().split('T')[0];
+        
+        // Check for existing sessions on this date/time
+        const { data: instructorGroups } = await supabase
+          .from('groups')
+          .select('id')
+          .eq('instructor_id', defaultInstructorId);
+        
+        if (instructorGroups && instructorGroups.length > 0) {
+          const groupIds = instructorGroups.map(g => g.id);
+          const { data: conflicts } = await supabase
+            .from('sessions')
+            .select('id')
+            .in('group_id', groupIds)
+            .eq('session_date', dateStr)
+            .eq('session_time', defaultTime)
+            .eq('status', 'scheduled');
+          
+          if (!conflicts || conflicts.length === 0) {
+            suggestedDate = dateStr;
+            break;
+          }
+        } else {
+          suggestedDate = dateStr;
+          break;
+        }
+      }
+    }
+
     setScheduleForm({
-      date: session.scheduled_date || '',
-      time: session.scheduled_time || '',
+      date: suggestedDate,
+      time: defaultTime,
       notes: session.notes || '',
-      instructorId: session.assigned_instructor_id || '',
+      instructorId: defaultInstructorId,
     });
     setScheduleDialogOpen(true);
   };
@@ -318,18 +376,38 @@ export default function MakeupSessionsPage() {
     return matchesStatus && matchesReason && matchesSearch;
   });
 
+  // Group filtered sessions into sections
+  const actionRequired = filtered.filter(m => m.status === 'pending' || (m.status === 'scheduled' && m.student_confirmed === null));
+  const scheduled = filtered.filter(m => m.status === 'scheduled' && m.student_confirmed !== null);
+  const completedExpired = filtered.filter(m => m.status === 'completed' || m.status === 'expired');
+
+  const getRelativeTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return isRTL ? 'اليوم' : 'Today';
+    if (diffDays === 1) return isRTL ? 'أمس' : 'Yesterday';
+    if (diffDays < 7) return isRTL ? `منذ ${diffDays} أيام` : `${diffDays} days ago`;
+    if (diffDays < 30) return isRTL ? `منذ ${Math.floor(diffDays / 7)} أسابيع` : `${Math.floor(diffDays / 7)} weeks ago`;
+    return isRTL ? `منذ ${Math.floor(diffDays / 30)} شهور` : `${Math.floor(diffDays / 30)} months ago`;
+  };
+
   const stats = {
     pending: makeupSessions.filter(m => m.status === 'pending').length,
     scheduled: makeupSessions.filter(m => m.status === 'scheduled').length,
     completed: makeupSessions.filter(m => m.status === 'completed').length,
     awaitingConfirmation: makeupSessions.filter(m => m.status === 'scheduled' && m.student_confirmed === null).length,
+    responseRate: makeupSessions.filter(m => m.status === 'scheduled').length > 0
+      ? Math.round((makeupSessions.filter(m => m.status === 'scheduled' && m.student_confirmed !== null).length / makeupSessions.filter(m => m.status === 'scheduled').length) * 100)
+      : 0,
   };
 
   return (
     <DashboardLayout title={isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions'}>
       <div className="space-y-6">
         {/* Stats */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-2">
@@ -374,6 +452,17 @@ export default function MakeupSessionsPage() {
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-2">
+                <Timer className="h-5 w-5 text-indigo-600" />
+                <div>
+                  <p className="text-2xl font-bold">{stats.responseRate}%</p>
+                  <p className="text-sm text-muted-foreground">{isRTL ? 'نسبة الاستجابة' : 'Response Rate'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Filters */}
@@ -402,89 +491,167 @@ export default function MakeupSessionsPage() {
           </Select>
         </div>
 
-        {/* Table */}
-        <Card>
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="text-center py-12">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
-            ) : filtered.length === 0 ? (
-              <div className="text-center py-12">
-                <RefreshCw className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">{isRTL ? 'لا توجد سيشنات تعويضية' : 'No makeup sessions found'}</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                      <TableHead>{isRTL ? 'المجموعة' : 'Group'}</TableHead>
-                      <TableHead>{isRTL ? 'السبب' : 'Reason'}</TableHead>
-                      <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                      <TableHead>{isRTL ? 'تأكيد الطالب' : 'Student Confirm'}</TableHead>
-                      <TableHead>{isRTL ? 'المدرب' : 'Instructor'}</TableHead>
-                      <TableHead>{isRTL ? 'مجانية' : 'Free'}</TableHead>
-                      <TableHead>{isRTL ? 'الموعد' : 'Schedule'}</TableHead>
-                      {role === 'admin' && <TableHead>{isRTL ? 'إجراءات' : 'Actions'}</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map(session => (
-                      <TableRow key={session.id}>
-                        <TableCell className="font-medium">{session.student_name}</TableCell>
-                        <TableCell>{session.group_name}</TableCell>
-                        <TableCell>{getReasonBadge(session.reason)}</TableCell>
-                        <TableCell>{getStatusBadge(session.status)}</TableCell>
-                        <TableCell>
-                          {session.status === 'scheduled' ? getConfirmationBadge(session.student_confirmed) : '-'}
-                        </TableCell>
-                        <TableCell>{session.instructor_name}</TableCell>
-                        <TableCell>
-                          {session.is_free ? (
-                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">{isRTL ? 'مجاني' : 'Free'}</Badge>
-                          ) : (
-                            <Badge variant="outline">{isRTL ? 'مدفوع' : 'Paid'}</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {session.scheduled_date ? (
-                            <span className="text-sm">{session.scheduled_date} {session.scheduled_time}</span>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">{isRTL ? 'غير محدد' : 'Not set'}</span>
-                          )}
-                        </TableCell>
-                        {role === 'admin' && (
-                          <TableCell>
-                            <div className="flex gap-1">
-                              {(session.status === 'pending' || session.status === 'scheduled') && (
-                                <Button size="sm" variant="outline" onClick={() => handleSchedule(session)}>
-                                  <Calendar className="h-3 w-3 mr-1" />
-                                  {isRTL ? 'جدولة' : 'Schedule'}
-                                </Button>
+        {/* Sectioned View */}
+        {loading ? (
+          <div className="text-center py-12 text-muted-foreground">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+        ) : filtered.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <RefreshCw className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">{isRTL ? 'لا توجد سيشنات تعويضية' : 'No makeup sessions found'}</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {/* Action Required Section */}
+            {actionRequired.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                  {isRTL ? `تحتاج إجراء (${actionRequired.length})` : `Action Required (${actionRequired.length})`}
+                </h3>
+                <div className="grid gap-3">
+                  {actionRequired.map(session => (
+                    <Card key={session.id} className="border-yellow-200 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10">
+                      <CardContent className="pt-4 pb-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium">{session.student_name}</span>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="text-sm text-muted-foreground">{session.group_name}</span>
+                              {getStatusBadge(session.status)}
+                              {session.status === 'scheduled' && getConfirmationBadge(session.student_confirmed)}
+                              {getReasonBadge(session.reason)}
+                              {session.is_free ? (
+                                <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">{isRTL ? 'مجاني' : 'Free'}</Badge>
+                              ) : (
+                                <Badge variant="outline">{isRTL ? 'مدفوع' : 'Paid'}</Badge>
                               )}
-                              {session.status === 'scheduled' && session.student_confirmed === true && (
-                                <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(session.id, 'completed')}>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Timer className="h-3 w-3" />
+                                {getRelativeTime(session.created_at)}
+                              </span>
+                              {session.scheduled_date && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {session.scheduled_date} {session.scheduled_time}
+                                </span>
+                              )}
+                              {session.instructor_name !== '-' && (
+                                <span>{isRTL ? 'المدرب:' : 'Instructor:'} {session.instructor_name}</span>
+                              )}
+                            </div>
+                          </div>
+                          {role === 'admin' && (
+                            <div className="flex gap-1 shrink-0">
+                              <Button size="sm" onClick={() => handleSchedule(session)}>
+                                <Calendar className="h-3 w-3 mr-1" />
+                                {isRTL ? 'جدولة' : 'Schedule'}
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => handleUpdateStatus(session.id, 'expired')}>
+                                <XCircle className="h-3 w-3 mr-1" />
+                                {isRTL ? 'إنهاء' : 'Expire'}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Scheduled Section */}
+            {scheduled.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                  {isRTL ? `مجدولة (${scheduled.length})` : `Scheduled (${scheduled.length})`}
+                </h3>
+                <div className="grid gap-3">
+                  {scheduled.map(session => (
+                    <Card key={session.id} className="border-blue-200 dark:border-blue-800">
+                      <CardContent className="pt-4 pb-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="space-y-1 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium">{session.student_name}</span>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="text-sm text-muted-foreground">{session.group_name}</span>
+                              {getConfirmationBadge(session.student_confirmed)}
+                              {session.is_free ? (
+                                <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">{isRTL ? 'مجاني' : 'Free'}</Badge>
+                              ) : (
+                                <Badge variant="outline">{isRTL ? 'مدفوع' : 'Paid'}</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {session.scheduled_date} {session.scheduled_time}
+                              </span>
+                              <span>{isRTL ? 'المدرب:' : 'Instructor:'} {session.instructor_name}</span>
+                            </div>
+                          </div>
+                          {role === 'admin' && (
+                            <div className="flex gap-1 shrink-0">
+                              <Button size="sm" variant="outline" onClick={() => handleSchedule(session)}>
+                                <Calendar className="h-3 w-3 mr-1" />
+                                {isRTL ? 'إعادة جدولة' : 'Reschedule'}
+                              </Button>
+                              {session.student_confirmed === true && (
+                                <Button size="sm" onClick={() => handleUpdateStatus(session.id, 'completed')}>
                                   <CheckCircle className="h-3 w-3 mr-1" />
                                   {isRTL ? 'مكتمل' : 'Complete'}
                                 </Button>
                               )}
-                              {(session.status === 'pending' || session.status === 'scheduled') && (
-                                <Button size="sm" variant="ghost" onClick={() => handleUpdateStatus(session.id, 'expired')}>
-                                  <XCircle className="h-3 w-3 mr-1" />
-                                  {isRTL ? 'إنهاء' : 'Expire'}
-                                </Button>
-                              )}
                             </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+
+            {/* Completed/Expired Section */}
+            {completedExpired.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  {isRTL ? `مكتملة ومنتهية (${completedExpired.length})` : `Completed & Expired (${completedExpired.length})`}
+                </h3>
+                <div className="grid gap-2">
+                  {completedExpired.map(session => (
+                    <Card key={session.id} className="opacity-75">
+                      <CardContent className="pt-4 pb-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm">{session.student_name}</span>
+                            <span className="text-muted-foreground">•</span>
+                            <span className="text-xs text-muted-foreground">{session.group_name}</span>
+                            {getStatusBadge(session.status)}
+                            {session.is_free ? (
+                              <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs">{isRTL ? 'مجاني' : 'Free'}</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">{isRTL ? 'مدفوع' : 'Paid'}</Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">{getRelativeTime(session.created_at)}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Schedule Dialog */}
         <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>

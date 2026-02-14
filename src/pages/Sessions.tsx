@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users, ChevronDown, FolderOpen, Snowflake, Eye } from 'lucide-react';
+import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users, ChevronDown, FolderOpen, Snowflake, Eye, AlertTriangle } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,6 +83,7 @@ export default function SessionsPage() {
   const [generating, setGenerating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [timeFilter, setTimeFilter] = useState<string>('all');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [formData, setFormData] = useState({
@@ -362,7 +363,29 @@ export default function SessionsPage() {
     return dateStr === today;
   };
 
-  // Filter sessions based on search and status
+  // Time filter helper
+  const isThisWeek = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 7);
+    return date >= startOfWeek && date < endOfWeek;
+  };
+
+  const isUpcoming = (dateStr: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    return dateStr >= today;
+  };
+
+  const isOverdue = (session: Session) => {
+    const today = new Date().toISOString().split('T')[0];
+    return session.status === 'scheduled' && session.session_date < today;
+  };
+
+  // Filter sessions based on search, status, and time
   const getFilteredSessionsForGroup = (groupId: string) => {
     return sessions.filter((session) => {
       if (session.group_id !== groupId) return false;
@@ -372,9 +395,35 @@ export default function SessionsPage() {
         session.topic_ar?.includes(searchQuery) ||
         session.session_date.includes(searchQuery);
       const matchesStatus = statusFilter === 'all' || session.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      
+      let matchesTime = true;
+      if (timeFilter === 'today') matchesTime = isToday(session.session_date);
+      else if (timeFilter === 'week') matchesTime = isThisWeek(session.session_date);
+      else if (timeFilter === 'upcoming') matchesTime = isUpcoming(session.session_date);
+      
+      return matchesSearch && matchesStatus && matchesTime;
     });
   };
+
+  // Today's sessions across all groups
+  const todaySessions = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return sessions
+      .filter(s => s.session_date === today)
+      .map(s => ({
+        ...s,
+        groupName: (() => {
+          const g = groups.find(gr => gr.id === s.group_id);
+          return g ? (language === 'ar' ? g.name_ar : g.name) : '-';
+        })(),
+      }));
+  }, [sessions, groups, language]);
+
+  // Overdue sessions
+  const overdueSessions = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return sessions.filter(s => s.status === 'scheduled' && s.session_date < today);
+  }, [sessions]);
 
   // Get session stats for a group
   const getGroupStats = (groupId: string) => {
@@ -396,7 +445,7 @@ export default function SessionsPage() {
   // Get groups that have sessions matching the filter
   const filteredGroups = groups.filter(group => {
     const groupSessions = getFilteredSessionsForGroup(group.id);
-    return groupSessions.length > 0 || (searchQuery === '' && statusFilter === 'all');
+    return groupSessions.length > 0 || (searchQuery === '' && statusFilter === 'all' && timeFilter === 'all');
   });
 
   return (
@@ -439,7 +488,60 @@ export default function SessionsPage() {
           )}
         </div>
 
-        {/* Edit Dialog */}
+        {/* Quick Time Filters */}
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { key: 'all', label: isRTL ? 'الكل' : 'All' },
+            { key: 'today', label: isRTL ? 'اليوم' : 'Today' },
+            { key: 'week', label: isRTL ? 'هذا الأسبوع' : 'This Week' },
+            { key: 'upcoming', label: isRTL ? 'القادم' : 'Upcoming' },
+          ].map(f => (
+            <Button
+              key={f.key}
+              variant={timeFilter === f.key ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setTimeFilter(f.key)}
+            >
+              {f.label}
+              {f.key === 'today' && todaySessions.length > 0 && (
+                <Badge variant="secondary" className="ml-1 text-xs">{todaySessions.length}</Badge>
+              )}
+            </Button>
+          ))}
+          {overdueSessions.length > 0 && (
+            <Badge variant="destructive" className="self-center">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              {overdueSessions.length} {isRTL ? 'متأخرة' : 'overdue'}
+            </Badge>
+          )}
+        </div>
+
+        {/* Today's Sessions Bar */}
+        {todaySessions.length > 0 && timeFilter === 'all' && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-sm">{isRTL ? `سيشنات اليوم (${todaySessions.length})` : `Today's Sessions (${todaySessions.length})`}</h3>
+              </div>
+              <div className="flex gap-3 flex-wrap">
+                {todaySessions.map(s => (
+                  <Badge 
+                    key={s.id} 
+                    variant="outline" 
+                    className="cursor-pointer hover:bg-primary/10 py-1.5 px-3"
+                    onClick={() => navigate(`/session/${s.id}`)}
+                  >
+                    <span className="font-medium">{s.groupName}</span>
+                    <span className="text-muted-foreground ml-2">{formatTime12Hour(s.session_time, isRTL)}</span>
+                    {s.status === 'completed' && <CheckCircle className="h-3 w-3 ml-1 text-green-600" />}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
@@ -574,11 +676,18 @@ export default function SessionsPage() {
                             {isRTL ? 'اليوم' : 'Today'}
                           </Badge>
                         )}
-                        <Badge variant="outline" className="text-xs">
+                        {/* Progress bar */}
+                        <div className="hidden sm:flex items-center gap-2 min-w-[120px]">
+                          <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-primary rounded-full transition-all" 
+                              style={{ width: `${stats.total > 0 ? (stats.completed / stats.total) * 100 : 0}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground font-mono">{stats.completed}/{stats.total}</span>
+                        </div>
+                        <Badge variant="outline" className="text-xs sm:hidden">
                           {stats.completed}/{stats.total}
-                        </Badge>
-                        <Badge variant="secondary" className="text-xs hidden sm:inline-flex">
-                          {groupSessions.length} {isRTL ? 'سيشن' : 'sessions'}
                         </Badge>
                       </div>
                     </div>
@@ -595,7 +704,7 @@ export default function SessionsPage() {
                         groupSessions.map((session) => (
                           <div 
                             key={session.id}
-                            className={`p-3 ${isToday(session.session_date) ? 'bg-primary/5' : ''} cursor-pointer hover:bg-muted/50`}
+                            className={`p-3 ${isToday(session.session_date) ? 'bg-primary/5' : isOverdue(session) ? 'bg-destructive/5 border-l-2 border-l-destructive' : ''} cursor-pointer hover:bg-muted/50`}
                             onClick={() => navigate(`/session/${session.id}`)}
                           >
                             <div className="flex items-start justify-between gap-2">
@@ -694,7 +803,7 @@ export default function SessionsPage() {
                             groupSessions.map((session) => (
                               <TableRow 
                                 key={session.id}
-                                className={`${isToday(session.session_date) ? 'bg-primary/5' : ''} cursor-pointer hover:bg-muted/50`}
+                                className={`${isToday(session.session_date) ? 'bg-primary/5' : isOverdue(session) ? 'bg-destructive/5' : ''} cursor-pointer hover:bg-muted/50`}
                                 onClick={() => navigate(`/session/${session.id}`)}
                               >
                                 <TableCell>
