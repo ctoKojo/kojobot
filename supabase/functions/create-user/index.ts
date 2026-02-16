@@ -67,9 +67,6 @@ serve(async (req) => {
     const isBootstrapMode = !countError && userCount === 0
     console.log('Bootstrap mode:', isBootstrapMode, 'User count:', userCount)
 
-    // Parse request body
-    const body: CreateUserRequest = await req.json()
-
     // If not bootstrap mode, verify authentication
     if (!isBootstrapMode) {
       const authHeader = req.headers.get('Authorization')
@@ -100,7 +97,7 @@ serve(async (req) => {
 
       const userId = claimsData.claims.sub as string
 
-      // Check if user is admin or reception
+      // Check if user is admin
       const { data: roleData, error: roleError } = await userSupabase
         .from('user_roles')
         .select('role')
@@ -125,6 +122,9 @@ serve(async (req) => {
         )
       }
     }
+
+    // Parse request body
+    const body: CreateUserRequest = await req.json()
     console.log('Creating user with role:', body.role)
 
     // In bootstrap mode, only allow creating admin
