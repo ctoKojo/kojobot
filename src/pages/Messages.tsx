@@ -233,22 +233,21 @@ export default function Messages() {
       }
     }
 
-    // Create new conversation
-    const { data: newConv, error: convError } = await supabase
+    // Create new conversation with client-generated ID to avoid SELECT policy issue
+    const convId = crypto.randomUUID();
+    const { error: convError } = await supabase
       .from('conversations')
-      .insert({})
-      .select('id')
-      .single();
+      .insert({ id: convId });
 
-    if (convError || !newConv) {
+    if (convError) {
       toast.error(isRTL ? 'فشل إنشاء المحادثة' : 'Failed to create conversation');
       return;
     }
 
     // Add participants
     const { error: partError } = await supabase.from('conversation_participants').insert([
-      { conversation_id: newConv.id, user_id: user.id },
-      { conversation_id: newConv.id, user_id: targetUserId },
+      { conversation_id: convId, user_id: user.id },
+      { conversation_id: convId, user_id: targetUserId },
     ]);
 
     if (partError) {
@@ -257,7 +256,7 @@ export default function Messages() {
     }
 
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    setSelectedConversation(newConv.id);
+    setSelectedConversation(convId);
     setShowNewDialog(false);
     setUserSearch('');
   };

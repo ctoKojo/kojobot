@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu } from 'lucide-react';
+import { Menu, MessageSquare } from 'lucide-react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -10,8 +10,11 @@ import { GlobalSearch } from '@/components/GlobalSearch';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import kojobotLogoWhite from '@/assets/kojobot-logo-white.png';
 import {
   DropdownMenu,
@@ -32,6 +35,32 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const { user, role, signOut } = useAuth();
   const { profile } = useProfile();
   const navigate = useNavigate();
+
+  // Unread messages count
+  const { data: unreadMessages = 0 } = useQuery({
+    queryKey: ['unread-messages-count'],
+    queryFn: async () => {
+      if (!user) return 0;
+      const { data: participations } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id, last_read_at')
+        .eq('user_id', user.id);
+      if (!participations?.length) return 0;
+      let total = 0;
+      for (const p of participations) {
+        const { count } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', p.conversation_id)
+          .neq('sender_id', user.id)
+          .gt('created_at', p.last_read_at || '1970-01-01');
+        total += count || 0;
+      }
+      return total;
+    },
+    enabled: !!user,
+    refetchInterval: 15000,
+  });
 
   const getRoleLabel = () => {
     switch (role) {
@@ -77,6 +106,19 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             
             <div className="flex items-center gap-2 md:gap-3 shrink-0">
               <GlobalSearch />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                onClick={() => navigate('/messages')}
+              >
+                <MessageSquare className="h-5 w-5" />
+                {unreadMessages > 0 && (
+                  <Badge variant="default" className="absolute -top-1 -right-1 h-5 min-w-5 p-0 flex items-center justify-center rounded-full text-xs">
+                    {unreadMessages > 9 ? '9+' : unreadMessages}
+                  </Badge>
+                )}
+              </Button>
               <NotificationBell />
               <ThemeToggle />
               <LanguageToggle />
