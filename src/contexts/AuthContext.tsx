@@ -11,7 +11,7 @@ interface AuthContextType {
   role: AppRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  
   signOut: () => Promise<void>;
 }
 
@@ -112,23 +112,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
-
-    return { error };
-  };
-
   const signOut = async () => {
     await logLogout();
     await supabase.auth.signOut();
@@ -143,7 +126,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     role,
     loading,
     signIn,
-    signUp,
     signOut,
   };
 

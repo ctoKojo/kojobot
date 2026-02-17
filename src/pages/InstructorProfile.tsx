@@ -18,6 +18,7 @@ import { InstructorPerformanceCharts } from '@/components/instructor/InstructorP
 import { IssueEmployeeWarningDialog } from '@/components/instructor/IssueEmployeeWarningDialog';
 import { TerminateEmployeeDialog } from '@/components/employee/TerminateEmployeeDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { ResetPasswordButton } from '@/components/ResetPasswordButton';
 
 // Capability-based section config
 const EMPLOYEE_SECTIONS = {
@@ -423,6 +424,11 @@ export default function InstructorProfile() {
             <div className="flex gap-2">
               {data.profile.employment_status !== 'terminated' && (
                 <>
+                  <ResetPasswordButton
+                    userId={instructorId!}
+                    userName={data.profile.full_name || ''}
+                    userEmail={data.profile.email || ''}
+                  />
                   <Button
                     variant="outline"
                     className="border-warning text-warning hover:bg-warning/10"

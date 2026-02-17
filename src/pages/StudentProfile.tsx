@@ -20,6 +20,7 @@ import { StudentPerformanceCharts } from '@/components/student/StudentPerformanc
 import { IssueWarningDialog } from '@/components/student/IssueWarningDialog';
 import { CreateSubscriptionDialog } from '@/components/student/CreateSubscriptionDialog';
 import { EditSubscriptionDialog } from '@/components/student/EditSubscriptionDialog';
+import { ResetPasswordButton } from '@/components/ResetPasswordButton';
 
 interface StudentData {
   profile: any;
@@ -209,6 +210,13 @@ export default function StudentProfile() {
                   <DollarSign className="h-4 w-4 mr-2" />
                   {isRTL ? 'تعديل الاشتراك' : 'Edit Subscription'}
                 </Button>
+              )}
+              {role === 'admin' && (
+                <ResetPasswordButton
+                  userId={studentId!}
+                  userName={data?.profile?.full_name || ''}
+                  userEmail={data?.profile?.email || ''}
+                />
               )}
               <Button 
                 variant="outline" 

@@ -235,7 +235,7 @@ export default function Auth() {
 
               {/* Footer */}
               <p className="text-center text-xs text-muted-foreground pt-2">
-                {isRTL ? '© 2024 Kojobot. جميع الحقوق محفوظة.' : '© 2024 Kojobot. All rights reserved.'}
+                {isRTL ? `© ${new Date().getFullYear()} Kojobot. جميع الحقوق محفوظة.` : `© ${new Date().getFullYear()} Kojobot. All rights reserved.`}
               </p>
             </div>
           </div>
@@ -320,7 +320,7 @@ export default function Auth() {
             {/* Footer */}
             <div className="pt-6 text-center">
               <p className="text-sm text-muted-foreground">
-                {isRTL ? '© 2024 Kojobot. جميع الحقوق محفوظة.' : '© 2024 Kojobot. All rights reserved.'}
+                {isRTL ? `© ${new Date().getFullYear()} Kojobot. جميع الحقوق محفوظة.` : `© ${new Date().getFullYear()} Kojobot. All rights reserved.`}
               </p>
             </div>
           </div>
