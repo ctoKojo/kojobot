@@ -6,6 +6,7 @@ import { AppSidebar } from '@/components/AppSidebar';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationBell } from '@/components/NotificationBell';
+import { GlobalSearch } from '@/components/GlobalSearch';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
@@ -75,6 +76,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             <div className="flex-1" />
             
             <div className="flex items-center gap-2 md:gap-3 shrink-0">
+              <GlobalSearch />
               <NotificationBell />
               <ThemeToggle />
               <LanguageToggle />
