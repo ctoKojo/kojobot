@@ -67,13 +67,17 @@ serve(async (req) => {
     const isBootstrapMode = !countError && userCount === 0
     console.log('Bootstrap mode:', isBootstrapMode, 'User count:', userCount)
 
+    // Parse request body FIRST (needed for role check below)
+    const body: CreateUserRequest = await req.json()
+    console.log('Creating user with role:', body.role)
+
     // If not bootstrap mode, verify authentication
     if (!isBootstrapMode) {
       const authHeader = req.headers.get('Authorization')
       if (!authHeader?.startsWith('Bearer ')) {
         console.error('Missing or invalid authorization header')
         return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
+          JSON.stringify({ error: 'Unauthorized', error_ar: 'غير مصرح' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -90,14 +94,14 @@ serve(async (req) => {
       if (claimsError || !claimsData?.claims) {
         console.error('Failed to verify token:', claimsError)
         return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
+          JSON.stringify({ error: 'Unauthorized', error_ar: 'غير مصرح' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
       const userId = claimsData.claims.sub as string
 
-      // Check if user is admin
+      // Check if user is admin or reception
       const { data: roleData, error: roleError } = await userSupabase
         .from('user_roles')
         .select('role')
@@ -108,7 +112,7 @@ serve(async (req) => {
       if (roleError || !requesterRole || !['admin', 'reception'].includes(requesterRole)) {
         console.error('User is not authorized:', roleError)
         return new Response(
-          JSON.stringify({ error: 'Only admins and reception can create users' }),
+          JSON.stringify({ error: 'Only admins and reception can create users', error_ar: 'فقط المديرون وموظفو الاستقبال يمكنهم إنشاء مستخدمين' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -117,20 +121,16 @@ serve(async (req) => {
       if (requesterRole === 'reception' && body.role !== 'student') {
         console.error('Reception attempted to create non-student role:', body.role)
         return new Response(
-          JSON.stringify({ error: 'Reception can only create student accounts' }),
+          JSON.stringify({ error: 'Reception can only create student accounts', error_ar: 'الاستقبال يمكنه فقط إنشاء حسابات الطلاب' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
     }
 
-    // Parse request body
-    const body: CreateUserRequest = await req.json()
-    console.log('Creating user with role:', body.role)
-
     // In bootstrap mode, only allow creating admin
     if (isBootstrapMode && body.role !== 'admin') {
       return new Response(
-        JSON.stringify({ error: 'First user must be an admin' }),
+        JSON.stringify({ error: 'First user must be an admin', error_ar: 'أول مستخدم يجب أن يكون مدير' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -138,7 +138,7 @@ serve(async (req) => {
     // Validate required fields
     if (!body.email || !body.password || !body.full_name || !body.role) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: email, password, full_name, role' }),
+        JSON.stringify({ error: 'Missing required fields: email, password, full_name, role', error_ar: 'حقول مطلوبة ناقصة: البريد الإلكتروني، كلمة المرور، الاسم، الدور' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -147,7 +147,7 @@ serve(async (req) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(body.email) || body.email.length > 255) {
       return new Response(
-        JSON.stringify({ error: 'Invalid email format' }),
+        JSON.stringify({ error: 'Invalid email format', error_ar: 'صيغة البريد الإلكتروني غير صحيحة' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -155,7 +155,7 @@ serve(async (req) => {
     // Validate password strength
     if (body.password.length < 8 || body.password.length > 128) {
       return new Response(
-        JSON.stringify({ error: 'Password must be between 8 and 128 characters' }),
+        JSON.stringify({ error: 'Password must be between 8 and 128 characters', error_ar: 'كلمة المرور يجب أن تكون بين 8 و 128 حرف' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -163,7 +163,7 @@ serve(async (req) => {
     // Validate name length
     if (body.full_name.trim().length < 2 || body.full_name.length > 200) {
       return new Response(
-        JSON.stringify({ error: 'Full name must be between 2 and 200 characters' }),
+        JSON.stringify({ error: 'Full name must be between 2 and 200 characters', error_ar: 'الاسم يجب أن يكون بين 2 و 200 حرف' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -172,7 +172,7 @@ serve(async (req) => {
     const validRoles = ['admin', 'student', 'instructor', 'reception']
     if (!validRoles.includes(body.role)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid role. Must be one of: admin, student, instructor, reception' }),
+        JSON.stringify({ error: 'Invalid role', error_ar: 'دور غير صحيح' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -180,7 +180,7 @@ serve(async (req) => {
     // Validate phone format if provided (Egyptian format)
     if (body.phone && !/^01[0-9]{9}$/.test(body.phone)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid phone number format. Must be 11 digits starting with 01' }),
+        JSON.stringify({ error: 'Invalid phone number format. Must be 11 digits starting with 01', error_ar: 'صيغة رقم الهاتف غير صحيحة. يجب أن يكون 11 رقم يبدأ بـ 01' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -188,14 +188,14 @@ serve(async (req) => {
     // Validate optional fields
     if (body.full_name_ar && body.full_name_ar.length > 200) {
       return new Response(
-        JSON.stringify({ error: 'Arabic name must not exceed 200 characters' }),
+        JSON.stringify({ error: 'Arabic name must not exceed 200 characters', error_ar: 'الاسم العربي يجب ألا يتجاوز 200 حرف' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     if (body.hourly_rate !== undefined && (typeof body.hourly_rate !== 'number' || body.hourly_rate < 0 || body.hourly_rate > 100000)) {
       return new Response(
-        JSON.stringify({ error: 'Invalid hourly rate' }),
+        JSON.stringify({ error: 'Invalid hourly rate', error_ar: 'معدل الساعة غير صحيح' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -212,8 +212,15 @@ serve(async (req) => {
 
     if (authError) {
       console.error('Error creating auth user:', authError)
+      // Map common auth errors to bilingual messages
+      let errorMsg = authError.message
+      let errorMsgAr = 'فشل في إنشاء الحساب'
+      if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
+        errorMsg = 'This email is already registered'
+        errorMsgAr = 'هذا البريد الإلكتروني مسجل بالفعل'
+      }
       return new Response(
-        JSON.stringify({ error: authError.message }),
+        JSON.stringify({ error: errorMsg, error_ar: errorMsgAr }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -252,10 +259,9 @@ serve(async (req) => {
 
     if (profileError) {
       console.error('Error creating profile:', profileError)
-      // Clean up: delete the auth user if profile creation fails
       await adminSupabase.auth.admin.deleteUser(newUserId)
       return new Response(
-        JSON.stringify({ error: 'Failed to create profile: ' + profileError.message }),
+        JSON.stringify({ error: 'Failed to create profile', error_ar: 'فشل في إنشاء الملف الشخصي' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -272,11 +278,10 @@ serve(async (req) => {
 
     if (roleInsertError) {
       console.error('Error assigning role:', roleInsertError)
-      // Clean up
       await adminSupabase.from('profiles').delete().eq('user_id', newUserId)
       await adminSupabase.auth.admin.deleteUser(newUserId)
       return new Response(
-        JSON.stringify({ error: 'Failed to assign role: ' + roleInsertError.message }),
+        JSON.stringify({ error: 'Failed to assign role', error_ar: 'فشل في تعيين الدور' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -314,7 +319,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Unexpected error:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', error_ar: 'خطأ داخلي في الخادم' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
