@@ -1963,6 +1963,15 @@ export type Database = {
         Args: { p_group_id: string }
         Returns: Json
       }
+      get_conversation_participant_profiles: {
+        Args: { p_user_ids: string[] }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          full_name_ar: string
+          user_id: string
+        }[]
+      }
       get_group_max_students: {
         Args: { g_type: Database["public"]["Enums"]["group_type"] }
         Returns: number
