@@ -73,7 +73,7 @@ export default function InstructorsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'instructor' | 'reception'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | 'instructor' | 'reception' | 'terminated'>('all');
   const [formData, setFormData] = useState({
     full_name: '',
     full_name_ar: '',
@@ -401,10 +401,23 @@ export default function InstructorsPage() {
     instructor.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Split active vs terminated employees
+  const activeEmployees = useMemo(() => 
+    filteredInstructors.filter((emp) => emp.employment_status !== 'terminated'),
+    [filteredInstructors]
+  );
+
+  const terminatedEmployees = useMemo(() => 
+    filteredInstructors.filter((emp) => emp.employment_status === 'terminated'),
+    [filteredInstructors]
+  );
+
   const filteredByCategory = useMemo(() => {
-    if (categoryFilter === 'all') return filteredInstructors;
-    return filteredInstructors.filter((emp) => emp.role === categoryFilter);
-  }, [filteredInstructors, categoryFilter]);
+    if (categoryFilter === 'terminated') return terminatedEmployees;
+    const source = activeEmployees;
+    if (categoryFilter === 'all') return source;
+    return source.filter((emp) => emp.role === categoryFilter);
+  }, [activeEmployees, terminatedEmployees, categoryFilter]);
 
   const getRoleBadge = (role: 'instructor' | 'reception') => {
     if (role === 'instructor') {
@@ -452,6 +465,11 @@ export default function InstructorsPage() {
             <TabsTrigger value="all">{t.instructors.allEmployees}</TabsTrigger>
             <TabsTrigger value="instructor">{t.instructors.instructorsOnly}</TabsTrigger>
             <TabsTrigger value="reception">{t.instructors.receptionOnly}</TabsTrigger>
+            {terminatedEmployees.length > 0 && (
+              <TabsTrigger value="terminated" className="text-destructive data-[state=active]:text-destructive">
+                {isRTL ? 'منتهي التعاقد' : 'Terminated'} ({terminatedEmployees.length})
+              </TabsTrigger>
+            )}
           </TabsList>
         </Tabs>
 
