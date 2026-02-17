@@ -1,21 +1,122 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConversationList, ConversationItem } from '@/components/messages/ConversationList';
 import { ChatArea } from '@/components/messages/ChatArea';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
 
+/**
+ * Auto-create conversations between a student and their group instructors.
+ * Runs once per session when the student opens the Messages page.
+ */
+async function ensureStudentInstructorConversations(userId: string) {
+  // 1. Get student's active groups and their instructors
+  const { data: groupStudents } = await supabase
+    .from('group_students')
+    .select('group_id')
+    .eq('student_id', userId)
+    .eq('is_active', true);
+
+  if (!groupStudents?.length) return;
+
+  const groupIds = groupStudents.map(gs => gs.group_id);
+
+  const { data: groups } = await supabase
+    .from('groups')
+    .select('id, instructor_id')
+    .in('id', groupIds)
+    .eq('is_active', true)
+    .not('instructor_id', 'is', null);
+
+  if (!groups?.length) return;
+
+  const instructorIds = [...new Set(groups.map(g => g.instructor_id!))];
+
+  // 2. Get student's existing conversations
+  const { data: myConvs } = await supabase
+    .from('conversation_participants')
+    .select('conversation_id')
+    .eq('user_id', userId);
+
+  const myConvIds = (myConvs || []).map(c => c.conversation_id);
+
+  for (const instructorId of instructorIds) {
+    let conversationExists = false;
+
+    if (myConvIds.length) {
+      // Check if a 1-on-1 conversation already exists with this instructor
+      const { data: theirConvs } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', instructorId)
+        .in('conversation_id', myConvIds);
+
+      if (theirConvs?.length) {
+        for (const conv of theirConvs) {
+          const { count } = await supabase
+            .from('conversation_participants')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', conv.conversation_id);
+          if (count === 2) {
+            conversationExists = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!conversationExists) {
+      // Create the conversation
+      const convId = crypto.randomUUID();
+      const { error: convError } = await supabase
+        .from('conversations')
+        .insert({ id: convId });
+
+      if (convError) {
+        console.error('Failed to auto-create conversation:', convError);
+        continue;
+      }
+
+      const { error: partError } = await supabase
+        .from('conversation_participants')
+        .insert([
+          { conversation_id: convId, user_id: userId },
+          { conversation_id: convId, user_id: instructorId },
+        ]);
+
+      if (partError) {
+        console.error('Failed to add participants:', partError);
+      }
+
+      // Add the new conversation ID to our list so subsequent iterations know about it
+      myConvIds.push(convId);
+    }
+  }
+}
+
 export default function Messages() {
   const { isRTL } = useLanguage();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const queryClient = useQueryClient();
+  const autoCreatedRef = useRef(false);
 
   // Setup realtime subscriptions
   useRealtimeMessages(user?.id, selectedConversation);
+
+  // Auto-create conversations for students with their instructors (once per session)
+  useEffect(() => {
+    if (!user?.id || role !== 'student' || autoCreatedRef.current) return;
+    autoCreatedRef.current = true;
+
+    ensureStudentInstructorConversations(user.id).then(() => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    });
+  }, [user?.id, role, queryClient]);
 
   // Fetch conversations
   const { data: conversations = [], isLoading: loadingConversations } = useQuery({
