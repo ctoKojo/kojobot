@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserPlus, Eye, CalendarDays, AlertCircle, Check, DollarSign } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserPlus, Eye, CalendarDays, AlertCircle, Check, DollarSign, UserX } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,8 @@ import {
   getLocalizedError,
 } from '@/lib/validationUtils';
 import { cn } from '@/lib/utils';
-
+import { TerminateEmployeeDialog } from '@/components/employee/TerminateEmployeeDialog';
+import { useAuth } from '@/contexts/AuthContext';
 interface Instructor {
   id: string;
   user_id: string;
@@ -56,7 +57,7 @@ interface Instructor {
   avatar_url: string | null;
   specialization: string | null;
   specialization_ar: string | null;
-  employment_status: 'permanent' | 'training' | null;
+  employment_status: 'permanent' | 'training' | 'terminated' | null;
   work_type: string | null;
   is_paid_trainee: boolean | null;
   hourly_rate: number | null;
@@ -81,7 +82,7 @@ export default function InstructorsPage() {
     specialization: '',
     specialization_ar: '',
     password: '',
-    employment_status: 'training' as 'permanent' | 'training',
+    employment_status: 'training' as 'permanent' | 'training' | 'terminated',
     work_type: 'full_time' as 'full_time' | 'part_time',
     is_paid_trainee: false,
     hourly_rate: '' as string | number,
@@ -97,7 +98,11 @@ export default function InstructorsPage() {
   const [salaryForm, setSalaryForm] = useState({ base_salary: '', effective_from: new Date().toISOString().split('T')[0] });
   const [salaryLoading, setSalaryLoading] = useState(false);
   const [salaries, setSalaries] = useState<Record<string, number>>({});
+  const { role } = useAuth();
 
+  // Termination dialog state
+  const [terminateDialogOpen, setTerminateDialogOpen] = useState(false);
+  const [terminateTarget, setTerminateTarget] = useState<Instructor | null>(null);
   // Validation results computed from form data
   const validationErrors = useMemo(() => {
     const nameResult = validateEnglishName(formData.full_name);
@@ -859,6 +864,15 @@ export default function InstructorsPage() {
                             )}
                           </DropdownMenuItem>
                         )}
+                        {role === 'admin' && instructor.employment_status !== 'terminated' && (
+                          <DropdownMenuItem
+                            onClick={(e) => { e.stopPropagation(); setTerminateTarget(instructor); setTerminateDialogOpen(true); }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <UserX className="h-4 w-4 mr-2" />
+                            {isRTL ? 'إنهاء التعاقد' : 'Terminate'}
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -1032,6 +1046,15 @@ export default function InstructorsPage() {
                                   )}
                                 </DropdownMenuItem>
                               )}
+                              {role === 'admin' && instructor.employment_status !== 'terminated' && (
+                                <DropdownMenuItem
+                                  onClick={() => { setTerminateTarget(instructor); setTerminateDialogOpen(true); }}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <UserX className="h-4 w-4 mr-2" />
+                                  {isRTL ? 'إنهاء التعاقد' : 'Terminate'}
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -1073,6 +1096,17 @@ export default function InstructorsPage() {
           </SalaryDialogFooter>
         </SalaryDialogContent>
       </SalaryDialog>
+
+      {/* Terminate Employee Dialog */}
+      {terminateTarget && (
+        <TerminateEmployeeDialog
+          open={terminateDialogOpen}
+          onOpenChange={setTerminateDialogOpen}
+          employeeId={terminateTarget.user_id}
+          employeeName={isRTL && terminateTarget.full_name_ar ? terminateTarget.full_name_ar : terminateTarget.full_name}
+          onSuccess={fetchInstructors}
+        />
+      )}
     </DashboardLayout>
   );
 }

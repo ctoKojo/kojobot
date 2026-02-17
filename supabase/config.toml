@@ -2,3 +2,6 @@ project_id = "jwkoqnvkvlyqbwydehfm"
 
 [functions.auto-complete-sessions]
 verify_jwt = false
+
+[functions.terminate-employee]
+verify_jwt = false

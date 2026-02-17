@@ -961,6 +961,9 @@ export type Database = {
           subscription_type:
             | Database["public"]["Enums"]["subscription_type"]
             | null
+          terminated_at: string | null
+          terminated_by: string | null
+          termination_reason: string | null
           updated_at: string
           user_id: string
           work_type: string | null
@@ -987,6 +990,9 @@ export type Database = {
           subscription_type?:
             | Database["public"]["Enums"]["subscription_type"]
             | null
+          terminated_at?: string | null
+          terminated_by?: string | null
+          termination_reason?: string | null
           updated_at?: string
           user_id: string
           work_type?: string | null
@@ -1013,6 +1019,9 @@ export type Database = {
           subscription_type?:
             | Database["public"]["Enums"]["subscription_type"]
             | null
+          terminated_at?: string | null
+          terminated_by?: string | null
+          termination_reason?: string | null
           updated_at?: string
           user_id?: string
           work_type?: string | null
@@ -1845,7 +1854,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "instructor" | "student" | "reception"
-      employment_status: "permanent" | "training"
+      employment_status: "permanent" | "training" | "terminated"
       group_type: "kojo_squad" | "kojo_core" | "kojo_x"
       subscription_type: "kojo_squad" | "kojo_core" | "kojo_x"
     }
@@ -1976,7 +1985,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "instructor", "student", "reception"],
-      employment_status: ["permanent", "training"],
+      employment_status: ["permanent", "training", "terminated"],
       group_type: ["kojo_squad", "kojo_core", "kojo_x"],
       subscription_type: ["kojo_squad", "kojo_core", "kojo_x"],
     },

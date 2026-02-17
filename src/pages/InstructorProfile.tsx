@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Users, BookOpen, 
-  FileText, ArrowLeft, Mail, Phone, Award, BarChart3, AlertTriangle, X, DollarSign
+  FileText, ArrowLeft, Mail, Phone, Award, BarChart3, AlertTriangle, X, DollarSign, UserX
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatTime12Hour } from '@/lib/timeUtils';
 import { InstructorPerformanceCharts } from '@/components/instructor/InstructorPerformanceCharts';
 import { IssueEmployeeWarningDialog } from '@/components/instructor/IssueEmployeeWarningDialog';
+import { TerminateEmployeeDialog } from '@/components/employee/TerminateEmployeeDialog';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Capability-based section config
@@ -93,6 +94,7 @@ export default function InstructorProfile() {
   const [dismissingWarningId, setDismissingWarningId] = useState<string | null>(null);
   const [employeeRole, setEmployeeRole] = useState<'instructor' | 'reception' | null>(null);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
+  const [showTerminateDialog, setShowTerminateDialog] = useState(false);
 
   const visibleSections = useMemo(() => {
     if (!employeeRole) return DEFAULT_SECTIONS;
@@ -418,14 +420,33 @@ export default function InstructorProfile() {
             {isRTL ? 'رجوع' : 'Back'}
           </Button>
           {role === 'admin' && (
-            <Button
-              variant="outline"
-              className="border-warning text-warning hover:bg-warning/10"
-              onClick={() => setShowWarningDialog(true)}
-            >
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              {isRTL ? 'إصدار إنذار' : 'Issue Warning'}
-            </Button>
+            <div className="flex gap-2">
+              {data.profile.employment_status !== 'terminated' && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="border-warning text-warning hover:bg-warning/10"
+                    onClick={() => setShowWarningDialog(true)}
+                  >
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    {isRTL ? 'إصدار إنذار' : 'Issue Warning'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-destructive text-destructive hover:bg-destructive/10"
+                    onClick={() => setShowTerminateDialog(true)}
+                  >
+                    <UserX className="h-4 w-4 mr-2" />
+                    {isRTL ? 'إنهاء التعاقد' : 'Terminate'}
+                  </Button>
+                </>
+              )}
+              {data.profile.employment_status === 'terminated' && (
+                <Badge variant="destructive" className="text-sm px-3 py-1">
+                  {isRTL ? 'تم إنهاء التعاقد' : 'Terminated'}
+                </Badge>
+              )}
+            </div>
           )}
         </div>
 
@@ -966,6 +987,16 @@ export default function InstructorProfile() {
         <IssueEmployeeWarningDialog
           open={showWarningDialog}
           onOpenChange={setShowWarningDialog}
+          employeeId={instructorId!}
+          employeeName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+          onSuccess={fetchInstructorData}
+        />
+      )}
+
+      {data?.profile && (
+        <TerminateEmployeeDialog
+          open={showTerminateDialog}
+          onOpenChange={setShowTerminateDialog}
           employeeId={instructorId!}
           employeeName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
           onSuccess={fetchInstructorData}
