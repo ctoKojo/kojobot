@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, Check, Clock, Plus, Minus, Gift, AlertCircle, Lock, Unlock, RotateCcw, Wallet } from 'lucide-react';
+import { DollarSign, Check, Clock, Plus, Minus, Gift, AlertCircle, Lock, Unlock, RotateCcw, Wallet, Printer } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { generateSalarySlip } from '@/lib/pdfReports';
 
 interface SalaryEvent {
   id: string;
@@ -400,6 +401,19 @@ export function SalariesTab() {
                                 <DollarSign className="h-3 w-3 mr-1" />{isRTL ? 'صرف' : 'Pay'}
                               </Button>
                             </>
+                          )}
+                          {snapshot && (
+                            <Button size="sm" variant="ghost" onClick={() => {
+                              const monthDate = new Date(snapshot.month);
+                              const monthLabel = monthDate.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long' });
+                              generateSalarySlip(
+                                { name: getName(emp), email: emp.email, type: emp.role === 'reception' ? (isRTL ? 'ريسيبشن' : 'Reception') : (isRTL ? 'مدرب' : 'Instructor') },
+                                { month: monthLabel, baseSalary: Number(snapshot.base_amount), earnings: Number(snapshot.total_earnings), bonuses: Number(snapshot.total_bonuses), deductions: Number(snapshot.total_deductions), netAmount: Number(snapshot.net_amount) },
+                                isRTL,
+                              );
+                            }}>
+                              <Printer className="h-3 w-3" />
+                            </Button>
                           )}
                         </div>
                       </TableCell>

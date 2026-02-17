@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Award, AlertTriangle, BookOpen, 
-  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw, DollarSign
+  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw, DollarSign, Printer
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +21,7 @@ import { IssueWarningDialog } from '@/components/student/IssueWarningDialog';
 import { CreateSubscriptionDialog } from '@/components/student/CreateSubscriptionDialog';
 import { EditSubscriptionDialog } from '@/components/student/EditSubscriptionDialog';
 import { ResetPasswordButton } from '@/components/ResetPasswordButton';
+import { generateStudentReport } from '@/lib/pdfReports';
 
 interface StudentData {
   profile: any;
@@ -218,6 +219,33 @@ export default function StudentProfile() {
                   userEmail={data?.profile?.email || ''}
                 />
               )}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const totalSessions = data?.attendance?.length || 0;
+                  const presentSessions = data?.attendance?.filter(a => a.status === 'present').length || 0;
+                  const attendanceRate = totalSessions > 0 ? Math.round((presentSessions / totalSessions) * 100) : 0;
+                  const quizScores = data?.quizSubmissions?.filter(q => q.percentage != null).map(q => q.percentage) || [];
+                  const quizAvg = quizScores.length > 0 ? Math.round(quizScores.reduce((a: number, b: number) => a + b, 0) / quizScores.length) : 0;
+                  const assignScores = data?.assignmentSubmissions?.filter(a => a.score != null).map(a => a.score) || [];
+                  const assignAvg = assignScores.length > 0 ? Math.round(assignScores.reduce((a: number, b: number) => a + b, 0) / assignScores.length) : 0;
+
+                  generateStudentReport(
+                    {
+                      name: data?.profile?.full_name || '',
+                      email: data?.profile?.email || '',
+                      group: data?.group ? (language === 'ar' ? data.group.name_ar : data.group.name) : undefined,
+                      level: data?.profile?.levels ? (language === 'ar' ? data.profile.levels.name_ar : data.profile.levels.name) : undefined,
+                      ageGroup: data?.profile?.age_groups ? (language === 'ar' ? data.profile.age_groups.name_ar : data.profile.age_groups.name) : undefined,
+                    },
+                    { attendanceRate, quizAvg, assignmentAvg: assignAvg, totalSessions, presentSessions, warningsCount: data?.warnings?.length || 0 },
+                    isRTL,
+                  );
+                }}
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                {isRTL ? 'تقرير PDF' : 'PDF Report'}
+              </Button>
               <Button 
                 variant="outline" 
                 className="border-warning text-warning hover:bg-warning/10"
