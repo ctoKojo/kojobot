@@ -52,6 +52,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { CredentialsDialog } from '@/components/CredentialsDialog';
 import {
   validateMobileNumber,
   validatePassword,
@@ -156,6 +157,9 @@ export default function StudentsPage() {
   const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // Credentials dialog state
+  const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string; name: string }>({ open: false, email: '', password: '', name: '' });
 
   // Validation results computed from form data
   const validationErrors = useMemo(() => {
@@ -410,16 +414,22 @@ export default function StudentsPage() {
           }
         }
 
-        toast({
-          title: t.common.success,
-          description: isRTL ? 'تم إنشاء الطالب بنجاح' : 'Student created successfully',
+        // Show credentials dialog
+        setCredentialsDialog({
+          open: true,
+          email: formData.email,
+          password: formData.password,
+          name: formData.full_name,
         });
       }
 
-      setIsDialogOpen(false);
-      setEditingStudent(null);
-      resetForm();
-      fetchData();
+      // For edit mode, close immediately. For create, credentials dialog handles cleanup.
+      if (editingStudent) {
+        setIsDialogOpen(false);
+        setEditingStudent(null);
+        resetForm();
+        fetchData();
+      }
     } catch (error: any) {
       console.error('Error saving student:', error);
       // Extract bilingual error message from edge function response
@@ -1288,6 +1298,21 @@ export default function StudentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Credentials Dialog */}
+      <CredentialsDialog
+        open={credentialsDialog.open}
+        onClose={() => {
+          setCredentialsDialog({ open: false, email: '', password: '', name: '' });
+          setIsDialogOpen(false);
+          setEditingStudent(null);
+          resetForm();
+          fetchData();
+        }}
+        email={credentialsDialog.email}
+        password={credentialsDialog.password}
+        userName={credentialsDialog.name}
+      />
     </DashboardLayout>
   );
 }
