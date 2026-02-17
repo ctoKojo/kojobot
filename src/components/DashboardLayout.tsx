@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, MessageSquare } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -10,7 +10,7 @@ import { GlobalSearch } from '@/components/GlobalSearch';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -35,8 +35,9 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const { user, role, signOut } = useAuth();
   const { profile } = useProfile();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  // Unread messages count
+  // Unread messages count (refreshed by realtime via useRealtimeMessages hook in Messages page)
   const { data: unreadMessages = 0 } = useQuery({
     queryKey: ['unread-messages-count'],
     queryFn: async () => {
@@ -59,8 +60,23 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
       return total;
     },
     enabled: !!user,
-    refetchInterval: 15000,
+    staleTime: 30000,
   });
+
+  // Realtime subscription for unread count updates
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('dashboard-unread')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['unread-messages-count'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_participants' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['unread-messages-count'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, queryClient]);
 
   const getRoleLabel = () => {
     switch (role) {
