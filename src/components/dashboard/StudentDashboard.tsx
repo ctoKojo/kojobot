@@ -80,10 +80,10 @@ export function StudentDashboard() {
         .eq('status', 'active')
         .maybeSingle();
 
-      // Get warnings count
+      // Get warnings count from the warnings table
       const { count: warningsCount } = await supabase
         .from('warnings')
-        .select('id', { count: 'exact' })
+        .select('id', { count: 'exact', head: true })
         .eq('student_id', user?.id)
         .eq('is_active', true);
 
