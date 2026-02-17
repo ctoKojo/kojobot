@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +7,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConversationList, ConversationItem } from '@/components/messages/ConversationList';
 import { ChatArea } from '@/components/messages/ChatArea';
 import { useRealtimeMessages } from '@/hooks/useRealtimeMessages';
+import { subscribeToPush } from '@/lib/pushSubscription';
+import { getNotificationPermission } from '@/lib/browserNotifications';
+import { Bell } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 /**
  * Auto-create conversations between a student and their group instructors.
@@ -104,9 +108,21 @@ export default function Messages() {
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
   const autoCreatedRef = useRef(false);
+  const [notifPermission, setNotifPermission] = useState<string>(getNotificationPermission());
 
   // Setup realtime subscriptions
   useRealtimeMessages(user?.id, selectedConversation);
+
+  // Handle enabling push notifications (requires user gesture)
+  const handleEnableNotifications = useCallback(async () => {
+    if (!user?.id) return;
+    const result = await subscribeToPush(user.id);
+    if (result) {
+      setNotifPermission('granted');
+    } else {
+      setNotifPermission(getNotificationPermission());
+    }
+  }, [user?.id]);
 
   // Auto-create conversations for students with their instructors (once per session)
   useEffect(() => {
@@ -208,6 +224,17 @@ export default function Messages() {
 
   return (
     <DashboardLayout title={isRTL ? 'الرسائل' : 'Messages'}>
+      {notifPermission !== 'granted' && notifPermission !== 'denied' && notifPermission !== 'unsupported' && (
+        <div className="mb-3 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <Bell className="h-5 w-5 text-primary shrink-0" />
+          <p className="text-sm text-muted-foreground flex-1">
+            {isRTL ? 'فعّل الإشعارات عشان توصلك الرسائل الجديدة حتى لو مش فاتح التطبيق' : 'Enable notifications to get alerted about new messages even when the app is closed'}
+          </p>
+          <Button size="sm" variant="outline" onClick={handleEnableNotifications}>
+            {isRTL ? 'تفعيل' : 'Enable'}
+          </Button>
+        </div>
+      )}
       <div className="flex h-[calc(100vh-8rem)] gap-4">
         <ConversationList
           conversations={conversations}

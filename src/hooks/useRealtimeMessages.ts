@@ -24,9 +24,9 @@ export function useRealtimeMessages(userId: string | undefined, selectedConversa
   const selectedConvRef = useRef(selectedConversation);
   selectedConvRef.current = selectedConversation;
 
-  // Auto-subscribe to push on mount
+  // Auto-subscribe to push on mount (only if permission already granted)
   useEffect(() => {
-    if (userId) {
+    if (userId && 'Notification' in window && Notification.permission === 'granted') {
       subscribeToPush(userId).catch(() => {});
     }
   }, [userId]);

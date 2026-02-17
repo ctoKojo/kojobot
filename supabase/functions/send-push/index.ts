@@ -5,10 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/**
- * Send Web Push notifications to a user's registered devices.
- * Called internally when a new message is sent.
- */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -38,6 +34,7 @@ Deno.serve(async (req) => {
       .from("system_settings").select("value").eq("key", "vapid_contact").single();
 
     if (!pubKeySetting?.value || !privKeySetting?.value) {
+      console.error("VAPID keys not configured");
       return new Response(JSON.stringify({ error: "VAPID keys not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -55,6 +52,7 @@ Deno.serve(async (req) => {
       .eq("user_id", recipientUserId);
 
     if (!subscriptions?.length) {
+      console.log(`No push subscriptions for user ${recipientUserId}`);
       return new Response(JSON.stringify({ sent: 0, reason: "no_subscriptions" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -74,10 +72,10 @@ Deno.serve(async (req) => {
           vapidContact
         );
         sent++;
+        console.log(`Push sent to ${sub.endpoint.substring(0, 50)}...`);
       } catch (err) {
         console.error(`Push failed for ${sub.endpoint}:`, err);
         failed.push(sub.id);
-        // Remove expired/invalid subscriptions
         if ((err as any)?.status === 410 || (err as any)?.status === 404) {
           await supabaseAdmin.from("push_subscriptions").delete().eq("id", sub.id);
         }
@@ -96,10 +94,8 @@ Deno.serve(async (req) => {
   }
 });
 
-/**
- * Implements the Web Push protocol using Web Crypto API.
- * Sends an encrypted push message to the user's push endpoint.
- */
+// ---- Web Push Implementation ----
+
 async function sendWebPush(
   subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
   payload: string,
@@ -107,10 +103,9 @@ async function sendWebPush(
   vapidPrivateKey: string,
   vapidContact: string
 ) {
-  // Import VAPID private key
-  const privateKeyBytes = base64UrlDecode(vapidPrivateKey);
   const publicKeyBytes = base64UrlDecode(vapidPublicKey);
 
+  // Import VAPID private key as JWK
   const vapidKey = await crypto.subtle.importKey(
     "jwk",
     {
@@ -129,7 +124,7 @@ async function sendWebPush(
   const audience = new URL(subscription.endpoint).origin;
   const vapidJwt = await createVapidJwt(vapidKey, audience, vapidContact);
 
-  // Encrypt payload using Web Push encryption (RFC 8291)
+  // Encrypt payload (RFC 8291)
   const encrypted = await encryptPayload(
     subscription.keys.p256dh,
     subscription.keys.auth,
@@ -154,7 +149,7 @@ async function sendWebPush(
     (error as any).status = response.status;
     throw error;
   }
-  await response.text(); // consume body
+  await response.text();
 }
 
 async function createVapidJwt(privateKey: CryptoKey, audience: string, subject: string): Promise<string> {
@@ -167,53 +162,50 @@ async function createVapidJwt(privateKey: CryptoKey, audience: string, subject: 
   })));
 
   const unsignedToken = `${header}.${claims}`;
-  const signature = await crypto.subtle.sign(
+  const signatureBuffer = await crypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
     privateKey,
     new TextEncoder().encode(unsignedToken)
   );
 
-  // Convert DER signature to raw r||s format
-  const rawSig = derToRaw(new Uint8Array(signature));
+  const rawSig = derToRaw(new Uint8Array(signatureBuffer));
   return `${unsignedToken}.${base64UrlEncode(rawSig)}`;
 }
 
 function derToRaw(der: Uint8Array): Uint8Array {
-  // ECDSA signatures from Web Crypto are in DER format
-  // Convert to raw 64-byte r||s format
-  const raw = new Uint8Array(64);
-
-  // If the signature is already raw (64 bytes), return as-is
+  // If already raw (64 bytes), return as-is
   if (der.length === 64) return der;
 
-  let offset = 2; // skip SEQUENCE tag and length
-  // Read r
-  if (der[offset] !== 0x02) throw new Error("Invalid DER signature");
+  const raw = new Uint8Array(64);
+  let offset = 2; // skip SEQUENCE tag + length
+
+  // Read r integer
+  if (der[offset] !== 0x02) throw new Error("Invalid DER: expected INTEGER tag for r");
   offset++;
-  let rLen = der[offset++];
+  const rLen = der[offset++];
   let rStart = offset;
-  if (rLen === 33 && der[rStart] === 0) { rStart++; rLen--; }
-  raw.set(der.slice(rStart, rStart + Math.min(rLen, 32)), 32 - Math.min(rLen, 32));
-  offset = rStart + rLen;
+  let rActualLen = rLen;
+  // Skip leading zero padding
+  if (rLen === 33 && der[rStart] === 0) { rStart++; rActualLen = 32; }
+  raw.set(der.slice(rStart, rStart + Math.min(rActualLen, 32)), 32 - Math.min(rActualLen, 32));
 
-  // Adjust for padding
-  if (der[rStart - 1 - (rLen === 32 ? 0 : 1)] === 33) offset = rStart + 32;
+  // Move to s
+  offset = rStart + rActualLen;
+  if (rLen === 33 && der[rStart - 1] === 0) offset = rStart + 32;
 
-  // Read s
-  offset = 2 + 2 + der[3]; // skip to s
-  if (der[offset] !== 0x02) throw new Error("Invalid DER signature");
-  offset++;
-  let sLen = der[offset++];
-  let sStart = offset;
-  if (sLen === 33 && der[sStart] === 0) { sStart++; sLen--; }
-  raw.set(der.slice(sStart, sStart + Math.min(sLen, 32)), 64 - Math.min(sLen, 32));
+  // Read s integer  
+  // Jump to s using header info
+  const sOffset = 2 + 2 + rLen;
+  if (der[sOffset] !== 0x02) throw new Error("Invalid DER: expected INTEGER tag for s");
+  const sLen = der[sOffset + 1];
+  let sStart = sOffset + 2;
+  let sActualLen = sLen;
+  if (sLen === 33 && der[sStart] === 0) { sStart++; sActualLen = 32; }
+  raw.set(der.slice(sStart, sStart + Math.min(sActualLen, 32)), 64 - Math.min(sActualLen, 32));
 
   return raw;
 }
 
-/**
- * Encrypt payload using RFC 8291 (Web Push Message Encryption).
- */
 async function encryptPayload(
   p256dhBase64: string,
   authBase64: string,
@@ -251,23 +243,26 @@ async function encryptPayload(
     )
   );
 
-  // HKDF to derive IKM
-  const authInfo = new TextEncoder().encode("WebPush: info\x00");
-  const authInfoFull = concat(authInfo, clientPublicKey, localPublicKeyRaw);
+  // HKDF: derive IKM from auth secret + shared secret
+  const authInfo = concat(
+    new TextEncoder().encode("WebPush: info\x00"),
+    clientPublicKey,
+    localPublicKeyRaw
+  );
 
-  const ikm = await hkdf(clientAuth, sharedSecret, authInfoFull, 32);
+  const ikm = await hkdfDerive(clientAuth, sharedSecret, authInfo, 32);
 
   // Generate salt
   const salt = crypto.getRandomValues(new Uint8Array(16));
 
-  // Derive content encryption key and nonce
+  // Derive CEK and nonce from IKM
   const cekInfo = new TextEncoder().encode("Content-Encoding: aes128gcm\x00");
   const nonceInfo = new TextEncoder().encode("Content-Encoding: nonce\x00");
 
-  const cek = await hkdf(salt, ikm, cekInfo, 16);
-  const nonce = await hkdf(salt, ikm, nonceInfo, 12);
+  const cek = await hkdfDerive(salt, ikm, cekInfo, 16);
+  const nonce = await hkdfDerive(salt, ikm, nonceInfo, 12);
 
-  // Pad plaintext (add delimiter byte 0x02 + no padding)
+  // Pad plaintext (delimiter byte 0x02 + no padding)
   const paddedPlaintext = concat(plaintext, new Uint8Array([2]));
 
   // Encrypt with AES-128-GCM
@@ -287,11 +282,12 @@ async function encryptPayload(
   return concat(header, encrypted);
 }
 
-async function hkdf(salt: Uint8Array, ikm: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
-  const key = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
+async function hkdfDerive(salt: Uint8Array, ikm: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
+  // Import IKM as the base key for HKDF
+  const baseKey = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
   const derived = await crypto.subtle.deriveBits(
     { name: "HKDF", hash: "SHA-256", salt, info },
-    key,
+    baseKey,
     length * 8
   );
   return new Uint8Array(derived);
