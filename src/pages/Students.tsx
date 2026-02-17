@@ -29,6 +29,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -111,7 +121,10 @@ interface Level {
 export default function StudentsPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = role === 'admin';
+  const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
   const [subscriptions, setSubscriptions] = useState<StudentSubscription[]>([]);
@@ -474,6 +487,42 @@ export default function StudentsPage() {
     setAvatarFile(null);
     setAvatarPreview(student.avatar_url || null);
     setIsDialogOpen(true);
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-users', {
+        body: { user_id: deleteTarget.user_id }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw { error: data.error, error_ar: data.error_ar };
+
+      toast({
+        title: t.common.success,
+        description: isRTL ? 'تم حذف الطالب بنجاح' : 'Student deleted successfully',
+      });
+      setDeleteTarget(null);
+      fetchData();
+    } catch (error: any) {
+      let errorMessage: string;
+      if (error?.error_ar && isRTL) {
+        errorMessage = error.error_ar;
+      } else if (error?.error) {
+        errorMessage = error.error;
+      } else {
+        errorMessage = isRTL ? 'فشل في حذف الطالب' : 'Failed to delete student';
+      }
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: errorMessage,
+      });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filteredStudents = students.filter((student) =>
@@ -1017,6 +1066,15 @@ export default function StudentsPage() {
                           <Pencil className="h-4 w-4 mr-2" />
                           {t.common.edit}
                         </DropdownMenuItem>
+                        {isAdmin && (
+                          <DropdownMenuItem 
+                            onClick={(e) => { e.stopPropagation(); setDeleteTarget(student); }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {isRTL ? 'حذف الطالب' : 'Delete Student'}
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -1140,6 +1198,15 @@ export default function StudentsPage() {
                               <Pencil className="h-4 w-4 mr-2" />
                               {t.common.edit}
                             </DropdownMenuItem>
+                            {isAdmin && (
+                              <DropdownMenuItem 
+                                onClick={() => setDeleteTarget(student)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                {isRTL ? 'حذف الطالب' : 'Delete Student'}
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -1151,6 +1218,35 @@ export default function StudentsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {isRTL ? 'تأكيد حذف الطالب' : 'Confirm Delete Student'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {isRTL 
+                ? `هل أنت متأكد من حذف الطالب "${deleteTarget?.full_name_ar || deleteTarget?.full_name}"؟ سيتم حذف جميع بياناته بشكل نهائي (الحضور، الكويزات، الاشتراكات، الإنذارات).`
+                : `Are you sure you want to delete "${deleteTarget?.full_name}"? All their data will be permanently removed (attendance, quizzes, subscriptions, warnings).`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              {isRTL ? 'إلغاء' : 'Cancel'}
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteStudent} 
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (isRTL ? 'جاري الحذف...' : 'Deleting...') : (isRTL ? 'حذف' : 'Delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
