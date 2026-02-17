@@ -23,6 +23,7 @@ import {
   RefreshCw,
   DollarSign,
   CreditCard,
+  MessageSquare,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,6 +69,7 @@ export function AppSidebar() {
     { title: isRTL ? 'جدول العمل' : 'My Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['instructor', 'reception'] },
     { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-instructor-warnings', icon: AlertTriangle, roles: ['instructor'] },
     { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['admin', 'student'] },
+    { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare, roles: ['admin', 'instructor', 'student', 'reception'] },
   ];
 
   // Groups & Sessions category (Admin & Instructor & Reception)

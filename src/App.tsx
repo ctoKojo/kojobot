@@ -53,6 +53,7 @@ import Finance from "./pages/Finance";
 import DeductionRules from "./pages/DeductionRules";
 import AccountSuspended from "./pages/AccountSuspended";
 import AccountTerminated from "./pages/AccountTerminated";
+import Messages from "./pages/Messages";
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
@@ -114,6 +115,7 @@ const App = () => (
                   <Route path="/pricing-plans" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><PricingPlans /></ProtectedRoute>} />
                   <Route path="/finance" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Finance /></ProtectedRoute>} />
                   <Route path="/deduction-rules" element={<ProtectedRoute allowedRoles={['admin']}><DeductionRules /></ProtectedRoute>} />
+                  <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
                   <Route path="/account-suspended" element={<AccountSuspended />} />
                   <Route path="/account-terminated" element={<AccountTerminated />} />
                   <Route path="*" element={<NotFound />} />
