@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { showBrowserNotification } from '@/lib/browserNotifications';
+import { subscribeToPush } from '@/lib/pushSubscription';
 
 // Notification sound as a short beep using Web Audio API
 function playNotificationSound() {
@@ -22,6 +23,13 @@ export function useRealtimeMessages(userId: string | undefined, selectedConversa
   const queryClient = useQueryClient();
   const selectedConvRef = useRef(selectedConversation);
   selectedConvRef.current = selectedConversation;
+
+  // Auto-subscribe to push on mount
+  useEffect(() => {
+    if (userId) {
+      subscribeToPush(userId).catch(() => {});
+    }
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) return;
