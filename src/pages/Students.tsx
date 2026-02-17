@@ -342,7 +342,7 @@ export default function StudentsPage() {
         });
 
         if (error) throw error;
-        if (data?.error) throw new Error(data.error);
+        if (data?.error) throw { error: data.error, error_ar: data.error_ar };
 
         // Upload avatar for new user
         if (avatarFile && data?.user_id) {
@@ -404,10 +404,27 @@ export default function StudentsPage() {
       fetchData();
     } catch (error: any) {
       console.error('Error saving student:', error);
+      // Extract bilingual error message from edge function response
+      let errorMessage: string;
+      if (error?.error_ar && isRTL) {
+        errorMessage = error.error_ar;
+      } else if (error?.error) {
+        errorMessage = error.error;
+      } else if (typeof error?.message === 'string') {
+        // Try to parse edge function error from message
+        try {
+          const parsed = JSON.parse(error.message);
+          errorMessage = isRTL ? (parsed.error_ar || parsed.error) : parsed.error;
+        } catch {
+          errorMessage = error.message;
+        }
+      } else {
+        errorMessage = isRTL ? 'فشل في حفظ بيانات الطالب' : 'Failed to save student';
+      }
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: error.message || (isRTL ? 'فشل في حفظ بيانات الطالب' : 'Failed to save student'),
+        description: errorMessage,
       });
     } finally {
       setSaving(false);

@@ -127,6 +127,8 @@ export default function GroupsPage() {
   const { role } = useAuth();
   const navigate = useNavigate();
   const isAdmin = role === 'admin';
+  const isReception = role === 'reception';
+  const canManageGroups = isAdmin || isReception;
   const canDelete = role === 'admin';
   const [groups, setGroups] = useState<Group[]>([]);
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
@@ -752,7 +754,7 @@ export default function GroupsPage() {
             />
           </div>
 
-          {isAdmin && (
+          {canManageGroups && (
             <Button className="kojo-gradient" onClick={() => {
               setEditingGroup(null);
               resetForm();
@@ -1172,7 +1174,7 @@ export default function GroupsPage() {
                       </div>
                       
                       <div onClick={(e) => e.stopPropagation()}>
-                        {isAdmin ? (
+                        {canManageGroups ? (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -1346,7 +1348,7 @@ export default function GroupsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
-                          {isAdmin ? (
+                          {canManageGroups ? (
                             <div className="flex items-center gap-1">
                               <Button
                                 variant="ghost"
