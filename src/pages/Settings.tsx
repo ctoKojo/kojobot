@@ -10,7 +10,7 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, Plus, Trash2, Save, Clock, Loader2 } from 'lucide-react';
+import { AlertTriangle, Plus, Trash2, Save, Clock, Loader2, Bell, Key, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -297,7 +297,96 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Push Notifications - Admin Only */}
+        {role === 'admin' && <PushNotificationSettings isRTL={isRTL} />}
       </div>
     </DashboardLayout>
+  );
+}
+
+function PushNotificationSettings({ isRTL }: { isRTL: boolean }) {
+  const [vapidStatus, setVapidStatus] = useState<'loading' | 'configured' | 'not_configured'>('loading');
+  const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'vapid_public_key')
+      .maybeSingle()
+      .then(({ data }) => {
+        setVapidStatus(data?.value ? 'configured' : 'not_configured');
+      });
+  }, []);
+
+  const generateKeys = async () => {
+    setGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-vapid-keys');
+      if (error) throw error;
+      setVapidStatus('configured');
+      toast.success(isRTL ? 'تم إنشاء مفاتيح Push بنجاح' : 'Push keys generated successfully');
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? 'فشل في إنشاء المفاتيح' : 'Failed to generate keys');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Bell className="h-5 w-5 text-primary" />
+          <CardTitle>{isRTL ? 'إشعارات Push' : 'Push Notifications'}</CardTitle>
+        </div>
+        <CardDescription>
+          {isRTL
+            ? 'إعداد إشعارات الدفع لإرسال تنبيهات حتى عندما يكون المتصفح مغلقاً'
+            : 'Set up push notifications to send alerts even when the browser is closed'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {vapidStatus === 'loading' ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : vapidStatus === 'configured' ? (
+          <div className="flex items-center gap-3 p-4 bg-accent/50 rounded-lg border border-accent">
+            <CheckCircle className="h-5 w-5 text-primary shrink-0" />
+            <div>
+              <p className="text-sm font-medium">
+                {isRTL ? 'مفاتيح VAPID مُهيأة' : 'VAPID Keys Configured'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {isRTL
+                  ? 'إشعارات Push جاهزة. المستخدمون سيتم تسجيلهم تلقائياً عند فتح صفحة الرسائل.'
+                  : 'Push notifications are ready. Users will be auto-subscribed when they open the Messages page.'}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground">
+                {isRTL
+                  ? 'لتفعيل إشعارات Push، تحتاج لإنشاء مفاتيح VAPID. هذا يتم مرة واحدة فقط.'
+                  : 'To enable push notifications, you need to generate VAPID keys. This is a one-time setup.'}
+              </p>
+            </div>
+            <Button onClick={generateKeys} disabled={generating} className="w-full">
+              {generating ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Key className="h-4 w-4 mr-2" />
+              )}
+              {isRTL ? 'إنشاء مفاتيح VAPID' : 'Generate VAPID Keys'}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
