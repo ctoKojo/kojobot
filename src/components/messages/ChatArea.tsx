@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquarePlus, Send, ArrowLeft, Check, CheckCheck, Trash2 } from 'lucide-react';
+import { MessageSquarePlus, Send, ArrowLeft, Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -155,21 +155,6 @@ export function ChatArea({ selectedConversation, conversationData, onBack, isRTL
     onError: () => toast.error(isRTL ? 'فشل إرسال الرسالة' : 'Failed to send message'),
   });
 
-  // Delete message (soft)
-  const deleteMessage = useMutation({
-    mutationFn: async (messageId: string) => {
-      const { error } = await supabase
-        .from('messages')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', messageId)
-        .eq('sender_id', userId!);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages', selectedConversation] });
-    },
-  });
-
   const participantProfiles = Object.fromEntries(
     (conversationData?.participants || []).map(p => [p.user_id, p])
   );
@@ -181,13 +166,6 @@ export function ChatArea({ selectedConversation, conversationData, onBack, isRTL
     if (!otherParticipant?.last_read_at) return 'sent';
     return new Date(otherParticipant.last_read_at) >= new Date(msg.created_at) ? 'read' : 'sent';
   };
-
-  // Quick replies for empty conversations
-  const quickReplies = messages.length === 0 ? [
-    isRTL ? 'مرحبا!' : 'Hello!',
-    isRTL ? 'عندي سؤال' : 'I have a question',
-    isRTL ? 'شكرا!' : 'Thank you!',
-  ] : [];
 
   if (!selectedConversation || !conversationData) {
     return (
@@ -230,56 +208,39 @@ export function ChatArea({ selectedConversation, conversationData, onBack, isRTL
               const prevMsg = messages[idx - 1];
               const showDateSep = !prevMsg || !isSameDay(new Date(msg.created_at), new Date(prevMsg.created_at));
               const readStatus = getReadStatus(msg);
-              const isDeleted = !!msg.deleted_at;
 
               return (
                 <React.Fragment key={msg.id}>
                   {showDateSep && <DateSeparator date={new Date(msg.created_at)} isRTL={isRTL} />}
-                  <div className={cn('flex gap-2 group', isMine ? 'justify-end' : 'justify-start')}>
+                  <div className={cn('flex gap-2', isMine ? 'justify-end' : 'justify-start')}>
                     {!isMine && (
                       <Avatar className="h-7 w-7 shrink-0 mt-1">
                         <AvatarImage src={sender?.avatar_url || ''} />
                         <AvatarFallback className="text-[10px]">{getInitials(sender?.full_name || '?')}</AvatarFallback>
                       </Avatar>
                     )}
-                    <div className="relative">
+                    <div className={cn(
+                      'max-w-[70%] rounded-2xl px-4 py-2',
+                      isMine ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-muted rounded-bl-sm'
+                    )}>
+                      <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                       <div className={cn(
-                        'max-w-[70%] rounded-2xl px-4 py-2',
-                        isDeleted ? 'bg-muted/50 italic' : (isMine ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-muted rounded-bl-sm')
+                        'flex items-center gap-1 mt-1',
+                        isMine ? 'justify-end' : 'justify-start'
                       )}>
-                        <p className="text-sm whitespace-pre-wrap break-words">
-                          {isDeleted
-                            ? (isRTL ? '🚫 تم حذف هذه الرسالة' : '🚫 This message was deleted')
-                            : msg.content}
-                        </p>
-                        <div className={cn(
-                          'flex items-center gap-1 mt-1',
-                          isMine ? 'justify-end' : 'justify-start'
+                        <span className={cn(
+                          'text-[10px]',
+                          isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'
                         )}>
-                          <span className={cn(
-                            'text-[10px]',
-                            isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                          )}>
-                            {format(new Date(msg.created_at), 'hh:mm a', { locale: isRTL ? ar : undefined })}
-                          </span>
-                          {isMine && !isDeleted && readStatus === 'read' && (
-                            <CheckCheck className="h-3.5 w-3.5 text-blue-400" />
-                          )}
-                          {isMine && !isDeleted && readStatus === 'sent' && (
-                            <Check className="h-3.5 w-3.5 text-primary-foreground/50" />
-                          )}
-                        </div>
+                          {format(new Date(msg.created_at), 'hh:mm a', { locale: isRTL ? ar : undefined })}
+                        </span>
+                        {isMine && readStatus === 'read' && (
+                          <CheckCheck className="h-3.5 w-3.5 text-primary-foreground" />
+                        )}
+                        {isMine && readStatus === 'sent' && (
+                          <Check className="h-3.5 w-3.5 text-primary-foreground/50" />
+                        )}
                       </div>
-                      {/* Delete button */}
-                      {isMine && !isDeleted && (
-                        <button
-                          className="absolute -top-2 opacity-0 group-hover:opacity-100 transition-opacity bg-background border rounded-full p-1 shadow-sm hover:bg-destructive hover:text-destructive-foreground"
-                          style={isRTL ? { left: -8 } : { right: -8 }}
-                          onClick={() => deleteMessage.mutate(msg.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      )}
                     </div>
                   </div>
                 </React.Fragment>
@@ -299,25 +260,6 @@ export function ChatArea({ selectedConversation, conversationData, onBack, isRTL
           )}
         </ScrollArea>
       </CardContent>
-
-      {/* Quick replies */}
-      {quickReplies.length > 0 && (
-        <div className="px-4 pb-2 flex gap-2 flex-wrap">
-          {quickReplies.map(text => (
-            <Button
-              key={text}
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={() => {
-                setMessageText(text);
-              }}
-            >
-              {text}
-            </Button>
-          ))}
-        </div>
-      )}
 
       {/* Input */}
       <div className="p-4 border-t">
