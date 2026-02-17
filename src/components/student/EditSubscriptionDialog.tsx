@@ -34,6 +34,7 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
   const [isSuspended, setIsSuspended] = useState(false);
   const [status, setStatus] = useState('active');
   const [notes, setNotes] = useState('');
+  const [discountPercentage, setDiscountPercentage] = useState(0);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
       setIsSuspended(subscription.is_suspended || false);
       setStatus(subscription.status || 'active');
       setNotes(subscription.notes || '');
+      setDiscountPercentage(Number(subscription.discount_percentage) || 0);
 
       const loadData = async () => {
         const [plansRes, groupRes] = await Promise.all([
@@ -107,6 +109,7 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
         is_suspended: isSuspended,
         status,
         notes: notes || null,
+        discount_percentage: discountPercentage,
       };
 
       const { error } = await supabase
@@ -222,6 +225,11 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
           <div>
             <Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>
             <Input value={notes} onChange={e => setNotes(e.target.value)} />
+          </div>
+
+          <div>
+            <Label>{isRTL ? 'نسبة الخصم الخاص %' : 'Special Discount %'}</Label>
+            <Input type="number" value={discountPercentage} onChange={e => setDiscountPercentage(Math.min(100, Math.max(0, +e.target.value)))} min={0} max={100} placeholder="0" />
           </div>
 
           {/* Summary */}
