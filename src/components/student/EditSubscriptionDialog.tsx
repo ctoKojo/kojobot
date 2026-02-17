@@ -25,8 +25,6 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
   const [plans, setPlans] = useState<any[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [paymentType, setPaymentType] = useState<'full' | 'installment'>('full');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [totalAmount, setTotalAmount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [installmentAmount, setInstallmentAmount] = useState<number | null>(null);
@@ -41,8 +39,6 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
     if (open && subscription) {
       setSelectedPlanId(subscription.pricing_plan_id || '');
       setPaymentType(subscription.payment_type || 'full');
-      setStartDate(subscription.start_date || '');
-      setEndDate(subscription.end_date || '');
       setTotalAmount(Number(subscription.total_amount) || 0);
       setPaidAmount(Number(subscription.paid_amount) || 0);
       setInstallmentAmount(subscription.installment_amount ? Number(subscription.installment_amount) : null);
@@ -52,43 +48,35 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
       setNotes(subscription.notes || '');
       setDiscountPercentage(Number(subscription.discount_percentage) || 0);
 
-      const loadData = async () => {
-        const [plansRes, groupRes] = await Promise.all([
-          supabase.from('pricing_plans').select('*').eq('is_active', true),
-          supabase.from('group_students').select('group_id').eq('student_id', studentId).eq('is_active', true).limit(1),
-        ]);
-        setPlans((plansRes.data as any) || []);
-
-        // Auto-set start date from first session if not already set
-        if (!subscription.start_date) {
-          const groupId = groupRes.data?.[0]?.group_id;
-          if (groupId) {
-            const { data: firstSession } = await supabase
-              .from('sessions')
-              .select('session_date')
-              .eq('group_id', groupId)
-              .order('session_date', { ascending: true })
-              .limit(1)
-              .maybeSingle();
-            if (firstSession?.session_date) {
-              setStartDate(firstSession.session_date);
-            }
-          }
-        }
-      };
-      loadData();
+      supabase.from('pricing_plans').select('*').eq('is_active', true).then(res => {
+        setPlans((res.data as any) || []);
+      });
     }
   }, [open, subscription]);
 
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
   const remaining = Math.max(0, totalAmount - paidAmount);
 
+  // Recalculate amounts when plan or discount changes
   const handlePlanChange = (planId: string) => {
     setSelectedPlanId(planId);
     const plan = plans.find(p => p.id === planId);
     if (plan) {
-      setTotalAmount(plan.price_3_months);
-      setInstallmentAmount(plan.price_1_month);
+      const discountedTotal = Math.round(plan.price_3_months * (1 - discountPercentage / 100));
+      const discountedInstallment = Math.round(plan.price_1_month * (1 - discountPercentage / 100));
+      setTotalAmount(discountedTotal);
+      setInstallmentAmount(discountedInstallment);
+    }
+  };
+
+  const handleDiscountChange = (pct: number) => {
+    const safePct = Math.min(100, Math.max(0, pct));
+    setDiscountPercentage(safePct);
+    if (selectedPlan) {
+      const discountedTotal = Math.round(selectedPlan.price_3_months * (1 - safePct / 100));
+      const discountedInstallment = Math.round(selectedPlan.price_1_month * (1 - safePct / 100));
+      setTotalAmount(discountedTotal);
+      setInstallmentAmount(discountedInstallment);
     }
   };
 
@@ -99,8 +87,6 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
       const updateData: Record<string, any> = {
         pricing_plan_id: selectedPlanId || null,
         payment_type: paymentType,
-        start_date: startDate,
-        end_date: endDate,
         total_amount: totalAmount,
         paid_amount: paidAmount,
         remaining_amount: remaining,
@@ -131,7 +117,7 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isRTL ? 'تعديل الاشتراك' : 'Edit Subscription'}</DialogTitle>
         </DialogHeader>
@@ -177,15 +163,16 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>{isRTL ? 'تاريخ البداية' : 'Start Date'}</Label>
-              <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-            </div>
-            <div>
-              <Label>{isRTL ? 'تاريخ النهاية' : 'End Date'}</Label>
-              <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
-            </div>
+          <div>
+            <Label>{isRTL ? 'نسبة الخصم الخاص %' : 'Special Discount %'}</Label>
+            <Input 
+              type="number" 
+              value={discountPercentage} 
+              onChange={e => handleDiscountChange(+e.target.value)} 
+              min={0} 
+              max={100} 
+              placeholder="0" 
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -227,14 +214,21 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
             <Input value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
 
-          <div>
-            <Label>{isRTL ? 'نسبة الخصم الخاص %' : 'Special Discount %'}</Label>
-            <Input type="number" value={discountPercentage} onChange={e => setDiscountPercentage(Math.min(100, Math.max(0, +e.target.value)))} min={0} max={100} placeholder="0" />
-          </div>
-
-          {/* Summary */}
+          {/* Summary Card - matches creation flow */}
           <Card className="bg-muted/30">
             <CardContent className="pt-4 space-y-2 text-sm">
+              {selectedPlan && discountPercentage > 0 && (
+                <>
+                  <div className="flex justify-between">
+                    <span>{isRTL ? 'السعر الأصلي (3 شهور)' : 'Original Price (3 months)'}</span>
+                    <span className="line-through text-muted-foreground">{selectedPlan.price_3_months} {isRTL ? 'ج.م' : 'EGP'}</span>
+                  </div>
+                  <div className="flex justify-between text-green-600">
+                    <span>{isRTL ? `خصم ${discountPercentage}%` : `${discountPercentage}% Discount`}</span>
+                    <span>-{Math.round(selectedPlan.price_3_months * discountPercentage / 100)} {isRTL ? 'ج.م' : 'EGP'}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between">
                 <span>{isRTL ? 'الإجمالي' : 'Total'}</span>
                 <span className="font-bold">{totalAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
@@ -247,6 +241,18 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
                 <span>{isRTL ? 'المتبقي' : 'Remaining'}</span>
                 <span className={remaining > 0 ? 'text-orange-600' : 'text-green-600'}>{remaining} {isRTL ? 'ج.م' : 'EGP'}</span>
               </div>
+              {paymentType === 'installment' && installmentAmount && (
+                <div className="flex justify-between">
+                  <span>{isRTL ? 'القسط الشهري' : 'Monthly Installment'}</span>
+                  <span className="font-medium">{installmentAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
+                </div>
+              )}
+              {subscription?.start_date && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>{isRTL ? 'فترة الاشتراك' : 'Subscription Period'}</span>
+                  <span>{subscription.start_date} → {subscription.end_date}</span>
+                </div>
+              )}
               {isSuspended && (
                 <Badge variant="destructive" className="w-full justify-center mt-2">
                   {isRTL ? '⚠️ الحساب موقوف' : '⚠️ Account Suspended'}

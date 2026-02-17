@@ -62,7 +62,6 @@ export default function StudentProfile() {
         .from('subscriptions')
         .select('*, pricing_plans(name, name_ar, attendance_mode)')
         .eq('student_id', studentId)
-        .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -191,9 +190,9 @@ export default function StudentProfile() {
             {isRTL ? 'رجوع' : 'Back'}
           </Button>
           
-          {(role === 'admin' || role === 'instructor') && (
+          {(role === 'admin' || role === 'instructor' || role === 'reception') && (
             <div className="flex gap-2">
-              {role === 'admin' && !data?.subscription && (
+              {(role === 'admin' || role === 'reception') && !data?.subscription && (
                 <Button 
                   variant="outline"
                   onClick={() => setShowSubscriptionDialog(true)}
@@ -202,7 +201,7 @@ export default function StudentProfile() {
                   {isRTL ? 'إنشاء اشتراك' : 'Create Subscription'}
                 </Button>
               )}
-              {role === 'admin' && data?.subscription && (
+              {(role === 'admin' || role === 'reception') && data?.subscription && (
                 <Button 
                   variant="outline"
                   onClick={() => setShowEditSubscriptionDialog(true)}
