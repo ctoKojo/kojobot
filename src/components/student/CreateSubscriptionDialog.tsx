@@ -29,6 +29,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
   const [startDate, setStartDate] = useState('');
   const [paidAmount, setPaidAmount] = useState(0);
   const [notes, setNotes] = useState('');
+  const [discountPercentage, setDiscountPercentage] = useState(0);
   const [saving, setSaving] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [loadingCheck, setLoadingCheck] = useState(true);
@@ -71,8 +72,9 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
   }, [open, studentId]);
 
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
-  const totalAmount = selectedPlan ? selectedPlan.price_3_months : 0;
-  const installmentAmount = selectedPlan ? selectedPlan.price_1_month : 0;
+  const discountAmount = selectedPlan ? Math.round(selectedPlan.price_3_months * discountPercentage / 100) : 0;
+  const totalAmount = selectedPlan ? selectedPlan.price_3_months - discountAmount : 0;
+  const installmentAmount = selectedPlan ? Math.round(selectedPlan.price_1_month * (1 - discountPercentage / 100)) : 0;
   const remaining = Math.max(0, totalAmount - paidAmount);
 
   const handleSave = async () => {
@@ -93,6 +95,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
         paid_amount: paidAmount,
         installment_amount: paymentType === 'installment' ? installmentAmount : null,
         next_payment_date: null,
+        discount_percentage: discountPercentage,
         is_suspended: false,
         status: 'active',
         notes,
@@ -197,6 +200,11 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
                 </Select>
               </div>
 
+              <div>
+                <Label>{isRTL ? 'نسبة الخصم الخاص %' : 'Special Discount %'}</Label>
+                <Input type="number" value={discountPercentage} onChange={e => setDiscountPercentage(Math.min(100, Math.max(0, +e.target.value)))} min={0} max={100} placeholder="0" />
+              </div>
+
               {studentGroupInfo?.hasStarted && studentGroupInfo.firstSessionDate ? (
                 <div className="p-3 rounded-lg border bg-muted/30 text-sm">
                   <p className="text-muted-foreground">
@@ -226,6 +234,18 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
               {selectedPlan && (
                 <Card className="bg-muted/30">
                   <CardContent className="pt-4 space-y-2 text-sm">
+                    {discountPercentage > 0 && (
+                      <>
+                        <div className="flex justify-between">
+                          <span>{isRTL ? 'السعر الأصلي' : 'Original Price'}</span>
+                          <span className="line-through text-muted-foreground">{selectedPlan.price_3_months} {isRTL ? 'ج.م' : 'EGP'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>{isRTL ? `خصم ${discountPercentage}%` : `${discountPercentage}% Discount`}</span>
+                          <span className="text-destructive">-{discountAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between">
                       <span>{isRTL ? 'المبلغ الإجمالي' : 'Total Amount'}</span>
                       <span className="font-bold">{totalAmount} {isRTL ? 'ج.م' : 'EGP'}</span>

@@ -1548,6 +1548,7 @@ export type Database = {
       subscriptions: {
         Row: {
           created_at: string
+          discount_percentage: number
           end_date: string | null
           id: string
           installment_amount: number | null
@@ -1566,6 +1567,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          discount_percentage?: number
           end_date?: string | null
           id?: string
           installment_amount?: number | null
@@ -1584,6 +1586,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          discount_percentage?: number
           end_date?: string | null
           id?: string
           installment_amount?: number | null

@@ -151,6 +151,7 @@ export default function StudentsPage() {
     payment_type: 'full' as PaymentType,
     sub_paid_amount: 0,
     sub_notes: '',
+    discount_percentage: 0,
   });
   const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -369,8 +370,11 @@ export default function StudentsPage() {
         if (formData.pricing_plan_id && data?.user_id) {
           const selectedPlan = pricingPlans.find(p => p.id === formData.pricing_plan_id);
           if (selectedPlan) {
-            const totalAmount = selectedPlan.price_3_months;
-            const installmentAmount = selectedPlan.price_1_month;
+            const discountPct = formData.discount_percentage || 0;
+            const baseTotal = selectedPlan.price_3_months;
+            const totalAmount = Math.round(baseTotal * (1 - discountPct / 100));
+            const baseInstallment = selectedPlan.price_1_month;
+            const installmentAmount = Math.round(baseInstallment * (1 - discountPct / 100));
 
             // Create subscription with null dates - will be set automatically by RPC when assigned to a started group
             const { data: sub, error: subError } = await supabase.from('subscriptions').insert({
@@ -386,6 +390,7 @@ export default function StudentsPage() {
               is_suspended: false,
               status: 'active',
               notes: formData.sub_notes || null,
+              discount_percentage: discountPct,
             } as any).select().single();
 
             if (subError) {
@@ -460,6 +465,7 @@ export default function StudentsPage() {
       payment_type: 'full',
       sub_paid_amount: 0,
       sub_notes: '',
+      discount_percentage: 0,
     });
     setFormTouched({});
     setAvatarFile(null);
@@ -483,6 +489,7 @@ export default function StudentsPage() {
       payment_type: 'full',
       sub_paid_amount: 0,
       sub_notes: '',
+      discount_percentage: 0,
     });
     setAvatarFile(null);
     setAvatarPreview(student.avatar_url || null);
@@ -946,6 +953,18 @@ export default function StudentsPage() {
                       </div>
 
                       <div className="grid gap-2">
+                        <Label>{isRTL ? 'نسبة الخصم الخاص %' : 'Special Discount %'}</Label>
+                        <Input
+                          type="number"
+                          value={formData.discount_percentage}
+                          onChange={(e) => setFormData({ ...formData, discount_percentage: Math.min(100, Math.max(0, +e.target.value)) })}
+                          min={0}
+                          max={100}
+                          placeholder="0"
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
                         <p className="text-xs text-muted-foreground">
                           {isRTL ? '📌 تاريخ البداية يتحدد تلقائياً عند إسناد الطالب لمجموعة' : '📌 Start date is set automatically when the student is assigned to a group'}
                         </p>
@@ -958,7 +977,6 @@ export default function StudentsPage() {
                           value={formData.sub_paid_amount}
                           onChange={(e) => setFormData({ ...formData, sub_paid_amount: +e.target.value })}
                           min={0}
-                          max={pricingPlans.find(p => p.id === formData.pricing_plan_id)?.price_3_months || 0}
                         />
                       </div>
 
@@ -975,22 +993,45 @@ export default function StudentsPage() {
                       {(() => {
                         const plan = pricingPlans.find(p => p.id === formData.pricing_plan_id);
                         if (!plan) return null;
-                        const total = plan.price_3_months;
+                        const discountPct = formData.discount_percentage || 0;
+                        const originalTotal = plan.price_3_months;
+                        const discountAmount = Math.round(originalTotal * discountPct / 100);
+                        const total = originalTotal - discountAmount;
+                        const monthlyOriginal = plan.price_1_month;
+                        const monthlyAfterDiscount = Math.round(monthlyOriginal * (1 - discountPct / 100));
                         const remaining = Math.max(0, total - formData.sub_paid_amount);
                         return (
                           <Card className="bg-muted/30">
                             <CardContent className="pt-4 space-y-2 text-sm">
+                              {discountPct > 0 && (
+                                <>
+                                  <div className="flex justify-between">
+                                    <span>{isRTL ? 'السعر الأصلي' : 'Original Price'}</span>
+                                    <span className="line-through text-muted-foreground">{originalTotal} {isRTL ? 'ج.م' : 'EGP'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>{isRTL ? `خصم ${discountPct}%` : `${discountPct}% Discount`}</span>
+                                    <span className="text-destructive">-{discountAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
+                                  </div>
+                                </>
+                              )}
                               <div className="flex justify-between">
                                 <span>{isRTL ? 'المبلغ الإجمالي' : 'Total'}</span>
                                 <span className="font-bold">{total} {isRTL ? 'ج.م' : 'EGP'}</span>
                               </div>
+                              {formData.payment_type === 'installment' && (
+                                <div className="flex justify-between">
+                                  <span>{isRTL ? 'القسط الشهري' : 'Monthly Installment'}</span>
+                                  <span>{monthlyAfterDiscount} {isRTL ? 'ج.م' : 'EGP'}</span>
+                                </div>
+                              )}
                               <div className="flex justify-between">
                                 <span>{isRTL ? 'المدفوع' : 'Paid'}</span>
-                                <span className="text-green-600">{formData.sub_paid_amount} {isRTL ? 'ج.م' : 'EGP'}</span>
+                                <span className="text-emerald-600">{formData.sub_paid_amount} {isRTL ? 'ج.م' : 'EGP'}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>{isRTL ? 'المتبقي' : 'Remaining'}</span>
-                                <span className={remaining > 0 ? 'text-orange-600' : 'text-green-600'}>{remaining} {isRTL ? 'ج.م' : 'EGP'}</span>
+                                <span className={remaining > 0 ? 'text-amber-600' : 'text-emerald-600'}>{remaining} {isRTL ? 'ج.م' : 'EGP'}</span>
                               </div>
                             </CardContent>
                           </Card>
