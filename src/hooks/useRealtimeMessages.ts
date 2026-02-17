@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
+import { showBrowserNotification } from '@/lib/browserNotifications';
 
 // Notification sound as a short beep using Web Audio API
 function playNotificationSound() {
@@ -40,9 +41,14 @@ export function useRealtimeMessages(userId: string | undefined, selectedConversa
           queryClient.invalidateQueries({ queryKey: ['conversations'] });
           queryClient.invalidateQueries({ queryKey: ['unread-messages-count'] });
 
-          // Play sound if message is from someone else
+          // Play sound + browser notification if message is from someone else
           if (msg.sender_id !== userId) {
             playNotificationSound();
+            showBrowserNotification(
+              'Kojobot - New Message',
+              msg.content?.substring(0, 100) || 'You have a new message',
+              '/messages'
+            );
           }
         }
       )
@@ -82,7 +88,7 @@ export function useTypingIndicator(userId: string | undefined, conversationId: s
   const sendTyping = useCallback(async () => {
     if (!userId || !conversationId) return;
     const now = Date.now();
-    if (now - lastSentRef.current < 2000) return; // throttle to every 2s
+    if (now - lastSentRef.current < 2000) return;
     lastSentRef.current = now;
 
     await supabase
