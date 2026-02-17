@@ -47,10 +47,10 @@ export default function Messages() {
         .in('conversation_id', convIds);
 
       const allUserIds = [...new Set(allParticipants?.map(p => p.user_id) || [])];
+      
+      // Use SECURITY DEFINER function to bypass RLS for profile fetching
       const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, full_name_ar, avatar_url')
-        .in('user_id', allUserIds);
+        .rpc('get_conversation_participant_profiles', { p_user_ids: allUserIds });
 
       // Get roles
       const { data: roles } = await supabase
