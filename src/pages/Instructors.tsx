@@ -46,6 +46,7 @@ import {
 } from '@/lib/validationUtils';
 import { cn } from '@/lib/utils';
 import { TerminateEmployeeDialog } from '@/components/employee/TerminateEmployeeDialog';
+import { CredentialsDialog } from '@/components/CredentialsDialog';
 import { useAuth } from '@/contexts/AuthContext';
 interface Instructor {
   id: string;
@@ -103,6 +104,9 @@ export default function InstructorsPage() {
   // Termination dialog state
   const [terminateDialogOpen, setTerminateDialogOpen] = useState(false);
   const [terminateTarget, setTerminateTarget] = useState<Instructor | null>(null);
+
+  // Credentials dialog state
+  const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string; name: string }>({ open: false, email: '', password: '', name: '' });
   // Validation results computed from form data
   const validationErrors = useMemo(() => {
     const nameResult = validateEnglishName(formData.full_name);
@@ -332,16 +336,22 @@ export default function InstructorsPage() {
           }
         }
 
-        toast({
-          title: t.common.success,
-          description: isRTL ? 'تم إنشاء الموظف بنجاح' : 'Employee created successfully',
+        // Show credentials dialog instead of toast
+        setCredentialsDialog({
+          open: true,
+          email: formData.email,
+          password: formData.password,
+          name: formData.full_name,
         });
       }
 
-      setIsDialogOpen(false);
-      setEditingInstructor(null);
-      resetForm();
-      fetchInstructors();
+      // For edit mode, close immediately. For create, credentials dialog handles cleanup.
+      if (editingInstructor) {
+        setIsDialogOpen(false);
+        setEditingInstructor(null);
+        resetForm();
+        fetchInstructors();
+      }
     } catch (error: any) {
       console.error('Error saving employee:', error);
       toast({
@@ -1125,6 +1135,21 @@ export default function InstructorsPage() {
           onSuccess={fetchInstructors}
         />
       )}
+
+      {/* Credentials Dialog */}
+      <CredentialsDialog
+        open={credentialsDialog.open}
+        onClose={() => {
+          setCredentialsDialog({ open: false, email: '', password: '', name: '' });
+          setIsDialogOpen(false);
+          setEditingInstructor(null);
+          resetForm();
+          fetchInstructors();
+        }}
+        email={credentialsDialog.email}
+        password={credentialsDialog.password}
+        userName={credentialsDialog.name}
+      />
     </DashboardLayout>
   );
 }
