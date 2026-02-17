@@ -89,7 +89,6 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
         payment_type: paymentType,
         total_amount: totalAmount,
         paid_amount: paidAmount,
-        remaining_amount: remaining,
         installment_amount: paymentType === 'installment' ? installmentAmount : null,
         next_payment_date: nextPaymentDate || null,
         is_suspended: isSuspended,
