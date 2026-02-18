@@ -177,13 +177,16 @@ export function GlobalSearch() {
     <>
       <Button
         variant="outline"
-        className="relative h-9 w-full justify-start px-3 py-2"
+        className="relative h-9 w-9 md:w-64 md:justify-start md:px-3 md:py-2"
         onClick={() => setOpen(true)}
       >
-        <Search className="h-4 w-4 shrink-0 ltr:mr-2 rtl:ml-2" />
-        <span className="text-muted-foreground text-sm">
+        <Search className="h-4 w-4 md:mr-2" />
+        <span className="hidden md:inline-flex text-muted-foreground text-sm">
           {isRTL ? 'بحث...' : 'Search...'}
         </span>
+        <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 md:flex">
+          <span className="text-xs">⌘</span>K
+        </kbd>
       </Button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
