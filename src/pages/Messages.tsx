@@ -101,6 +101,91 @@ async function ensureStudentInstructorConversations(userId: string) {
   }
 }
 
+/**
+ * Auto-create conversations between an instructor and all their active group students.
+ */
+async function ensureInstructorStudentConversations(userId: string) {
+  // 1. Get instructor's active groups
+  const { data: groups } = await supabase
+    .from('groups')
+    .select('id')
+    .eq('instructor_id', userId)
+    .eq('is_active', true);
+
+  if (!groups?.length) return;
+
+  const groupIds = groups.map(g => g.id);
+
+  // 2. Get all active students in those groups
+  const { data: groupStudents } = await supabase
+    .from('group_students')
+    .select('student_id')
+    .in('group_id', groupIds)
+    .eq('is_active', true);
+
+  if (!groupStudents?.length) return;
+
+  const studentIds = [...new Set(groupStudents.map(gs => gs.student_id))];
+
+  // 3. Get instructor's existing conversations
+  const { data: myConvs } = await supabase
+    .from('conversation_participants')
+    .select('conversation_id')
+    .eq('user_id', userId);
+
+  const myConvIds = (myConvs || []).map(c => c.conversation_id);
+
+  for (const studentId of studentIds) {
+    let conversationExists = false;
+
+    if (myConvIds.length) {
+      const { data: theirConvs } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', studentId)
+        .in('conversation_id', myConvIds);
+
+      if (theirConvs?.length) {
+        for (const conv of theirConvs) {
+          const { count } = await supabase
+            .from('conversation_participants')
+            .select('*', { count: 'exact', head: true })
+            .eq('conversation_id', conv.conversation_id);
+          if (count === 2) {
+            conversationExists = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!conversationExists) {
+      const convId = crypto.randomUUID();
+      const { error: convError } = await supabase
+        .from('conversations')
+        .insert({ id: convId });
+
+      if (convError) {
+        console.error('Failed to auto-create conversation:', convError);
+        continue;
+      }
+
+      const { error: partError } = await supabase
+        .from('conversation_participants')
+        .insert([
+          { conversation_id: convId, user_id: userId },
+          { conversation_id: convId, user_id: studentId },
+        ]);
+
+      if (partError) {
+        console.error('Failed to add participants:', partError);
+      }
+
+      myConvIds.push(convId);
+    }
+  }
+}
+
 export default function Messages() {
   const { isRTL } = useLanguage();
   const { user, role } = useAuth();
@@ -126,12 +211,19 @@ export default function Messages() {
 
   // Auto-create conversations for students with their instructors (once per session)
   useEffect(() => {
-    if (!user?.id || role !== 'student' || autoCreatedRef.current) return;
+    if (!user?.id || autoCreatedRef.current) return;
+    if (role !== 'student' && role !== 'instructor') return;
     autoCreatedRef.current = true;
 
-    ensureStudentInstructorConversations(user.id).then(() => {
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    });
+    if (role === 'student') {
+      ensureStudentInstructorConversations(user.id).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      });
+    } else if (role === 'instructor') {
+      ensureInstructorStudentConversations(user.id).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      });
+    }
   }, [user?.id, role, queryClient]);
 
   // Fetch conversations
@@ -224,7 +316,7 @@ export default function Messages() {
 
   return (
     <DashboardLayout title={isRTL ? 'الرسائل' : 'Messages'}>
-      {notifPermission !== 'granted' && notifPermission !== 'denied' && notifPermission !== 'unsupported' && (
+      {(role === 'student' || role === 'instructor') && notifPermission !== 'granted' && notifPermission !== 'denied' && notifPermission !== 'unsupported' && (
         <div className="mb-3 flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
           <Bell className="h-5 w-5 text-primary shrink-0" />
           <p className="text-sm text-muted-foreground flex-1">
