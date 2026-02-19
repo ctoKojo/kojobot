@@ -152,6 +152,7 @@ export type Database = {
           attachment_type: string | null
           attachment_url: string | null
           created_at: string
+          curriculum_snapshot: Json | null
           description: string | null
           description_ar: string | null
           due_date: string
@@ -170,6 +171,7 @@ export type Database = {
           attachment_type?: string | null
           attachment_url?: string | null
           created_at?: string
+          curriculum_snapshot?: Json | null
           description?: string | null
           description_ar?: string | null
           due_date: string
@@ -188,6 +190,7 @@ export type Database = {
           attachment_type?: string | null
           attachment_url?: string | null
           created_at?: string
+          curriculum_snapshot?: Json | null
           description?: string | null
           description_ar?: string | null
           due_date?: string
@@ -227,7 +230,9 @@ export type Database = {
       }
       attendance: {
         Row: {
+          compensation_status: string | null
           id: string
+          makeup_session_id: string | null
           notes: string | null
           recorded_at: string
           recorded_by: string
@@ -236,7 +241,9 @@ export type Database = {
           student_id: string
         }
         Insert: {
+          compensation_status?: string | null
           id?: string
+          makeup_session_id?: string | null
           notes?: string | null
           recorded_at?: string
           recorded_by: string
@@ -245,7 +252,9 @@ export type Database = {
           student_id: string
         }
         Update: {
+          compensation_status?: string | null
           id?: string
+          makeup_session_id?: string | null
           notes?: string | null
           recorded_at?: string
           recorded_by?: string
@@ -254,6 +263,13 @@ export type Database = {
           student_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "attendance_makeup_session_id_fkey"
+            columns: ["makeup_session_id"]
+            isOneToOne: false
+            referencedRelation: "makeup_sessions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "attendance_session_id_fkey"
             columns: ["session_id"]
@@ -269,6 +285,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      content_access_rules: {
+        Row: {
+          attendance_mode: string
+          can_view_assignment: boolean | null
+          can_view_full_video: boolean | null
+          can_view_quiz: boolean | null
+          can_view_slides: boolean | null
+          can_view_summary_video: boolean | null
+          created_at: string
+          effective_from: string | null
+          id: string
+          is_active: boolean | null
+          subscription_type: string
+          updated_at: string
+        }
+        Insert: {
+          attendance_mode: string
+          can_view_assignment?: boolean | null
+          can_view_full_video?: boolean | null
+          can_view_quiz?: boolean | null
+          can_view_slides?: boolean | null
+          can_view_summary_video?: boolean | null
+          created_at?: string
+          effective_from?: string | null
+          id?: string
+          is_active?: boolean | null
+          subscription_type: string
+          updated_at?: string
+        }
+        Update: {
+          attendance_mode?: string
+          can_view_assignment?: boolean | null
+          can_view_full_video?: boolean | null
+          can_view_quiz?: boolean | null
+          can_view_slides?: boolean | null
+          can_view_summary_video?: boolean | null
+          created_at?: string
+          effective_from?: string | null
+          id?: string
+          is_active?: boolean | null
+          subscription_type?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       conversation_participants: {
         Row: {
@@ -322,6 +383,112 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      curriculum_sessions: {
+        Row: {
+          age_group_id: string
+          assignment_attachment_type: string | null
+          assignment_attachment_url: string | null
+          assignment_description: string | null
+          assignment_description_ar: string | null
+          assignment_max_score: number | null
+          assignment_title: string | null
+          assignment_title_ar: string | null
+          created_at: string
+          description: string | null
+          description_ar: string | null
+          full_video_url: string | null
+          id: string
+          is_active: boolean | null
+          is_published: boolean | null
+          level_id: string
+          published_at: string | null
+          quiz_id: string | null
+          session_number: number
+          slides_url: string | null
+          summary_video_url: string | null
+          title: string
+          title_ar: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          age_group_id: string
+          assignment_attachment_type?: string | null
+          assignment_attachment_url?: string | null
+          assignment_description?: string | null
+          assignment_description_ar?: string | null
+          assignment_max_score?: number | null
+          assignment_title?: string | null
+          assignment_title_ar?: string | null
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          full_video_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_published?: boolean | null
+          level_id: string
+          published_at?: string | null
+          quiz_id?: string | null
+          session_number: number
+          slides_url?: string | null
+          summary_video_url?: string | null
+          title?: string
+          title_ar?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          age_group_id?: string
+          assignment_attachment_type?: string | null
+          assignment_attachment_url?: string | null
+          assignment_description?: string | null
+          assignment_description_ar?: string | null
+          assignment_max_score?: number | null
+          assignment_title?: string | null
+          assignment_title_ar?: string | null
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          full_video_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_published?: boolean | null
+          level_id?: string
+          published_at?: string | null
+          quiz_id?: string | null
+          session_number?: number
+          slides_url?: string | null
+          summary_video_url?: string | null
+          title?: string
+          title_ar?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_sessions_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curriculum_sessions_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curriculum_sessions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employee_salaries: {
         Row: {
@@ -752,10 +919,12 @@ export type Database = {
           assigned_instructor_id: string | null
           completed_at: string | null
           created_at: string
+          curriculum_session_id: string | null
           group_id: string
           id: string
           is_free: boolean
           level_id: string | null
+          makeup_type: string
           notes: string | null
           original_session_id: string | null
           reason: string
@@ -769,10 +938,12 @@ export type Database = {
           assigned_instructor_id?: string | null
           completed_at?: string | null
           created_at?: string
+          curriculum_session_id?: string | null
           group_id: string
           id?: string
           is_free?: boolean
           level_id?: string | null
+          makeup_type?: string
           notes?: string | null
           original_session_id?: string | null
           reason: string
@@ -786,10 +957,12 @@ export type Database = {
           assigned_instructor_id?: string | null
           completed_at?: string | null
           created_at?: string
+          curriculum_session_id?: string | null
           group_id?: string
           id?: string
           is_free?: boolean
           level_id?: string | null
+          makeup_type?: string
           notes?: string | null
           original_session_id?: string | null
           reason?: string
@@ -800,6 +973,13 @@ export type Database = {
           student_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "makeup_sessions_curriculum_session_id_fkey"
+            columns: ["curriculum_session_id"]
+            isOneToOne: false
+            referencedRelation: "curriculum_sessions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "makeup_sessions_group_id_fkey"
             columns: ["group_id"]
@@ -1252,6 +1432,7 @@ export type Database = {
         Row: {
           assigned_by: string
           created_at: string
+          curriculum_snapshot: Json | null
           due_date: string | null
           group_id: string | null
           id: string
@@ -1264,6 +1445,7 @@ export type Database = {
         Insert: {
           assigned_by: string
           created_at?: string
+          curriculum_snapshot?: Json | null
           due_date?: string | null
           group_id?: string | null
           id?: string
@@ -1276,6 +1458,7 @@ export type Database = {
         Update: {
           assigned_by?: string
           created_at?: string
+          curriculum_snapshot?: Json | null
           due_date?: string | null
           group_id?: string | null
           id?: string
@@ -1759,6 +1942,44 @@ export type Database = {
           },
         ]
       }
+      student_makeup_credits: {
+        Row: {
+          created_at: string
+          id: string
+          level_id: string
+          student_id: string
+          total_free_allowed: number
+          updated_at: string
+          used_free: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level_id: string
+          student_id: string
+          total_free_allowed?: number
+          updated_at?: string
+          used_free?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level_id?: string
+          student_id?: string
+          total_free_allowed?: number
+          updated_at?: string
+          used_free?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_makeup_credits_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           created_at: string
@@ -2136,6 +2357,44 @@ export type Database = {
           full_name: string
           full_name_ar: string
           user_id: string
+        }[]
+      }
+      get_curriculum_with_access: {
+        Args: {
+          p_age_group_id: string
+          p_attendance_mode?: string
+          p_level_id: string
+          p_session_number: number
+          p_subscription_type?: string
+        }
+        Returns: {
+          age_group_id: string
+          assignment_attachment_type: string
+          assignment_attachment_url: string
+          assignment_description: string
+          assignment_description_ar: string
+          assignment_max_score: number
+          assignment_title: string
+          assignment_title_ar: string
+          can_view_assignment: boolean
+          can_view_full_video: boolean
+          can_view_quiz: boolean
+          can_view_slides: boolean
+          can_view_summary_video: boolean
+          description: string
+          description_ar: string
+          full_video_url: string
+          id: string
+          is_published: boolean
+          level_id: string
+          published_at: string
+          quiz_id: string
+          session_number: number
+          slides_url: string
+          summary_video_url: string
+          title: string
+          title_ar: string
+          version: number
         }[]
       }
       get_group_max_students: {

@@ -108,6 +108,7 @@ export function AppSidebar() {
 
   // Settings category (Admin only) + Reception personal items
   const settingsNavItems: NavItem[] = [
+    { title: isRTL ? 'المنهج' : 'Curriculum', url: '/curriculum', icon: Library, roles: ['admin'] },
     { title: t.nav.ageGroups, url: '/age-groups', icon: Layers, roles: ['admin'] },
     { title: t.nav.levels, url: '/levels', icon: BookOpen, roles: ['admin'] },
     { title: isRTL ? 'إنذارات المدربين' : 'Instructor Warnings', url: '/instructor-warnings', icon: AlertTriangle, roles: ['admin'] },
