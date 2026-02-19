@@ -559,6 +559,51 @@ export type Database = {
           },
         ]
       }
+      instructor_performance_metrics: {
+        Row: {
+          avg_grading_time_hours: number
+          avg_reply_time_hours: number
+          created_at: string
+          id: string
+          instructor_id: string
+          month: string
+          quality_score: number
+          total_groups: number
+          total_reminders: number
+          total_students: number
+          total_warnings: number
+          updated_at: string
+        }
+        Insert: {
+          avg_grading_time_hours?: number
+          avg_reply_time_hours?: number
+          created_at?: string
+          id?: string
+          instructor_id: string
+          month: string
+          quality_score?: number
+          total_groups?: number
+          total_reminders?: number
+          total_students?: number
+          total_warnings?: number
+          updated_at?: string
+        }
+        Update: {
+          avg_grading_time_hours?: number
+          avg_reply_time_hours?: number
+          created_at?: string
+          id?: string
+          instructor_id?: string
+          month?: string
+          quality_score?: number
+          total_groups?: number
+          total_reminders?: number
+          total_students?: number
+          total_warnings?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       instructor_schedules: {
         Row: {
           created_at: string
@@ -607,7 +652,10 @@ export type Database = {
           issued_by: string | null
           reason: string
           reason_ar: string | null
+          reference_id: string | null
+          reference_type: string | null
           session_id: string | null
+          severity: string
           warning_type: string
         }
         Insert: {
@@ -618,7 +666,10 @@ export type Database = {
           issued_by?: string | null
           reason: string
           reason_ar?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
           session_id?: string | null
+          severity?: string
           warning_type: string
         }
         Update: {
@@ -629,7 +680,10 @@ export type Database = {
           issued_by?: string | null
           reason?: string
           reason_ar?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
           session_id?: string | null
+          severity?: string
           warning_type?: string
         }
         Relationships: [
@@ -977,6 +1031,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      performance_events: {
+        Row: {
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          instructor_id: string
+          is_archived: boolean
+          reference_id: string | null
+          reference_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          instructor_id: string
+          is_archived?: boolean
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          instructor_id?: string
+          is_archived?: boolean
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Relationships: []
       }
       pricing_plans: {
         Row: {
@@ -1740,6 +1827,39 @@ export type Database = {
           },
         ]
       }
+      system_health_metrics: {
+        Row: {
+          avg_execution_time_ms: number
+          created_at: string
+          date: string
+          errors_count: number
+          id: string
+          total_deductions: number
+          total_reminders: number
+          total_warnings: number
+        }
+        Insert: {
+          avg_execution_time_ms?: number
+          created_at?: string
+          date: string
+          errors_count?: number
+          id?: string
+          total_deductions?: number
+          total_reminders?: number
+          total_warnings?: number
+        }
+        Update: {
+          avg_execution_time_ms?: number
+          created_at?: string
+          date?: string
+          errors_count?: number
+          id?: string
+          total_deductions?: number
+          total_reminders?: number
+          total_warnings?: number
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           id: string
@@ -1813,29 +1933,38 @@ export type Database = {
       }
       warning_deduction_rules: {
         Row: {
+          action: string
           created_at: string
           deduction_amount: number
           id: string
           is_active: boolean
+          severity: string
           updated_at: string
+          version: number
           warning_count: number
           warning_type: string
         }
         Insert: {
+          action?: string
           created_at?: string
           deduction_amount?: number
           id?: string
           is_active?: boolean
+          severity?: string
           updated_at?: string
+          version?: number
           warning_count?: number
           warning_type: string
         }
         Update: {
+          action?: string
           created_at?: string
           deduction_amount?: number
           id?: string
           is_active?: boolean
+          severity?: string
           updated_at?: string
+          version?: number
           warning_count?: number
           warning_type?: string
         }
@@ -1989,6 +2118,16 @@ export type Database = {
       assign_subscription_dates_bulk: {
         Args: { p_group_id: string }
         Returns: Json
+      }
+      compute_quality_score: {
+        Args: {
+          p_avg_grading: number
+          p_avg_reply: number
+          p_reminders: number
+          p_total_students: number
+          p_warnings: number
+        }
+        Returns: number
       }
       get_conversation_participant_profiles: {
         Args: { p_user_ids: string[] }
