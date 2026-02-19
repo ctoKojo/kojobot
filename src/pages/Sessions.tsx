@@ -255,6 +255,7 @@ export default function SessionsPage() {
               level_id: levelId,
               reason: 'group_cancelled',
               is_free: isFree,
+              makeup_type: 'group_cancellation',
             });
           }
 

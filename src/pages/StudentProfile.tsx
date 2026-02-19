@@ -34,6 +34,83 @@ interface StudentData {
   makeupSessions: any[];
 }
 
+function MakeupCreditsDisplay({ studentId }: { studentId: string }) {
+  const { isRTL } = useLanguage();
+  const [credits, setCredits] = useState<any[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from('student_makeup_credits')
+      .select('*, levels(name, name_ar)')
+      .eq('student_id', studentId)
+      .then(({ data }) => setCredits(data || []));
+  }, [studentId]);
+
+  if (credits.length === 0) {
+    return <span>{isRTL ? 'لا يوجد رصيد تعويضي مسجل' : 'No makeup credits recorded'}</span>;
+  }
+
+  return (
+    <div className="space-y-1">
+      {credits.map((c: any) => {
+        const remaining = Math.max(0, c.total_free_allowed - c.used_free);
+        const levelName = isRTL ? (c.levels?.name_ar || c.levels?.name) : (c.levels?.name || '');
+        return (
+          <div key={c.id} className="text-sm">
+            {levelName}: <Badge variant={remaining === 0 ? 'destructive' : 'secondary'}>{remaining}/{c.total_free_allowed} {isRTL ? 'متبقية' : 'remaining'}</Badge>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function LevelProgressGrid({ studentId, attendance, makeupSessions }: { studentId: string; attendance: any[]; makeupSessions: any[] }) {
+  const { isRTL, language } = useLanguage();
+  
+  // Build a 1-12 session progress grid from attendance data
+  const sessionMap = new Map<number, string>();
+  
+  attendance.forEach((a: any) => {
+    const sessionNum = a.sessions?.session_number;
+    if (sessionNum) {
+      if (a.status === 'present' || a.status === 'late') {
+        sessionMap.set(sessionNum, 'present');
+      } else if (a.compensation_status === 'compensated') {
+        sessionMap.set(sessionNum, 'compensated');
+      } else if (a.status === 'absent') {
+        sessionMap.set(sessionNum, 'absent');
+      }
+    }
+  });
+
+  return (
+    <div>
+      <p className="text-sm font-medium mb-2">{isRTL ? 'تقدم الليفل (1-12)' : 'Level Progress (1-12)'}</p>
+      <div className="grid grid-cols-6 sm:grid-cols-12 gap-1">
+        {Array.from({ length: 12 }, (_, i) => i + 1).map(num => {
+          const status = sessionMap.get(num);
+          const bgClass = status === 'present' ? 'bg-green-500 text-white' :
+                          status === 'compensated' ? 'bg-blue-500 text-white' :
+                          status === 'absent' ? 'bg-red-500 text-white' :
+                          'bg-muted text-muted-foreground';
+          return (
+            <div key={num} className={`w-full aspect-square rounded flex items-center justify-center text-xs font-medium ${bgClass}`}>
+              {num}
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
+        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-green-500" />{isRTL ? 'حضر' : 'Present'}</span>
+        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-blue-500" />{isRTL ? 'عوّض' : 'Compensated'}</span>
+        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-500" />{isRTL ? 'غاب' : 'Absent'}</span>
+        <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-muted" />{isRTL ? 'لم يبدأ' : 'Not started'}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function StudentProfile() {
   const { studentId } = useParams();
   const navigate = useNavigate();
@@ -79,7 +156,7 @@ export default function StudentProfile() {
       // Fetch attendance
       const { data: attendance } = await supabase
         .from('attendance')
-        .select('*, sessions(session_date, session_time, topic, topic_ar)')
+        .select('*, sessions(session_date, session_time, session_number, topic, topic_ar)')
         .eq('student_id', studentId)
         .order('recorded_at', { ascending: false })
         .limit(50);
@@ -605,23 +682,20 @@ export default function StudentProfile() {
                   {isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions'}
                 </CardTitle>
                 <CardDescription>
-                  {(() => {
-                    const freeUsed = data.makeupSessions.filter((m: any) => m.is_free).length;
-                    const freeRemaining = Math.max(0, 2 - freeUsed);
-                    return isRTL 
-                      ? `الرصيد المجاني: ${freeRemaining}/2 سيشن متبقية`
-                      : `Free balance: ${freeRemaining}/2 sessions remaining`;
-                  })()}
+                  <MakeupCreditsDisplay studentId={studentId!} />
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="mb-4 p-3 rounded-lg border bg-muted/50">
+                {/* Level Progress Grid */}
+                <LevelProgressGrid studentId={studentId!} attendance={data.attendance} makeupSessions={data.makeupSessions} />
+                
+                <div className="mb-4 mt-4 p-3 rounded-lg border bg-muted/50">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">
-                      {isRTL ? 'السيشنات المجانية المستخدمة' : 'Free sessions used'}
+                      {isRTL ? 'السيشنات المعوضة' : 'Compensated sessions'}
                     </span>
-                    <Badge variant={data.makeupSessions.filter((m: any) => m.is_free).length >= 2 ? 'destructive' : 'secondary'}>
-                      {data.makeupSessions.filter((m: any) => m.is_free).length} / 2
+                    <Badge variant="secondary">
+                      {data.makeupSessions.filter((m: any) => m.status === 'completed').length} / {data.makeupSessions.length}
                     </Badge>
                   </div>
                 </div>
