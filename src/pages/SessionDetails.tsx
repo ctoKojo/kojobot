@@ -57,8 +57,6 @@ import {
   FileQuestion,
   ClipboardList,
   AlertCircle,
-  Plus,
-  Import,
   UserCheck,
   Video,
   Pencil,
@@ -149,11 +147,6 @@ interface StudentData {
   assignment_status: string | null;
 }
 
-interface Quiz {
-  id: string;
-  title: string;
-  title_ar: string;
-}
 
 export default function SessionDetails() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -174,14 +167,7 @@ export default function SessionDetails() {
   const [assigningCurriculumQuiz, setAssigningCurriculumQuiz] = useState(false);
   const [assigningCurriculumAssignment, setAssigningCurriculumAssignment] = useState(false);
   
-  // Import quiz dialog
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [availableQuizzes, setAvailableQuizzes] = useState<Quiz[]>([]);
-  const [selectedQuizId, setSelectedQuizId] = useState('');
-  const [quizStartTime, setQuizStartTime] = useState('');
-  const [importing, setImporting] = useState(false);
-  
-  // Create/Edit assignment dialog
+  // Edit assignment dialog (for editing existing assignments only)
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState(false);
   const [assignmentForm, setAssignmentForm] = useState({
@@ -498,14 +484,6 @@ export default function SessionDetails() {
     }
   };
 
-  const fetchAvailableQuizzes = async () => {
-    const { data } = await supabase
-      .from('quizzes')
-      .select('id, title, title_ar')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false });
-    setAvailableQuizzes(data || []);
-  };
 
   // One-click assign curriculum quiz
   const handleAssignCurriculumQuiz = async () => {
@@ -604,55 +582,6 @@ export default function SessionDetails() {
     }
   };
 
-  const handleImportQuiz = async () => {
-    if (!selectedQuizId || !quizStartTime || !session || !user) return;
-    
-    setImporting(true);
-    try {
-      // Get quiz duration
-      const { data: quiz } = await supabase
-        .from('quizzes')
-        .select('duration_minutes')
-        .eq('id', selectedQuizId)
-        .single();
-      
-      const startDate = new Date(quizStartTime);
-      const dueDate = new Date(startDate.getTime() + (quiz?.duration_minutes || 30) * 60 * 1000);
-      
-      const { error } = await supabase
-        .from('quiz_assignments')
-        .insert({
-          quiz_id: selectedQuizId,
-          session_id: session.id,
-          group_id: session.group_id,
-          assigned_by: user.id,
-          start_time: startDate.toISOString(),
-          due_date: dueDate.toISOString(),
-        });
-      
-      if (error) throw error;
-      
-      toast({
-        title: isRTL ? 'تم الإضافة' : 'Quiz Added',
-        description: isRTL ? 'تم إضافة الكويز للسيشن بنجاح' : 'Quiz added to session successfully',
-      });
-      
-      setImportDialogOpen(false);
-      setSelectedQuizId('');
-      setQuizStartTime('');
-      fetchSessionData();
-      // Auto-confirm instructor attendance
-      autoConfirmInstructorAttendance();
-    } catch (error: any) {
-      toast({
-        title: isRTL ? 'خطأ' : 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setImporting(false);
-    }
-  };
 
   const handleSaveAssignment = async () => {
     if (!assignmentForm.title || !assignmentForm.due_date || !session || !user) return;
@@ -668,7 +597,7 @@ export default function SessionDetails() {
         const fileExt = assignmentFile.name.split('.').pop();
         const fileName = `${session.id}-${Date.now()}.${fileExt}`;
         
-        const { error: uploadError, data: uploadData } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('assignments')
           .upload(fileName, assignmentFile);
         
@@ -679,7 +608,6 @@ export default function SessionDetails() {
           .getPublicUrl(fileName);
         
         attachmentUrl = publicUrl.publicUrl;
-        // Map MIME type to allowed database values: 'text', 'image', 'pdf', 'video'
         const mimeType = assignmentFile.type;
         if (mimeType.startsWith('image/')) {
           attachmentType = 'image';
@@ -688,13 +616,13 @@ export default function SessionDetails() {
         } else if (mimeType.startsWith('video/')) {
           attachmentType = 'video';
         } else {
-          attachmentType = 'text'; // Default for documents, audio, etc.
+          attachmentType = 'text';
         }
         setUploadingFile(false);
       }
       
       if (editingAssignment && assignment) {
-        // Update existing assignment
+        // Update existing assignment only
         const updateData: any = {
           title: assignmentForm.title,
           title_ar: assignmentForm.title,
@@ -704,7 +632,6 @@ export default function SessionDetails() {
           due_date: new Date(assignmentForm.due_date).toISOString(),
         };
         
-        // Only update attachment if new file was uploaded
         if (attachmentUrl) {
           updateData.attachment_url = attachmentUrl;
           updateData.attachment_type = attachmentType;
@@ -721,30 +648,6 @@ export default function SessionDetails() {
           title: isRTL ? 'تم التحديث' : 'Assignment Updated',
           description: isRTL ? 'تم تحديث الواجب بنجاح' : 'Assignment updated successfully',
         });
-      } else {
-        // Create new assignment
-        const { error } = await supabase
-          .from('assignments')
-          .insert({
-            title: assignmentForm.title,
-            title_ar: assignmentForm.title,
-            description: assignmentForm.description || null,
-            description_ar: assignmentForm.description || null,
-            max_score: assignmentForm.max_score,
-            due_date: new Date(assignmentForm.due_date).toISOString(),
-            session_id: session.id,
-            group_id: session.group_id,
-            assigned_by: user.id,
-            attachment_url: attachmentUrl,
-            attachment_type: attachmentType,
-          });
-        
-        if (error) throw error;
-        
-        toast({
-          title: isRTL ? 'تم الإنشاء' : 'Assignment Created',
-          description: isRTL ? 'تم إنشاء الواجب بنجاح' : 'Assignment created successfully',
-        });
       }
       
       setAssignmentDialogOpen(false);
@@ -752,7 +655,6 @@ export default function SessionDetails() {
       setAssignmentForm({ title: '', description: '', max_score: 100, due_date: '' });
       setAssignmentFile(null);
       fetchSessionData();
-      // Auto-confirm instructor attendance
       autoConfirmInstructorAttendance();
     } catch (error: any) {
       toast({
@@ -1395,53 +1297,6 @@ export default function SessionDetails() {
           </Card>
         </div>
 
-        {/* Actions for adding quiz/assignment */}
-        {canManage && (!quizAssignment || !assignment) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">{isRTL ? 'إضافة محتوى السيشن' : 'Add Session Content'}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex gap-4 flex-wrap">
-              {!quizAssignment && (
-                <Button
-                  onClick={() => {
-                    fetchAvailableQuizzes();
-                    // Auto-suggest start time based on session date + time
-                    if (session) {
-                      const suggestedStart = `${session.session_date}T${session.session_time.slice(0, 5)}`;
-                      setQuizStartTime(suggestedStart);
-                    }
-                    setImportDialogOpen(true);
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Import className="h-4 w-4" />
-                  {isRTL ? 'استيراد كويز من البنك' : 'Import Quiz from Bank'}
-                </Button>
-              )}
-              {!assignment && (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setEditingAssignment(false);
-                    // Auto-suggest due date: session date + 7 days at session time
-                    const suggestedDue = session ? (() => {
-                      const d = new Date(session.session_date + 'T' + session.session_time.slice(0, 5));
-                      d.setDate(d.getDate() + 7);
-                      return d.toISOString().slice(0, 16);
-                    })() : '';
-                    setAssignmentForm({ title: '', description: '', max_score: 100, due_date: suggestedDue });
-                    setAssignmentDialogOpen(true);
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  {isRTL ? 'إنشاء واجب' : 'Create Assignment'}
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
 
         {/* Instructor Attendance Card */}
         {group?.instructor_id && (role === 'admin' || role === 'reception' || (role === 'instructor' && user?.id === group.instructor_id)) && (
@@ -1555,51 +1410,6 @@ export default function SessionDetails() {
           </CardContent>
         </Card>
 
-        {/* Import Quiz Dialog */}
-        <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{isRTL ? 'استيراد كويز من البنك' : 'Import Quiz from Bank'}</DialogTitle>
-              <DialogDescription>
-                {isRTL ? 'اختر كويز من بنك الأسئلة لإضافته لهذه السيشن' : 'Select a quiz from the question bank to add to this session'}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label>{isRTL ? 'الكويز' : 'Quiz'}</Label>
-                <Select value={selectedQuizId} onValueChange={setSelectedQuizId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={isRTL ? 'اختر كويز...' : 'Select quiz...'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableQuizzes.map(quiz => (
-                      <SelectItem key={quiz.id} value={quiz.id}>
-                        {language === 'ar' ? quiz.title_ar : quiz.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-2">
-                <Label>{isRTL ? 'وقت البدء' : 'Start Time'}</Label>
-                <Input
-                  type="datetime-local"
-                  value={quizStartTime}
-                  onChange={(e) => setQuizStartTime(e.target.value)}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
-                {isRTL ? 'إلغاء' : 'Cancel'}
-              </Button>
-              <Button onClick={handleImportQuiz} disabled={importing || !selectedQuizId || !quizStartTime}>
-                {importing ? (isRTL ? 'جاري الاستيراد...' : 'Importing...') : (isRTL ? 'استيراد' : 'Import')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
         {/* Edit Quiz Time Dialog */}
         <Dialog open={editQuizDialogOpen} onOpenChange={setEditQuizDialogOpen}>
           <DialogContent>
@@ -1627,21 +1437,15 @@ export default function SessionDetails() {
           </DialogContent>
         </Dialog>
 
-        {/* Create/Edit Assignment Dialog */}
+        {/* Edit Assignment Dialog */}
         <Dialog open={assignmentDialogOpen} onOpenChange={setAssignmentDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>
-                {editingAssignment 
-                  ? (isRTL ? 'تعديل الواجب' : 'Edit Assignment')
-                  : (isRTL ? 'إنشاء واجب جديد' : 'Create New Assignment')
-                }
+                {isRTL ? 'تعديل الواجب' : 'Edit Assignment'}
               </DialogTitle>
               <DialogDescription>
-                {editingAssignment
-                  ? (isRTL ? 'عدّل تفاصيل الواجب' : 'Edit assignment details')
-                  : (isRTL ? 'أنشئ واجب جديد لهذه السيشن' : 'Create a new assignment for this session')
-                }
+                {isRTL ? 'عدّل تفاصيل الواجب' : 'Edit assignment details'}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">

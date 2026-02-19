@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,16 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -31,8 +21,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { 
   FileQuestion, 
@@ -43,28 +31,8 @@ import {
   CheckCircle, 
   XCircle,
   ChevronRight,
-  Send,
   Trash2,
-  BookOpen
 } from 'lucide-react';
-
-interface Quiz {
-  id: string;
-  title: string;
-  title_ar: string;
-  description: string | null;
-  description_ar: string | null;
-  duration_minutes: number;
-  passing_score: number;
-  level?: { name: string; name_ar: string } | null;
-  age_group?: { name: string; name_ar: string } | null;
-}
-
-interface Group {
-  id: string;
-  name: string;
-  name_ar: string;
-}
 
 interface AssignedQuiz {
   id: string;
@@ -109,21 +77,9 @@ interface QuestionDetail {
 
 export default function MyInstructorQuizzes() {
   const { isRTL, language } = useLanguage();
-  const { user, role } = useAuth();
+  const { user } = useAuth();
   
-  // Available quizzes tab
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [loadingQuizzes, setLoadingQuizzes] = useState(true);
-  
-  // Assignment dialog
-  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
-  const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
-  const [selectedGroupId, setSelectedGroupId] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [assigning, setAssigning] = useState(false);
-  
-  // My assignments tab
+  // My assignments
   const [assignedQuizzes, setAssignedQuizzes] = useState<AssignedQuiz[]>([]);
   const [loadingAssignments, setLoadingAssignments] = useState(true);
   
@@ -139,60 +95,9 @@ export default function MyInstructorQuizzes() {
 
   useEffect(() => {
     if (user) {
-      fetchQuizzes();
-      fetchGroups();
       fetchAssignedQuizzes();
     }
   }, [user]);
-
-  const fetchQuizzes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('quizzes')
-        .select(`
-          id, title, title_ar, description, description_ar, 
-          duration_minutes, passing_score,
-          levels:level_id(name, name_ar),
-          age_groups:age_group_id(name, name_ar)
-        `)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setQuizzes(data?.map(q => ({
-        ...q,
-        level: q.levels,
-        age_group: q.age_groups,
-      })) || []);
-    } catch (error) {
-      console.error('Error fetching quizzes:', error);
-    } finally {
-      setLoadingQuizzes(false);
-    }
-  };
-
-  const fetchGroups = async () => {
-    if (!user) return;
-    try {
-      // Admin can see all active groups, instructors only see their own
-      let query = supabase
-        .from('groups')
-        .select('id, name, name_ar, status')
-        .eq('is_active', true)
-        .neq('status', 'frozen'); // Exclude frozen groups from assignment
-      
-      // If instructor, filter by their groups only
-      if (role === 'instructor') {
-        query = query.eq('instructor_id', user.id);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      setGroups(data || []);
-    } catch (error) {
-      console.error('Error fetching groups:', error);
-    }
-  };
 
   const fetchAssignedQuizzes = async () => {
     if (!user) return;
@@ -264,61 +169,6 @@ export default function MyInstructorQuizzes() {
       console.error('Error fetching assigned quizzes:', error);
     } finally {
       setLoadingAssignments(false);
-    }
-  };
-
-  const openAssignDialog = (quiz: Quiz) => {
-    setSelectedQuiz(quiz);
-    setSelectedGroupId('');
-    setStartTime('');
-    setAssignDialogOpen(true);
-  };
-
-  const getISOString = (localDateTime: string) => {
-    if (!localDateTime) return null;
-    const date = new Date(localDateTime);
-    return date.toISOString();
-  };
-
-  const handleAssignQuiz = async () => {
-    if (!selectedQuiz || !selectedGroupId || !startTime || !user) return;
-    
-    setAssigning(true);
-    try {
-      const startTimeISO = getISOString(startTime);
-      
-      // Calculate due_date based on quiz duration
-      const startDate = new Date(startTime);
-      const dueDate = new Date(startDate.getTime() + selectedQuiz.duration_minutes * 60 * 1000);
-
-      const { error } = await supabase
-        .from('quiz_assignments')
-        .insert({
-          quiz_id: selectedQuiz.id,
-          group_id: selectedGroupId,
-          assigned_by: user.id,
-          start_time: startTimeISO,
-          due_date: dueDate.toISOString(),
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: isRTL ? 'تم الإسناد بنجاح' : 'Quiz Assigned',
-        description: isRTL ? 'تم إسناد الكويز للمجموعة بنجاح' : 'The quiz has been assigned to the group',
-      });
-
-      setAssignDialogOpen(false);
-      fetchAssignedQuizzes();
-    } catch (error: any) {
-      console.error('Error assigning quiz:', error);
-      toast({
-        title: isRTL ? 'خطأ' : 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setAssigning(false);
     }
   };
 
@@ -489,7 +339,7 @@ export default function MyInstructorQuizzes() {
     : 0;
 
   return (
-    <DashboardLayout title={isRTL ? 'إسناد الكويزات' : 'Quiz Assignments'}>
+    <DashboardLayout title={isRTL ? 'نتائج الكويزات' : 'Quiz Results'}>
       <div className="space-y-6">
         {/* Stats */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
@@ -542,230 +392,87 @@ export default function MyInstructorQuizzes() {
           </Card>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="available" dir={isRTL ? 'rtl' : 'ltr'}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="available">
-              <BookOpen className="h-4 w-4 mr-2" />
-              {isRTL ? 'الكويزات المتاحة' : 'Available Quizzes'}
-            </TabsTrigger>
-            <TabsTrigger value="my-assignments">
-              <FileQuestion className="h-4 w-4 mr-2" />
-              {isRTL ? 'إسناداتي ونتائجي' : 'My Assignments & Results'}
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Available Quizzes Tab */}
-          <TabsContent value="available" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>{isRTL ? 'بنك الأسئلة' : 'Question Bank'}</CardTitle>
-                <CardDescription>
-                  {isRTL ? 'اختر كويز وأسنده لإحدى مجموعاتك' : 'Select a quiz and assign it to one of your groups'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingQuizzes ? (
-                  <div className="py-8 text-center text-muted-foreground">
-                    {isRTL ? 'جاري التحميل...' : 'Loading...'}
-                  </div>
-                ) : quizzes.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <FileQuestion className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">
-                      {isRTL ? 'لا توجد كويزات متاحة' : 'No quizzes available'}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {quizzes.map((quiz) => (
-                      <div
-                        key={quiz.id}
-                        className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">
-                            {language === 'ar' ? quiz.title_ar : quiz.title}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
-                            <span>{quiz.duration_minutes} {isRTL ? 'دقيقة' : 'min'}</span>
-                            <span>•</span>
-                            <span>{quiz.passing_score}% {isRTL ? 'للنجاح' : 'to pass'}</span>
-                            {quiz.level && (
-                              <>
-                                <span>•</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {language === 'ar' ? quiz.level.name_ar : quiz.level.name}
-                                </Badge>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <Button
-                          onClick={() => openAssignDialog(quiz)}
-                          size="sm"
-                          className="gap-2"
-                        >
-                          <Send className="h-4 w-4" />
-                          {isRTL ? 'إسناد' : 'Assign'}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* My Assignments Tab */}
-          <TabsContent value="my-assignments" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>{isRTL ? 'الكويزات المسندة' : 'Assigned Quizzes'}</CardTitle>
-                <CardDescription>
-                  {isRTL ? 'اضغط على أي كويز لعرض نتائج الطلاب' : 'Click on any quiz to view student results'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingAssignments ? (
-                  <div className="py-8 text-center text-muted-foreground">
-                    {isRTL ? 'جاري التحميل...' : 'Loading...'}
-                  </div>
-                ) : assignedQuizzes.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <FileQuestion className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">
-                      {isRTL ? 'لم تقم بإسناد أي كويزات بعد' : "You haven't assigned any quizzes yet"}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {assignedQuizzes.map((quiz) => (
-                      <div
-                        key={quiz.id}
-                        className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
-                      >
-                        <div 
-                          className="flex-1 min-w-0 cursor-pointer"
-                          onClick={() => handleViewDetails(quiz)}
-                        >
-                          <p className="font-medium truncate">
-                            {language === 'ar' ? quiz.quiz_title_ar : quiz.quiz_title}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                            <Badge variant="outline" className="text-xs">
-                              {language === 'ar' ? quiz.group_name_ar : quiz.group_name}
-                            </Badge>
-                            <span>•</span>
-                            <span>{formatDateTime(quiz.start_time)}</span>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-4">
-                          <div className="text-right hidden sm:block">
-                            <div className="flex items-center gap-2 text-sm">
-                              <span className="text-green-600 font-medium">{quiz.passed_count}</span>
-                              <span className="text-muted-foreground">/</span>
-                              <span>{quiz.completed_count}</span>
-                              <span className="text-muted-foreground">/</span>
-                              <span className="text-muted-foreground">{quiz.total_students}</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {isRTL ? 'ناجح / أكمل / إجمالي' : 'passed / completed / total'}
-                            </p>
-                          </div>
-                          <div className="w-16 hidden md:block">
-                            <Progress value={quiz.total_students > 0 ? (quiz.completed_count / quiz.total_students) * 100 : 0} />
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteAssignment(quiz.id);
-                            }}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                          <ChevronRight 
-                            className="h-5 w-5 text-muted-foreground cursor-pointer" 
-                            onClick={() => handleViewDetails(quiz)}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* Assign Quiz Dialog */}
-        <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {isRTL ? 'إسناد كويز' : 'Assign Quiz'}
-              </DialogTitle>
-              <DialogDescription>
-                {selectedQuiz && (language === 'ar' ? selectedQuiz.title_ar : selectedQuiz.title)}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>{isRTL ? 'المجموعة' : 'Group'}</Label>
-                <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={isRTL ? 'اختر مجموعة' : 'Select a group'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {language === 'ar' ? group.name_ar : group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        {/* Assigned Quizzes List */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{isRTL ? 'الكويزات المسندة' : 'Assigned Quizzes'}</CardTitle>
+            <CardDescription>
+              {isRTL ? 'اضغط على أي كويز لعرض نتائج الطلاب' : 'Click on any quiz to view student results'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingAssignments ? (
+              <div className="py-8 text-center text-muted-foreground">
+                {isRTL ? 'جاري التحميل...' : 'Loading...'}
               </div>
-
-              <div className="space-y-2">
-                <Label>{isRTL ? 'وقت البداية' : 'Start Time'}</Label>
-                <Input
-                  type="datetime-local"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                />
+            ) : assignedQuizzes.length === 0 ? (
+              <div className="py-8 text-center">
+                <FileQuestion className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">
+                  {isRTL ? 'لا توجد كويزات مسندة بعد' : "No quizzes assigned yet"}
+                </p>
               </div>
-
-              {selectedQuiz && (
-                <div className="p-3 bg-muted rounded-lg text-sm">
-                  <p className="text-muted-foreground">
-                    {isRTL ? 'مدة الكويز:' : 'Quiz duration:'} {selectedQuiz.duration_minutes} {isRTL ? 'دقيقة' : 'minutes'}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {isRTL ? 'سينتهي تلقائياً بعد المدة المحددة من وقت البداية' : 'Will end automatically after the specified duration from start time'}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
-                {isRTL ? 'إلغاء' : 'Cancel'}
-              </Button>
-              <Button 
-                onClick={handleAssignQuiz} 
-                disabled={!selectedGroupId || !startTime || assigning}
-              >
-                {assigning ? (isRTL ? 'جاري الإسناد...' : 'Assigning...') : (isRTL ? 'إسناد' : 'Assign')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            ) : (
+              <div className="space-y-3">
+                {assignedQuizzes.map((quiz) => (
+                  <div
+                    key={quiz.id}
+                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                  >
+                    <div 
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => handleViewDetails(quiz)}
+                    >
+                      <p className="font-medium truncate">
+                        {language === 'ar' ? quiz.quiz_title_ar : quiz.quiz_title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                        <Badge variant="outline" className="text-xs">
+                          {language === 'ar' ? quiz.group_name_ar : quiz.group_name}
+                        </Badge>
+                        <span>•</span>
+                        <span>{formatDateTime(quiz.start_time)}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4">
+                      <div className="text-right hidden sm:block">
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-green-600 font-medium">{quiz.passed_count}</span>
+                          <span className="text-muted-foreground">/</span>
+                          <span>{quiz.completed_count}</span>
+                          <span className="text-muted-foreground">/</span>
+                          <span className="text-muted-foreground">{quiz.total_students}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {isRTL ? 'ناجح / أكمل / إجمالي' : 'passed / completed / total'}
+                        </p>
+                      </div>
+                      <div className="w-16 hidden md:block">
+                        <Progress value={quiz.total_students > 0 ? (quiz.completed_count / quiz.total_students) * 100 : 0} />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteAssignment(quiz.id);
+                        }}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                      <ChevronRight 
+                        className="h-5 w-5 text-muted-foreground cursor-pointer" 
+                        onClick={() => handleViewDetails(quiz)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Student Results Dialog */}
         <Dialog open={!!selectedAssignment} onOpenChange={() => { setSelectedAssignment(null); setSelectedStudent(null); }}>
@@ -870,9 +577,13 @@ export default function MyInstructorQuizzes() {
         <Dialog open={!!selectedStudent} onOpenChange={() => setSelectedStudent(null)}>
           <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                {isRTL ? 'إجابات الطالب' : 'Student Answers'}: {selectedStudent && (language === 'ar' ? selectedStudent.student_name_ar : selectedStudent.student_name)}
+              <DialogTitle>
+                {selectedStudent && (language === 'ar' ? selectedStudent.student_name_ar : selectedStudent.student_name)}
+                {selectedStudent?.percentage !== null && (
+                  <Badge className={`ml-2 ${(selectedStudent?.percentage || 0) >= (selectedAssignment?.passing_score || 60) ? 'bg-green-500' : 'bg-red-500'}`}>
+                    {selectedStudent?.percentage}%
+                  </Badge>
+                )}
               </DialogTitle>
             </DialogHeader>
 
@@ -882,67 +593,49 @@ export default function MyInstructorQuizzes() {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Summary */}
-                {selectedStudent && (
-                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                    <div>
-                      <p className="text-sm text-muted-foreground">{isRTL ? 'الدرجة' : 'Score'}</p>
-                      <p className="text-xl font-bold">{selectedStudent.score}/{selectedStudent.max_score}</p>
+                {questionDetails.map((q, index) => (
+                  <div
+                    key={index}
+                    className={`p-4 rounded-lg border ${q.is_correct ? 'border-green-200 bg-green-50 dark:bg-green-950/20' : 'border-red-200 bg-red-50 dark:bg-red-950/20'}`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <p className="font-medium">
+                        {index + 1}. {language === 'ar' ? q.question_text_ar : q.question_text}
+                      </p>
+                      <Badge variant="outline" className="shrink-0 ml-2">
+                        {q.points} {isRTL ? 'نقطة' : 'pts'}
+                      </Badge>
                     </div>
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground">{isRTL ? 'النسبة' : 'Percentage'}</p>
-                      <p className="text-xl font-bold">{selectedStudent.percentage}%</p>
-                    </div>
-                    <div>
-                      {getStatusBadge(selectedStudent.status, selectedStudent.percentage, selectedAssignment?.passing_score || 60)}
-                    </div>
-                  </div>
-                )}
-
-                {/* Questions */}
-                <div className="space-y-4">
-                  {questionDetails.map((q, idx) => (
-                    <Card key={idx} className={q.is_correct ? 'border-green-200 bg-green-50/50' : 'border-red-200 bg-red-50/50'}>
-                      <CardContent className="pt-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <p className="font-medium mb-2">
-                              {idx + 1}. {language === 'ar' ? q.question_text_ar : q.question_text}
-                            </p>
-                            <div className="space-y-2">
-                              {Array.isArray(q.options) && q.options.map((opt, optIdx) => {
-                                const isCorrect = opt === q.correct_answer;
-                                const isSelected = opt === q.student_answer;
-                                
-                                return (
-                                  <div
-                                    key={optIdx}
-                                    className={`p-2 rounded-lg border ${
-                                      isCorrect
-                                        ? 'bg-green-100 border-green-300'
-                                        : isSelected
-                                        ? 'bg-red-100 border-red-300'
-                                        : 'bg-background'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      {isCorrect && <CheckCircle className="h-4 w-4 text-green-600" />}
-                                      {isSelected && !isCorrect && <XCircle className="h-4 w-4 text-red-600" />}
-                                      <span>{opt}</span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
+                    
+                    <div className="space-y-1 ml-4">
+                      {q.options.map((option, optIndex) => {
+                        const isCorrect = option === q.correct_answer;
+                        const isStudentAnswer = option === q.student_answer;
+                        
+                        return (
+                          <div
+                            key={optIndex}
+                            className={`flex items-center gap-2 p-2 rounded text-sm ${
+                              isCorrect ? 'bg-green-100 dark:bg-green-900/30 font-medium' :
+                              isStudentAnswer && !isCorrect ? 'bg-red-100 dark:bg-red-900/30' : ''
+                            }`}
+                          >
+                            {isCorrect && <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />}
+                            {isStudentAnswer && !isCorrect && <XCircle className="h-4 w-4 text-red-600 shrink-0" />}
+                            {!isCorrect && !isStudentAnswer && <span className="w-4 h-4 shrink-0" />}
+                            <span>{option}</span>
                           </div>
-                          <Badge variant={q.is_correct ? 'default' : 'destructive'} className={q.is_correct ? 'bg-green-500' : ''}>
-                            {q.is_correct ? q.points : 0}/{q.points}
-                          </Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {!q.student_answer && (
+                      <p className="text-sm text-muted-foreground mt-2 ml-4">
+                        {isRTL ? 'لم يُجب' : 'Not answered'}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </DialogContent>
