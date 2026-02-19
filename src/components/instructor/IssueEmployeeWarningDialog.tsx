@@ -24,7 +24,15 @@ const warningTypes = [
   { value: 'poor_performance', labelEn: 'Poor Performance', labelAr: 'أداء ضعيف' },
   { value: 'attendance', labelEn: 'Attendance', labelAr: 'حضور' },
   { value: 'late_submission', labelEn: 'Late Submission', labelAr: 'تأخر في التسليم' },
+  { value: 'no_reply', labelEn: 'No Reply to Student', labelAr: 'عدم الرد على الطالب' },
+  { value: 'late_grading', labelEn: 'Late Grading', labelAr: 'تأخر في التقييم' },
   { value: 'other', labelEn: 'Other', labelAr: 'أخرى' },
+];
+
+const severityOptions = [
+  { value: 'minor', labelEn: 'Minor', labelAr: 'بسيط' },
+  { value: 'major', labelEn: 'Major', labelAr: 'متوسط' },
+  { value: 'critical', labelEn: 'Critical', labelAr: 'حرج' },
 ];
 
 export function IssueEmployeeWarningDialog({
@@ -38,6 +46,7 @@ export function IssueEmployeeWarningDialog({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [warningType, setWarningType] = useState('');
+  const [severity, setSeverity] = useState('minor');
   const [reason, setReason] = useState('');
   const [reasonAr, setReasonAr] = useState('');
 
@@ -53,6 +62,7 @@ export function IssueEmployeeWarningDialog({
         instructor_id: employeeId,
         issued_by: user!.id,
         warning_type: warningType,
+        severity,
         reason: reason.trim(),
         reason_ar: reasonAr.trim() || reason.trim(),
         is_active: true,
@@ -67,14 +77,15 @@ export function IssueEmployeeWarningDialog({
         category: 'warning',
         title: 'New Warning',
         title_ar: 'إنذار جديد',
-        message: `You have received a warning: ${reason.trim()}`,
-        message_ar: `لقد تلقيت إنذارًا: ${reasonAr.trim() || reason.trim()}`,
+        message: `You have received a ${severity} warning: ${reason.trim()}`,
+        message_ar: `لقد تلقيت إنذارًا (${severity === 'minor' ? 'بسيط' : severity === 'major' ? 'متوسط' : 'حرج'}): ${reasonAr.trim() || reason.trim()}`,
         action_url: '/my-instructor-warnings',
       });
 
       toast.success(isRTL ? 'تم إصدار الإنذار بنجاح' : 'Warning issued successfully');
       onOpenChange(false);
       setWarningType('');
+      setSeverity('minor');
       setReason('');
       setReasonAr('');
       onSuccess?.();
@@ -112,6 +123,22 @@ export function IssueEmployeeWarningDialog({
                 {warningTypes.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     {language === 'ar' ? type.labelAr : type.labelEn}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{isRTL ? 'درجة الخطورة' : 'Severity'} *</Label>
+            <Select value={severity} onValueChange={setSeverity}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {severityOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {language === 'ar' ? opt.labelAr : opt.labelEn}
                   </SelectItem>
                 ))}
               </SelectContent>
