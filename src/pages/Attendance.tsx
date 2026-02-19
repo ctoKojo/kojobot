@@ -262,18 +262,39 @@ export default function AttendancePage() {
 
       if (newAbsentIds.length === 0) return 0;
 
-      // For each new absent student, check free quota and create makeup
+      // For each new absent student, check free quota via ledger and create makeup
       let created = 0;
       for (const studentId of newAbsentIds) {
         let isFree = true;
         if (levelId) {
-          const { count } = await supabase
-            .from('makeup_sessions')
-            .select('id', { count: 'exact' })
+          // Use the credits ledger
+          const { data: credits } = await supabase
+            .from('student_makeup_credits')
+            .select('used_free, total_free_allowed')
             .eq('student_id', studentId)
             .eq('level_id', levelId)
-            .eq('is_free', true);
-          isFree = (count || 0) < 2;
+            .maybeSingle();
+
+          if (credits) {
+            isFree = credits.used_free < credits.total_free_allowed;
+            // Increment used_free
+            if (isFree) {
+              await supabase
+                .from('student_makeup_credits')
+                .update({ used_free: credits.used_free + 1 })
+                .eq('student_id', studentId)
+                .eq('level_id', levelId);
+            }
+          } else {
+            // Create ledger entry
+            await supabase.from('student_makeup_credits').insert({
+              student_id: studentId,
+              level_id: levelId,
+              total_free_allowed: 2,
+              used_free: 1,
+            });
+            isFree = true;
+          }
         }
 
         const { error } = await supabase.from('makeup_sessions').insert({
@@ -283,6 +304,7 @@ export default function AttendancePage() {
           level_id: levelId,
           reason: 'student_absent',
           is_free: isFree,
+          makeup_type: 'individual',
         });
 
         if (!error) created++;
@@ -302,11 +324,12 @@ export default function AttendancePage() {
     try {
       // Upsert attendance records
       for (const record of attendanceRecords) {
+        const compensationStatus = (record.status === 'absent') ? 'pending_compensation' : null;
         if (record.id) {
           // Update existing
           await supabase
             .from('attendance')
-            .update({ status: record.status, notes: record.notes })
+            .update({ status: record.status, notes: record.notes, compensation_status: compensationStatus })
             .eq('id', record.id);
         } else {
           // Insert new
@@ -318,6 +341,7 @@ export default function AttendancePage() {
               status: record.status,
               recorded_by: user.id,
               notes: record.notes,
+              compensation_status: compensationStatus,
             });
         }
       }
@@ -360,13 +384,31 @@ export default function AttendancePage() {
 
       let isFree = true;
       if (levelId) {
-        const { count } = await supabase
-          .from('makeup_sessions')
-          .select('id', { count: 'exact' })
+        const { data: credits } = await supabase
+          .from('student_makeup_credits')
+          .select('used_free, total_free_allowed')
           .eq('student_id', studentId)
           .eq('level_id', levelId)
-          .eq('is_free', true);
-        isFree = (count || 0) < 2;
+          .maybeSingle();
+
+        if (credits) {
+          isFree = credits.used_free < credits.total_free_allowed;
+          if (isFree) {
+            await supabase
+              .from('student_makeup_credits')
+              .update({ used_free: credits.used_free + 1 })
+              .eq('student_id', studentId)
+              .eq('level_id', levelId);
+          }
+        } else {
+          await supabase.from('student_makeup_credits').insert({
+            student_id: studentId,
+            level_id: levelId,
+            total_free_allowed: 2,
+            used_free: 1,
+          });
+          isFree = true;
+        }
       }
 
       const { error } = await supabase.from('makeup_sessions').insert({
@@ -376,6 +418,7 @@ export default function AttendancePage() {
         level_id: levelId,
         reason: 'student_absent',
         is_free: isFree,
+        makeup_type: 'individual',
       });
 
       if (error) throw error;

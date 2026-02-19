@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake } from 'lucide-react';
+import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -31,6 +31,9 @@ interface StudentStats {
   pendingAssignments: any[];
   upcomingSessions: any[];
   profile: any;
+  levelProgress: { completed: number; total: number } | null;
+  makeupCredits: any | null;
+  scheduledMakeups: any[];
 }
 
 export function StudentDashboard() {
@@ -46,6 +49,9 @@ export function StudentDashboard() {
     pendingAssignments: [],
     upcomingSessions: [],
     profile: null,
+    levelProgress: null,
+    makeupCredits: null,
+    scheduledMakeups: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -152,6 +158,41 @@ export function StudentDashboard() {
         upcomingSessions = data || [];
       }
 
+      // Fetch level progress from group_level_progress
+      let levelProgress = null;
+      if (groupStudent?.group_id) {
+        const { data: glp } = await supabase
+          .from('group_level_progress')
+          .select('current_session, total_sessions')
+          .eq('group_id', groupStudent.group_id)
+          .order('started_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (glp) {
+          levelProgress = { completed: (glp.current_session || 1) - 1, total: glp.total_sessions || 12 };
+        }
+      }
+
+      // Fetch makeup credits for current level
+      let makeupCredits = null;
+      if (profile?.level_id) {
+        const { data: credits } = await supabase
+          .from('student_makeup_credits')
+          .select('used_free, total_free_allowed')
+          .eq('student_id', user?.id)
+          .eq('level_id', profile.level_id)
+          .maybeSingle();
+        makeupCredits = credits;
+      }
+
+      // Fetch scheduled makeup sessions
+      const { data: scheduledMakeups } = await supabase
+        .from('makeup_sessions')
+        .select('*, groups(name, name_ar)')
+        .eq('student_id', user?.id)
+        .eq('status', 'scheduled')
+        .order('scheduled_date');
+
       setStats({
         groupInfo: groupStudent?.groups,
         subscription,
@@ -161,6 +202,9 @@ export function StudentDashboard() {
         pendingAssignments,
         upcomingSessions,
         profile,
+        levelProgress,
+        makeupCredits,
+        scheduledMakeups: scheduledMakeups || [],
       });
     } catch (error) {
       console.error('Error fetching student stats:', error);
@@ -343,7 +387,85 @@ export function StudentDashboard() {
         </Card>
       </div>
 
-      {/* Upcoming Sessions */}
+      {/* Curriculum Progress & Makeup Credits */}
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
+        {/* Level Progress */}
+        {stats.levelProgress && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <BookOpen className="h-5 w-5 text-primary" />
+                {isRTL ? 'تقدم المنهج' : 'Curriculum Progress'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-2xl font-bold">{stats.levelProgress.completed}/{stats.levelProgress.total}</span>
+                <span className="text-sm text-muted-foreground">{isRTL ? 'سيشن مكتمل' : 'sessions completed'}</span>
+              </div>
+              <Progress value={(stats.levelProgress.completed / stats.levelProgress.total) * 100} className="h-3" />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Makeup Credits */}
+        {stats.makeupCredits && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <RefreshCw className="h-5 w-5 text-secondary" />
+                {isRTL ? 'رصيد التعويضية' : 'Makeup Credits'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-2xl font-bold">
+                  {Math.max(0, stats.makeupCredits.total_free_allowed - stats.makeupCredits.used_free)}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {isRTL ? `من ${stats.makeupCredits.total_free_allowed} سيشن مجانية متبقية` : `of ${stats.makeupCredits.total_free_allowed} free sessions remaining`}
+                </span>
+              </div>
+              <Progress value={(stats.makeupCredits.used_free / stats.makeupCredits.total_free_allowed) * 100} className="h-3" />
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Scheduled Makeup Sessions */}
+      {stats.scheduledMakeups.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-secondary" />
+              {isRTL ? 'سيشنات تعويضية مجدولة' : 'Scheduled Makeup Sessions'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {stats.scheduledMakeups.map((ms: any) => (
+                <div key={ms.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center">
+                      <RefreshCw className="w-5 h-5 text-secondary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">
+                        {language === 'ar' ? ms.groups?.name_ar : ms.groups?.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {ms.scheduled_date} • {formatTime12Hour(ms.scheduled_time, isRTL)}
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="border-secondary text-secondary">{isRTL ? 'تعويضية' : 'Makeup'}</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {stats.upcomingSessions.length > 0 && (
         <Card>
           <CardHeader>

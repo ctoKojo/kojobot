@@ -38,6 +38,8 @@ interface MakeupSession {
   completed_at: string | null;
   student_confirmed: boolean | null;
   assigned_instructor_id: string | null;
+  makeup_type: string;
+  curriculum_session_id: string | null;
 }
 
 interface EnrichedMakeupSession extends MakeupSession {
@@ -62,6 +64,7 @@ export default function MakeupSessionsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
   const [reasonFilter, setReasonFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<EnrichedMakeupSession | null>(null);
@@ -329,10 +332,25 @@ export default function MakeupSessionsPage() {
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
+      const session = makeupSessions.find(m => m.id === id);
       const updateData: any = { status: newStatus };
       if (newStatus === 'completed') updateData.completed_at = new Date().toISOString();
       const { error } = await supabase.from('makeup_sessions').update(updateData).eq('id', id);
       if (error) throw error;
+
+      // When completed, update attendance compensation_status and credits ledger
+      if (newStatus === 'completed' && session) {
+        // Update original attendance record
+        if (session.original_session_id) {
+          await supabase
+            .from('attendance')
+            .update({ compensation_status: 'compensated', makeup_session_id: id })
+            .eq('session_id', session.original_session_id)
+            .eq('student_id', session.student_id)
+            .eq('status', 'absent');
+        }
+      }
+
       toast({ title: isRTL ? 'تم التحديث' : 'Updated' });
       fetchMakeupSessions();
     } catch (error) {
@@ -372,8 +390,9 @@ export default function MakeupSessionsPage() {
   const filtered = makeupSessions.filter(m => {
     const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
     const matchesReason = reasonFilter === 'all' || m.reason === reasonFilter;
+    const matchesType = typeFilter === 'all' || m.makeup_type === typeFilter;
     const matchesSearch = m.student_name.toLowerCase().includes(searchQuery.toLowerCase()) || m.group_name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesReason && matchesSearch;
+    return matchesStatus && matchesReason && matchesType && matchesSearch;
   });
 
   // Group filtered sessions into sections
@@ -487,6 +506,14 @@ export default function MakeupSessionsPage() {
               <SelectItem value="all">{isRTL ? 'كل الأسباب' : 'All Reasons'}</SelectItem>
               <SelectItem value="group_cancelled">{isRTL ? 'إلغاء مجموعة' : 'Group Cancelled'}</SelectItem>
               <SelectItem value="student_absent">{isRTL ? 'غياب طالب' : 'Student Absent'}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</SelectItem>
+              <SelectItem value="individual">{isRTL ? 'فردية' : 'Individual'}</SelectItem>
+              <SelectItem value="group_cancellation">{isRTL ? 'إلغاء جماعي' : 'Group Cancellation'}</SelectItem>
             </SelectContent>
           </Select>
         </div>
