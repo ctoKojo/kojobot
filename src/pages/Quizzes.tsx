@@ -68,6 +68,13 @@ interface Level {
   name_ar: string;
 }
 
+interface CurriculumLink {
+  quiz_id: string;
+  session_number: number;
+  age_groups: { name: string; name_ar: string } | null;
+  levels: { name: string; name_ar: string } | null;
+}
+
 export default function QuizzesPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
@@ -76,8 +83,10 @@ export default function QuizzesPage() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
+  const [curriculumMap, setCurriculumMap] = useState<Map<string, CurriculumLink>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [linkFilter, setLinkFilter] = useState<'all' | 'linked' | 'unlinked'>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
   const [formData, setFormData] = useState({
@@ -101,9 +110,26 @@ export default function QuizzesPage() {
         supabase.from('levels').select('id, name, name_ar').eq('is_active', true),
       ]);
 
-      setQuizzes(quizzesRes.data || []);
+      const quizzesData = quizzesRes.data || [];
+      setQuizzes(quizzesData);
       setAgeGroups(ageGroupsRes.data || []);
       setLevels(levelsRes.data || []);
+
+      // Fetch curriculum links for all quizzes
+      const quizIds = quizzesData.map(q => q.id);
+      if (quizIds.length > 0) {
+        const { data: curriculumLinks } = await supabase
+          .from('curriculum_sessions')
+          .select('quiz_id, session_number, age_groups(name, name_ar), levels(name, name_ar)')
+          .in('quiz_id', quizIds)
+          .eq('is_active', true);
+        
+        const map = new Map<string, CurriculumLink>();
+        (curriculumLinks || []).forEach((c: any) => {
+          if (c.quiz_id) map.set(c.quiz_id, c);
+        });
+        setCurriculumMap(map);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -207,10 +233,22 @@ export default function QuizzesPage() {
     }
   };
 
-  const filteredQuizzes = quizzes.filter((quiz) =>
-    quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    quiz.title_ar.includes(searchQuery)
-  );
+  const filteredQuizzes = quizzes.filter((quiz) => {
+    const matchesSearch = quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      quiz.title_ar.includes(searchQuery);
+    const matchesLink = linkFilter === 'all' ? true :
+      linkFilter === 'linked' ? curriculumMap.has(quiz.id) :
+      !curriculumMap.has(quiz.id);
+    return matchesSearch && matchesLink;
+  });
+
+  const getCurriculumLabel = (quizId: string) => {
+    const link = curriculumMap.get(quizId);
+    if (!link) return null;
+    const agName = language === 'ar' ? link.age_groups?.name_ar : link.age_groups?.name;
+    const lvName = language === 'ar' ? link.levels?.name_ar : link.levels?.name;
+    return `${agName || ''} • ${lvName || ''} • ${isRTL ? 'سيشن' : 'Session'} ${link.session_number}`;
+  };
 
   const getLevelName = (id: string | null) => {
     if (!id) return '-';
@@ -233,7 +271,17 @@ export default function QuizzesPage() {
             />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Select value={linkFilter} onValueChange={(v) => setLinkFilter(v as any)}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{isRTL ? 'الكل' : 'All'}</SelectItem>
+                <SelectItem value="linked">{isRTL ? 'مربوط بالمنهج' : 'Linked'}</SelectItem>
+                <SelectItem value="unlinked">{isRTL ? 'غير مربوط' : 'Unlinked'}</SelectItem>
+              </SelectContent>
+            </Select>
             {role === 'admin' && (
               <Button variant="outline" onClick={() => navigate('/quiz-reports')}>
                 <BarChart3 className="h-4 w-4 mr-2" />
@@ -414,6 +462,15 @@ export default function QuizzesPage() {
                     <Badge variant="secondary" className="text-xs">
                       {quiz.passing_score}% {isRTL ? 'للنجاح' : 'to pass'}
                     </Badge>
+                    {curriculumMap.has(quiz.id) ? (
+                      <Badge className="text-xs bg-primary/10 text-primary border-primary/20">
+                        {isRTL ? 'مربوط' : 'Linked'}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs text-muted-foreground">
+                        {isRTL ? 'غير مربوط' : 'Unlinked'}
+                      </Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -429,6 +486,7 @@ export default function QuizzesPage() {
                 <TableRow>
                   <TableHead>{t.quizzes.quizName}</TableHead>
                   <TableHead>{t.students.level}</TableHead>
+                  <TableHead>{isRTL ? 'المنهج' : 'Curriculum'}</TableHead>
                   <TableHead>{t.quizzes.duration}</TableHead>
                   <TableHead>{isRTL ? 'درجة النجاح' : 'Pass Score'}</TableHead>
                   {role === 'admin' && <TableHead className="w-[100px]">{t.common.actions}</TableHead>}
@@ -437,13 +495,13 @@ export default function QuizzesPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={role === 'admin' ? 5 : 4} className="text-center py-8">
+                    <TableCell colSpan={role === 'admin' ? 6 : 5} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredQuizzes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={role === 'admin' ? 5 : 4} className="text-center py-8">
+                    <TableCell colSpan={role === 'admin' ? 6 : 5} className="text-center py-8">
                       <FileQuestion className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <p className="text-muted-foreground">
                         {isRTL ? 'لا توجد كويزات' : 'No quizzes found'}
@@ -457,6 +515,18 @@ export default function QuizzesPage() {
                         {language === 'ar' ? quiz.title_ar : quiz.title}
                       </TableCell>
                       <TableCell>{getLevelName(quiz.level_id)}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          const label = getCurriculumLabel(quiz.id);
+                          return label ? (
+                            <Badge className="text-xs bg-primary/10 text-primary border-primary/20 font-normal">
+                              {label}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">{isRTL ? 'غير مربوط' : 'Unlinked'}</span>
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">
                           {quiz.duration_minutes} {isRTL ? 'دقيقة' : 'min'}

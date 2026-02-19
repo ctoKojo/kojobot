@@ -166,6 +166,7 @@ export default function SessionDetails() {
   const [curriculumLoading, setCurriculumLoading] = useState(false);
   const [assigningCurriculumQuiz, setAssigningCurriculumQuiz] = useState(false);
   const [assigningCurriculumAssignment, setAssigningCurriculumAssignment] = useState(false);
+  const [quizMeta, setQuizMeta] = useState<{ questionCount: number; passingScore: number; duration: number } | null>(null);
   
   // Edit assignment dialog (for editing existing assignments only)
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
@@ -460,9 +461,26 @@ export default function SessionDetails() {
           });
 
           if (currData && currData.length > 0) {
-            setCurriculumContent(currData[0] as unknown as CurriculumContent);
+            const curr = currData[0] as unknown as CurriculumContent;
+            setCurriculumContent(curr);
+            
+            // Fetch quiz metadata if quiz is linked
+            if (curr.quiz_id) {
+              const [quizRes, questionsRes] = await Promise.all([
+                supabase.from('quizzes').select('passing_score, duration_minutes').eq('id', curr.quiz_id).single(),
+                supabase.from('quiz_questions').select('id', { count: 'exact', head: true }).eq('quiz_id', curr.quiz_id),
+              ]);
+              setQuizMeta({
+                questionCount: questionsRes.count || 0,
+                passingScore: quizRes.data?.passing_score || 0,
+                duration: quizRes.data?.duration_minutes || 0,
+              });
+            } else {
+              setQuizMeta(null);
+            }
           } else {
             setCurriculumContent(null);
+            setQuizMeta(null);
           }
         } catch (err) {
           console.error('Error fetching curriculum:', err);
@@ -1130,42 +1148,57 @@ export default function SessionDetails() {
 
               {/* One-click assign buttons (admin/instructor only) */}
               {canManage && (
-                <div className="flex flex-wrap gap-3 pt-2 border-t">
-                  {curriculumContent.quiz_id && !quizAssignment && (
-                    <Button
-                      size="sm"
-                      onClick={handleAssignCurriculumQuiz}
-                      disabled={assigningCurriculumQuiz}
-                      className="flex items-center gap-2"
-                    >
-                      {assigningCurriculumQuiz ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileQuestion className="h-4 w-4" />}
-                      {isRTL ? 'اسناد كويز المنهج' : 'Assign Curriculum Quiz'}
-                    </Button>
+                <div className="space-y-2 pt-2 border-t">
+                  {curriculumContent.quiz_id && quizMeta && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {quizMeta.questionCount} {isRTL ? 'سؤال' : 'Q'}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {quizMeta.passingScore}% {isRTL ? 'للنجاح' : 'pass'}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {quizMeta.duration} {isRTL ? 'دقيقة' : 'min'}
+                      </Badge>
+                    </div>
                   )}
-                  {curriculumContent.quiz_id && quizAssignment && (
-                    <Button size="sm" variant="outline" disabled className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-primary" />
-                      {isRTL ? 'تم اسناد الكويز' : 'Quiz Assigned'}
-                    </Button>
-                  )}
-                  {curriculumContent.assignment_title && !assignment && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={handleAssignCurriculumAssignment}
-                      disabled={assigningCurriculumAssignment}
-                      className="flex items-center gap-2"
-                    >
-                      {assigningCurriculumAssignment ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
-                      {isRTL ? 'اسناد واجب المنهج' : 'Assign Curriculum Assignment'}
-                    </Button>
-                  )}
-                  {curriculumContent.assignment_title && assignment && (
-                    <Button size="sm" variant="outline" disabled className="flex items-center gap-2">
-                      <CheckCircle className="h-4 w-4 text-primary" />
-                      {isRTL ? 'تم اسناد الواجب' : 'Assignment Assigned'}
-                    </Button>
-                  )}
+                  <div className="flex flex-wrap gap-3">
+                    {curriculumContent.quiz_id && !quizAssignment && (
+                      <Button
+                        size="sm"
+                        onClick={handleAssignCurriculumQuiz}
+                        disabled={assigningCurriculumQuiz}
+                        className="flex items-center gap-2"
+                      >
+                        {assigningCurriculumQuiz ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileQuestion className="h-4 w-4" />}
+                        {isRTL ? 'اسناد كويز المنهج' : 'Assign Curriculum Quiz'}
+                      </Button>
+                    )}
+                    {curriculumContent.quiz_id && quizAssignment && (
+                      <Button size="sm" variant="outline" disabled className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-primary" />
+                        {isRTL ? 'تم اسناد الكويز' : 'Quiz Assigned'}
+                      </Button>
+                    )}
+                    {curriculumContent.assignment_title && !assignment && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={handleAssignCurriculumAssignment}
+                        disabled={assigningCurriculumAssignment}
+                        className="flex items-center gap-2"
+                      >
+                        {assigningCurriculumAssignment ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
+                        {isRTL ? 'اسناد واجب المنهج' : 'Assign Curriculum Assignment'}
+                      </Button>
+                    )}
+                    {curriculumContent.assignment_title && assignment && (
+                      <Button size="sm" variant="outline" disabled className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-primary" />
+                        {isRTL ? 'تم اسناد الواجب' : 'Assignment Assigned'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>

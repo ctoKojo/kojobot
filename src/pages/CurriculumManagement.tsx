@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
   Loader2, Plus, Copy, FileUp, BookOpen, Video, Film, ClipboardList, HelpCircle,
-  AlertCircle, CheckCircle2, Lock, Unlock, Eye
+  AlertCircle, CheckCircle2, Lock, Unlock, Eye, ExternalLink, Upload, X, FileIcon, Pencil
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -50,11 +51,15 @@ export default function CurriculumManagement() {
   const { isRTL } = useLanguage();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedAgeGroup, setSelectedAgeGroup] = useState<string>('');
   const [selectedLevel, setSelectedLevel] = useState<string>('');
   const [editSession, setEditSession] = useState<CurriculumSession | null>(null);
   const [editForm, setEditForm] = useState<Partial<CurriculumSession>>({});
+  const [assignmentFile, setAssignmentFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   // Fetch age groups
   const { data: ageGroups = [] } = useQuery({
@@ -84,19 +89,25 @@ export default function CurriculumManagement() {
     },
   });
 
-  // Fetch quizzes for selection
-  const { data: quizzes = [] } = useQuery({
+  // Fetch quizzes for selection (with age_group_id and level_id for filtering)
+  const { data: allQuizzes = [] } = useQuery({
     queryKey: ['quizzes-list'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('quizzes')
-        .select('id, title, title_ar')
+        .select('id, title, title_ar, age_group_id, level_id')
         .eq('is_active', true)
         .order('title');
       if (error) throw error;
       return data;
     },
   });
+
+  // Filter quizzes by selected age group and level
+  const filteredQuizzes = allQuizzes.filter(q =>
+    (!q.age_group_id || q.age_group_id === selectedAgeGroup) &&
+    (!q.level_id || q.level_id === selectedLevel)
+  );
 
   // Fetch curriculum sessions for selected age group + level (latest version)
   const { data: sessions = [], isLoading: loadingSessions } = useQuery({
@@ -240,10 +251,33 @@ export default function CurriculumManagement() {
   const openEditDialog = (session: CurriculumSession) => {
     setEditSession(session);
     setEditForm({ ...session });
+    setAssignmentFile(null);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editSession) return;
+
+    let attachmentUrl = editForm.assignment_attachment_url;
+    let attachmentType = editForm.assignment_attachment_type;
+
+    // Upload file if selected
+    if (assignmentFile) {
+      setUploadingFile(true);
+      try {
+        const ext = assignmentFile.name.split('.').pop();
+        const fileName = `assignments/${editSession.age_group_id}/${editSession.level_id}/${editSession.session_number}/${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from('curriculum').upload(fileName, assignmentFile);
+        if (uploadError) throw uploadError;
+        attachmentUrl = fileName;
+        attachmentType = assignmentFile.type;
+      } catch (err: any) {
+        toast.error(err.message || (isRTL ? 'فشل في رفع الملف' : 'Failed to upload file'));
+        setUploadingFile(false);
+        return;
+      }
+      setUploadingFile(false);
+    }
+
     updateSessionMutation.mutate({
       id: editSession.id,
       title: editForm.title || '',
@@ -258,8 +292,15 @@ export default function CurriculumManagement() {
       assignment_title_ar: editForm.assignment_title_ar,
       assignment_description: editForm.assignment_description,
       assignment_description_ar: editForm.assignment_description_ar,
+      assignment_attachment_url: attachmentUrl,
+      assignment_attachment_type: attachmentType,
       assignment_max_score: editForm.assignment_max_score,
     });
+  };
+
+  const handleRemoveAttachment = () => {
+    setEditForm(f => ({ ...f, assignment_attachment_url: null, assignment_attachment_type: null }));
+    setAssignmentFile(null);
   };
 
   const getContentIcons = (s: CurriculumSession) => {
@@ -583,22 +624,49 @@ export default function CurriculumManagement() {
                   <HelpCircle className="h-4 w-4" />
                   {isRTL ? 'الكويز المحضر' : 'Pre-configured Quiz'}
                 </Label>
-                <Select
-                  value={editForm.quiz_id || 'none'}
-                  onValueChange={v => setEditForm(f => ({ ...f, quiz_id: v === 'none' ? null : v }))}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder={isRTL ? 'اختر كويز' : 'Select Quiz'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{isRTL ? 'بدون كويز' : 'No Quiz'}</SelectItem>
-                    {quizzes.map(q => (
-                      <SelectItem key={q.id} value={q.id}>
-                        {isRTL ? q.title_ar : q.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2 mt-1">
+                  <Select
+                    value={editForm.quiz_id || 'none'}
+                    onValueChange={v => setEditForm(f => ({ ...f, quiz_id: v === 'none' ? null : v }))}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder={isRTL ? 'اختر كويز' : 'Select Quiz'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{isRTL ? 'بدون كويز' : 'No Quiz'}</SelectItem>
+                      {filteredQuizzes.map(q => (
+                        <SelectItem key={q.id} value={q.id}>
+                          {isRTL ? q.title_ar : q.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {editForm.quiz_id && editForm.quiz_id !== 'none' && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => window.open(`/quiz-editor/${editForm.quiz_id}`, '_blank')}
+                      title={isRTL ? 'تعديل الأسئلة' : 'Edit Questions'}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`/quizzes`, '_blank')}
+                  >
+                    <Plus className="h-4 w-4 ltr:mr-1 rtl:ml-1" />
+                    {isRTL ? 'جديد' : 'New'}
+                  </Button>
+                </div>
+                {filteredQuizzes.length === 0 && allQuizzes.length > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {isRTL ? 'لا توجد كويزات لهذه الفئة والليفل. اضغط "جديد" لإنشاء واحد.' : 'No quizzes match this age group/level. Click "New" to create one.'}
+                  </p>
+                )}
               </div>
 
               {/* Assignment Details */}
@@ -634,6 +702,55 @@ export default function CurriculumManagement() {
                     rows={2}
                   />
                 </div>
+
+                {/* Assignment File Upload */}
+                <div>
+                  <Label className="flex items-center gap-1.5">
+                    <Upload className="h-4 w-4" />
+                    {isRTL ? 'ملف مرفق' : 'Attachment'}
+                  </Label>
+                  {editForm.assignment_attachment_url && !assignmentFile ? (
+                    <div className="flex items-center gap-2 mt-1 p-2 border rounded-md bg-muted/30">
+                      <FileIcon className="h-4 w-4 text-primary shrink-0" />
+                      <span className="text-sm truncate flex-1">
+                        {editForm.assignment_attachment_url.split('/').pop()}
+                      </span>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={handleRemoveAttachment}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : assignmentFile ? (
+                    <div className="flex items-center gap-2 mt-1 p-2 border rounded-md bg-muted/30">
+                      <FileIcon className="h-4 w-4 text-primary shrink-0" />
+                      <span className="text-sm truncate flex-1">{assignmentFile.name}</span>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setAssignmentFile(null)}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="mt-1 border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                      <p className="text-sm text-muted-foreground">
+                        {isRTL ? 'اضغط لاختيار ملف (PDF, صور, ZIP)' : 'Click to select file (PDF, Images, ZIP)'}
+                      </p>
+                    </div>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.zip,.rar"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setAssignmentFile(file);
+                      e.target.value = '';
+                    }}
+                  />
+                </div>
+
                 <div className="w-32">
                   <Label>{isRTL ? 'الدرجة القصوى' : 'Max Score'}</Label>
                   <Input
@@ -652,12 +769,12 @@ export default function CurriculumManagement() {
               </Button>
               <Button
                 onClick={handleSaveEdit}
-                disabled={updateSessionMutation.isPending}
+                disabled={updateSessionMutation.isPending || uploadingFile}
               >
-                {updateSessionMutation.isPending && (
+                {(updateSessionMutation.isPending || uploadingFile) && (
                   <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />
                 )}
-                {isRTL ? 'حفظ' : 'Save'}
+                {uploadingFile ? (isRTL ? 'جاري الرفع...' : 'Uploading...') : (isRTL ? 'حفظ' : 'Save')}
               </Button>
             </DialogFooter>
           </DialogContent>
