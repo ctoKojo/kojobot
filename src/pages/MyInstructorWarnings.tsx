@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle, Clock, Calendar, FileQuestion, ClipboardList, UserCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, Calendar, FileQuestion, ClipboardList, UserCheck, MessageSquare, Shield } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 interface Warning {
   id: string;
   warning_type: string;
+  severity: string;
   reason: string;
   reason_ar: string | null;
   is_active: boolean;
@@ -27,16 +28,25 @@ interface Warning {
   } | null;
 }
 
+interface SLAStatus {
+  pendingMessages: number;
+  pendingGrading: number;
+  oldestMessageHours: number | null;
+  oldestGradingHours: number | null;
+}
+
 export default function MyInstructorWarnings() {
   const { user } = useAuth();
   const { isRTL, language } = useLanguage();
   const navigate = useNavigate();
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [loading, setLoading] = useState(true);
+  const [slaStatus, setSlaStatus] = useState<SLAStatus>({ pendingMessages: 0, pendingGrading: 0, oldestMessageHours: null, oldestGradingHours: null });
 
   useEffect(() => {
     if (user) {
       fetchWarnings();
+      fetchSLAStatus();
     }
   }, [user]);
 
@@ -60,65 +70,113 @@ export default function MyInstructorWarnings() {
     }
   };
 
+  const fetchSLAStatus = async () => {
+    if (!user) return;
+    try {
+      // Get conversations where this instructor participates
+      const { data: participations } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', user.id);
+
+      if (participations && participations.length > 0) {
+        const convIds = participations.map(p => p.conversation_id);
+        let pendingCount = 0;
+        let oldestHours: number | null = null;
+
+        for (const convId of convIds.slice(0, 20)) {
+          const { data: lastMsg } = await supabase
+            .from('messages')
+            .select('sender_id, created_at')
+            .eq('conversation_id', convId)
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          if (lastMsg && lastMsg.length > 0 && lastMsg[0].sender_id !== user.id) {
+            const hours = (Date.now() - new Date(lastMsg[0].created_at).getTime()) / (1000 * 60 * 60);
+            if (hours >= 24) {
+              pendingCount++;
+              if (oldestHours === null || hours > oldestHours) oldestHours = hours;
+            }
+          }
+        }
+
+        // Get pending grading
+        const { data: pendingSubs } = await supabase
+          .from('assignment_submissions')
+          .select('submitted_at, assignments!inner(assigned_by)')
+          .eq('status', 'submitted')
+          .eq('assignments.assigned_by', user.id);
+
+        let gradingCount = 0;
+        let oldestGrading: number | null = null;
+        if (pendingSubs) {
+          for (const sub of pendingSubs) {
+            const hours = (Date.now() - new Date(sub.submitted_at).getTime()) / (1000 * 60 * 60);
+            if (hours >= 24) {
+              gradingCount++;
+              if (oldestGrading === null || hours > oldestGrading) oldestGrading = hours;
+            }
+          }
+        }
+
+        setSlaStatus({
+          pendingMessages: pendingCount,
+          pendingGrading: gradingCount,
+          oldestMessageHours: oldestHours,
+          oldestGradingHours: oldestGrading,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching SLA status:', error);
+    }
+  };
+
   const activeWarnings = warnings.filter(w => w.is_active);
   const resolvedWarnings = warnings.filter(w => !w.is_active);
+
+  const getSLALevel = (): 'green' | 'yellow' | 'red' => {
+    if (slaStatus.pendingMessages === 0 && slaStatus.pendingGrading === 0) return 'green';
+    if ((slaStatus.oldestMessageHours && slaStatus.oldestMessageHours >= 48) ||
+        (slaStatus.oldestGradingHours && slaStatus.oldestGradingHours >= 48)) return 'red';
+    return 'yellow';
+  };
+
+  const slaLevel = getSLALevel();
 
   const getWarningTypeInfo = (type: string) => {
     switch (type) {
       case 'no_quiz':
-        return {
-          label: isRTL ? 'كويز مفقود' : 'Missing Quiz',
-          color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-          icon: FileQuestion,
-        };
+        return { label: isRTL ? 'كويز مفقود' : 'Missing Quiz', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400', icon: FileQuestion };
       case 'no_attendance':
-        return {
-          label: isRTL ? 'حضور غير مسجل' : 'Missing Attendance',
-          color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-          icon: UserCheck,
-        };
+        return { label: isRTL ? 'حضور غير مسجل' : 'Missing Attendance', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400', icon: UserCheck };
       case 'no_assignment':
-        return {
-          label: isRTL ? 'واجب مفقود' : 'Missing Assignment',
-          color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-          icon: ClipboardList,
-        };
+        return { label: isRTL ? 'واجب مفقود' : 'Missing Assignment', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400', icon: ClipboardList };
+      case 'no_reply':
+        return { label: isRTL ? 'عدم الرد على الطالب' : 'No Reply to Student', color: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400', icon: MessageSquare };
+      case 'late_grading':
+        return { label: isRTL ? 'تأخر في التقييم' : 'Late Grading', color: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400', icon: Clock };
       case 'behavior':
-        return {
-          label: isRTL ? 'سلوك' : 'Behavior',
-          color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-          icon: AlertTriangle,
-        };
+        return { label: isRTL ? 'سلوك' : 'Behavior', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400', icon: AlertTriangle };
       case 'non_compliance':
-        return {
-          label: isRTL ? 'عدم التزام' : 'Non-Compliance',
-          color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-          icon: AlertTriangle,
-        };
+        return { label: isRTL ? 'عدم التزام' : 'Non-Compliance', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400', icon: AlertTriangle };
       case 'poor_performance':
-        return {
-          label: isRTL ? 'أداء ضعيف' : 'Poor Performance',
-          color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-          icon: AlertTriangle,
-        };
+        return { label: isRTL ? 'أداء ضعيف' : 'Poor Performance', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400', icon: AlertTriangle };
       case 'attendance':
-        return {
-          label: isRTL ? 'حضور' : 'Attendance',
-          color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
-          icon: UserCheck,
-        };
+        return { label: isRTL ? 'حضور' : 'Attendance', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400', icon: UserCheck };
       case 'late_submission':
-        return {
-          label: isRTL ? 'تأخر في التسليم' : 'Late Submission',
-          color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-          icon: Clock,
-        };
+        return { label: isRTL ? 'تأخر في التسليم' : 'Late Submission', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400', icon: Clock };
       default:
-        return {
-          label: type,
-          color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-          icon: AlertTriangle,
-        };
+        return { label: type, color: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400', icon: AlertTriangle };
+    }
+  };
+
+  const getSeverityBadge = (sev: string) => {
+    switch (sev) {
+      case 'minor': return { label: isRTL ? 'بسيط' : 'Minor', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' };
+      case 'major': return { label: isRTL ? 'متوسط' : 'Major', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' };
+      case 'critical': return { label: isRTL ? 'حرج' : 'Critical', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' };
+      default: return { label: sev, color: '' };
     }
   };
 
@@ -133,6 +191,7 @@ export default function MyInstructorWarnings() {
   const WarningCard = ({ warning }: { warning: Warning }) => {
     const typeInfo = getWarningTypeInfo(warning.warning_type);
     const TypeIcon = typeInfo.icon;
+    const sevBadge = getSeverityBadge(warning.severity || 'minor');
 
     return (
       <Card 
@@ -146,9 +205,10 @@ export default function MyInstructorWarnings() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                <Badge className={typeInfo.color}>
-                  {typeInfo.label}
-                </Badge>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge className={typeInfo.color}>{typeInfo.label}</Badge>
+                  <Badge className={sevBadge.color}>{sevBadge.label}</Badge>
+                </div>
                 {!warning.is_active && (
                   <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                     <CheckCircle className="w-3 h-3 mr-1" />
@@ -194,6 +254,49 @@ export default function MyInstructorWarnings() {
             {isRTL ? 'تتبع الإنذارات الصادرة لك' : 'Track warnings issued to you'}
           </p>
         </div>
+
+        {/* SLA Status Widget */}
+        <Card className={`border-2 ${
+          slaLevel === 'green' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
+          slaLevel === 'yellow' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' :
+          'border-red-500 bg-red-50 dark:bg-red-950/20'
+        }`}>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 mb-3">
+              <Shield className={`h-6 w-6 ${
+                slaLevel === 'green' ? 'text-green-600' :
+                slaLevel === 'yellow' ? 'text-yellow-600' :
+                'text-red-600'
+              }`} />
+              <h3 className="font-semibold text-lg">
+                {isRTL ? 'حالة SLA' : 'SLA Status'}
+              </h3>
+              <Badge className={`${
+                slaLevel === 'green' ? 'bg-green-100 text-green-800' :
+                slaLevel === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-red-100 text-red-800'
+              }`}>
+                {slaLevel === 'green' ? (isRTL ? 'ممتاز' : 'Good') :
+                 slaLevel === 'yellow' ? (isRTL ? 'تنبيه' : 'Warning') :
+                 (isRTL ? 'تجاوز' : 'Exceeded')}
+              </Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">
+                  {isRTL ? `${slaStatus.pendingMessages} رسائل بانتظار الرد` : `${slaStatus.pendingMessages} messages pending reply`}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm">
+                  {isRTL ? `${slaStatus.pendingGrading} تقييمات معلقة` : `${slaStatus.pendingGrading} pending grading`}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Stats Cards */}
         <div className="grid gap-4 grid-cols-2">
@@ -313,6 +416,18 @@ export default function MyInstructorWarnings() {
                 {isRTL 
                   ? 'ارفع الواجب خلال 24 ساعة من انتهاء السيشن'
                   : 'Upload assignment within 24 hours after session'}
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                {isRTL 
+                  ? 'رد على رسائل الطلاب خلال فترة الـ SLA المحددة'
+                  : 'Reply to student messages within the SLA period'}
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                {isRTL 
+                  ? 'قيّم واجبات الطلاب في أسرع وقت ممكن'
+                  : 'Grade student assignments as soon as possible'}
               </li>
             </ul>
           </CardContent>

@@ -28,6 +28,8 @@ const systemWarningTypes: WarningType[] = [
   { id: '3', value: 'poor_performance', labelEn: 'Poor Performance', labelAr: 'أداء ضعيف', isSystem: true },
   { id: '4', value: 'attendance', labelEn: 'Attendance', labelAr: 'حضور', isSystem: true },
   { id: '5', value: 'late_submission', labelEn: 'Late Submission', labelAr: 'تأخر في التسليم', isSystem: true },
+  { id: '6', value: 'no_reply', labelEn: 'No Reply to Student', labelAr: 'عدم الرد على الطالب', isSystem: true },
+  { id: '7', value: 'late_grading', labelEn: 'Late Grading', labelAr: 'تأخر في التقييم', isSystem: true },
 ];
 
 interface WarningSettings {

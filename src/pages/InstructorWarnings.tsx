@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Search, X, User, Calendar, Filter } from 'lucide-react';
+import { AlertTriangle, Search, X, Calendar, Filter, MessageSquare, Clock } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,7 @@ interface InstructorWarning {
   instructor_id: string;
   session_id: string | null;
   warning_type: string;
+  severity: string;
   reason: string;
   reason_ar: string | null;
   created_at: string;
@@ -66,6 +67,8 @@ interface WarningStats {
   noQuiz: number;
   noAttendance: number;
   noAssignment: number;
+  noReply: number;
+  lateGrading: number;
 }
 
 export default function InstructorWarnings() {
@@ -76,8 +79,9 @@ export default function InstructorWarnings() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [dismissingId, setDismissingId] = useState<string | null>(null);
-  const [stats, setStats] = useState<WarningStats>({ total: 0, noQuiz: 0, noAttendance: 0, noAssignment: 0 });
+  const [stats, setStats] = useState<WarningStats>({ total: 0, noQuiz: 0, noAttendance: 0, noAssignment: 0, noReply: 0, lateGrading: 0 });
 
   useEffect(() => {
     fetchWarnings();
@@ -96,7 +100,6 @@ export default function InstructorWarnings() {
 
       if (error) throw error;
 
-      // Fetch instructor profiles separately
       const instructorIds = [...new Set((data || []).map(w => w.instructor_id))];
       const { data: profiles } = await supabase
         .from('profiles')
@@ -113,12 +116,13 @@ export default function InstructorWarnings() {
 
       setWarnings(warningsWithInstructor);
 
-      // Calculate stats
       setStats({
         total: warningsWithInstructor.length,
         noQuiz: warningsWithInstructor.filter(w => w.warning_type === 'no_quiz').length,
         noAttendance: warningsWithInstructor.filter(w => w.warning_type === 'no_attendance').length,
         noAssignment: warningsWithInstructor.filter(w => w.warning_type === 'no_assignment').length,
+        noReply: warningsWithInstructor.filter(w => w.warning_type === 'no_reply').length,
+        lateGrading: warningsWithInstructor.filter(w => w.warning_type === 'late_grading').length,
       });
     } catch (error) {
       console.error('Error fetching warnings:', error);
@@ -168,12 +172,23 @@ export default function InstructorWarnings() {
   };
 
   const getWarningTypeBadge = (type: string) => {
-    const badges = {
-      no_quiz: { label: isRTL ? 'كويز مفقود' : 'Missing Quiz', variant: 'destructive' as const },
-      no_attendance: { label: isRTL ? 'حضور غير مسجل' : 'No Attendance', variant: 'secondary' as const },
-      no_assignment: { label: isRTL ? 'واجب مفقود' : 'Missing Assignment', variant: 'outline' as const },
+    const badges: Record<string, { label: string; variant: 'destructive' | 'secondary' | 'outline' | 'default' }> = {
+      no_quiz: { label: isRTL ? 'كويز مفقود' : 'Missing Quiz', variant: 'destructive' },
+      no_attendance: { label: isRTL ? 'حضور غير مسجل' : 'No Attendance', variant: 'secondary' },
+      no_assignment: { label: isRTL ? 'واجب مفقود' : 'Missing Assignment', variant: 'outline' },
+      no_reply: { label: isRTL ? 'عدم الرد' : 'No Reply', variant: 'default' },
+      late_grading: { label: isRTL ? 'تأخر تقييم' : 'Late Grading', variant: 'secondary' },
     };
-    return badges[type as keyof typeof badges] || { label: type, variant: 'default' as const };
+    return badges[type] || { label: type, variant: 'default' as const };
+  };
+
+  const getSeverityColor = (sev: string) => {
+    switch (sev) {
+      case 'minor': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      case 'major': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+      case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+      default: return '';
+    }
   };
 
   const filteredWarnings = warnings.filter(w => {
@@ -183,15 +198,16 @@ export default function InstructorWarnings() {
       w.reason?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesType = typeFilter === 'all' || w.warning_type === typeFilter;
+    const matchesSeverity = severityFilter === 'all' || w.severity === severityFilter;
     
-    return matchesSearch && matchesType;
+    return matchesSearch && matchesType && matchesSeverity;
   });
 
   return (
     <DashboardLayout title={isRTL ? 'إنذارات المدربين' : 'Instructor Warnings'}>
       <div className="space-y-6">
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -200,7 +216,7 @@ export default function InstructorWarnings() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'إجمالي الإنذارات' : 'Total Warnings'}</p>
+                  <p className="text-xs text-muted-foreground">{isRTL ? 'الإجمالي' : 'Total'}</p>
                 </div>
               </div>
             </CardContent>
@@ -214,7 +230,7 @@ export default function InstructorWarnings() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{stats.noQuiz}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'كويز مفقود' : 'Missing Quiz'}</p>
+                  <p className="text-xs text-muted-foreground">{isRTL ? 'كويز' : 'Quiz'}</p>
                 </div>
               </div>
             </CardContent>
@@ -228,7 +244,7 @@ export default function InstructorWarnings() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{stats.noAttendance}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'حضور غير مسجل' : 'No Attendance'}</p>
+                  <p className="text-xs text-muted-foreground">{isRTL ? 'حضور' : 'Attendance'}</p>
                 </div>
               </div>
             </CardContent>
@@ -242,7 +258,35 @@ export default function InstructorWarnings() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{stats.noAssignment}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'واجب مفقود' : 'Missing Assignment'}</p>
+                  <p className="text-xs text-muted-foreground">{isRTL ? 'واجب' : 'Assignment'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setTypeFilter('no_reply')}>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-sky-100 dark:bg-sky-900/30">
+                  <MessageSquare className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.noReply}</p>
+                  <p className="text-xs text-muted-foreground">{isRTL ? 'عدم رد' : 'No Reply'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setTypeFilter('late_grading')}>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-violet-100 dark:bg-violet-900/30">
+                  <Clock className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.lateGrading}</p>
+                  <p className="text-xs text-muted-foreground">{isRTL ? 'تأخر تقييم' : 'Late Grade'}</p>
                 </div>
               </div>
             </CardContent>
@@ -273,10 +317,23 @@ export default function InstructorWarnings() {
                   <SelectValue placeholder={isRTL ? 'نوع الإنذار' : 'Warning Type'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{isRTL ? 'الكل' : 'All Types'}</SelectItem>
+                  <SelectItem value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</SelectItem>
                   <SelectItem value="no_quiz">{isRTL ? 'كويز مفقود' : 'Missing Quiz'}</SelectItem>
                   <SelectItem value="no_attendance">{isRTL ? 'حضور غير مسجل' : 'No Attendance'}</SelectItem>
                   <SelectItem value="no_assignment">{isRTL ? 'واجب مفقود' : 'Missing Assignment'}</SelectItem>
+                  <SelectItem value="no_reply">{isRTL ? 'عدم الرد' : 'No Reply'}</SelectItem>
+                  <SelectItem value="late_grading">{isRTL ? 'تأخر تقييم' : 'Late Grading'}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={severityFilter} onValueChange={setSeverityFilter}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder={isRTL ? 'الخطورة' : 'Severity'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{isRTL ? 'كل الدرجات' : 'All Severities'}</SelectItem>
+                  <SelectItem value="minor">{isRTL ? 'بسيط' : 'Minor'}</SelectItem>
+                  <SelectItem value="major">{isRTL ? 'متوسط' : 'Major'}</SelectItem>
+                  <SelectItem value="critical">{isRTL ? 'حرج' : 'Critical'}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -310,6 +367,7 @@ export default function InstructorWarnings() {
                     <TableRow>
                       <TableHead>{isRTL ? 'المدرب' : 'Instructor'}</TableHead>
                       <TableHead>{isRTL ? 'نوع الإنذار' : 'Warning Type'}</TableHead>
+                      <TableHead>{isRTL ? 'الخطورة' : 'Severity'}</TableHead>
                       <TableHead>{isRTL ? 'السبب' : 'Reason'}</TableHead>
                       <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
                       <TableHead className="text-center">{isRTL ? 'الإجراءات' : 'Actions'}</TableHead>
@@ -346,6 +404,13 @@ export default function InstructorWarnings() {
                           </TableCell>
                           <TableCell>
                             <Badge variant={badge.variant}>{badge.label}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getSeverityColor(warning.severity || 'minor')}>
+                              {warning.severity === 'minor' ? (isRTL ? 'بسيط' : 'Minor') :
+                               warning.severity === 'major' ? (isRTL ? 'متوسط' : 'Major') :
+                               (isRTL ? 'حرج' : 'Critical')}
+                            </Badge>
                           </TableCell>
                           <TableCell className="max-w-xs">
                             <p className="truncate">

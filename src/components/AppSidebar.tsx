@@ -111,6 +111,7 @@ export function AppSidebar() {
     { title: t.nav.ageGroups, url: '/age-groups', icon: Layers, roles: ['admin'] },
     { title: t.nav.levels, url: '/levels', icon: BookOpen, roles: ['admin'] },
     { title: isRTL ? 'إنذارات المدربين' : 'Instructor Warnings', url: '/instructor-warnings', icon: AlertTriangle, roles: ['admin'] },
+    { title: isRTL ? 'أداء المدربين' : 'Instructor Performance', url: '/instructor-performance', icon: BarChart3, roles: ['admin'] },
     { title: t.nav.activityLog, url: '/activity-log', icon: Activity, roles: ['admin'] },
     { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['admin', 'reception'] },
     { title: t.nav.settings, url: '/settings', icon: Settings, roles: ['admin'] },
