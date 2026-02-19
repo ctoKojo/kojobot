@@ -158,18 +158,36 @@ export function StudentDashboard() {
         upcomingSessions = data || [];
       }
 
-      // Fetch level progress from group_level_progress
+      // Fetch level progress from actual attendance records
       let levelProgress = null;
       if (groupStudent?.group_id) {
-        const { data: glp } = await supabase
-          .from('group_level_progress')
-          .select('current_session, total_sessions')
-          .eq('group_id', groupStudent.group_id)
-          .order('started_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (glp) {
-          levelProgress = { completed: (glp.current_session || 1) - 1, total: glp.total_sessions || 12 };
+        // Get sessions where student was present or late
+        const { data: presentAttendance } = await supabase
+          .from('attendance')
+          .select('session_id, status, compensation_status, sessions!inner(session_number, group_id)')
+          .eq('student_id', user?.id)
+          .eq('sessions.group_id', groupStudent.group_id)
+          .in('status', ['present', 'late']);
+
+        // Get sessions where student was compensated (regardless of original status)
+        const { data: compensatedAttendance } = await supabase
+          .from('attendance')
+          .select('session_id, sessions!inner(session_number, group_id)')
+          .eq('student_id', user?.id)
+          .eq('sessions.group_id', groupStudent.group_id)
+          .eq('compensation_status', 'compensated');
+
+        // Calculate unique session numbers attended
+        const attendedSessionNumbers = new Set<number>();
+        presentAttendance?.forEach((a: any) => {
+          if (a.sessions?.session_number) attendedSessionNumbers.add(a.sessions.session_number);
+        });
+        compensatedAttendance?.forEach((a: any) => {
+          if (a.sessions?.session_number) attendedSessionNumbers.add(a.sessions.session_number);
+        });
+
+        if (attendedSessionNumbers.size > 0 || presentAttendance?.length === 0) {
+          levelProgress = { completed: attendedSessionNumbers.size, total: 12 };
         }
       }
 
