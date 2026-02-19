@@ -10,7 +10,7 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, Plus, Trash2, Save, Clock, Loader2, Bell, Key, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Plus, Trash2, Save, Clock, Loader2, Bell, Key, CheckCircle, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -300,12 +300,192 @@ export default function SettingsPage() {
           </Card>
         )}
 
+        {/* Content Access Permissions - Admin Only */}
+        {role === 'admin' && <ContentAccessSettings isRTL={isRTL} />}
+
         {/* Push Notifications - Admin Only */}
         {role === 'admin' && <PushNotificationSettings isRTL={isRTL} />}
       </div>
     </DashboardLayout>
   );
 }
+
+function ContentAccessSettings({ isRTL }: { isRTL: boolean }) {
+  const [rules, setRules] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  const subscriptionTypes = [
+    { value: 'kojo_squad', labelEn: 'Kojo Squad', labelAr: 'كوجو سكواد' },
+    { value: 'kojo_core', labelEn: 'Kojo Core', labelAr: 'كوجو كور' },
+    { value: 'kojo_x', labelEn: 'Kojo X', labelAr: 'كوجو اكس' },
+  ];
+
+  const attendanceModes = [
+    { value: 'offline', labelEn: 'Offline', labelAr: 'حضوري' },
+    { value: 'online', labelEn: 'Online', labelAr: 'أونلاين' },
+  ];
+
+  useEffect(() => {
+    const loadRules = async () => {
+      const { data } = await supabase
+        .from('content_access_rules')
+        .select('*')
+        .eq('is_active', true)
+        .order('subscription_type');
+      
+      if (data && data.length > 0) {
+        setRules(data);
+      } else {
+        // Initialize with defaults
+        const defaults: any[] = [];
+        for (const sub of subscriptionTypes) {
+          for (const mode of attendanceModes) {
+            defaults.push({
+              subscription_type: sub.value,
+              attendance_mode: mode.value,
+              can_view_slides: true,
+              can_view_summary_video: sub.value !== 'kojo_squad',
+              can_view_full_video: sub.value === 'kojo_x',
+              can_view_assignment: true,
+              can_view_quiz: true,
+            });
+          }
+        }
+        setRules(defaults);
+      }
+      setLoading(false);
+    };
+    loadRules();
+  }, []);
+
+  const updateRule = (subType: string, attMode: string, field: string, value: boolean) => {
+    setRules(prev => prev.map(r => 
+      r.subscription_type === subType && r.attendance_mode === attMode
+        ? { ...r, [field]: value }
+        : r
+    ));
+    setHasChanges(true);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      for (const rule of rules) {
+        const { error } = await supabase
+          .from('content_access_rules')
+          .upsert({
+            subscription_type: rule.subscription_type,
+            attendance_mode: rule.attendance_mode,
+            can_view_slides: rule.can_view_slides,
+            can_view_summary_video: rule.can_view_summary_video,
+            can_view_full_video: rule.can_view_full_video,
+            can_view_assignment: rule.can_view_assignment,
+            can_view_quiz: rule.can_view_quiz,
+            effective_from: new Date().toISOString().split('T')[0],
+            is_active: true,
+          }, { onConflict: 'subscription_type,attendance_mode' });
+        
+        if (error) throw error;
+      }
+      setHasChanges(false);
+      toast.success(isRTL ? 'تم حفظ صلاحيات المحتوى' : 'Content permissions saved');
+    } catch (error) {
+      console.error(error);
+      toast.error(isRTL ? 'فشل في حفظ الصلاحيات' : 'Failed to save permissions');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getSubLabel = (value: string) => {
+    const sub = subscriptionTypes.find(s => s.value === value);
+    return isRTL ? sub?.labelAr : sub?.labelEn;
+  };
+
+  const getModeLabel = (value: string) => {
+    const mode = attendanceModes.find(m => m.value === value);
+    return isRTL ? mode?.labelAr : mode?.labelEn;
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-primary" />
+            <CardTitle>{isRTL ? 'صلاحيات المحتوى التعليمي' : 'Content Access Permissions'}</CardTitle>
+          </div>
+          {hasChanges && (
+            <Button onClick={handleSave} disabled={saving} size="sm">
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              {isRTL ? 'حفظ' : 'Save'}
+            </Button>
+          )}
+        </div>
+        <CardDescription>
+          {isRTL ? 'تحكم في المحتوى المتاح لكل باقة اشتراك' : 'Control content available for each subscription tier'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-start p-2 font-medium">{isRTL ? 'الباقة' : 'Tier'}</th>
+                    <th className="text-start p-2 font-medium">{isRTL ? 'الوضع' : 'Mode'}</th>
+                    <th className="text-center p-2 font-medium">{isRTL ? 'سلايد' : 'Slides'}</th>
+                    <th className="text-center p-2 font-medium">{isRTL ? 'فيديو ملخص' : 'Summary'}</th>
+                    <th className="text-center p-2 font-medium">{isRTL ? 'فيديو كامل' : 'Full Video'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rules.map((rule, idx) => (
+                    <tr key={idx} className="border-b last:border-0">
+                      <td className="p-2 font-medium">{getSubLabel(rule.subscription_type)}</td>
+                      <td className="p-2">
+                        <Badge variant="outline">{getModeLabel(rule.attendance_mode)}</Badge>
+                      </td>
+                      <td className="p-2 text-center">
+                        <Switch
+                          checked={rule.can_view_slides}
+                          onCheckedChange={(v) => updateRule(rule.subscription_type, rule.attendance_mode, 'can_view_slides', v)}
+                        />
+                      </td>
+                      <td className="p-2 text-center">
+                        <Switch
+                          checked={rule.can_view_summary_video}
+                          onCheckedChange={(v) => updateRule(rule.subscription_type, rule.attendance_mode, 'can_view_summary_video', v)}
+                        />
+                      </td>
+                      <td className="p-2 text-center">
+                        <Switch
+                          checked={rule.can_view_full_video}
+                          onCheckedChange={(v) => updateRule(rule.subscription_type, rule.attendance_mode, 'can_view_full_video', v)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isRTL ? '* التعديلات تسري على الاشتراكات الجديدة فقط' : '* Changes apply to new subscriptions only'}
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 
 function PushNotificationSettings({ isRTL }: { isRTL: boolean }) {
   const [vapidStatus, setVapidStatus] = useState<'loading' | 'configured' | 'not_configured'>('loading');

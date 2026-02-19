@@ -68,7 +68,39 @@ import {
   X,
   FileIcon,
   Eye,
+  BookOpen,
+  Presentation,
+  PlayCircle,
+  Film,
+  CheckCircle,
+  Loader2,
 } from 'lucide-react';
+
+interface CurriculumContent {
+  id: string;
+  title: string;
+  title_ar: string;
+  description: string | null;
+  description_ar: string | null;
+  slides_url: string | null;
+  summary_video_url: string | null;
+  full_video_url: string | null;
+  quiz_id: string | null;
+  assignment_title: string | null;
+  assignment_title_ar: string | null;
+  assignment_description: string | null;
+  assignment_description_ar: string | null;
+  assignment_attachment_url: string | null;
+  assignment_attachment_type: string | null;
+  assignment_max_score: number | null;
+  version: number;
+  is_published: boolean;
+  can_view_slides: boolean;
+  can_view_summary_video: boolean;
+  can_view_full_video: boolean;
+  can_view_assignment: boolean;
+  can_view_quiz: boolean;
+}
 
 interface StaffAttendance {
   id: string;
@@ -98,6 +130,9 @@ interface Group {
   instructor_id?: string | null;
   attendance_mode?: string;
   session_link?: string | null;
+  age_group_id?: string | null;
+  level_id?: string | null;
+  group_type?: string;
 }
 
 interface StudentData {
@@ -132,6 +167,12 @@ export default function SessionDetails() {
   const [students, setStudents] = useState<StudentData[]>([]);
   const [quizAssignment, setQuizAssignment] = useState<any>(null);
   const [assignment, setAssignment] = useState<any>(null);
+  
+  // Curriculum content
+  const [curriculumContent, setCurriculumContent] = useState<CurriculumContent | null>(null);
+  const [curriculumLoading, setCurriculumLoading] = useState(false);
+  const [assigningCurriculumQuiz, setAssigningCurriculumQuiz] = useState(false);
+  const [assigningCurriculumAssignment, setAssigningCurriculumAssignment] = useState(false);
   
   // Import quiz dialog
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -287,7 +328,7 @@ export default function SessionDetails() {
       // Fetch group with attendance mode and session link
       const { data: groupData } = await supabase
         .from('groups')
-        .select('id, name, name_ar, instructor_id, attendance_mode, session_link')
+        .select('id, name, name_ar, instructor_id, attendance_mode, session_link, age_group_id, level_id, group_type')
         .eq('id', sessionData.group_id)
         .single();
       setGroup(groupData);
@@ -408,6 +449,43 @@ export default function SessionDetails() {
         setInstructorProfile(instrProfile);
       }
 
+      // Fetch curriculum content
+      if (groupData?.age_group_id && groupData?.level_id && sessionData.session_number) {
+        setCurriculumLoading(true);
+        try {
+          let subType: string | null = null;
+          let attMode: string | null = null;
+          if (role === 'student' && user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('subscription_type, attendance_mode')
+              .eq('user_id', user.id)
+              .maybeSingle();
+            subType = profile?.subscription_type || null;
+            attMode = profile?.attendance_mode || null;
+          }
+
+          const { data: currData } = await supabase.rpc('get_curriculum_with_access', {
+            p_age_group_id: groupData.age_group_id,
+            p_level_id: groupData.level_id,
+            p_session_number: sessionData.session_number,
+            p_subscription_type: subType,
+            p_attendance_mode: attMode,
+          });
+
+          if (currData && currData.length > 0) {
+            setCurriculumContent(currData[0] as unknown as CurriculumContent);
+          } else {
+            setCurriculumContent(null);
+          }
+        } catch (err) {
+          console.error('Error fetching curriculum:', err);
+          setCurriculumContent(null);
+        } finally {
+          setCurriculumLoading(false);
+        }
+      }
+
     } catch (error) {
       console.error('Error fetching session data:', error);
       toast({
@@ -427,6 +505,103 @@ export default function SessionDetails() {
       .eq('is_active', true)
       .order('created_at', { ascending: false });
     setAvailableQuizzes(data || []);
+  };
+
+  // One-click assign curriculum quiz
+  const handleAssignCurriculumQuiz = async () => {
+    if (!curriculumContent?.quiz_id || !session || !user) return;
+    setAssigningCurriculumQuiz(true);
+    try {
+      const { data: quiz } = await supabase
+        .from('quizzes')
+        .select('duration_minutes')
+        .eq('id', curriculumContent.quiz_id)
+        .single();
+
+      const startDate = new Date(`${session.session_date}T${session.session_time.slice(0, 5)}`);
+      const dueDate = new Date(startDate.getTime() + (quiz?.duration_minutes || 30) * 60 * 1000);
+
+      const snapshot = {
+        curriculum_session_id: curriculumContent.id,
+        title: curriculumContent.title,
+        title_ar: curriculumContent.title_ar,
+        version: curriculumContent.version,
+        assigned_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('quiz_assignments')
+        .insert({
+          quiz_id: curriculumContent.quiz_id,
+          session_id: session.id,
+          group_id: session.group_id,
+          assigned_by: user.id,
+          start_time: startDate.toISOString(),
+          due_date: dueDate.toISOString(),
+          curriculum_snapshot: snapshot,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: isRTL ? 'تم اسناد الكويز' : 'Quiz Assigned',
+        description: isRTL ? 'تم اسناد كويز المنهج بنجاح' : 'Curriculum quiz assigned successfully',
+      });
+      fetchSessionData();
+      autoConfirmInstructorAttendance();
+    } catch (error: any) {
+      toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setAssigningCurriculumQuiz(false);
+    }
+  };
+
+  // One-click assign curriculum assignment
+  const handleAssignCurriculumAssignment = async () => {
+    if (!curriculumContent?.assignment_title || !session || !user) return;
+    setAssigningCurriculumAssignment(true);
+    try {
+      const dueDate = new Date(`${session.session_date}T${session.session_time.slice(0, 5)}`);
+      dueDate.setDate(dueDate.getDate() + 7);
+
+      const snapshot = {
+        curriculum_session_id: curriculumContent.id,
+        title: curriculumContent.title,
+        title_ar: curriculumContent.title_ar,
+        version: curriculumContent.version,
+        assigned_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('assignments')
+        .insert({
+          title: curriculumContent.assignment_title,
+          title_ar: curriculumContent.assignment_title_ar || curriculumContent.assignment_title,
+          description: curriculumContent.assignment_description,
+          description_ar: curriculumContent.assignment_description_ar,
+          max_score: curriculumContent.assignment_max_score || 100,
+          due_date: dueDate.toISOString(),
+          session_id: session.id,
+          group_id: session.group_id,
+          assigned_by: user.id,
+          attachment_url: curriculumContent.assignment_attachment_url,
+          attachment_type: curriculumContent.assignment_attachment_type,
+          curriculum_snapshot: snapshot,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: isRTL ? 'تم اسناد الواجب' : 'Assignment Assigned',
+        description: isRTL ? 'تم اسناد واجب المنهج بنجاح' : 'Curriculum assignment assigned successfully',
+      });
+      fetchSessionData();
+      autoConfirmInstructorAttendance();
+    } catch (error: any) {
+      toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setAssigningCurriculumAssignment(false);
+    }
   };
 
   const handleImportQuiz = async () => {
@@ -988,6 +1163,122 @@ export default function SessionDetails() {
             </CardContent>
           </Card>
         )}
+
+        {/* Curriculum Content Section */}
+        {curriculumLoading ? (
+          <Card>
+            <CardContent className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-muted-foreground">{isRTL ? 'جاري تحميل المنهج...' : 'Loading curriculum...'}</span>
+            </CardContent>
+          </Card>
+        ) : curriculumContent ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                  {isRTL ? 'محتوى المنهج' : 'Curriculum Content'}
+                  <Badge variant="secondary" className="text-xs">v{curriculumContent.version}</Badge>
+                  {curriculumContent.is_published && (
+                    <Badge className="bg-primary text-primary-foreground text-xs">
+                      {isRTL ? 'منشور' : 'Published'}
+                    </Badge>
+                  )}
+                </CardTitle>
+              </div>
+              <CardDescription>
+                {language === 'ar' ? curriculumContent.title_ar : curriculumContent.title}
+                {curriculumContent.description && (
+                  <span className="block mt-1">{language === 'ar' ? curriculumContent.description_ar : curriculumContent.description}</span>
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Content Links */}
+              <div className="flex flex-wrap gap-3">
+                {curriculumContent.can_view_slides && curriculumContent.slides_url && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={curriculumContent.slides_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                      <Presentation className="h-4 w-4" />
+                      {isRTL ? 'السلايدات' : 'Slides'}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </Button>
+                )}
+                {curriculumContent.can_view_summary_video && curriculumContent.summary_video_url && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={curriculumContent.summary_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                      <PlayCircle className="h-4 w-4" />
+                      {isRTL ? 'فيديو ملخص' : 'Summary Video'}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </Button>
+                )}
+                {curriculumContent.can_view_full_video && curriculumContent.full_video_url && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={curriculumContent.full_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                      <Film className="h-4 w-4" />
+                      {isRTL ? 'فيديو كامل' : 'Full Video'}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </Button>
+                )}
+              </div>
+
+              {/* One-click assign buttons (admin/instructor only) */}
+              {canManage && (
+                <div className="flex flex-wrap gap-3 pt-2 border-t">
+                  {curriculumContent.quiz_id && !quizAssignment && (
+                    <Button
+                      size="sm"
+                      onClick={handleAssignCurriculumQuiz}
+                      disabled={assigningCurriculumQuiz}
+                      className="flex items-center gap-2"
+                    >
+                      {assigningCurriculumQuiz ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileQuestion className="h-4 w-4" />}
+                      {isRTL ? 'اسناد كويز المنهج' : 'Assign Curriculum Quiz'}
+                    </Button>
+                  )}
+                  {curriculumContent.quiz_id && quizAssignment && (
+                    <Button size="sm" variant="outline" disabled className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-primary" />
+                      {isRTL ? 'تم اسناد الكويز' : 'Quiz Assigned'}
+                    </Button>
+                  )}
+                  {curriculumContent.assignment_title && !assignment && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={handleAssignCurriculumAssignment}
+                      disabled={assigningCurriculumAssignment}
+                      className="flex items-center gap-2"
+                    >
+                      {assigningCurriculumAssignment ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
+                      {isRTL ? 'اسناد واجب المنهج' : 'Assign Curriculum Assignment'}
+                    </Button>
+                  )}
+                  {curriculumContent.assignment_title && assignment && (
+                    <Button size="sm" variant="outline" disabled className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-primary" />
+                      {isRTL ? 'تم اسناد الواجب' : 'Assignment Assigned'}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ) : canManage ? (
+          <Card className="border-warning/50 bg-warning/5">
+            <CardContent className="flex items-center gap-3 py-4">
+              <AlertCircle className="h-5 w-5 text-warning shrink-0" />
+              <div>
+                <p className="text-sm font-medium">{isRTL ? 'لا يوجد محتوى منهج لهذه السيشن' : 'No curriculum content for this session'}</p>
+                <p className="text-xs text-muted-foreground">{isRTL ? 'يمكنك إضافة المحتوى من صفحة إدارة المنهج' : 'You can add content from the Curriculum Management page'}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
