@@ -24,6 +24,9 @@ import {
   DollarSign,
   CreditCard,
   MessageSquare,
+  TrendingUp,
+  Briefcase,
+  GraduationCap as AcademicCap,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,6 +54,12 @@ interface NavItem {
   roles: ('admin' | 'instructor' | 'student' | 'reception')[];
 }
 
+interface NavSection {
+  label: string;
+  labelAr: string;
+  items: NavItem[];
+}
+
 export function AppSidebar() {
   const { t, isRTL } = useLanguage();
   const { role, signOut } = useAuth();
@@ -60,65 +69,178 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
 
-  // Main navigation - different per role
-  const mainNavItems: NavItem[] = [
-    { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'instructor', 'student', 'reception'] },
-    { title: t.nav.students, url: '/students', icon: GraduationCap, roles: ['admin', 'reception'] },
-    { title: t.nav.instructors, url: '/instructors', icon: Users, roles: ['admin'] },
-    { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['admin', 'instructor', 'reception'] },
-    { title: isRTL ? 'جدول العمل' : 'My Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['instructor', 'reception'] },
-    { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-instructor-warnings', icon: AlertTriangle, roles: ['instructor'] },
-    { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['admin', 'student'] },
-    { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare, roles: ['admin', 'instructor', 'student', 'reception'] },
-  ];
+  const getSections = (): NavSection[] => {
+    switch (role) {
+      case 'admin':
+        return [
+          {
+            label: 'Main', labelAr: 'الرئيسية',
+            items: [
+              { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['admin'] },
+              { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare, roles: ['admin'] },
+              { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['admin'] },
+            ],
+          },
+          {
+            label: 'People', labelAr: 'الأشخاص',
+            items: [
+              { title: t.nav.students, url: '/students', icon: GraduationCap, roles: ['admin'] },
+              { title: t.nav.instructors, url: '/instructors', icon: Users, roles: ['admin'] },
+            ],
+          },
+          {
+            label: 'Academic', labelAr: 'الأكاديمي',
+            items: [
+              { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['admin'] },
+              { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin'] },
+              { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['admin'] },
+              { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['admin'] },
+            ],
+          },
+          {
+            label: 'Content', labelAr: 'المحتوى',
+            items: [
+              { title: isRTL ? 'المنهج' : 'Curriculum', url: '/curriculum', icon: Library, roles: ['admin'] },
+              { title: isRTL ? 'المواد التعليمية' : 'Materials', url: '/materials', icon: BookMarked, roles: ['admin'] },
+              { title: t.nav.questionBank, url: '/quizzes', icon: Library, roles: ['admin'] },
+              { title: isRTL ? 'إسناد الكويزات' : 'Quiz Assignments', url: '/my-instructor-quizzes', icon: Send, roles: ['admin'] },
+              { title: isRTL ? 'تقارير الكويزات' : 'Quiz Reports', url: '/quiz-reports', icon: BarChart3, roles: ['admin'] },
+              { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['admin'] },
+            ],
+          },
+          {
+            label: 'Finance', labelAr: 'المالية',
+            items: [
+              { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['admin'] },
+              { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['admin'] },
+              { title: isRTL ? 'قواعد الخصم' : 'Deduction Rules', url: '/deduction-rules', icon: AlertTriangle, roles: ['admin'] },
+            ],
+          },
+          {
+            label: 'Management', labelAr: 'الإدارة',
+            items: [
+              { title: isRTL ? 'أداء المدربين' : 'Instructor Performance', url: '/instructor-performance', icon: TrendingUp, roles: ['admin'] },
+              { title: isRTL ? 'إنذارات المدربين' : 'Instructor Warnings', url: '/instructor-warnings', icon: AlertTriangle, roles: ['admin'] },
+              { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['admin'] },
+              { title: t.nav.activityLog, url: '/activity-log', icon: Activity, roles: ['admin'] },
+            ],
+          },
+          {
+            label: 'Settings', labelAr: 'الإعدادات',
+            items: [
+              { title: t.nav.ageGroups, url: '/age-groups', icon: Layers, roles: ['admin'] },
+              { title: t.nav.levels, url: '/levels', icon: BookOpen, roles: ['admin'] },
+              { title: t.nav.settings, url: '/settings', icon: Settings, roles: ['admin'] },
+            ],
+          },
+        ];
 
-  // Groups & Sessions category (Admin & Instructor & Reception)
-  const sessionsNavItems: NavItem[] = [
-    { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin', 'instructor', 'reception'] },
-    { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['admin', 'reception'] },
-    { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['admin', 'instructor', 'reception'] },
-    { title: isRTL ? 'سيشناتي التعويضية' : 'My Makeup Sessions', url: '/my-makeup-sessions', icon: RefreshCw, roles: ['student'] },
-  ];
+      case 'instructor':
+        return [
+          {
+            label: 'Main', labelAr: 'الرئيسية',
+            items: [
+              { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['instructor'] },
+              { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare, roles: ['instructor'] },
+              { title: isRTL ? 'جدول العمل' : 'My Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['instructor'] },
+            ],
+          },
+          {
+            label: 'Work', labelAr: 'العمل',
+            items: [
+              { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['instructor'] },
+              { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['instructor'] },
+              { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['instructor'] },
+            ],
+          },
+          {
+            label: 'Teaching', labelAr: 'التدريس',
+            items: [
+              { title: isRTL ? 'إسناد الكويزات' : 'Quiz Assignments', url: '/my-instructor-quizzes', icon: Send, roles: ['instructor'] },
+              { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['instructor'] },
+            ],
+          },
+          {
+            label: 'Personal', labelAr: 'الشخصي',
+            items: [
+              { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-instructor-warnings', icon: AlertTriangle, roles: ['instructor'] },
+              { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['instructor'] },
+            ],
+          },
+        ];
 
-  // Quizzes & Assignments category
-  const quizzesNavItems: NavItem[] = [
-    { title: t.nav.questionBank, url: '/quizzes', icon: Library, roles: ['admin'] },
-    { title: isRTL ? 'إسناد الكويزات' : 'Quiz Assignments', url: '/my-instructor-quizzes', icon: Send, roles: ['admin', 'instructor'] },
-    { title: isRTL ? 'تقارير الكويزات' : 'Quiz Reports', url: '/quiz-reports', icon: BarChart3, roles: ['admin'] },
-    { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['admin', 'instructor'] },
-    { title: isRTL ? 'المواد التعليمية' : 'Materials', url: '/materials', icon: BookMarked, roles: ['admin'] },
-  ];
+      case 'student':
+        return [
+          {
+            label: 'Main', labelAr: 'الرئيسية',
+            items: [
+              { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['student'] },
+              { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare, roles: ['student'] },
+              { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['student'] },
+            ],
+          },
+          {
+            label: 'My Learning', labelAr: 'دراستي',
+            items: [
+              { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileCheck, roles: ['student'] },
+              { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['student'] },
+              { title: isRTL ? 'موادي التعليمية' : 'My Materials', url: '/my-materials', icon: BookMarked, roles: ['student'] },
+              { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['student'] },
+            ],
+          },
+          {
+            label: 'Support', labelAr: 'الدعم',
+            items: [
+              { title: isRTL ? 'سيشناتي التعويضية' : 'My Makeup Sessions', url: '/my-makeup-sessions', icon: RefreshCw, roles: ['student'] },
+              { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['student'] },
+              { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-warnings', icon: AlertTriangle, roles: ['student'] },
+            ],
+          },
+        ];
 
-  // Student's "My Learning" section
-  const studentLearningItems: NavItem[] = [
-    { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileCheck, roles: ['student'] },
-    { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['student'] },
-    { title: isRTL ? 'موادي التعليمية' : 'My Materials', url: '/my-materials', icon: BookMarked, roles: ['student'] },
-    { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['student'] },
-    { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-warnings', icon: AlertTriangle, roles: ['student'] },
-    { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['student'] },
-  ];
+      case 'reception':
+        return [
+          {
+            label: 'Main', labelAr: 'الرئيسية',
+            items: [
+              { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['reception'] },
+              { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare, roles: ['reception'] },
+              { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['reception'] },
+            ],
+          },
+          {
+            label: 'Operations', labelAr: 'العمليات',
+            items: [
+              { title: t.nav.students, url: '/students', icon: GraduationCap, roles: ['reception'] },
+              { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['reception'] },
+              { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['reception'] },
+              { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['reception'] },
+              { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['reception'] },
+              { title: isRTL ? 'جدول العمل' : 'Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['reception'] },
+            ],
+          },
+          {
+            label: 'Finance', labelAr: 'المالية',
+            items: [
+              { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['reception'] },
+              { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['reception'] },
+            ],
+          },
+        ];
 
-  // Finance category (Admin + Reception)
-  const financeNavItems: NavItem[] = [
-    { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['admin', 'reception'] },
-    { title: isRTL ? 'قواعد الخصم' : 'Deduction Rules', url: '/deduction-rules', icon: AlertTriangle, roles: ['admin'] },
-    { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['admin', 'reception'] },
-  ];
+      default:
+        return [
+          {
+            label: 'Main', labelAr: 'الرئيسية',
+            items: [
+              { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'instructor', 'student', 'reception'] },
+            ],
+          },
+        ];
+    }
+  };
 
-  // Settings category (Admin only) + Reception personal items
-  const settingsNavItems: NavItem[] = [
-    { title: isRTL ? 'المنهج' : 'Curriculum', url: '/curriculum', icon: Library, roles: ['admin'] },
-    { title: t.nav.ageGroups, url: '/age-groups', icon: Layers, roles: ['admin'] },
-    { title: t.nav.levels, url: '/levels', icon: BookOpen, roles: ['admin'] },
-    { title: isRTL ? 'إنذارات المدربين' : 'Instructor Warnings', url: '/instructor-warnings', icon: AlertTriangle, roles: ['admin'] },
-    { title: isRTL ? 'أداء المدربين' : 'Instructor Performance', url: '/instructor-performance', icon: BarChart3, roles: ['admin'] },
-    { title: t.nav.activityLog, url: '/activity-log', icon: Activity, roles: ['admin'] },
-    { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['admin', 'reception'] },
-    { title: t.nav.settings, url: '/settings', icon: Settings, roles: ['admin'] },
-  ];
-
-  const filterByRole = (items: NavItem[]) => items.filter((item) => role && item.roles.includes(role));
+  const sections = getSections();
   const isActive = (url: string) => location.pathname === url;
 
   const handleSignOut = async () => {
@@ -128,7 +250,7 @@ export function AppSidebar() {
 
   const renderNavItems = (items: NavItem[]) => (
     <SidebarMenu>
-      {filterByRole(items).map((item) => (
+      {items.map((item) => (
         <SidebarMenuItem key={item.url}>
           <SidebarMenuButton
             asChild
@@ -160,13 +282,6 @@ export function AppSidebar() {
     </SidebarMenu>
   );
 
-  // Check if sections have items for current role
-  const hasSessionsItems = filterByRole(sessionsNavItems).length > 0;
-  const hasQuizzesItems = filterByRole(quizzesNavItems).length > 0;
-  const hasStudentLearningItems = filterByRole(studentLearningItems).length > 0;
-  const hasFinanceItems = filterByRole(financeNavItems).length > 0;
-  const hasSettingsItems = filterByRole(settingsNavItems).length > 0;
-
   return (
     <Sidebar side={isRTL ? 'right' : 'left'} collapsible="icon" className="font-sans">
       <SidebarHeader className="border-b border-sidebar-border h-16 flex items-center justify-center">
@@ -176,75 +291,16 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-4">
-        {/* Main Menu */}
-        <SidebarGroup>
-          {!collapsed && (
-            <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
-              {isRTL ? 'القائمة الرئيسية' : 'Main Menu'}
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent>{renderNavItems(mainNavItems)}</SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Sessions & Attendance (Admin & Instructor) */}
-        {hasSessionsItems && (
-          <SidebarGroup className="mt-4">
+        {sections.map((section, idx) => (
+          <SidebarGroup key={section.label} className={idx > 0 ? 'mt-4' : ''}>
             {!collapsed && (
               <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
-                {isRTL ? 'السيشنات والحضور' : 'Sessions & Attendance'}
+                {isRTL ? section.labelAr : section.label}
               </SidebarGroupLabel>
             )}
-            <SidebarGroupContent>{renderNavItems(sessionsNavItems)}</SidebarGroupContent>
+            <SidebarGroupContent>{renderNavItems(section.items)}</SidebarGroupContent>
           </SidebarGroup>
-        )}
-
-        {/* Quizzes & Assignments (Admin & Instructor) */}
-        {hasQuizzesItems && (
-          <SidebarGroup className="mt-4">
-            {!collapsed && (
-              <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
-                {isRTL ? 'الكويزات والواجبات' : 'Quizzes & Assignments'}
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>{renderNavItems(quizzesNavItems)}</SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {/* Student's My Learning section */}
-        {hasStudentLearningItems && (
-          <SidebarGroup className="mt-4">
-            {!collapsed && (
-              <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
-                {isRTL ? 'دراستي' : 'My Learning'}
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>{renderNavItems(studentLearningItems)}</SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {/* Finance (Admin) */}
-        {hasFinanceItems && (
-          <SidebarGroup className="mt-4">
-            {!collapsed && (
-              <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
-                {isRTL ? 'المالية' : 'Finance'}
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>{renderNavItems(financeNavItems)}</SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {/* Settings (Admin) */}
-        {hasSettingsItems && (
-          <SidebarGroup className="mt-4">
-            {!collapsed && (
-              <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
-                {isRTL ? 'الإعدادات' : 'Settings'}
-              </SidebarGroupLabel>
-            )}
-            <SidebarGroupContent>{renderNavItems(settingsNavItems)}</SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
