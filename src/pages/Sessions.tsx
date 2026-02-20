@@ -223,9 +223,6 @@ export default function SessionsPage() {
       await supabase.from('sessions').update({ status: 'cancelled' }).eq('id', pendingCancelSession.id);
 
       if (createMakeup) {
-        // Get group's level and students
-        const group = groups.find(g => g.id === pendingCancelSession.group_id);
-        const { data: groupData } = await supabase.from('groups').select('level_id').eq('id', pendingCancelSession.group_id).single();
         const { data: groupStudents } = await supabase
           .from('group_students')
           .select('student_id')
@@ -233,37 +230,21 @@ export default function SessionsPage() {
           .eq('is_active', true);
 
         if (groupStudents && groupStudents.length > 0) {
-          const levelId = groupData?.level_id || null;
+          const studentIds = groupStudents.map(gs => gs.student_id);
+          const { data, error } = await supabase.rpc('create_group_makeup_sessions', {
+            p_student_ids: studentIds,
+            p_original_session_id: pendingCancelSession.id,
+            p_group_id: pendingCancelSession.group_id,
+            p_reason: 'group_cancelled',
+            p_makeup_type: 'group_cancellation',
+          });
 
-          // For each student, check free quota and create makeup session
-          for (const gs of groupStudents) {
-            let isFree = true;
-            if (levelId) {
-              const { count } = await supabase
-                .from('makeup_sessions')
-                .select('id', { count: 'exact' })
-                .eq('student_id', gs.student_id)
-                .eq('level_id', levelId)
-                .eq('is_free', true);
-              isFree = (count || 0) < 2;
-            }
-
-            await supabase.from('makeup_sessions').insert({
-              student_id: gs.student_id,
-              original_session_id: pendingCancelSession.id,
-              group_id: pendingCancelSession.group_id,
-              level_id: levelId,
-              reason: 'group_cancelled',
-              is_free: isFree,
-              makeup_type: 'group_cancellation',
-            });
-          }
-
+          const result = data as any;
           toast({
             title: t.common.success,
-            description: isRTL 
-              ? `تم إلغاء السيشن وإنشاء ${groupStudents.length} سيشن تعويضية`
-              : `Session cancelled and ${groupStudents.length} makeup sessions created`,
+            description: isRTL
+              ? `تم إلغاء السيشن وإنشاء ${result?.created_count || 0} سيشن تعويضية`
+              : `Session cancelled and ${result?.created_count || 0} makeup sessions created`,
           });
         }
       } else {

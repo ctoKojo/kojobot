@@ -302,7 +302,7 @@ export default function MakeupSessionsPage() {
         message_ar: `تم جدولة سيشن تعويضية لمجموعة "${selectedSession.group_name}" في ${scheduleForm.date} الساعة ${scheduleForm.time}. يرجى التأكيد أو الرفض.`,
         type: 'info',
         category: 'makeup_session',
-        action_url: '/profile',
+        action_url: '/my-makeup-sessions',
       });
 
       // Send notification to assigned instructor
