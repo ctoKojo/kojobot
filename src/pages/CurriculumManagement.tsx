@@ -396,7 +396,7 @@ export default function CurriculumManagement() {
                           <TableRow key={session.id}>
                             <TableCell className="font-medium">{session.session_number}</TableCell>
                             <TableCell>
-                              {inlineEditId === session.id && !isViewingOldVersion && !isPublished ? (
+                              {inlineEditId === session.id ? (
                                 <input
                                   className="w-full bg-transparent border-b border-primary outline-none text-sm py-0.5"
                                   value={inlineEditValue}
@@ -407,12 +407,10 @@ export default function CurriculumManagement() {
                                 />
                               ) : (
                                 <div
-                                  className={!isViewingOldVersion && !isPublished ? 'cursor-pointer hover:text-primary transition-colors' : ''}
+                                  className="cursor-pointer hover:text-primary transition-colors"
                                   onClick={() => {
-                                    if (!isViewingOldVersion && !isPublished) {
-                                      setInlineEditId(session.id);
-                                      setInlineEditValue(isRTL ? session.title_ar : session.title);
-                                    }
+                                    setInlineEditId(session.id);
+                                    setInlineEditValue(isRTL ? session.title_ar : session.title);
                                   }}
                                 >
                                   <div className="font-medium text-sm">{isRTL ? session.title_ar : session.title}</div>
@@ -450,7 +448,7 @@ export default function CurriculumManagement() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Button variant="ghost" size="sm" onClick={() => setEditSession(session)} disabled={isPublished || isViewingOldVersion}>
+                              <Button variant="ghost" size="sm" onClick={() => setEditSession(session)}>
                                 {isRTL ? 'تعديل' : 'Edit'}
                               </Button>
                             </TableCell>
