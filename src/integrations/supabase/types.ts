@@ -2350,6 +2350,26 @@ export type Database = {
         }
         Returns: number
       }
+      create_group_makeup_sessions: {
+        Args: {
+          p_group_id: string
+          p_makeup_type: string
+          p_original_session_id: string
+          p_reason: string
+          p_student_ids: string[]
+        }
+        Returns: Json
+      }
+      create_makeup_session: {
+        Args: {
+          p_group_id: string
+          p_makeup_type: string
+          p_original_session_id: string
+          p_reason: string
+          p_student_id: string
+        }
+        Returns: Json
+      }
       get_conversation_participant_profiles: {
         Args: { p_user_ids: string[] }
         Returns: {

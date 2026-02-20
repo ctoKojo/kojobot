@@ -245,72 +245,16 @@ export default function AttendancePage() {
 
   const autoCreateMakeupSessions = async (absentStudentIds: string[]) => {
     if (!selectedSession || !selectedGroup || absentStudentIds.length === 0) return 0;
-
     try {
-      const { data: groupData } = await supabase.from('groups').select('level_id').eq('id', selectedGroup).single();
-      const levelId = groupData?.level_id || null;
-
-      // Check which absent students already have a makeup session for this session
-      const { data: existingMakeups } = await supabase
-        .from('makeup_sessions')
-        .select('student_id')
-        .eq('original_session_id', selectedSession)
-        .in('student_id', absentStudentIds);
-
-      const existingStudentIds = new Set((existingMakeups || []).map(m => m.student_id));
-      const newAbsentIds = absentStudentIds.filter(id => !existingStudentIds.has(id));
-
-      if (newAbsentIds.length === 0) return 0;
-
-      // For each new absent student, check free quota via ledger and create makeup
-      let created = 0;
-      for (const studentId of newAbsentIds) {
-        let isFree = true;
-        if (levelId) {
-          // Use the credits ledger
-          const { data: credits } = await supabase
-            .from('student_makeup_credits')
-            .select('used_free, total_free_allowed')
-            .eq('student_id', studentId)
-            .eq('level_id', levelId)
-            .maybeSingle();
-
-          if (credits) {
-            isFree = credits.used_free < credits.total_free_allowed;
-            // Increment used_free
-            if (isFree) {
-              await supabase
-                .from('student_makeup_credits')
-                .update({ used_free: credits.used_free + 1 })
-                .eq('student_id', studentId)
-                .eq('level_id', levelId);
-            }
-          } else {
-            // Create ledger entry
-            await supabase.from('student_makeup_credits').insert({
-              student_id: studentId,
-              level_id: levelId,
-              total_free_allowed: 2,
-              used_free: 1,
-            });
-            isFree = true;
-          }
-        }
-
-        const { error } = await supabase.from('makeup_sessions').insert({
-          student_id: studentId,
-          original_session_id: selectedSession,
-          group_id: selectedGroup,
-          level_id: levelId,
-          reason: 'student_absent',
-          is_free: isFree,
-          makeup_type: 'individual',
-        });
-
-        if (!error) created++;
-      }
-
-      return created;
+      const { data, error } = await supabase.rpc('create_group_makeup_sessions', {
+        p_student_ids: absentStudentIds,
+        p_original_session_id: selectedSession,
+        p_group_id: selectedGroup,
+        p_reason: 'student_absent',
+        p_makeup_type: 'individual',
+      });
+      if (error) throw error;
+      return (data as any)?.created_count || 0;
     } catch (error) {
       console.error('Error auto-creating makeup sessions:', error);
       return 0;
@@ -379,50 +323,23 @@ export default function AttendancePage() {
   const handleCreateMakeupSession = async (studentId: string) => {
     if (!selectedSession || !selectedGroup) return;
     try {
-      const { data: groupData } = await supabase.from('groups').select('level_id').eq('id', selectedGroup).single();
-      const levelId = groupData?.level_id || null;
-
-      let isFree = true;
-      if (levelId) {
-        const { data: credits } = await supabase
-          .from('student_makeup_credits')
-          .select('used_free, total_free_allowed')
-          .eq('student_id', studentId)
-          .eq('level_id', levelId)
-          .maybeSingle();
-
-        if (credits) {
-          isFree = credits.used_free < credits.total_free_allowed;
-          if (isFree) {
-            await supabase
-              .from('student_makeup_credits')
-              .update({ used_free: credits.used_free + 1 })
-              .eq('student_id', studentId)
-              .eq('level_id', levelId);
-          }
-        } else {
-          await supabase.from('student_makeup_credits').insert({
-            student_id: studentId,
-            level_id: levelId,
-            total_free_allowed: 2,
-            used_free: 1,
-          });
-          isFree = true;
-        }
-      }
-
-      const { error } = await supabase.from('makeup_sessions').insert({
-        student_id: studentId,
-        original_session_id: selectedSession,
-        group_id: selectedGroup,
-        level_id: levelId,
-        reason: 'student_absent',
-        is_free: isFree,
-        makeup_type: 'individual',
+      const { data, error } = await supabase.rpc('create_makeup_session', {
+        p_student_id: studentId,
+        p_original_session_id: selectedSession,
+        p_group_id: selectedGroup,
+        p_reason: 'student_absent',
+        p_makeup_type: 'individual',
       });
-
       if (error) throw error;
-      toast({ title: isRTL ? 'تم الإنشاء' : 'Created', description: isRTL ? 'تم إنشاء سيشن تعويضية' : 'Makeup session created' });
+      const result = data as any;
+      toast({
+        title: result?.created
+          ? (isRTL ? 'تم الإنشاء' : 'Created')
+          : (isRTL ? 'موجودة بالفعل' : 'Already exists'),
+        description: result?.created
+          ? (isRTL ? 'تم إنشاء سيشن تعويضية' : 'Makeup session created')
+          : (isRTL ? 'سيشن تعويضية موجودة بالفعل لهذا الطالب' : 'Makeup session already exists for this student'),
+      });
     } catch (error) {
       console.error(error);
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error' });
