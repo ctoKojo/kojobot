@@ -253,10 +253,23 @@ export default function AttendancePage() {
         p_reason: 'student_absent',
         p_makeup_type: 'individual',
       });
-      if (error) throw error;
+      if (error) {
+        console.error('Makeup sessions RPC error:', error);
+        toast({
+          variant: 'destructive',
+          title: isRTL ? 'خطأ في السيشنات التعويضية' : 'Makeup Sessions Error',
+          description: error.message,
+        });
+        return 0;
+      }
       return (data as any)?.created_count || 0;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error auto-creating makeup sessions:', error);
+      toast({
+        variant: 'destructive',
+        title: isRTL ? 'خطأ في السيشنات التعويضية' : 'Makeup Sessions Error',
+        description: error?.message || (isRTL ? 'فشل في إنشاء السيشنات التعويضية' : 'Failed to create makeup sessions'),
+      });
       return 0;
     }
   };

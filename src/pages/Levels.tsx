@@ -48,6 +48,7 @@ interface Level {
   track: string | null;
   parent_level_id: string | null;
   is_active: boolean;
+  expected_sessions_count: number;
 }
 
 export default function LevelsPage() {
@@ -60,9 +61,11 @@ export default function LevelsPage() {
   const [editingLevel, setEditingLevel] = useState<Level | null>(null);
   const [formData, setFormData] = useState({
     name: '',
+    name_ar: '',
     level_order: 0,
     track: '',
     parent_level_id: '',
+    expected_sessions_count: 12,
   });
 
   useEffect(() => {
@@ -77,7 +80,7 @@ export default function LevelsPage() {
         .order('level_order', { ascending: true });
 
       if (error) throw error;
-      setLevels(data || []);
+      setLevels((data || []) as Level[]);
     } catch (error) {
       console.error('Error fetching levels:', error);
       toast({
@@ -94,10 +97,11 @@ export default function LevelsPage() {
     try {
       const payload = {
         name: formData.name,
-        name_ar: formData.name,
+        name_ar: formData.name_ar || formData.name,
         level_order: formData.level_order,
         track: formData.track || null,
         parent_level_id: formData.parent_level_id || null,
+        expected_sessions_count: formData.expected_sessions_count,
       };
 
       if (editingLevel) {
@@ -125,7 +129,7 @@ export default function LevelsPage() {
 
       setIsDialogOpen(false);
       setEditingLevel(null);
-      setFormData({ name: '', level_order: 0, track: '', parent_level_id: '' });
+      setFormData({ name: '', name_ar: '', level_order: 0, track: '', parent_level_id: '', expected_sessions_count: 12 });
       fetchLevels();
     } catch (error) {
       console.error('Error saving level:', error);
@@ -141,9 +145,11 @@ export default function LevelsPage() {
     setEditingLevel(level);
     setFormData({
       name: level.name,
+      name_ar: level.name_ar,
       level_order: level.level_order,
       track: level.track || '',
       parent_level_id: level.parent_level_id || '',
+      expected_sessions_count: level.expected_sessions_count ?? 12,
     });
     setIsDialogOpen(true);
   };
@@ -214,7 +220,7 @@ export default function LevelsPage() {
             <DialogTrigger asChild>
               <Button className="kojo-gradient" onClick={() => {
                 setEditingLevel(null);
-                setFormData({ name: '', level_order: levels.length, track: '', parent_level_id: '' });
+                setFormData({ name: '', name_ar: '', level_order: levels.length, track: '', parent_level_id: '', expected_sessions_count: 12 });
               }}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t.levels.addLevel}
@@ -230,23 +236,47 @@ export default function LevelsPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">{isRTL ? 'الاسم' : 'Name'}</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder={isRTL ? 'مثال: المستوى 2 سوفتوير' : 'e.g., Level 2 Software'}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">{isRTL ? 'الاسم (إنجليزي)' : 'Name (English)'}</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder={isRTL ? 'مثال: Level 2 Software' : 'e.g., Level 2 Software'}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="name_ar">{isRTL ? 'الاسم (عربي)' : 'Name (Arabic)'}</Label>
+                    <Input
+                      id="name_ar"
+                      value={formData.name_ar}
+                      onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
+                      placeholder={isRTL ? 'مثال: المستوى 2 سوفتوير' : 'e.g., المستوى 2 سوفتوير'}
+                      dir="rtl"
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="level_order">{isRTL ? 'ترتيب المستوى' : 'Level Order'}</Label>
-                  <Input
-                    id="level_order"
-                    type="number"
-                    value={formData.level_order}
-                    onChange={(e) => setFormData({ ...formData, level_order: parseInt(e.target.value) || 0 })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="level_order">{isRTL ? 'ترتيب المستوى' : 'Level Order'}</Label>
+                    <Input
+                      id="level_order"
+                      type="number"
+                      value={formData.level_order}
+                      onChange={(e) => setFormData({ ...formData, level_order: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="expected_sessions">{isRTL ? 'عدد السيشنات المتوقع' : 'Expected Sessions'}</Label>
+                    <Input
+                      id="expected_sessions"
+                      type="number"
+                      min={1}
+                      value={formData.expected_sessions_count}
+                      onChange={(e) => setFormData({ ...formData, expected_sessions_count: parseInt(e.target.value) || 12 })}
+                    />
+                  </div>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="track">{t.levels.track}</Label>
@@ -304,6 +334,7 @@ export default function LevelsPage() {
                 <TableRow>
                   <TableHead>{isRTL ? 'الترتيب' : 'Order'}</TableHead>
                   <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
+                  <TableHead>{isRTL ? 'عدد السيشنات' : 'Sessions'}</TableHead>
                   <TableHead>{t.levels.track}</TableHead>
                   <TableHead>{t.levels.parentLevel}</TableHead>
                   <TableHead className="w-[100px]">{t.common.actions}</TableHead>
@@ -312,13 +343,13 @@ export default function LevelsPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : filteredLevels.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       {isRTL ? 'لا توجد مستويات' : 'No levels found'}
                     </TableCell>
                   </TableRow>
@@ -328,6 +359,9 @@ export default function LevelsPage() {
                       <TableCell>{level.level_order}</TableCell>
                       <TableCell className="font-medium">
                         {language === 'ar' ? level.name_ar : level.name}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{level.expected_sessions_count ?? 12}</Badge>
                       </TableCell>
                       <TableCell>{getTrackBadge(level.track)}</TableCell>
                       <TableCell>{getParentLevelName(level.parent_level_id)}</TableCell>
