@@ -873,6 +873,7 @@ export type Database = {
       levels: {
         Row: {
           created_at: string
+          expected_sessions_count: number
           id: string
           is_active: boolean | null
           level_order: number
@@ -884,6 +885,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          expected_sessions_count?: number
           id?: string
           is_active?: boolean | null
           level_order: number
@@ -895,6 +897,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          expected_sessions_count?: number
           id?: string
           is_active?: boolean | null
           level_order?: number
@@ -2244,6 +2247,35 @@ export type Database = {
       }
     }
     Views: {
+      curriculum_overview_latest: {
+        Row: {
+          age_group_id: string | null
+          completion_percentage: number | null
+          expected_sessions_count: number | null
+          filled_sessions: number | null
+          is_published: boolean | null
+          latest_version: number | null
+          level_id: string | null
+          published_at: string | null
+          total_sessions: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_sessions_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curriculum_sessions_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_questions_student_view: {
         Row: {
           created_at: string | null
@@ -2338,6 +2370,25 @@ export type Database = {
       }
       assign_subscription_dates_bulk: {
         Args: { p_group_id: string }
+        Returns: Json
+      }
+      clone_curriculum: {
+        Args: {
+          p_source_age_group_id: string
+          p_source_level_id: string
+          p_source_version: number
+          p_target_age_group_id: string
+          p_target_level_id: string
+        }
+        Returns: Json
+      }
+      compare_curriculum_versions: {
+        Args: {
+          p_age_group_id: string
+          p_level_id: string
+          p_version_a: number
+          p_version_b: number
+        }
         Returns: Json
       }
       compute_quality_score: {
@@ -2446,9 +2497,17 @@ export type Database = {
         Returns: boolean
       }
       is_student: { Args: { _user_id: string }; Returns: boolean }
+      publish_curriculum: {
+        Args: { p_age_group_id: string; p_level_id: string }
+        Returns: Json
+      }
       rebuild_salary_snapshot: {
         Args: { p_employee_id: string; p_month: string }
         Returns: undefined
+      }
+      update_curriculum_session: {
+        Args: { p_data: Json; p_expected_updated_at: string; p_id: string }
+        Returns: Json
       }
     }
     Enums: {
