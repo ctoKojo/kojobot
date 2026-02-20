@@ -1,84 +1,83 @@
 
 
-# اصلاح سيستم السيشنات التعويضية - Enterprise Ready
+# Curriculum Versioning Engine - Production Hardened
 
 ---
 
-## ملخص التعديلات
+## ملخص
 
-نقل كل منطق انشاء السيشنات التعويضية الى Database Functions مركزية مع حماية كاملة ضد التكرار والتلاعب وال race conditions. وحذف كل المنطق القديم من الفرونت.
+تنفيذ كل التحسينات المطلوبة: اضافة `expected_sessions_count` كمصدر واحد للحقيقة، View محسنة بـ JOIN بدل subquery، RPCs محكومة مع locks وvalidation دقيق، clone مرن يدعم increment version، compare بـ JOIN set-based، وOptimistic Locking على مستوى الداتابيز. ثم اعادة هيكلة الفرونت بالكامل.
 
 ---
 
 ## الجزء 1: Database Migration
 
-### أ. Unique Constraint + Indexes
+### ا. اضافة `expected_sessions_count` في `levels`
 
 ```text
--- منع التكرار على مستوى الداتابيز
-ALTER TABLE public.makeup_sessions
-ADD CONSTRAINT unique_student_session_makeup
-UNIQUE (student_id, original_session_id, makeup_type);
-
--- Index للتقارير بالمجموعة
-CREATE INDEX IF NOT EXISTS idx_makeup_sessions_group
-ON public.makeup_sessions (group_id);
-
--- Index للـ curriculum lookup
-CREATE INDEX IF NOT EXISTS idx_curriculum_lookup
-ON public.curriculum_sessions (age_group_id, level_id, session_number, is_active);
+ALTER TABLE public.levels
+ADD COLUMN expected_sessions_count INTEGER NOT NULL DEFAULT 12;
 ```
 
-ملاحظة: الـ unique constraint ينشئ index تلقائي على `(student_id, original_session_id, makeup_type)` فلا حاجة لـ index منفصل.
+هذا هو المصدر الوحيد لعدد السيشنات المتوقع لكل ليفل. كل المنطق (publish, overview, clone, frontend) يعتمد عليه.
 
-### ب. RLS Policies للمدربين على student_makeup_credits
+### ب. Database View: `curriculum_overview_latest` (محسنة)
 
 ```text
-CREATE POLICY "Instructors can view credits for their students"
-ON public.student_makeup_credits FOR SELECT
-USING (
-  has_role(auth.uid(), 'instructor'::app_role)
-  AND student_id IN (
-    SELECT gs.student_id FROM group_students gs
-    JOIN groups g ON gs.group_id = g.id
-    WHERE g.instructor_id = auth.uid() AND gs.is_active = true
-  )
-);
-
-CREATE POLICY "Instructors can insert credits for their students"
-ON public.student_makeup_credits FOR INSERT
-WITH CHECK (
-  has_role(auth.uid(), 'instructor'::app_role)
-  AND student_id IN (
-    SELECT gs.student_id FROM group_students gs
-    JOIN groups g ON gs.group_id = g.id
-    WHERE g.instructor_id = auth.uid() AND gs.is_active = true
-  )
-);
-
-CREATE POLICY "Instructors can update credits for their students"
-ON public.student_makeup_credits FOR UPDATE
-USING (
-  has_role(auth.uid(), 'instructor'::app_role)
-  AND student_id IN (
-    SELECT gs.student_id FROM group_students gs
-    JOIN groups g ON gs.group_id = g.id
-    WHERE g.instructor_id = auth.uid() AND gs.is_active = true
-  )
-);
+CREATE OR REPLACE VIEW public.curriculum_overview_latest
+WITH (security_invoker = true)
+AS
+WITH latest_version AS (
+  SELECT age_group_id, level_id, MAX(version) AS version
+  FROM curriculum_sessions
+  WHERE is_active = true
+  GROUP BY age_group_id, level_id
+)
+SELECT
+  cs.age_group_id,
+  cs.level_id,
+  lv.version AS latest_version,
+  BOOL_OR(cs.is_published) AS is_published,
+  MAX(cs.published_at) AS published_at,
+  COUNT(*) AS total_sessions,
+  l.expected_sessions_count,
+  COUNT(*) FILTER (
+    WHERE cs.slides_url IS NOT NULL
+    OR cs.summary_video_url IS NOT NULL
+    OR cs.full_video_url IS NOT NULL
+    OR cs.quiz_id IS NOT NULL
+    OR cs.assignment_title IS NOT NULL
+  ) AS filled_sessions,
+  ROUND(
+    COUNT(*) FILTER (
+      WHERE cs.slides_url IS NOT NULL
+      OR cs.summary_video_url IS NOT NULL
+      OR cs.full_video_url IS NOT NULL
+      OR cs.quiz_id IS NOT NULL
+      OR cs.assignment_title IS NOT NULL
+    )::numeric / GREATEST(l.expected_sessions_count, 1) * 100
+  ) AS completion_percentage
+FROM latest_version lv
+JOIN curriculum_sessions cs
+  ON cs.age_group_id = lv.age_group_id
+  AND cs.level_id = lv.level_id
+  AND cs.version = lv.version
+  AND cs.is_active = true
+JOIN levels l ON l.id = cs.level_id
+GROUP BY cs.age_group_id, cs.level_id, lv.version, l.expected_sessions_count;
 ```
 
-ملاحظة: `has_role` هي `SECURITY DEFINER` بالفعل، فلا مشكلة في استدعائها من داخل RLS policies او functions اخرى.
+التحسينات:
+- `latest_version` CTE بـ `MAX(version)` بدل `ROW_NUMBER` (اوضح واسرع)
+- JOIN مع `levels` لجلب `expected_sessions_count`
+- حساب `completion_percentage` جاهز من الداتابيز
 
-### ج. Database Function: `create_makeup_session` (فردي)
+### ج. RPC: `publish_curriculum` (محسنة)
 
 ```text
-CREATE OR REPLACE FUNCTION public.create_makeup_session(
-  p_student_id UUID,
-  p_original_session_id UUID,
-  p_group_id UUID,
-  p_reason TEXT,
-  p_makeup_type TEXT
+CREATE OR REPLACE FUNCTION public.publish_curriculum(
+  p_age_group_id UUID,
+  p_level_id UUID
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -86,142 +85,107 @@ SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
 DECLARE
-  v_level_id UUID;
-  v_age_group_id UUID;
-  v_session_number INTEGER;
-  v_curriculum_session_id UUID;
-  v_is_free BOOLEAN;
-  v_credits RECORD;
-  v_new_id UUID;
+  v_latest_version INTEGER;
+  v_session_count INTEGER;
+  v_distinct_count INTEGER;
+  v_expected INTEGER;
   v_caller_id UUID;
 BEGIN
   v_caller_id := auth.uid();
 
-  -- Authorization check
-  IF NOT EXISTS (
-    SELECT 1 FROM groups g
-    WHERE g.id = p_group_id
-    AND (
-      g.instructor_id = v_caller_id
-      OR has_role(v_caller_id, 'admin'::app_role)
-      OR has_role(v_caller_id, 'reception'::app_role)
-    )
+  IF NOT has_role(v_caller_id, 'admin'::app_role) THEN
+    RAISE EXCEPTION 'Only admins can publish curriculum';
+  END IF;
+
+  -- Lock all rows for this age_group + level to prevent race condition
+  PERFORM 1 FROM curriculum_sessions
+  WHERE age_group_id = p_age_group_id
+    AND level_id = p_level_id
+  FOR UPDATE;
+
+  -- Get expected count from levels
+  SELECT expected_sessions_count INTO v_expected
+  FROM levels WHERE id = p_level_id;
+
+  IF v_expected IS NULL THEN
+    RAISE EXCEPTION 'Level not found';
+  END IF;
+
+  -- Get latest version
+  SELECT MAX(version) INTO v_latest_version
+  FROM curriculum_sessions
+  WHERE age_group_id = p_age_group_id
+    AND level_id = p_level_id
+    AND is_active = true;
+
+  IF v_latest_version IS NULL THEN
+    RAISE EXCEPTION 'No curriculum found';
+  END IF;
+
+  -- Check already published
+  IF EXISTS (
+    SELECT 1 FROM curriculum_sessions
+    WHERE age_group_id = p_age_group_id
+      AND level_id = p_level_id
+      AND version = v_latest_version
+      AND is_published = true
   ) THEN
-    RAISE EXCEPTION 'Unauthorized';
+    RETURN jsonb_build_object('published', false, 'reason', 'already_published');
   END IF;
 
-  -- Validate student belongs to group
-  IF NOT EXISTS (
-    SELECT 1 FROM group_students gs
-    WHERE gs.student_id = p_student_id
-    AND gs.group_id = p_group_id
-    AND gs.is_active = true
-  ) THEN
-    RAISE EXCEPTION 'Student does not belong to this group';
+  -- Validate: COUNT and DISTINCT session_number
+  SELECT COUNT(*), COUNT(DISTINCT session_number)
+  INTO v_session_count, v_distinct_count
+  FROM curriculum_sessions
+  WHERE age_group_id = p_age_group_id
+    AND level_id = p_level_id
+    AND version = v_latest_version
+    AND is_active = true;
+
+  IF v_distinct_count != v_expected THEN
+    RAISE EXCEPTION 'Cannot publish: expected % distinct sessions, found % (% total rows)',
+      v_expected, v_distinct_count, v_session_count;
   END IF;
 
-  -- Validate session belongs to group
-  IF NOT EXISTS (
-    SELECT 1 FROM sessions s
-    WHERE s.id = p_original_session_id
-    AND s.group_id = p_group_id
-  ) THEN
-    RAISE EXCEPTION 'Session does not belong to this group';
-  END IF;
+  -- Unpublish previous versions
+  UPDATE curriculum_sessions
+  SET is_published = false
+  WHERE age_group_id = p_age_group_id
+    AND level_id = p_level_id
+    AND version < v_latest_version
+    AND is_published = true;
 
-  -- Get group and session data
-  SELECT g.level_id, g.age_group_id INTO v_level_id, v_age_group_id
-  FROM groups g WHERE g.id = p_group_id;
-
-  SELECT s.session_number INTO v_session_number
-  FROM sessions s WHERE s.id = p_original_session_id;
-
-  -- Get curriculum_session_id
-  IF v_age_group_id IS NOT NULL AND v_level_id IS NOT NULL AND v_session_number IS NOT NULL THEN
-    SELECT cs.id INTO v_curriculum_session_id
-    FROM curriculum_sessions cs
-    WHERE cs.age_group_id = v_age_group_id
-      AND cs.level_id = v_level_id
-      AND cs.session_number = v_session_number
-      AND cs.is_active = true
-    ORDER BY cs.version DESC
-    LIMIT 1;
-  END IF;
-
-  IF v_curriculum_session_id IS NULL THEN
-    RAISE WARNING 'No curriculum_session found for group=%, session_number=%', p_group_id, v_session_number;
-  END IF;
-
-  -- Determine free quota
-  IF p_reason = 'group_cancelled' THEN
-    v_is_free := true;
-  ELSIF v_level_id IS NOT NULL THEN
-    -- Atomic: upsert then lock
-    INSERT INTO student_makeup_credits (student_id, level_id, total_free_allowed, used_free)
-    VALUES (p_student_id, v_level_id, 2, 0)
-    ON CONFLICT (student_id, level_id)
-    DO UPDATE SET updated_at = now()
-    RETURNING * INTO v_credits;
-
-    -- Lock acquired via RETURNING, now check
-    IF v_credits.used_free < v_credits.total_free_allowed THEN
-      UPDATE student_makeup_credits
-      SET used_free = used_free + 1, updated_at = now()
-      WHERE student_id = p_student_id AND level_id = v_level_id;
-      v_is_free := true;
-    ELSE
-      v_is_free := false;
-    END IF;
-  ELSE
-    v_is_free := true;
-  END IF;
-
-  -- Insert makeup session (rely on unique constraint for duplicate prevention)
-  INSERT INTO makeup_sessions (
-    student_id, original_session_id, group_id, level_id,
-    reason, is_free, makeup_type, curriculum_session_id
-  ) VALUES (
-    p_student_id, p_original_session_id, p_group_id, v_level_id,
-    p_reason, v_is_free, p_makeup_type, v_curriculum_session_id
-  )
-  RETURNING id INTO v_new_id;
-
-  -- For group_cancelled: ensure credit record exists (audit trail)
-  IF p_reason = 'group_cancelled' AND v_level_id IS NOT NULL THEN
-    INSERT INTO student_makeup_credits (student_id, level_id, total_free_allowed, used_free)
-    VALUES (p_student_id, v_level_id, 2, 0)
-    ON CONFLICT (student_id, level_id) DO NOTHING;
-  END IF;
+  -- Publish current version
+  UPDATE curriculum_sessions
+  SET is_published = true, published_at = now()
+  WHERE age_group_id = p_age_group_id
+    AND level_id = p_level_id
+    AND version = v_latest_version
+    AND is_active = true;
 
   RETURN jsonb_build_object(
-    'created', true,
-    'id', v_new_id,
-    'is_free', v_is_free,
-    'curriculum_session_id', v_curriculum_session_id
+    'published', true,
+    'version', v_latest_version,
+    'session_count', v_distinct_count
   );
-
-EXCEPTION
-  WHEN unique_violation THEN
-    RETURN jsonb_build_object('created', false, 'reason', 'already_exists');
 END;
 $$;
 ```
 
-التحسينات المطبقة:
-- Session-group validation (النقطة 1)
-- حذف duplicate check واعتماد كامل على unique constraint (النقطة 2)
-- `INSERT ON CONFLICT DO UPDATE RETURNING` بدل SELECT منفصل (النقطة 3)
-- `has_role` هي `SECURITY DEFINER` بالفعل (النقطة 4 مغطاة)
+التحسينات:
+- `FOR UPDATE` lock يمنع سباق النشر
+- `COUNT(DISTINCT session_number)` بدل مجرد `COUNT`
+- يعتمد على `expected_sessions_count` من `levels` بدل 12 هاردكود
 
-### د. Database Function: `create_group_makeup_sessions` (جماعي)
+### د. RPC: `clone_curriculum` (مرنة)
 
 ```text
-CREATE OR REPLACE FUNCTION public.create_group_makeup_sessions(
-  p_student_ids UUID[],
-  p_original_session_id UUID,
-  p_group_id UUID,
-  p_reason TEXT,
-  p_makeup_type TEXT
+CREATE OR REPLACE FUNCTION public.clone_curriculum(
+  p_source_age_group_id UUID,
+  p_source_level_id UUID,
+  p_source_version INTEGER,
+  p_target_age_group_id UUID,
+  p_target_level_id UUID
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -229,160 +193,267 @@ SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
 DECLARE
-  v_student_id UUID;
-  v_result JSONB;
-  v_created_count INTEGER := 0;
-  v_skipped_count INTEGER := 0;
   v_caller_id UUID;
+  v_source_count INTEGER;
+  v_target_version INTEGER;
+  v_count INTEGER;
 BEGIN
   v_caller_id := auth.uid();
 
-  -- Authorization
-  IF NOT EXISTS (
-    SELECT 1 FROM groups g
-    WHERE g.id = p_group_id
-    AND (
-      g.instructor_id = v_caller_id
-      OR has_role(v_caller_id, 'admin'::app_role)
-      OR has_role(v_caller_id, 'reception'::app_role)
-    )
-  ) THEN
+  IF NOT has_role(v_caller_id, 'admin'::app_role) THEN
+    RAISE EXCEPTION 'Only admins can clone curriculum';
+  END IF;
+
+  -- Validate source version exists
+  SELECT COUNT(*) INTO v_source_count
+  FROM curriculum_sessions
+  WHERE age_group_id = p_source_age_group_id
+    AND level_id = p_source_level_id
+    AND version = p_source_version
+    AND is_active = true;
+
+  IF v_source_count = 0 THEN
+    RAISE EXCEPTION 'Source version does not exist';
+  END IF;
+
+  -- Determine target version: MAX(version) + 1, or 1 if empty
+  SELECT COALESCE(MAX(version), 0) + 1 INTO v_target_version
+  FROM curriculum_sessions
+  WHERE age_group_id = p_target_age_group_id
+    AND level_id = p_target_level_id
+    AND is_active = true;
+
+  -- Atomic INSERT...SELECT
+  INSERT INTO curriculum_sessions (
+    age_group_id, level_id, session_number,
+    title, title_ar, description, description_ar,
+    slides_url, summary_video_url, full_video_url,
+    quiz_id,
+    assignment_title, assignment_title_ar,
+    assignment_description, assignment_description_ar,
+    assignment_attachment_url, assignment_attachment_type,
+    assignment_max_score,
+    version, is_published, is_active
+  )
+  SELECT
+    p_target_age_group_id, p_target_level_id, session_number,
+    title, title_ar, description, description_ar,
+    slides_url, summary_video_url, full_video_url,
+    quiz_id,
+    assignment_title, assignment_title_ar,
+    assignment_description, assignment_description_ar,
+    assignment_attachment_url, assignment_attachment_type,
+    assignment_max_score,
+    v_target_version, false, true
+  FROM curriculum_sessions
+  WHERE age_group_id = p_source_age_group_id
+    AND level_id = p_source_level_id
+    AND version = p_source_version
+    AND is_active = true;
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+
+  RETURN jsonb_build_object(
+    'cloned', true,
+    'target_version', v_target_version,
+    'sessions_copied', v_count
+  );
+END;
+$$;
+```
+
+التحسينات:
+- يتحقق ان source_version فعلا موجودة
+- لو target فيه نسخ: يعمل `MAX(version) + 1` بدل ما يرفض
+- لو فارغ: `version = 1`
+
+### هـ. RPC: `compare_curriculum_versions` (set-based)
+
+```text
+CREATE OR REPLACE FUNCTION public.compare_curriculum_versions(
+  p_age_group_id UUID,
+  p_level_id UUID,
+  p_version_a INTEGER,
+  p_version_b INTEGER
+)
+RETURNS JSONB
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT COALESCE(jsonb_agg(row_to_json(diff)::jsonb), '[]'::jsonb)
+  FROM (
+    SELECT
+      COALESCE(a.session_number, b.session_number) AS session_number,
+      jsonb_strip_nulls(jsonb_build_object(
+        'title', CASE WHEN a.title IS DISTINCT FROM b.title
+          THEN jsonb_build_object('old', a.title, 'new', b.title) END,
+        'title_ar', CASE WHEN a.title_ar IS DISTINCT FROM b.title_ar
+          THEN jsonb_build_object('old', a.title_ar, 'new', b.title_ar) END,
+        'slides_url', CASE WHEN a.slides_url IS DISTINCT FROM b.slides_url
+          THEN jsonb_build_object('old', a.slides_url, 'new', b.slides_url) END,
+        'summary_video_url', CASE WHEN a.summary_video_url IS DISTINCT FROM b.summary_video_url
+          THEN jsonb_build_object('old', a.summary_video_url, 'new', b.summary_video_url) END,
+        'full_video_url', CASE WHEN a.full_video_url IS DISTINCT FROM b.full_video_url
+          THEN jsonb_build_object('old', a.full_video_url, 'new', b.full_video_url) END,
+        'quiz_id', CASE WHEN a.quiz_id IS DISTINCT FROM b.quiz_id
+          THEN jsonb_build_object('old', a.quiz_id, 'new', b.quiz_id) END,
+        'assignment_title', CASE WHEN a.assignment_title IS DISTINCT FROM b.assignment_title
+          THEN jsonb_build_object('old', a.assignment_title, 'new', b.assignment_title) END,
+        'description', CASE WHEN a.description IS DISTINCT FROM b.description
+          THEN jsonb_build_object('old', a.description, 'new', b.description) END
+      )) AS changes
+    FROM curriculum_sessions a
+    FULL OUTER JOIN curriculum_sessions b
+      ON a.session_number = b.session_number
+      AND b.age_group_id = p_age_group_id
+      AND b.level_id = p_level_id
+      AND b.version = p_version_b
+      AND b.is_active = true
+    WHERE a.age_group_id = p_age_group_id
+      AND a.level_id = p_level_id
+      AND a.version = p_version_a
+      AND a.is_active = true
+    ORDER BY COALESCE(a.session_number, b.session_number)
+  ) diff
+  WHERE diff.changes != '{}'::jsonb;
+$$;
+```
+
+التحسينات:
+- `FULL OUTER JOIN` set-based بدل loop procedural
+- `IS DISTINCT FROM` يتعامل مع NULL صح
+- `jsonb_strip_nulls` يشيل الحقول اللي مفيش فيها تغيير
+- يرجع فقط السيشنات اللي فيها فروقات
+
+### و. RPC: `update_curriculum_session` (Optimistic Lock على مستوى الداتابيز)
+
+```text
+CREATE OR REPLACE FUNCTION public.update_curriculum_session(
+  p_id UUID,
+  p_expected_updated_at TIMESTAMPTZ,
+  p_data JSONB
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_caller_id UUID;
+  v_current_updated_at TIMESTAMPTZ;
+  v_count INTEGER;
+BEGIN
+  v_caller_id := auth.uid();
+
+  IF NOT has_role(v_caller_id, 'admin'::app_role) THEN
     RAISE EXCEPTION 'Unauthorized';
   END IF;
 
-  -- Session-group validation
-  IF NOT EXISTS (
-    SELECT 1 FROM sessions s
-    WHERE s.id = p_original_session_id
-    AND s.group_id = p_group_id
-  ) THEN
-    RAISE EXCEPTION 'Session does not belong to this group';
+  -- Check optimistic lock
+  SELECT updated_at INTO v_current_updated_at
+  FROM curriculum_sessions WHERE id = p_id FOR UPDATE;
+
+  IF v_current_updated_at IS NULL THEN
+    RAISE EXCEPTION 'Session not found';
   END IF;
 
-  -- Loop internally (single transaction, no N network calls)
-  FOREACH v_student_id IN ARRAY p_student_ids
-  LOOP
-    v_result := create_makeup_session(
-      v_student_id,
-      p_original_session_id,
-      p_group_id,
-      p_reason,
-      p_makeup_type
+  IF v_current_updated_at != p_expected_updated_at THEN
+    RETURN jsonb_build_object(
+      'updated', false,
+      'reason', 'conflict',
+      'current_updated_at', v_current_updated_at
     );
-    IF (v_result->>'created')::boolean THEN
-      v_created_count := v_created_count + 1;
-    ELSE
-      v_skipped_count := v_skipped_count + 1;
-    END IF;
-  END LOOP;
+  END IF;
 
-  RETURN jsonb_build_object(
-    'created_count', v_created_count,
-    'skipped_count', v_skipped_count,
-    'total', array_length(p_student_ids, 1)
-  );
+  -- Do the update
+  UPDATE curriculum_sessions SET
+    title = COALESCE(p_data->>'title', title),
+    title_ar = COALESCE(p_data->>'title_ar', title_ar),
+    description = p_data->>'description',
+    description_ar = p_data->>'description_ar',
+    slides_url = p_data->>'slides_url',
+    summary_video_url = p_data->>'summary_video_url',
+    full_video_url = p_data->>'full_video_url',
+    quiz_id = CASE WHEN p_data->>'quiz_id' = '' OR p_data->>'quiz_id' IS NULL
+              THEN NULL ELSE (p_data->>'quiz_id')::uuid END,
+    assignment_title = p_data->>'assignment_title',
+    assignment_title_ar = p_data->>'assignment_title_ar',
+    assignment_description = p_data->>'assignment_description',
+    assignment_description_ar = p_data->>'assignment_description_ar',
+    assignment_attachment_url = p_data->>'assignment_attachment_url',
+    assignment_attachment_type = p_data->>'assignment_attachment_type',
+    assignment_max_score = CASE WHEN p_data->>'assignment_max_score' IS NULL
+                           THEN assignment_max_score
+                           ELSE (p_data->>'assignment_max_score')::integer END,
+    updated_at = now()
+  WHERE id = p_id;
+
+  RETURN jsonb_build_object('updated', true);
 END;
 $$;
 ```
 
-هذه الفنكشن تنادي `create_makeup_session` داخليا في loop واحد على مستوى الداتابيز. بدل 30 network call من الفرونت، يبقى call واحد فقط.
+Optimistic Lock على مستوى الداتابيز:
+- `SELECT ... FOR UPDATE` يقفل الصف
+- يقارن `updated_at` مع القيمة المتوقعة
+- يرفض لو حد تاني عدل بعدك
+- الفرونت يعرض رسالة "تم تعديل هذا السيشن من مستخدم آخر"
 
 ---
 
 ## الجزء 2: تعديل الفرونت
 
-### الملف 1: `src/pages/Attendance.tsx`
+اعادة هيكلة `src/pages/CurriculumManagement.tsx` بالكامل:
 
-**استبدال `autoCreateMakeupSessions` (سطور 246-318):**
+### ا. Overview Grid (قبل اختيار فئة/ليفل)
 
-```text
-const autoCreateMakeupSessions = async (absentStudentIds: string[]) => {
-  if (!selectedSession || !selectedGroup || absentStudentIds.length === 0) return 0;
-  try {
-    const { data, error } = await supabase.rpc('create_group_makeup_sessions', {
-      p_student_ids: absentStudentIds,
-      p_original_session_id: selectedSession,
-      p_group_id: selectedGroup,
-      p_reason: 'student_absent',
-      p_makeup_type: 'individual',
-    });
-    if (error) throw error;
-    return data?.created_count || 0;
-  } catch (error) {
-    console.error('Error auto-creating makeup sessions:', error);
-    return 0;
-  }
-};
-```
+- جلب بيانات من `curriculum_overview_latest` View
+- عرض كل الفئات والليفلات في شبكة cards
+- كل card تعرض:
+  - اسم الفئة + الليفل
+  - `latest_version` + حالة (منشور/مسودة/فارغ)
+  - Progress bar بـ `completion_percentage` (جاهز من الداتابيز)
+  - ضغطة واحدة تختار الفئة والليفل
+- الخلايا الفارغة (بدون منهج) تظهر بزر "انشاء" مباشر
 
-**استبدال `handleCreateMakeupSession` (سطور 379-430):**
+### ب. Version History Panel
 
-```text
-const handleCreateMakeupSession = async (studentId: string) => {
-  if (!selectedSession || !selectedGroup) return;
-  try {
-    const { data, error } = await supabase.rpc('create_makeup_session', {
-      p_student_id: studentId,
-      p_original_session_id: selectedSession,
-      p_group_id: selectedGroup,
-      p_reason: 'student_absent',
-      p_makeup_type: 'individual',
-    });
-    if (error) throw error;
-    toast({
-      title: data?.created
-        ? (isRTL ? 'تم الإنشاء' : 'Created')
-        : (isRTL ? 'موجودة بالفعل' : 'Already exists'),
-      description: data?.created
-        ? (isRTL ? 'تم إنشاء سيشن تعويضية' : 'Makeup session created')
-        : (isRTL ? 'سيشن تعويضية موجودة بالفعل لهذا الطالب' : 'Makeup session already exists for this student'),
-    });
-  } catch (error) {
-    console.error(error);
-    toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error' });
-  }
-};
-```
+- بعد اختيار فئة/ليفل، جلب كل النسخ:
+  `SELECT DISTINCT version, is_published, published_at, COUNT(*) FROM curriculum_sessions WHERE ... GROUP BY version, is_published, published_at`
+- عرض قائمة النسخ مع: رقم، تاريخ، حالة
+- زر "عرض" يفتح النسخة القديمة read-only
+- زر "مقارنة" يفتح dialog:
+  - اختيار نسختين
+  - استدعاء `compare_curriculum_versions` RPC
+  - عرض الفروقات بتلوين
 
-### الملف 2: `src/pages/Sessions.tsx`
+### ج. Clone Dialog
 
-**استبدال loop في `handleCancelWithMakeup` (سطور 225-260):**
+- زر "نسخ من منهج آخر" بجانب "انشاء منهج فارغ"
+- اختيار فئة مصدر + ليفل مصدر + نسخة
+- يستدعي `clone_curriculum` RPC
+- يعمل increment version لو الهدف فيه نسخ
 
-```text
-if (createMakeup) {
-  const { data: groupStudents } = await supabase
-    .from('group_students')
-    .select('student_id')
-    .eq('group_id', pendingCancelSession.group_id)
-    .eq('is_active', true);
+### د. Publish المحكوم
 
-  if (groupStudents && groupStudents.length > 0) {
-    const studentIds = groupStudents.map(gs => gs.student_id);
-    const { data, error } = await supabase.rpc('create_group_makeup_sessions', {
-      p_student_ids: studentIds,
-      p_original_session_id: pendingCancelSession.id,
-      p_group_id: pendingCancelSession.group_id,
-      p_reason: 'group_cancelled',
-      p_makeup_type: 'group_cancellation',
-    });
+- استبدال `publishMutation` باستدعاء `publish_curriculum` RPC
+- عرض رسالة خطأ واضحة لو عدد السيشنات غلط
+- ازالة كل هاردكود لرقم 12
 
-    toast({
-      title: t.common.success,
-      description: isRTL
-        ? `تم إلغاء السيشن وإنشاء ${data?.created_count || 0} سيشن تعويضية`
-        : `Session cancelled and ${data?.created_count || 0} makeup sessions created`,
-    });
-  }
-}
-```
+### هـ. تحسينات واجهة التعديل
 
-حذف كل منطق count query و isFree و level lookup القديم.
+1. **Inline Edit**: ضغط على العنوان في الجدول يحوله لـ Input
+2. **Tabbed Dialog**: 4 tabs (اساسي، محتوى، كويز، واجب)
+3. **Progress Bar**: بدل ايقونة، progress bar + tooltip تفصيلي
+4. **Optimistic Lock**: حفظ `updated_at` عند فتح dialog، استدعاء `update_curriculum_session` RPC عند الحفظ
+5. **Create Curriculum**: يعتمد على `expected_sessions_count` من الليفل بدل 12
 
-### الملف 3: `src/pages/MakeupSessions.tsx`
+### و. ازالة كل هاردكود 12
 
-تغيير سطر 305:
-- من: `action_url: '/profile'`
-- الى: `action_url: '/my-makeup-sessions'`
+- `Array.from({ length: 12 })` يتغير لـ `Array.from({ length: expectedCount })`
+- `/ 12` في اي حساب progress يتشال (النسبة جاهزة من الداتابيز)
+- اي validation على العدد تعتمد على `expected_sessions_count`
 
 ---
 
@@ -390,8 +461,14 @@ if (createMakeup) {
 
 | الملف | نوع التعديل |
 |---|---|
-| Migration SQL | Unique constraint + Indexes + RLS policies + 2 Database Functions |
-| `src/pages/Attendance.tsx` | استبدال autoCreateMakeupSessions و handleCreateMakeupSession بـ RPC |
-| `src/pages/Sessions.tsx` | استبدال handleCancelWithMakeup بـ bulk RPC call واحد |
-| `src/pages/MakeupSessions.tsx` | تصحيح action_url |
+| Migration SQL | عمود `expected_sessions_count` + View + 4 RPCs (publish, clone, compare, update) |
+| `src/pages/CurriculumManagement.tsx` | اعادة هيكلة كاملة |
+
+---
+
+## ملاحظات
+
+- **منع تغيير `expected_sessions_count` بعد النشر**: ال `publish_curriculum` تتحقق من العدد وقت النشر. لو الادمن غير العدد بعدها، النسخة المنشورة تفضل سليمة. نسخة جديدة لازم تطابق العدد الجديد.
+- **quiz_id reuse**: الكويز يفضل shared عند clone (حسب التصميم الموثق Curriculum-First). ده مقصود لان الكويز يُدار مركزيا.
+- **security_invoker = true**: الـ View تحترم RLS الموجودة على `curriculum_sessions`.
 
