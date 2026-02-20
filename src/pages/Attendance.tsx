@@ -1,25 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, UserCheck, UserX, Clock, AlertCircle, Calendar, ChevronLeft, ChevronRight, Save, Snowflake, RefreshCw } from 'lucide-react';
+import { UserCheck, UserX, Clock, AlertCircle, Calendar, Save, Snowflake, RefreshCw, CheckCheck } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +51,8 @@ interface AttendanceRecord {
   student_id: string;
   status: 'present' | 'absent' | 'late' | 'excused';
   notes?: string;
+  compensation_status?: string;
+  makeup_session_id?: string | null;
 }
 
 export default function AttendancePage() {
@@ -70,7 +62,7 @@ export default function AttendancePage() {
   const [searchParams] = useSearchParams();
   const urlSessionId = searchParams.get('session');
   const urlGroupId = searchParams.get('group');
-  
+
   const [groups, setGroups] = useState<Group[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -99,17 +91,12 @@ export default function AttendancePage() {
   const fetchGroups = async () => {
     try {
       let query = supabase.from('groups').select('id, name, name_ar, instructor_id, status').eq('is_active', true);
-      
-      // Instructors only see their groups
       if (role === 'instructor' && user) {
         query = query.eq('instructor_id', user.id);
       }
-
       const { data, error } = await query;
       if (error) throw error;
       setGroups(data || []);
-      
-      // Auto-select first group if available
       if (data && data.length > 0) {
         setSelectedGroup(data[0].id);
       }
@@ -122,7 +109,6 @@ export default function AttendancePage() {
 
   const fetchSessionsAndStudents = async () => {
     try {
-      // Fetch sessions for the group
       const { data: sessionsData } = await supabase
         .from('sessions')
         .select('*')
@@ -132,7 +118,6 @@ export default function AttendancePage() {
 
       setSessions(sessionsData || []);
 
-      // Auto-select today's session or latest
       const today = new Date().toISOString().split('T')[0];
       const todaySession = sessionsData?.find(s => s.session_date === today);
       if (todaySession) {
@@ -141,7 +126,6 @@ export default function AttendancePage() {
         setSelectedSession(sessionsData[0].id);
       }
 
-      // Fetch students in the group
       const { data: groupStudents } = await supabase
         .from('group_students')
         .select('student_id')
@@ -154,7 +138,6 @@ export default function AttendancePage() {
           .from('profiles')
           .select('user_id, full_name, full_name_ar, avatar_url')
           .in('user_id', studentIds);
-
         setStudents(profilesData || []);
       } else {
         setStudents([]);
@@ -171,15 +154,16 @@ export default function AttendancePage() {
         .select('*')
         .eq('session_id', selectedSession);
 
-      // Map existing records
       const records: AttendanceRecord[] = students.map(student => {
         const existing = data?.find(a => a.student_id === student.user_id);
         return {
           id: existing?.id,
           session_id: selectedSession,
           student_id: student.user_id,
-          status: (existing?.status as 'present' | 'absent' | 'late' | 'excused') || 'absent',
+          status: (existing?.status as AttendanceRecord['status']) || 'absent',
           notes: existing?.notes || '',
+          compensation_status: existing?.compensation_status || undefined,
+          makeup_session_id: existing?.makeup_session_id || null,
         };
       });
 
@@ -189,7 +173,7 @@ export default function AttendancePage() {
     }
   };
 
-  const updateStatus = (studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
+  const updateStatus = (studentId: string, status: AttendanceRecord['status']) => {
     setAttendanceRecords(prev =>
       prev.map(record =>
         record.student_id === studentId ? { ...record, status } : record
@@ -197,136 +181,78 @@ export default function AttendancePage() {
     );
   };
 
-  // Auto-confirm instructor attendance when they save student attendance
-  const autoConfirmInstructorAttendance = async () => {
-    if (!user || !selectedSession || !selectedGroup) return;
-    const groupData = groups.find(g => g.id === selectedGroup);
-    if (!groupData || user.id !== groupData.instructor_id) return;
-
-    const sessionData = sessions.find(s => s.id === selectedSession);
-    if (!sessionData || sessionData.status === 'cancelled') return;
-
-    try {
-      // Check if record already exists
-      const { data: existing } = await supabase
-        .from('session_staff_attendance')
-        .select('id')
-        .eq('session_id', selectedSession)
-        .eq('staff_id', user.id)
-        .maybeSingle();
-
-      if (existing) return;
-
-      const actualHours = sessionData.duration_minutes / 60;
-      await supabase
-        .from('session_staff_attendance')
-        .insert({
-          session_id: selectedSession,
-          staff_id: user.id,
-          status: 'confirmed',
-          actual_hours: actualHours,
-        });
-
-      // Auto-complete session if time has passed
-      if (sessionData.status === 'scheduled') {
-        const sessionDateTime = new Date(`${sessionData.session_date}T${sessionData.session_time}`);
-        const sessionEndTime = new Date(sessionDateTime.getTime() + sessionData.duration_minutes * 60 * 1000);
-        if (new Date() >= sessionEndTime) {
-          await supabase
-            .from('sessions')
-            .update({ status: 'completed' })
-            .eq('id', selectedSession);
-        }
-      }
-    } catch (error) {
-      console.error('Auto-confirm instructor attendance error:', error);
+  const markAllPresent = () => {
+    // Warn if any student is already compensated
+    const compensatedStudents = attendanceRecords.filter(r => r.compensation_status === 'compensated');
+    if (compensatedStudents.length > 0) {
+      const confirmMsg = isRTL
+        ? `${compensatedStudents.length} طالب تم تعويضهم بالفعل. هل تريد تغيير حالتهم لحاضر؟`
+        : `${compensatedStudents.length} student(s) already compensated. Change to present?`;
+      if (!window.confirm(confirmMsg)) return;
     }
-  };
 
-  const autoCreateMakeupSessions = async (absentStudentIds: string[]) => {
-    if (!selectedSession || !selectedGroup || absentStudentIds.length === 0) return 0;
-    try {
-      const { data, error } = await supabase.rpc('create_group_makeup_sessions', {
-        p_student_ids: absentStudentIds,
-        p_original_session_id: selectedSession,
-        p_group_id: selectedGroup,
-        p_reason: 'student_absent',
-        p_makeup_type: 'individual',
-      });
-      if (error) {
-        console.error('Makeup sessions RPC error:', error);
-        toast({
-          variant: 'destructive',
-          title: isRTL ? 'خطأ في السيشنات التعويضية' : 'Makeup Sessions Error',
-          description: error.message,
-        });
-        return 0;
-      }
-      return (data as any)?.created_count || 0;
-    } catch (error: any) {
-      console.error('Error auto-creating makeup sessions:', error);
-      toast({
-        variant: 'destructive',
-        title: isRTL ? 'خطأ في السيشنات التعويضية' : 'Makeup Sessions Error',
-        description: error?.message || (isRTL ? 'فشل في إنشاء السيشنات التعويضية' : 'Failed to create makeup sessions'),
-      });
-      return 0;
-    }
+    setAttendanceRecords(prev =>
+      prev.map(record => ({ ...record, status: 'present' as const }))
+    );
   };
 
   const saveAttendance = async () => {
-    if (!user || !selectedSession) return;
+    if (!user || !selectedSession || !selectedGroup) return;
+    if (students.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: isRTL ? 'خطأ' : 'Error',
+        description: isRTL ? 'لا يوجد طلاب في المجموعة' : 'No students in this group',
+      });
+      return;
+    }
+
+    // Warn if session is completed
+    const sessionData = sessions.find(s => s.id === selectedSession);
+    if (sessionData?.status === 'completed') {
+      const confirmMsg = isRTL
+        ? 'هذه السيشن مكتملة بالفعل. هل تريد تعديل الحضور؟'
+        : 'This session is already completed. Edit attendance anyway?';
+      if (!window.confirm(confirmMsg)) return;
+    }
+
     setSaving(true);
-
     try {
-      // Upsert attendance records
-      for (const record of attendanceRecords) {
-        const compensationStatus = (record.status === 'absent') ? 'pending_compensation' : null;
-        if (record.id) {
-          // Update existing
-          await supabase
-            .from('attendance')
-            .update({ status: record.status, notes: record.notes, compensation_status: compensationStatus })
-            .eq('id', record.id);
-        } else {
-          // Insert new
-          await supabase
-            .from('attendance')
-            .insert({
-              session_id: selectedSession,
-              student_id: record.student_id,
-              status: record.status,
-              recorded_by: user.id,
-              notes: record.notes,
-              compensation_status: compensationStatus,
-            });
-        }
-      }
+      const records = attendanceRecords.map(r => ({
+        student_id: r.student_id,
+        status: r.status,
+        notes: r.notes || null,
+      }));
 
-      // Auto-create makeup sessions for absent students
-      const absentStudentIds = attendanceRecords
-        .filter(r => r.status === 'absent')
-        .map(r => r.student_id);
+      const { data, error } = await supabase.rpc('save_attendance', {
+        p_session_id: selectedSession,
+        p_group_id: selectedGroup,
+        p_records: records,
+      });
 
-      const makeupCount = await autoCreateMakeupSessions(absentStudentIds);
+      if (error) throw error;
+
+      const result = data as any;
+      const parts: string[] = [];
+      if (result?.saved) parts.push(isRTL ? `تم حفظ ${result.saved} سجل` : `${result.saved} records saved`);
+      if (result?.makeups_created > 0) parts.push(isRTL ? `إنشاء ${result.makeups_created} تعويضية` : `${result.makeups_created} makeups created`);
+      if (result?.makeups_cancelled > 0) parts.push(isRTL ? `إلغاء ${result.makeups_cancelled} تعويضية` : `${result.makeups_cancelled} makeups cancelled`);
+      if (result?.instructor_confirmed) parts.push(isRTL ? 'تم تأكيد حضور المدرب' : 'Instructor confirmed');
+      if (result?.session_completed) parts.push(isRTL ? 'تم إكمال السيشن' : 'Session completed');
 
       toast({
         title: t.common.success,
-        description: makeupCount > 0
-          ? (isRTL ? `تم حفظ الحضور وإنشاء ${makeupCount} سيشن تعويضية تلقائياً` : `Attendance saved and ${makeupCount} makeup sessions auto-created`)
-          : (isRTL ? 'تم حفظ الحضور' : 'Attendance saved successfully'),
+        description: parts.join(' • ') || (isRTL ? 'تم حفظ الحضور' : 'Attendance saved'),
       });
 
-      // Auto-confirm instructor attendance
-      await autoConfirmInstructorAttendance();
-
-      fetchAttendance();
-    } catch (error) {
+      // Refetch from server (single source of truth)
+      await fetchAttendance();
+    } catch (error: any) {
       console.error('Error saving attendance:', error);
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: isRTL ? 'فشل في حفظ الحضور' : 'Failed to save attendance',
+        description: error?.message || (isRTL ? 'فشل في حفظ الحضور' : 'Failed to save attendance'),
       });
     } finally {
       setSaving(false);
@@ -353,10 +279,21 @@ export default function AttendancePage() {
           ? (isRTL ? 'تم إنشاء سيشن تعويضية' : 'Makeup session created')
           : (isRTL ? 'سيشن تعويضية موجودة بالفعل لهذا الطالب' : 'Makeup session already exists for this student'),
       });
+      await fetchAttendance();
     } catch (error) {
       console.error(error);
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error' });
     }
+  };
+
+  const getCompensationBadge = (record: AttendanceRecord) => {
+    if (record.compensation_status === 'compensated') {
+      return <Badge className="bg-green-100 text-green-800 border-green-200 text-[10px]">{isRTL ? 'تم التعويض' : 'Compensated'}</Badge>;
+    }
+    if (record.compensation_status === 'pending_compensation' && record.makeup_session_id) {
+      return <Badge className="bg-orange-100 text-orange-800 border-orange-200 text-[10px]">{isRTL ? 'في انتظار التعويض' : 'Pending'}</Badge>;
+    }
+    return null;
   };
 
   const getStatusBadge = (status: string) => {
@@ -366,14 +303,12 @@ export default function AttendancePage() {
       late: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       excused: 'bg-blue-100 text-blue-800 border-blue-200',
     };
-
     const labels: Record<string, { en: string; ar: string }> = {
       present: { en: 'Present', ar: 'حاضر' },
       absent: { en: 'Absent', ar: 'غائب' },
       late: { en: 'Late', ar: 'متأخر' },
       excused: { en: 'Excused', ar: 'معذور' },
     };
-
     return (
       <Badge className={styles[status] || styles.absent}>
         {labels[status]?.[language] || status}
@@ -387,7 +322,7 @@ export default function AttendancePage() {
     const sessionName = isRTL ? `سيشن ${session.session_number || '-'}` : `Session ${session.session_number || '-'}`;
     return `${sessionName} - ${session.session_date} - ${formatTime12Hour(session.session_time, isRTL)}`;
   };
-  // Check if selected group is frozen
+
   const selectedGroupData = groups.find(g => g.id === selectedGroup);
   const isGroupFrozen = selectedGroupData?.status === 'frozen';
   const canManage = (role === 'admin' || (role === 'instructor' && !isGroupFrozen));
@@ -403,7 +338,7 @@ export default function AttendancePage() {
               {isRTL ? 'هذه المجموعة مجمدة' : 'This Group is Frozen'}
             </AlertTitle>
             <AlertDescription className="text-sky-700 dark:text-sky-400">
-              {isRTL 
+              {isRTL
                 ? 'لا يمكن تسجيل الحضور لهذه المجموعة. يمكنك فقط عرض البيانات السابقة.'
                 : 'Attendance cannot be recorded for this group. You can only view historical data.'}
             </AlertDescription>
@@ -411,7 +346,7 @@ export default function AttendancePage() {
         )}
 
         {/* Filters */}
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <div className="grid gap-2">
             <Label className="text-sm">{t.students.group}</Label>
             <Select value={selectedGroup} onValueChange={setSelectedGroup}>
@@ -423,9 +358,7 @@ export default function AttendancePage() {
                   <SelectItem key={group.id} value={group.id}>
                     <span className="flex items-center gap-2">
                       {language === 'ar' ? group.name_ar : group.name}
-                      {group.status === 'frozen' && (
-                        <Snowflake className="h-3 w-3 text-sky-500" />
-                      )}
+                      {group.status === 'frozen' && <Snowflake className="h-3 w-3 text-sky-500" />}
                     </span>
                   </SelectItem>
                 ))}
@@ -450,12 +383,20 @@ export default function AttendancePage() {
           </div>
 
           {canManage && selectedSession && (
-            <div className="flex items-end">
-              <Button className="kojo-gradient w-full" onClick={saveAttendance} disabled={saving}>
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : t.common.save}
-              </Button>
-            </div>
+            <>
+              <div className="flex items-end">
+                <Button variant="outline" className="w-full" onClick={markAllPresent}>
+                  <CheckCheck className="h-4 w-4 mr-2" />
+                  {isRTL ? 'تحضير الكل' : 'Mark All Present'}
+                </Button>
+              </div>
+              <div className="flex items-end">
+                <Button className="kojo-gradient w-full" onClick={saveAttendance} disabled={saving}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : t.common.save}
+                </Button>
+              </div>
+            </>
           )}
         </div>
 
@@ -515,7 +456,7 @@ export default function AttendancePage() {
           </Card>
         </div>
 
-        {/* Attendance - Mobile Card View */}
+        {/* Mobile Card View */}
         <Card className="block md:hidden">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -547,11 +488,14 @@ export default function AttendancePage() {
                           {(student.full_name || '?').charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-medium text-sm">
-                        {language === 'ar' && student.full_name_ar
-                          ? student.full_name_ar
-                          : student.full_name}
-                      </span>
+                      <div className="flex-1">
+                        <span className="font-medium text-sm">
+                          {language === 'ar' && student.full_name_ar ? student.full_name_ar : student.full_name}
+                        </span>
+                        {record && getCompensationBadge(record) && (
+                          <div className="mt-1">{getCompensationBadge(record)}</div>
+                        )}
+                      </div>
                     </div>
                     {canManage ? (
                       <>
@@ -571,7 +515,7 @@ export default function AttendancePage() {
                             </Button>
                           ))}
                         </div>
-                        {currentStatus === 'absent' && record?.id && (
+                        {currentStatus === 'absent' && record?.id && !record.makeup_session_id && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -584,7 +528,10 @@ export default function AttendancePage() {
                         )}
                       </>
                     ) : (
-                      <div>{getStatusBadge(currentStatus)}</div>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(currentStatus)}
+                        {record && getCompensationBadge(record)}
+                      </div>
                     )}
                   </div>
                 );
@@ -593,7 +540,7 @@ export default function AttendancePage() {
           </CardContent>
         </Card>
 
-        {/* Attendance - Desktop Table View */}
+        {/* Desktop Table View */}
         <Card className="hidden md:block">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -610,19 +557,19 @@ export default function AttendancePage() {
                   <TableHead className="text-center">{t.attendance.absent}</TableHead>
                   <TableHead className="text-center">{t.attendance.late}</TableHead>
                   <TableHead className="text-center">{t.attendance.excused}</TableHead>
-                  {canManage && <TableHead className="text-center">{isRTL ? 'تعويض' : 'Makeup'}</TableHead>}
+                  <TableHead className="text-center">{isRTL ? 'التعويض' : 'Compensation'}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={canManage ? 6 : 5} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
                 ) : students.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={canManage ? 6 : 5} className="text-center py-8">
+                    <TableCell colSpan={6} className="text-center py-8">
                       <UserCheck className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <p className="text-muted-foreground">
                         {isRTL ? 'لا يوجد طلاب في هذه المجموعة' : 'No students in this group'}
@@ -645,9 +592,7 @@ export default function AttendancePage() {
                               </AvatarFallback>
                             </Avatar>
                             <span className="font-medium">
-                              {language === 'ar' && student.full_name_ar
-                                ? student.full_name_ar
-                                : student.full_name}
+                              {language === 'ar' && student.full_name_ar ? student.full_name_ar : student.full_name}
                             </span>
                           </div>
                         </TableCell>
@@ -667,21 +612,20 @@ export default function AttendancePage() {
                             )}
                           </TableCell>
                         ))}
-                        {canManage && (
-                          <TableCell className="text-center">
-                            {currentStatus === 'absent' && record?.id && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs"
-                                onClick={() => handleCreateMakeupSession(student.user_id)}
-                              >
-                                <RefreshCw className="h-3 w-3 mr-1" />
-                                {isRTL ? 'تعويض' : 'Makeup'}
-                              </Button>
-                            )}
-                          </TableCell>
-                        )}
+                        <TableCell className="text-center">
+                          {record && getCompensationBadge(record)}
+                          {canManage && currentStatus === 'absent' && record?.id && !record.makeup_session_id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs ml-1"
+                              onClick={() => handleCreateMakeupSession(student.user_id)}
+                            >
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                              {isRTL ? 'تعويض' : 'Makeup'}
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     );
                   })

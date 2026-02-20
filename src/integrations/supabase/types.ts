@@ -230,7 +230,7 @@ export type Database = {
       }
       attendance: {
         Row: {
-          compensation_status: string | null
+          compensation_status: string
           id: string
           makeup_session_id: string | null
           notes: string | null
@@ -241,7 +241,7 @@ export type Database = {
           student_id: string
         }
         Insert: {
-          compensation_status?: string | null
+          compensation_status?: string
           id?: string
           makeup_session_id?: string | null
           notes?: string | null
@@ -252,7 +252,7 @@ export type Database = {
           student_id: string
         }
         Update: {
-          compensation_status?: string | null
+          compensation_status?: string
           id?: string
           makeup_session_id?: string | null
           notes?: string | null
@@ -2504,6 +2504,10 @@ export type Database = {
       rebuild_salary_snapshot: {
         Args: { p_employee_id: string; p_month: string }
         Returns: undefined
+      }
+      save_attendance: {
+        Args: { p_group_id: string; p_records: Json; p_session_id: string }
+        Returns: Json
       }
       update_curriculum_session: {
         Args: { p_data: Json; p_expected_updated_at: string; p_id: string }
