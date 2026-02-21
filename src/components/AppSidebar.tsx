@@ -93,7 +93,7 @@ export function AppSidebar() {
             items: [
               { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['admin'] },
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin'] },
-              { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['admin'] },
+              
               { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['admin'] },
             ],
           },
@@ -185,7 +185,7 @@ export function AppSidebar() {
               { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileCheck, roles: ['student'] },
               { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['student'] },
               { title: isRTL ? 'موادي التعليمية' : 'My Materials', url: '/my-materials', icon: BookMarked, roles: ['student'] },
-              { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['student'] },
+              
             ],
           },
           {
@@ -214,7 +214,7 @@ export function AppSidebar() {
               { title: t.nav.students, url: '/students', icon: GraduationCap, roles: ['reception'] },
               { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['reception'] },
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['reception'] },
-              { title: t.nav.attendance, url: '/attendance', icon: UserCheck, roles: ['reception'] },
+              
               { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['reception'] },
               { title: isRTL ? 'جدول العمل' : 'Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['reception'] },
             ],
