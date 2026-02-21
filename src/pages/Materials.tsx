@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { GROUP_TYPES_LIST } from '@/lib/constants';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -407,9 +408,9 @@ export default function Materials() {
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">{isRTL ? 'الكل' : 'All'}</SelectItem>
-                        <SelectItem value="kojo_squad">Kojo Squad</SelectItem>
-                        <SelectItem value="kojo_core">Kojo Core</SelectItem>
-                        <SelectItem value="kojo_x">Kojo X</SelectItem>
+                        {GROUP_TYPES_LIST.map(gt => (
+                          <SelectItem key={gt.value} value={gt.value}>{isRTL ? gt.labelAr : gt.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

@@ -153,8 +153,7 @@ export default function ActivityLogPage() {
     return labels[entity]?.[language] || entity;
   };
 
-  // formatDateTime centralized in timeUtils.ts (SSOT)
-  const formatDate = (date: string) => formatDateTime(date, language);
+  // SSOT: using centralized formatDateTime from timeUtils.ts
 
   const getUserName = (userId: string) => {
     const user = users[userId];
@@ -327,7 +326,7 @@ export default function ActivityLogPage() {
                   filteredLogs.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                        {formatDate(log.created_at)}
+                        {formatDateTime(log.created_at, language)}
                       </TableCell>
                       <TableCell className="font-medium">
                         {getUserName(log.user_id)}

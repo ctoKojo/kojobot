@@ -21,6 +21,22 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // SSOT: Flag inline definitions that should come from centralized files
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "VariableDeclarator[init.type='ObjectExpression'] > Identifier[name='GROUP_TYPES']",
+          message: "Use GROUP_TYPES from '@/lib/constants' instead of defining locally.",
+        },
+        {
+          selector: "VariableDeclarator[init.type='ObjectExpression'] > Identifier[name='ROLE_LABELS']",
+          message: "Use ROLE_LABELS from '@/lib/constants' instead of defining locally.",
+        },
+        {
+          selector: "VariableDeclarator[init.type='ObjectExpression'] > Identifier[name='ATTENDANCE_MODES']",
+          message: "Use ATTENDANCE_MODES from '@/lib/constants' instead of defining locally.",
+        },
+      ],
     },
   },
 );

@@ -30,13 +30,15 @@ export function formatTime12Hour(time24: string, isRTL: boolean = false): string
  * @param language - 'ar' or 'en'
  * @returns Formatted date string (e.g. "Jan 15, 2025" or "١٥ يناير ٢٠٢٥")
  */
-export function formatDate(date: string, language: string = 'en'): string {
+export function formatDate(date: string, language: string = 'en', timezone?: string): string {
   if (!date) return '-';
-  return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+  const options: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-  });
+    ...(timezone ? { timeZone: timezone } : {}),
+  };
+  return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', options);
 }
 
 /**
@@ -45,15 +47,17 @@ export function formatDate(date: string, language: string = 'en'): string {
  * @param language - 'ar' or 'en'
  * @returns Formatted date+time string (e.g. "Jan 15, 2025, 02:30 PM")
  */
-export function formatDateTime(date: string, language: string = 'en'): string {
+export function formatDateTime(date: string, language: string = 'en', timezone?: string): string {
   if (!date) return '-';
-  return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+  const options: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  });
+    ...(timezone ? { timeZone: timezone } : {}),
+  };
+  return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', options);
 }
 
 /**

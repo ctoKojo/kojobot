@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatTime12Hour, formatDate } from '@/lib/timeUtils';
+import { getRoleLabel } from '@/lib/constants';
 import { InstructorPerformanceCharts } from '@/components/instructor/InstructorPerformanceCharts';
 import { IssueEmployeeWarningDialog } from '@/components/instructor/IssueEmployeeWarningDialog';
 import { TerminateEmployeeDialog } from '@/components/employee/TerminateEmployeeDialog';
@@ -466,7 +467,7 @@ export default function InstructorProfile() {
                 </h1>
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Badge variant="secondary" className={isReception ? "border-purple-500 text-purple-600" : "border-blue-500 text-blue-600"}>
-                    {isReception ? (isRTL ? 'ريسيبشن' : 'Reception') : (isRTL ? 'مدرب' : 'Instructor')}
+                    {getRoleLabel(isReception ? 'reception' : 'instructor', isRTL)}
                   </Badge>
                   {!isReception && data.profile.specialization && (
                     <Badge variant="outline">

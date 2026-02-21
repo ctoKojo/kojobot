@@ -78,3 +78,19 @@ export const DAYS_OF_WEEK = [
   { en: 'Friday',    ar: 'الجمعة' },
   { en: 'Saturday',  ar: 'السبت' },
 ];
+
+const DAYS_MAP: Record<string, { en: string; ar: string }> = {
+  Sunday:    { en: 'Sunday',    ar: 'الأحد' },
+  Monday:    { en: 'Monday',    ar: 'الاثنين' },
+  Tuesday:   { en: 'Tuesday',   ar: 'الثلاثاء' },
+  Wednesday: { en: 'Wednesday', ar: 'الأربعاء' },
+  Thursday:  { en: 'Thursday',  ar: 'الخميس' },
+  Friday:    { en: 'Friday',    ar: 'الجمعة' },
+  Saturday:  { en: 'Saturday',  ar: 'السبت' },
+};
+
+/** Get localized day name from English day name */
+export function getDayName(day: string, isRTL: boolean): string {
+  const d = DAYS_MAP[day];
+  return d ? (isRTL ? d.ar : d.en) : day;
+}

@@ -224,15 +224,7 @@ export default function TakeQuiz() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const formatDateTime = (date: string) => {
-    return new Date(date).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // SSOT: using centralized formatDateTime from timeUtils.ts
 
   const currentQuestion = questions[currentIndex];
   const progress = ((currentIndex + 1) / questions.length) * 100;
@@ -269,7 +261,7 @@ export default function TakeQuiz() {
                 {isRTL ? 'الكويز يبدأ في:' : 'Quiz starts at:'}
               </p>
               <p className="text-2xl font-bold text-primary">
-                {formatDateTime(assignment.start_time)}
+                {formatDateTime(assignment.start_time, language)}
               </p>
             </div>
             <div className="flex items-center justify-center gap-2 text-muted-foreground">

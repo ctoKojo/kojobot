@@ -28,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { RescheduleDialog } from '@/components/group/RescheduleDialog';
 import { EditSessionDialog } from '@/components/group/EditSessionDialog';
 import { formatTime12Hour, formatDate } from '@/lib/timeUtils';
+import { getGroupTypeLabel, getDayName } from '@/lib/constants';
 
 interface AttendanceRecord {
   id: string;
@@ -178,27 +179,7 @@ export default function GroupDetails() {
 
   // SSOT: uses centralized formatDate from timeUtils.ts
 
-  const getDayName = (day: string) => {
-    const days: { [key: string]: { en: string; ar: string } } = {
-      Sunday: { en: 'Sunday', ar: 'الأحد' },
-      Monday: { en: 'Monday', ar: 'الاثنين' },
-      Tuesday: { en: 'Tuesday', ar: 'الثلاثاء' },
-      Wednesday: { en: 'Wednesday', ar: 'الأربعاء' },
-      Thursday: { en: 'Thursday', ar: 'الخميس' },
-      Friday: { en: 'Friday', ar: 'الجمعة' },
-      Saturday: { en: 'Saturday', ar: 'السبت' },
-    };
-    return language === 'ar' ? days[day]?.ar || day : days[day]?.en || day;
-  };
-
-  const getGroupTypeName = (type: string) => {
-    const types: { [key: string]: { en: string; ar: string } } = {
-      kojo_squad: { en: 'Kojo Squad', ar: 'كوجو سكواد' },
-      kojo_core: { en: 'Kojo Core', ar: 'كوجو كور' },
-      kojo_x: { en: 'Kojo X', ar: 'كوجو اكس' },
-    };
-    return language === 'ar' ? types[type]?.ar || type : types[type]?.en || type;
-  };
+  // SSOT: getDayName and getGroupTypeLabel imported from constants.ts
 
   // Level Progress calculations
   const getLevelProgress = () => {
@@ -333,7 +314,7 @@ export default function GroupDetails() {
                 </h1>
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Badge variant="secondary">
-                    {getGroupTypeName(data.group.group_type)}
+                    {getGroupTypeLabel(data.group.group_type, isRTL)}
                   </Badge>
                   {data.group.status === 'frozen' && (
                     <Badge className="bg-sky-500 text-white">
@@ -360,7 +341,7 @@ export default function GroupDetails() {
                 <div className="flex flex-wrap gap-4 mt-3 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
-                    {getDayName(data.group.schedule_day)}
+                    {getDayName(data.group.schedule_day, isRTL)}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />

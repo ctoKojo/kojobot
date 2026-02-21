@@ -136,18 +136,7 @@ export function StudentQuizPreviewDialog({
     return { en: [], ar: [] };
   };
 
-  // formatDateTime centralized in timeUtils.ts (SSOT)
-  // StudentQuizPreview uses Egypt timezone override
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Africa/Cairo',
-    });
-  };
+  // SSOT: using centralized formatDateTime from timeUtils.ts with Cairo timezone
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -171,7 +160,7 @@ export function StudentQuizPreviewDialog({
             </Badge>
             <span className="flex items-center gap-1 text-sm">
               <Clock className="h-3 w-3" />
-              {formatDate(submittedAt)}
+              {formatDateTime(submittedAt, language, 'Africa/Cairo')}
             </span>
           </DialogDescription>
         </DialogHeader>

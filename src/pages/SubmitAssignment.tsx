@@ -234,8 +234,7 @@ export default function SubmitAssignment() {
     }
   };
 
-  // formatDateTime centralized in timeUtils.ts (SSOT)
-  const formatDate = (date: string) => formatDateTime(date, language);
+  // SSOT: using centralized formatDateTime from timeUtils.ts
 
   const isOverdue = assignment ? new Date(assignment.due_date) < new Date() : false;
   const isGraded = submission?.status === 'graded';
@@ -297,7 +296,7 @@ export default function SubmitAssignment() {
               <div className="flex items-center gap-1">
                 <Clock className="w-4 h-4" />
                 {isRTL ? 'موعد التسليم: ' : 'Due: '}
-                {assignment && formatDate(assignment.due_date)}
+                {assignment && formatDateTime(assignment.due_date, language)}
               </div>
               {assignment?.max_score && (
                 <div>
@@ -400,7 +399,7 @@ export default function SubmitAssignment() {
               </CardTitle>
               {submission && !isRevisionRequested && (
                 <CardDescription>
-                  {isRTL ? 'تم التسليم: ' : 'Submitted: '}{formatDate(submission.submitted_at)}
+                  {isRTL ? 'تم التسليم: ' : 'Submitted: '}{formatDateTime(submission.submitted_at, language)}
                 </CardDescription>
               )}
             </CardHeader>

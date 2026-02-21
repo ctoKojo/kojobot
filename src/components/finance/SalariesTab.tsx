@@ -408,7 +408,7 @@ export function SalariesTab() {
                               const monthDate = new Date(snapshot.month);
                               const monthLabel = monthDate.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long' });
                               generateSalarySlip(
-                                { name: getName(emp), email: emp.email, type: emp.role === 'reception' ? (isRTL ? 'ريسيبشن' : 'Reception') : (isRTL ? 'مدرب' : 'Instructor') },
+                                { name: getName(emp), email: emp.email, type: getRoleLabel(emp.role === 'reception' ? 'reception' : 'instructor', isRTL) },
                                 { month: monthLabel, baseSalary: Number(snapshot.base_amount), earnings: Number(snapshot.total_earnings), bonuses: Number(snapshot.total_bonuses), deductions: Number(snapshot.total_deductions), netAmount: Number(snapshot.net_amount) },
                                 isRTL,
                               );
