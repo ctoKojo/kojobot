@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDateTime } from '@/lib/timeUtils';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, FileText, Image, Video, CheckCircle, Clock, Download, RotateCcw } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -223,15 +224,8 @@ export default function GradeAssignment() {
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // formatDateTime centralized in timeUtils.ts (SSOT)
+  const formatDate = (date: string) => formatDateTime(date, language);
 
   const getFileIcon = (type: string | null) => {
     if (!type) return <FileText className="w-6 h-6" />;

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDateTime } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
 import { Search, MoreHorizontal, Trash2, ClipboardList, Eye, FileText, Image, Video, CheckCircle } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -135,15 +136,8 @@ export default function AssignmentsPage() {
     return group ? (language === 'ar' ? group.name_ar : group.name) : '-';
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // formatDateTime centralized in timeUtils.ts (SSOT)
+  const formatDate = (date: string) => formatDateTime(date, language);
 
   const isOverdue = (dueDate: string) => {
     return new Date(dueDate) < new Date();

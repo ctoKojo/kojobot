@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { formatTime12Hour } from '@/lib/timeUtils';
+import { formatTime12Hour, formatDate } from '@/lib/timeUtils';
 
 interface GroupInfo {
   id: string;
@@ -235,13 +235,7 @@ export function StudentDashboard() {
     ? Math.round((stats.attendanceStats.present / stats.attendanceStats.total) * 100)
     : 0;
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  // SSOT: uses centralized formatDate from timeUtils.ts
 
   const daysUntil = (date: string) => {
     const diff = new Date(date).getTime() - new Date().getTime();

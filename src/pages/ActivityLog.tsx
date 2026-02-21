@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDateTime } from '@/lib/timeUtils';
 import { Activity, Search, Filter, Download, User, RefreshCw } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -152,15 +153,8 @@ export default function ActivityLogPage() {
     return labels[entity]?.[language] || entity;
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // formatDateTime centralized in timeUtils.ts (SSOT)
+  const formatDate = (date: string) => formatDateTime(date, language);
 
   const getUserName = (userId: string) => {
     const user = users[userId];

@@ -15,6 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDate } from '@/lib/timeUtils';
 import { notificationService } from '@/lib/notificationService';
 import { StudentPerformanceCharts } from '@/components/student/StudentPerformanceCharts';
 import { IssueWarningDialog } from '@/components/student/IssueWarningDialog';
@@ -224,13 +225,7 @@ export default function StudentProfile() {
     return { completed, avgScore };
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  // SSOT: uses centralized formatDate from timeUtils.ts
 
   if (loading) {
     return (

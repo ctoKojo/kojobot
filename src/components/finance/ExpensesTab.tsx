@@ -13,6 +13,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDate } from '@/lib/timeUtils';
 
 const CATEGORIES = [
   { value: 'rent', en: 'Rent', ar: 'إيجار' },
@@ -98,7 +99,7 @@ export function ExpensesTab() {
     return c ? (isRTL ? c.ar : c.en) : cat;
   };
 
-  const formatDate = (d: string) => new Date(d).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  // SSOT: uses centralized formatDate from timeUtils.ts
 
   return (
     <Card>

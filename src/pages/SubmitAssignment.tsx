@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { formatDateTime } from '@/lib/timeUtils';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, FileText, Image, Video, X, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -233,15 +234,8 @@ export default function SubmitAssignment() {
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // formatDateTime centralized in timeUtils.ts (SSOT)
+  const formatDate = (date: string) => formatDateTime(date, language);
 
   const isOverdue = assignment ? new Date(assignment.due_date) < new Date() : false;
   const isGraded = submission?.status === 'graded';

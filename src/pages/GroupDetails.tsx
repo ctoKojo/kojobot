@@ -27,7 +27,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { RescheduleDialog } from '@/components/group/RescheduleDialog';
 import { EditSessionDialog } from '@/components/group/EditSessionDialog';
-import { formatTime12Hour } from '@/lib/timeUtils';
+import { formatTime12Hour, formatDate } from '@/lib/timeUtils';
 
 interface AttendanceRecord {
   id: string;
@@ -176,13 +176,7 @@ export default function GroupDetails() {
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  // SSOT: uses centralized formatDate from timeUtils.ts
 
   const getDayName = (day: string) => {
     const days: { [key: string]: { en: string; ar: string } } = {

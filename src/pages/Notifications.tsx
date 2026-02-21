@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDateTime } from '@/lib/timeUtils';
 import { Bell, Check, CheckCheck, Trash2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -97,15 +98,7 @@ export default function NotificationsPage() {
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // formatDate/formatDateTime centralized in timeUtils.ts (SSOT)
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -178,7 +171,7 @@ export default function NotificationsPage() {
                         {language === 'ar' ? notification.message_ar : notification.message}
                       </p>
                       <p className="text-xs text-muted-foreground mt-2">
-                        {formatDate(notification.created_at)}
+                        {formatDateTime(notification.created_at, language)}
                       </p>
                     </div>
                     {!notification.is_read && (
