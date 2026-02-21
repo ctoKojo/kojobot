@@ -363,12 +363,14 @@ export default function MakeupSessionsPage() {
       pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
       scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
       completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
       expired: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
     };
     const labels: Record<string, string> = {
       pending: isRTL ? 'معلق' : 'Pending',
       scheduled: isRTL ? 'مجدول' : 'Scheduled',
       completed: isRTL ? 'مكتمل' : 'Completed',
+      cancelled: isRTL ? 'ملغي' : 'Cancelled',
       expired: isRTL ? 'منتهي' : 'Expired',
     };
     return <Badge className={styles[status] || ''}>{labels[status] || status}</Badge>;
@@ -398,7 +400,7 @@ export default function MakeupSessionsPage() {
   // Group filtered sessions into sections
   const actionRequired = filtered.filter(m => m.status === 'pending' || (m.status === 'scheduled' && m.student_confirmed === null));
   const scheduled = filtered.filter(m => m.status === 'scheduled' && m.student_confirmed !== null);
-  const completedExpired = filtered.filter(m => m.status === 'completed' || m.status === 'expired');
+  const completedExpired = filtered.filter(m => m.status === 'completed' || m.status === 'expired' || m.status === 'cancelled');
 
   const getRelativeTime = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -497,6 +499,7 @@ export default function MakeupSessionsPage() {
               <SelectItem value="pending">{isRTL ? 'معلق' : 'Pending'}</SelectItem>
               <SelectItem value="scheduled">{isRTL ? 'مجدول' : 'Scheduled'}</SelectItem>
               <SelectItem value="completed">{isRTL ? 'مكتمل' : 'Completed'}</SelectItem>
+              <SelectItem value="cancelled">{isRTL ? 'ملغي' : 'Cancelled'}</SelectItem>
               <SelectItem value="expired">{isRTL ? 'منتهي' : 'Expired'}</SelectItem>
             </SelectContent>
           </Select>
