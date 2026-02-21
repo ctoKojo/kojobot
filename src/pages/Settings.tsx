@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AlertTriangle, Plus, Trash2, Save, Clock, Loader2, Bell, Key, CheckCircle, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { GROUP_TYPES_LIST } from '@/lib/constants';
 
 interface WarningType {
   id: string;
@@ -316,11 +317,7 @@ function ContentAccessSettings({ isRTL }: { isRTL: boolean }) {
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
-  const subscriptionTypes = [
-    { value: 'kojo_squad', labelEn: 'Kojo Squad', labelAr: 'كوجو سكواد' },
-    { value: 'kojo_core', labelEn: 'Kojo Core', labelAr: 'كوجو كور' },
-    { value: 'kojo_x', labelEn: 'Kojo X', labelAr: 'كوجو اكس' },
-  ];
+  const subscriptionTypes = GROUP_TYPES_LIST.map(g => ({ value: g.value, labelEn: g.label, labelAr: g.labelAr }));
 
   const attendanceModes = [
     { value: 'offline', labelEn: 'Offline', labelAr: 'حضوري' },

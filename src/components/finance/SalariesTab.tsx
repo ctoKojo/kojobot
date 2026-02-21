@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateSalarySlip } from '@/lib/pdfReports';
+import { getRoleLabel } from '@/lib/constants';
 
 interface SalaryEvent {
   id: string;
@@ -344,7 +345,7 @@ export function SalariesTab() {
                       <TableCell className="font-medium">{getName(emp)}</TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {emp.role === 'reception' ? (isRTL ? 'ريسيبشن' : 'Reception') : (isRTL ? 'مدرب' : 'Instructor')}
+                          {getRoleLabel(emp.role, isRTL)}
                         </Badge>
                       </TableCell>
                       <TableCell>

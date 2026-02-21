@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/lib/notificationService';
+import { getMakeupStatusBadge } from '@/lib/statusBadges';
 
 interface MakeupSession {
   id: string;
@@ -368,23 +369,7 @@ export default function MakeupSessionsPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-      scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-      completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-      expired: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300',
-    };
-    const labels: Record<string, string> = {
-      pending: isRTL ? 'معلق' : 'Pending',
-      scheduled: isRTL ? 'مجدول' : 'Scheduled',
-      completed: isRTL ? 'مكتمل' : 'Completed',
-      cancelled: isRTL ? 'ملغي' : 'Cancelled',
-      expired: isRTL ? 'منتهي' : 'Expired',
-    };
-    return <Badge className={styles[status] || ''}>{labels[status] || status}</Badge>;
-  };
+  const getStatusBadge = (status: string) => getMakeupStatusBadge(status, isRTL);
 
   const getConfirmationBadge = (confirmed: boolean | null) => {
     if (confirmed === null) return <Badge variant="outline" className="text-muted-foreground">{isRTL ? 'في الانتظار' : 'Awaiting'}</Badge>;

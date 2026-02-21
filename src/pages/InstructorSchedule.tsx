@@ -9,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { DAYS_OF_WEEK } from '@/lib/constants';
 
 interface InstructorSchedule {
   id: string;
@@ -121,15 +122,9 @@ export default function InstructorSchedulePage() {
     setEditDialogOpen(true);
   };
 
-  const DAY_NAMES_AR: Record<string, string> = {
-    Sunday: 'الأحد',
-    Monday: 'الإثنين',
-    Tuesday: 'الثلاثاء',
-    Wednesday: 'الأربعاء',
-    Thursday: 'الخميس',
-    Friday: 'الجمعة',
-    Saturday: 'السبت',
-  };
+  const DAY_NAMES_AR: Record<string, string> = Object.fromEntries(
+    DAYS_OF_WEEK.map(d => [d.en, d.ar])
+  );
 
   const sendScheduleNotification = async (dayOfWeek: string, isWorkingDay: boolean) => {
     if (!targetInstructorId || role !== 'admin') return;

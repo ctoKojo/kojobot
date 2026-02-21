@@ -63,8 +63,7 @@ import {
   getLocalizedError,
 } from '@/lib/validationUtils';
 import { cn } from '@/lib/utils';
-
-type SubscriptionType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
+import { GROUP_TYPES_LIST, type GroupType as SubscriptionType } from '@/lib/constants';
 type PaymentType = 'full' | 'installment';
 
 interface PricingPlan {
@@ -195,11 +194,7 @@ export default function StudentsPage() {
            formData.subscription_type !== '';
   }, [validationErrors, editingStudent, formData.subscription_type]);
 
-  const subscriptionTypes: { value: SubscriptionType; label: string; labelAr: string }[] = [
-    { value: 'kojo_squad', label: 'Kojo Squad', labelAr: 'كوجو سكواد' },
-    { value: 'kojo_core', label: 'Kojo Core', labelAr: 'كوجو كور' },
-    { value: 'kojo_x', label: 'Kojo X', labelAr: 'كوجو اكس' },
-  ];
+  const subscriptionTypes = GROUP_TYPES_LIST;
 
   const attendanceModes: { value: AttendanceMode; label: string; labelAr: string }[] = [
     { value: 'online', label: 'Online', labelAr: 'أونلاين' },

@@ -13,6 +13,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { getGroupTypeLabel } from '@/lib/constants';
 
 interface PricingPlan {
   id: string;
@@ -88,10 +89,7 @@ export default function PricingPlans() {
     fetchPlans();
   };
 
-  const groupTypeLabel = (type: string) => {
-    const labels: Record<string, string> = { kojo_squad: 'Kojo Squad', kojo_core: 'Kojo Core', kojo_x: 'Kojo X' };
-    return labels[type] || type;
-  };
+  const groupTypeLabel = (type: string) => getGroupTypeLabel(type, false);
 
   const offlinePlans = plans.filter(p => p.attendance_mode === 'offline');
   const onlinePlans = plans.filter(p => p.attendance_mode === 'online');

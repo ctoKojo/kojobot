@@ -48,6 +48,7 @@ import { cn } from '@/lib/utils';
 import { TerminateEmployeeDialog } from '@/components/employee/TerminateEmployeeDialog';
 import { CredentialsDialog } from '@/components/CredentialsDialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { getRoleLabel } from '@/lib/constants';
 interface Instructor {
   id: string;
   user_id: string;
@@ -430,16 +431,10 @@ export default function InstructorsPage() {
   }, [activeEmployees, terminatedEmployees, categoryFilter]);
 
   const getRoleBadge = (role: 'instructor' | 'reception') => {
-    if (role === 'instructor') {
-      return (
-        <Badge variant="outline" className="border-blue-500 text-blue-600 text-xs">
-          {isRTL ? 'مدرب' : 'Instructor'}
-        </Badge>
-      );
-    }
+    const colors = role === 'instructor' ? 'border-blue-500 text-blue-600' : 'border-purple-500 text-purple-600';
     return (
-      <Badge variant="outline" className="border-purple-500 text-purple-600 text-xs">
-        {isRTL ? 'ريسيبشن' : 'Reception'}
+      <Badge variant="outline" className={`${colors} text-xs`}>
+        {getRoleLabel(role, isRTL)}
       </Badge>
     );
   };

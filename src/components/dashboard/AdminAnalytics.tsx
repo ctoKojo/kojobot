@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { getGroupTypeLabel } from '@/lib/constants';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell,
@@ -90,13 +91,8 @@ export function AdminAnalytics() {
     if (groups) {
       const counts: Record<string, number> = {};
       groups.forEach(g => { counts[g.group_type] = (counts[g.group_type] || 0) + 1; });
-      const labels: Record<string, string> = {
-        kojo_squad: 'Kojo Squad',
-        kojo_core: 'Kojo Core',
-        kojo_x: 'Kojo X',
-      };
       setGroupTypeData(Object.entries(counts).map(([key, value]) => ({
-        name: labels[key] || key,
+        name: getGroupTypeLabel(key, false),
         value,
       })));
     }

@@ -49,6 +49,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatTime12Hour } from '@/lib/timeUtils';
 import { logUpdate, logDelete } from '@/lib/activityLogger';
+import { getSessionStatusBadge } from '@/lib/statusBadges';
 
 interface Session {
   id: string;
@@ -322,25 +323,7 @@ export default function SessionsPage() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-      completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    };
-
-    const labels: Record<string, { en: string; ar: string }> = {
-      scheduled: { en: 'Scheduled', ar: 'مجدول' },
-      completed: { en: 'Completed', ar: 'مكتمل' },
-      cancelled: { en: 'Cancelled', ar: 'ملغي' },
-    };
-
-    return (
-      <Badge className={styles[status] || styles.scheduled}>
-        {labels[status]?.[language] || status}
-      </Badge>
-    );
-  };
+  const getStatusBadge = (status: string) => getSessionStatusBadge(status, language);
 
   const isToday = (dateStr: string) => {
     const today = new Date().toISOString().split('T')[0];
