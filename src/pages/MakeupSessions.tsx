@@ -279,17 +279,13 @@ export default function MakeupSessionsPage() {
       return;
     }
     try {
-      const { error } = await supabase
-        .from('makeup_sessions')
-        .update({
-          scheduled_date: scheduleForm.date,
-          scheduled_time: scheduleForm.time,
-          notes: scheduleForm.notes || null,
-          status: 'scheduled',
-          assigned_instructor_id: scheduleForm.instructorId || null,
-          student_confirmed: null, // Reset confirmation when rescheduled
-        })
-        .eq('id', selectedSession.id);
+      const { data, error } = await supabase.rpc('schedule_makeup_session', {
+        p_makeup_id: selectedSession.id,
+        p_date: scheduleForm.date,
+        p_time: scheduleForm.time,
+        p_instructor_id: scheduleForm.instructorId || null,
+        p_notes: scheduleForm.notes || null,
+      });
 
       if (error) throw error;
 
@@ -332,23 +328,37 @@ export default function MakeupSessionsPage() {
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
-      const session = makeupSessions.find(m => m.id === id);
-      const updateData: any = { status: newStatus };
-      if (newStatus === 'completed') updateData.completed_at = new Date().toISOString();
-      const { error } = await supabase.from('makeup_sessions').update(updateData).eq('id', id);
-      if (error) throw error;
+      if (newStatus === 'completed') {
+        // Find linked session and use complete_makeup_session RPC
+        const { data: linkedSession } = await supabase
+          .from('sessions')
+          .select('id')
+          .eq('makeup_session_id', id)
+          .maybeSingle();
 
-      // When completed, update attendance compensation_status and credits ledger
-      if (newStatus === 'completed' && session) {
-        // Update original attendance record
-        if (session.original_session_id) {
-          await supabase
-            .from('attendance')
-            .update({ compensation_status: 'compensated', makeup_session_id: id })
-            .eq('session_id', session.original_session_id)
-            .eq('student_id', session.student_id)
-            .eq('status', 'absent');
+        if (linkedSession) {
+          const { error } = await supabase.rpc('complete_makeup_session', {
+            p_session_id: linkedSession.id,
+          });
+          if (error) throw error;
+        } else {
+          // Fallback: no linked session yet, update makeup directly
+          const session = makeupSessions.find(m => m.id === id);
+          const { error } = await supabase.from('makeup_sessions').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', id);
+          if (error) throw error;
+          if (session?.original_session_id) {
+            await supabase
+              .from('attendance')
+              .update({ compensation_status: 'compensated', makeup_session_id: id })
+              .eq('session_id', session.original_session_id)
+              .eq('student_id', session.student_id)
+              .eq('status', 'absent');
+          }
         }
+      } else {
+        // For expired/cancelled - direct update
+        const { error } = await supabase.from('makeup_sessions').update({ status: newStatus }).eq('id', id);
+        if (error) throw error;
       }
 
       toast({ title: isRTL ? 'تم التحديث' : 'Updated' });

@@ -72,6 +72,7 @@ import {
   Film,
   CheckCircle,
   Loader2,
+  RefreshCw,
 } from 'lucide-react';
 
 interface CurriculumContent {
@@ -119,6 +120,8 @@ interface Session {
   topic: string | null;
   topic_ar: string | null;
   group_id: string;
+  is_makeup: boolean;
+  makeup_session_id: string | null;
 }
 
 interface Group {
@@ -209,6 +212,7 @@ export default function SessionDetails() {
   // Assignment submissions dialog
   const [assignmentSubmissionsDialogOpen, setAssignmentSubmissionsDialogOpen] = useState(false);
   const [savingAttendance, setSavingAttendance] = useState(false);
+  const [makeupStudentId, setMakeupStudentId] = useState<string | null>(null);
 
   // autoConfirmInstructorAttendance removed - handled by save_attendance RPC
 
@@ -221,18 +225,31 @@ export default function SessionDetails() {
     const now = new Date();
     
     if (now >= sessionEndTime) {
-      // Session should be completed
-      const { error } = await supabase
-        .from('sessions')
-        .update({ status: 'completed' })
-        .eq('id', session.id);
-      
-      if (!error) {
-        setSession(prev => prev ? { ...prev, status: 'completed' } : null);
-        toast({
-          title: isRTL ? 'تم تحديث الحالة' : 'Status Updated',
-          description: isRTL ? 'تم تحديث حالة السيشن تلقائياً' : 'Session status updated automatically',
+      // For makeup sessions, use the complete_makeup_session RPC
+      if (session.is_makeup && session.makeup_session_id) {
+        const { error } = await supabase.rpc('complete_makeup_session', {
+          p_session_id: session.id,
         });
+        if (!error) {
+          setSession(prev => prev ? { ...prev, status: 'completed' } : null);
+          toast({
+            title: isRTL ? 'تم تحديث الحالة' : 'Status Updated',
+            description: isRTL ? 'تم اكتمال السيشن التعويضية تلقائياً' : 'Makeup session completed automatically',
+          });
+        }
+      } else {
+        const { error } = await supabase
+          .from('sessions')
+          .update({ status: 'completed' })
+          .eq('id', session.id);
+        
+        if (!error) {
+          setSession(prev => prev ? { ...prev, status: 'completed' } : null);
+          toast({
+            title: isRTL ? 'تم تحديث الحالة' : 'Status Updated',
+            description: isRTL ? 'تم تحديث حالة السيشن تلقائياً' : 'Session status updated automatically',
+          });
+        }
       }
     }
   }, [session, isRTL]);
@@ -266,6 +283,18 @@ export default function SessionDetails() {
       
       if (sessionError) throw sessionError;
       setSession(sessionData);
+
+      // Fetch makeup student if this is a makeup session
+      if (sessionData.is_makeup && sessionData.makeup_session_id) {
+        const { data: makeupData } = await supabase
+          .from('makeup_sessions')
+          .select('student_id')
+          .eq('id', sessionData.makeup_session_id)
+          .single();
+        setMakeupStudentId(makeupData?.student_id || null);
+      } else {
+        setMakeupStudentId(null);
+      }
       
       // Fetch group with attendance mode and session link
       const { data: groupData } = await supabase
@@ -463,6 +492,25 @@ export default function SessionDetails() {
   // One-click assign curriculum quiz
   const handleAssignCurriculumQuiz = async () => {
     if (!curriculumContent?.quiz_id || !session || !user) return;
+
+    // Guard: prevent assignment if all students are absent
+    const hasAttendance = students.some(s => s.attendance_status !== null);
+    if (hasAttendance) {
+      const presentStudents = students.filter(s => 
+        s.attendance_status === 'present' || s.attendance_status === 'late'
+      );
+      if (presentStudents.length === 0) {
+        toast({
+          title: isRTL ? 'لا يمكن الاسناد' : 'Cannot Assign',
+          description: isRTL 
+            ? 'لا يوجد طلاب حاضرون لاسناد المهمة لهم' 
+            : 'No present students to assign to',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setAssigningCurriculumQuiz(true);
     try {
       const { data: quiz } = await supabase
@@ -511,6 +559,25 @@ export default function SessionDetails() {
   // One-click assign curriculum assignment
   const handleAssignCurriculumAssignment = async () => {
     if (!curriculumContent?.assignment_title || !session || !user) return;
+
+    // Guard: prevent assignment if all students are absent
+    const hasAttendance = students.some(s => s.attendance_status !== null);
+    if (hasAttendance) {
+      const presentStudents = students.filter(s => 
+        s.attendance_status === 'present' || s.attendance_status === 'late'
+      );
+      if (presentStudents.length === 0) {
+        toast({
+          title: isRTL ? 'لا يمكن الاسناد' : 'Cannot Assign',
+          description: isRTL 
+            ? 'لا يوجد طلاب حاضرون لاسناد المهمة لهم' 
+            : 'No present students to assign to',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setAssigningCurriculumAssignment(true);
     try {
       const dueDate = new Date(`${session.session_date}T${session.session_time.slice(0, 5)}`);
@@ -762,10 +829,15 @@ export default function SessionDetails() {
     }
   };
 
+  // For makeup sessions, only show the assigned student
+  const attendanceStudents = session?.is_makeup && makeupStudentId
+    ? students.filter(s => s.student_id === makeupStudentId)
+    : students;
+
   const openAttendanceDialog = () => {
-    // Initialize attendance records from current student data
+    // Initialize attendance records from filtered students
     const records: Record<string, string> = {};
-    students.forEach(s => {
+    attendanceStudents.forEach(s => {
       records[s.student_id] = s.attendance_status || 'absent';
     });
     setAttendanceRecords(records);
@@ -819,7 +891,7 @@ export default function SessionDetails() {
 
   const markAllAs = (status: string) => {
     const newRecords: Record<string, string> = {};
-    students.forEach(s => {
+    attendanceStudents.forEach(s => {
       newRecords[s.student_id] = status;
     });
     setAttendanceRecords(newRecords);
@@ -967,6 +1039,23 @@ export default function SessionDetails() {
             </Badge>
           </div>
         </div>
+
+        {/* Makeup Session Banner */}
+        {session.is_makeup && (
+          <Card className="border-purple-300 bg-purple-50 dark:bg-purple-900/10 dark:border-purple-800">
+            <CardContent className="flex items-center gap-3 py-3">
+              <RefreshCw className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              <div>
+                <p className="font-medium text-purple-800 dark:text-purple-300">
+                  {isRTL ? 'سيشن تعويضية' : 'Makeup Session'}
+                </p>
+                <p className="text-sm text-purple-600 dark:text-purple-400">
+                  {isRTL ? 'هذه السيشن بديلة عن سيشن سابقة' : 'This session replaces a previous one'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Session Info Card */}
         <Card>
@@ -1617,7 +1706,7 @@ export default function SessionDetails() {
             </div>
             
             <div className="space-y-3 py-4">
-              {students.map((student) => (
+              {attendanceStudents.map((student) => (
                 <div key={student.student_id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">
