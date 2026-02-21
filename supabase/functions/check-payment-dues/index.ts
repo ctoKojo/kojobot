@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkRateLimit, getClientIP, rateLimitResponse } from "../_shared/rateLimit.ts";
+import { getCairoToday, getCairoDatePlusDays } from "../_shared/cairoTime.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -60,7 +61,8 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    const today = new Date().toISOString().split('T')[0];
+    // Use Cairo timezone for date comparisons
+    const today = getCairoToday();
 
     // Find overdue subscriptions that are not yet suspended
     const { data: overdueSubs } = await supabase
@@ -116,10 +118,8 @@ Deno.serve(async (req) => {
       suspendedCount++;
     }
 
-    // Check for upcoming payments (5 days warning)
-    const fiveDaysFromNow = new Date();
-    fiveDaysFromNow.setDate(fiveDaysFromNow.getDate() + 5);
-    const warningDate = fiveDaysFromNow.toISOString().split('T')[0];
+    // Check for upcoming payments (5 days warning) - Cairo timezone
+    const warningDate = getCairoDatePlusDays(5);
 
     const { data: upcomingSubs } = await supabase
       .from('subscriptions')

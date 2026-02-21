@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { formatDate } from '@/lib/timeUtils';
 import { GROUP_TYPES_LIST } from '@/lib/constants';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -587,7 +588,7 @@ export default function Materials() {
                                       {getModeBadge(m.attendance_mode)}
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-1">
-                                      {new Date(m.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US')}
+                                      {formatDate(m.created_at, isRTL ? 'ar' : 'en')}
                                     </p>
                                   </div>
                                   <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

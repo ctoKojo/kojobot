@@ -720,7 +720,7 @@ export default function InstructorProfile() {
                           <div key={payment.id} className="flex items-center justify-between p-4 rounded-lg border">
                             <div>
                               <p className="font-medium">
-                                {new Date(payment.month).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long' })}
+                                {formatDate(payment.month, language)}
                               </p>
                               <div className="flex gap-3 mt-1 text-sm">
                                 <span className="text-muted-foreground">{isRTL ? 'أساسي:' : 'Base:'} {payment.base_amount}</span>

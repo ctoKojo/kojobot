@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDateTime } from '@/lib/timeUtils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -347,12 +348,7 @@ export function AssignmentSubmissionsDialog({
                       </TableCell>
                       <TableCell className="text-center text-sm text-muted-foreground">
                         {submission.submitted_at 
-                          ? new Date(submission.submitted_at).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })
+                          ? formatDateTime(submission.submitted_at, language)
                           : '-'
                         }
                       </TableCell>

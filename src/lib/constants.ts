@@ -5,6 +5,9 @@
 // instead of defining locally.
 // ============================================================
 
+// --- App Timezone (Cairo SSOT) ---
+export const APP_TIMEZONE = 'Africa/Cairo';
+
 export type GroupType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
 export type AttendanceMode = 'online' | 'offline';
 export type GroupStatus = 'active' | 'frozen';

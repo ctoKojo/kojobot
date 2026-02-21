@@ -297,7 +297,7 @@ export default function MyQuizzes() {
                         </CardTitle>
                         <CardDescription>
                           {isRTL ? 'تم التسليم: ' : 'Submitted: '}
-                          {quiz.submission && formatDate(quiz.submission.submitted_at, language, 'Africa/Cairo')}
+                          {quiz.submission && formatDate(quiz.submission.submitted_at, language)}
                         </CardDescription>
                       </div>
                       <Badge 

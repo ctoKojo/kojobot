@@ -421,7 +421,7 @@ export default function MyInstructorQuizzes() {
                           {language === 'ar' ? quiz.group_name_ar : quiz.group_name}
                         </Badge>
                         <span>•</span>
-                        <span>{formatDateTime(quiz.start_time, language, 'Africa/Cairo')}</span>
+                        <span>{formatDateTime(quiz.start_time, language)}</span>
                       </div>
                     </div>
                     
@@ -489,7 +489,7 @@ export default function MyInstructorQuizzes() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">{isRTL ? 'البداية' : 'Start'}</p>
-                      <p className="font-medium">{formatDateTime(selectedAssignment.start_time, language, 'Africa/Cairo')}</p>
+                      <p className="font-medium">{formatDateTime(selectedAssignment.start_time, language)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">{isRTL ? 'متوسط الدرجات' : 'Avg. Score'}</p>
@@ -541,7 +541,7 @@ export default function MyInstructorQuizzes() {
                           ) : '-'}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {formatDateTime(result.submitted_at, language, 'Africa/Cairo')}
+                          {formatDateTime(result.submitted_at, language)}
                         </TableCell>
                         <TableCell>
                           {result.answers && (

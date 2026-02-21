@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDate, formatDateTime } from '@/lib/timeUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -70,7 +71,7 @@ export function EmployeeFinanceSection({ profile }: EmployeeFinanceSectionProps)
   };
 
   const formatMonth = (month: string) => {
-    return new Date(month).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long' });
+    return formatDate(month, language);
   };
 
   if (loading) {
@@ -153,7 +154,7 @@ export function EmployeeFinanceSection({ profile }: EmployeeFinanceSectionProps)
                     {isRTL ? (event.description_ar || event.description || event.event_type) : (event.description || event.event_type)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(event.created_at).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {formatDateTime(event.created_at, language)}
                     {event.is_reversal && (
                       <span className="ms-2 text-amber-600">({isRTL ? 'عكس' : 'Reversal'})</span>
                     )}

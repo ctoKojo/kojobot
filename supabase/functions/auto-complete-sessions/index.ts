@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isCairoTimePastSessionEnd, getCairoNow } from "../_shared/cairoTime.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,12 +17,11 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get current timestamp in UTC
-    const now = new Date().toISOString();
-    const today = now.split("T")[0];
-    const currentTime = now.split("T")[1].substring(0, 8);
+    // Use Cairo time for "today" comparison
+    const cairo = getCairoNow();
+    const today = cairo.today;
 
-    // Find sessions that are scheduled and their date+time+duration has passed
+    // Find sessions that are scheduled and their date has passed or is today
     const { data: sessions, error: fetchError } = await supabase
       .from("sessions")
       .select("id, session_date, session_time, duration_minutes, group_id")
@@ -34,15 +34,12 @@ Deno.serve(async (req) => {
     const completedIds: string[] = [];
 
     for (const session of sessions || []) {
-      // Calculate session end time
-      const sessionStart = new Date(
-        `${session.session_date}T${session.session_time}`
-      );
-      const sessionEnd = new Date(
-        sessionStart.getTime() + session.duration_minutes * 60 * 1000
-      );
-
-      if (new Date() >= sessionEnd) {
+      // Use Cairo-aware comparison for session end time
+      if (isCairoTimePastSessionEnd(
+        session.session_date,
+        session.session_time,
+        session.duration_minutes
+      )) {
         completedIds.push(session.id);
         completedCount++;
       }
@@ -62,7 +59,8 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         completed: completedCount,
-        timestamp: now,
+        timestamp: new Date().toISOString(),
+        cairoTime: `${cairo.today} ${cairo.timeHHMMSS}`,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

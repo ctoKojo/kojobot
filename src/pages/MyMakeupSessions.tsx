@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDate } from '@/lib/timeUtils';
 import { Calendar, Clock, CheckCircle, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -274,7 +275,7 @@ export default function MyMakeupSessions() {
                           )}
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(session.created_at).toLocaleDateString()}
+                          {formatDate(session.created_at, language)}
                         </span>
                       </div>
                     </CardContent>

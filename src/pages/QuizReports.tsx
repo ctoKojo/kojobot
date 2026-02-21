@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDate } from '@/lib/timeUtils';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -452,7 +453,7 @@ export default function QuizReportsPage() {
                         </TableCell>
                         <TableCell>
                           {sub.submitted_at 
-                            ? new Date(sub.submitted_at).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')
+                            ? formatDate(sub.submitted_at, language)
                             : '-'
                           }
                         </TableCell>
