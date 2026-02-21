@@ -135,6 +135,12 @@ export default function GroupsPage() {
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterDay, setFilterDay] = useState<string>('all');
+  const [filterInstructor, setFilterInstructor] = useState<string>('all');
+  const [filterLevel, setFilterLevel] = useState<string>('all');
+  const [filterAgeGroup, setFilterAgeGroup] = useState<string>('all');
+  const [filterGroupType, setFilterGroupType] = useState<string>('all');
+  const [filterAttendanceMode, setFilterAttendanceMode] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isStudentsDialogOpen, setIsStudentsDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -615,10 +621,17 @@ export default function GroupsPage() {
     }
   };
 
-  const filteredGroups = groups.filter((group) =>
-    group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    group.name_ar.includes(searchQuery)
-  );
+  const filteredGroups = groups.filter((group) => {
+    const matchesSearch = group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      group.name_ar.includes(searchQuery);
+    const matchesDay = filterDay === 'all' || group.schedule_day === filterDay;
+    const matchesInstructor = filterInstructor === 'all' || group.instructor_id === filterInstructor;
+    const matchesLevel = filterLevel === 'all' || group.level_id === filterLevel;
+    const matchesAgeGroup = filterAgeGroup === 'all' || group.age_group_id === filterAgeGroup;
+    const matchesGroupType = filterGroupType === 'all' || group.group_type === filterGroupType;
+    const matchesAttendanceMode = filterAttendanceMode === 'all' || group.attendance_mode === filterAttendanceMode;
+    return matchesSearch && matchesDay && matchesInstructor && matchesLevel && matchesAgeGroup && matchesGroupType && matchesAttendanceMode;
+  });
 
   const getInstructorName = (id: string | null) => {
     if (!id) return isRTL ? 'لم يتم التعيين' : 'Not Assigned';
@@ -749,6 +762,90 @@ export default function GroupsPage() {
               {t.groups.addGroup}
             </Button>
           )}
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-3">
+          <Select value={filterDay} onValueChange={setFilterDay}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder={isRTL ? 'الموعد' : 'Day'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isRTL ? 'كل الأيام' : 'All Days'}</SelectItem>
+              {days.map(d => (
+                <SelectItem key={d.en} value={d.en}>
+                  {language === 'ar' ? d.ar : d.en}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterInstructor} onValueChange={setFilterInstructor}>
+            <SelectTrigger className="w-[170px]">
+              <SelectValue placeholder={isRTL ? 'المدرب' : 'Instructor'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isRTL ? 'كل المدربين' : 'All Instructors'}</SelectItem>
+              {instructors.map(i => (
+                <SelectItem key={i.user_id} value={i.user_id}>
+                  {language === 'ar' && i.full_name_ar ? i.full_name_ar : i.full_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterLevel} onValueChange={setFilterLevel}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder={isRTL ? 'المستوى' : 'Level'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isRTL ? 'كل المستويات' : 'All Levels'}</SelectItem>
+              {levels.map(l => (
+                <SelectItem key={l.id} value={l.id}>
+                  {language === 'ar' ? l.name_ar : l.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterAgeGroup} onValueChange={setFilterAgeGroup}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder={isRTL ? 'الفئة العمرية' : 'Age Group'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isRTL ? 'كل الفئات' : 'All Age Groups'}</SelectItem>
+              {ageGroups.map(ag => (
+                <SelectItem key={ag.id} value={ag.id}>
+                  {language === 'ar' ? ag.name_ar : ag.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterGroupType} onValueChange={setFilterGroupType}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder={isRTL ? 'نوع المجموعة' : 'Group Type'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</SelectItem>
+              {groupTypes.map(gt => (
+                <SelectItem key={gt.value} value={gt.value}>
+                  {language === 'ar' ? gt.labelAr : gt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterAttendanceMode} onValueChange={setFilterAttendanceMode}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder={isRTL ? 'نوع الحضور' : 'Attendance'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isRTL ? 'الكل' : 'All Modes'}</SelectItem>
+              <SelectItem value="online">{isRTL ? 'أونلاين' : 'Online'}</SelectItem>
+              <SelectItem value="offline">{isRTL ? 'حضوري' : 'Offline'}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Dialog */}
