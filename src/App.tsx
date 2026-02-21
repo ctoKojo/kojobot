@@ -56,6 +56,7 @@ import AccountTerminated from "./pages/AccountTerminated";
 import Messages from "./pages/Messages";
 import InstructorPerformanceDashboard from "./pages/InstructorPerformanceDashboard";
 import CurriculumManagement from "./pages/CurriculumManagement";
+import MySessions from "./pages/MySessions";
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
@@ -120,6 +121,7 @@ const App = () => (
                   <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
                   <Route path="/instructor-performance" element={<ProtectedRoute allowedRoles={['admin']}><InstructorPerformanceDashboard /></ProtectedRoute>} />
                   <Route path="/curriculum" element={<ProtectedRoute allowedRoles={['admin']}><CurriculumManagement /></ProtectedRoute>} />
+                  <Route path="/my-sessions" element={<ProtectedRoute allowedRoles={['student']}><MySessions /></ProtectedRoute>} />
                   <Route path="/account-suspended" element={<AccountSuspended />} />
                   <Route path="/account-terminated" element={<AccountTerminated />} />
                   <Route path="*" element={<NotFound />} />

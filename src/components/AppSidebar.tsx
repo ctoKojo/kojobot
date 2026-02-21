@@ -185,7 +185,7 @@ export function AppSidebar() {
               { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileCheck, roles: ['student'] },
               { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['student'] },
               { title: isRTL ? 'موادي التعليمية' : 'My Materials', url: '/my-materials', icon: BookMarked, roles: ['student'] },
-              
+              { title: isRTL ? 'سيشناتي' : 'My Sessions', url: '/my-sessions', icon: BookOpen, roles: ['student'] },
             ],
           },
           {
