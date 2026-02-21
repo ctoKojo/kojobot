@@ -160,6 +160,7 @@ export default function SessionDetails() {
   const { user, role } = useAuth();
   
   const [loading, setLoading] = useState(true);
+  const [studentCanViewContent, setStudentCanViewContent] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [group, setGroup] = useState<Group | null>(null);
   const [students, setStudents] = useState<StudentData[]>([]);
@@ -398,6 +399,20 @@ export default function SessionDetails() {
       });
       
       setStudents(combinedStudents);
+
+      // Check if student can view content based on attendance
+      if (role === 'student' && user) {
+        const myAttendance = attendanceData?.find(a => a.student_id === user.id);
+        if (myAttendance) {
+          const isPresent = myAttendance.status === 'present' || myAttendance.status === 'late';
+          const isCompensated = myAttendance.compensation_status === 'compensated';
+          setStudentCanViewContent(isPresent || isCompensated);
+        } else {
+          setStudentCanViewContent(true); // attendance not recorded yet
+        }
+      } else {
+        setStudentCanViewContent(true);
+      }
       // Fetch staff attendance for this session
       if (groupData?.instructor_id) {
         const { data: staffAtt } = await supabase
@@ -1175,7 +1190,23 @@ export default function SessionDetails() {
         )}
 
         {/* Curriculum Content Section */}
-        {curriculumLoading ? (
+        {!studentCanViewContent ? (
+          <Card className="border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800">
+            <CardContent className="flex items-center gap-3 py-4">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div>
+                <p className="font-medium text-amber-800 dark:text-amber-300">
+                  {isRTL ? 'المحتوى غير متاح' : 'Content Not Available'}
+                </p>
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  {isRTL 
+                    ? 'ستتمكن من مشاهدة محتوى هذه السيشن بعد حضور السيشن التعويضية'
+                    : 'You can view this content after attending your makeup session'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : curriculumLoading ? (
           <Card>
             <CardContent className="flex items-center justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
