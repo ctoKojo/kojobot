@@ -530,9 +530,28 @@ export default function SessionDetails() {
         assigned_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase
-        .from('quiz_assignments')
-        .insert({
+      // Check if attendance is recorded - assign individually to present students only
+      const hasAttendanceForQuiz = students.some(s => s.attendance_status !== null);
+      let quizInsertError: any = null;
+
+      if (hasAttendanceForQuiz) {
+        const presentForQuiz = students.filter(s => 
+          s.attendance_status === 'present' || s.attendance_status === 'late'
+        );
+        const quizRecords = presentForQuiz.map(s => ({
+          quiz_id: curriculumContent.quiz_id,
+          session_id: session.id,
+          student_id: s.student_id,
+          assigned_by: user.id,
+          start_time: startDate.toISOString(),
+          due_date: dueDate.toISOString(),
+          curriculum_snapshot: snapshot,
+        }));
+        const { error } = await supabase.from('quiz_assignments').insert(quizRecords);
+        quizInsertError = error;
+      } else {
+        // Attendance not recorded yet - fallback to group-level assignment
+        const { error } = await supabase.from('quiz_assignments').insert({
           quiz_id: curriculumContent.quiz_id,
           session_id: session.id,
           group_id: session.group_id,
@@ -541,8 +560,10 @@ export default function SessionDetails() {
           due_date: dueDate.toISOString(),
           curriculum_snapshot: snapshot,
         });
+        quizInsertError = error;
+      }
 
-      if (error) throw error;
+      if (quizInsertError) throw quizInsertError;
 
       toast({
         title: isRTL ? 'تم اسناد الكويز' : 'Quiz Assigned',
@@ -591,9 +612,33 @@ export default function SessionDetails() {
         assigned_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase
-        .from('assignments')
-        .insert({
+      // Check if attendance is recorded - assign individually to present students only
+      const hasAttendanceForAssignment = students.some(s => s.attendance_status !== null);
+      let assignmentInsertError: any = null;
+
+      if (hasAttendanceForAssignment) {
+        const presentForAssignment = students.filter(s => 
+          s.attendance_status === 'present' || s.attendance_status === 'late'
+        );
+        const assignmentRecords = presentForAssignment.map(s => ({
+          title: curriculumContent.assignment_title,
+          title_ar: curriculumContent.assignment_title_ar || curriculumContent.assignment_title,
+          description: curriculumContent.assignment_description,
+          description_ar: curriculumContent.assignment_description_ar,
+          max_score: curriculumContent.assignment_max_score || 100,
+          due_date: dueDate.toISOString(),
+          session_id: session.id,
+          student_id: s.student_id,
+          assigned_by: user.id,
+          attachment_url: curriculumContent.assignment_attachment_url,
+          attachment_type: curriculumContent.assignment_attachment_type,
+          curriculum_snapshot: snapshot,
+        }));
+        const { error } = await supabase.from('assignments').insert(assignmentRecords);
+        assignmentInsertError = error;
+      } else {
+        // Attendance not recorded yet - fallback to group-level assignment
+        const { error } = await supabase.from('assignments').insert({
           title: curriculumContent.assignment_title,
           title_ar: curriculumContent.assignment_title_ar || curriculumContent.assignment_title,
           description: curriculumContent.assignment_description,
@@ -607,8 +652,10 @@ export default function SessionDetails() {
           attachment_type: curriculumContent.assignment_attachment_type,
           curriculum_snapshot: snapshot,
         });
+        assignmentInsertError = error;
+      }
 
-      if (error) throw error;
+      if (assignmentInsertError) throw assignmentInsertError;
 
       toast({
         title: isRTL ? 'تم اسناد الواجب' : 'Assignment Assigned',
