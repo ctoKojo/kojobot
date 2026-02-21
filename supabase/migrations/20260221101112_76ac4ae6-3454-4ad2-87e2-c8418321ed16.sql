@@ -1,0 +1,2 @@
+ALTER TABLE public.makeup_sessions DROP CONSTRAINT makeup_sessions_status_check;
+ALTER TABLE public.makeup_sessions ADD CONSTRAINT makeup_sessions_status_check CHECK (status = ANY (ARRAY['pending'::text, 'scheduled'::text, 'completed'::text, 'expired'::text, 'cancelled'::text]));
