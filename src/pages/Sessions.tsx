@@ -61,6 +61,8 @@ interface Session {
   status: string;
   notes: string | null;
   session_number: number | null;
+  is_makeup: boolean;
+  makeup_session_id: string | null;
 }
 
 interface Group {
@@ -696,6 +698,11 @@ export default function SessionsPage() {
                                     {isRTL ? `سيشن ${session.session_number}` : `#${session.session_number}`}
                                   </Badge>
                                   {getStatusBadge(session.status)}
+                                  {session.is_makeup && (
+                                    <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 text-xs">
+                                      {isRTL ? 'تعويضية' : 'Makeup'}
+                                    </Badge>
+                                  )}
                                   {isToday(session.session_date) && (
                                     <Badge variant="secondary" className="text-xs">
                                       {isRTL ? 'اليوم' : 'Today'}
@@ -815,7 +822,16 @@ export default function SessionsPage() {
                                     : (session.topic || session.topic_ar || '-')
                                   }
                                 </TableCell>
-                                <TableCell>{getStatusBadge(session.status)}</TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-1">
+                                    {getStatusBadge(session.status)}
+                                    {session.is_makeup && (
+                                      <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 text-xs">
+                                        {isRTL ? 'تعويضية' : 'Makeup'}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </TableCell>
                                 {canManageGroup(group) && (
                                   <TableCell>
                                     <div className="flex items-center gap-1">

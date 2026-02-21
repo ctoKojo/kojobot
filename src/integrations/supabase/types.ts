@@ -1898,6 +1898,8 @@ export type Database = {
           duration_minutes: number
           group_id: string
           id: string
+          is_makeup: boolean
+          makeup_session_id: string | null
           notes: string | null
           session_date: string
           session_number: number | null
@@ -1912,6 +1914,8 @@ export type Database = {
           duration_minutes?: number
           group_id: string
           id?: string
+          is_makeup?: boolean
+          makeup_session_id?: string | null
           notes?: string | null
           session_date: string
           session_number?: number | null
@@ -1926,6 +1930,8 @@ export type Database = {
           duration_minutes?: number
           group_id?: string
           id?: string
+          is_makeup?: boolean
+          makeup_session_id?: string | null
           notes?: string | null
           session_date?: string
           session_number?: number | null
@@ -1941,6 +1947,13 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_makeup_session_id_fkey"
+            columns: ["makeup_session_id"]
+            isOneToOne: true
+            referencedRelation: "makeup_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -2391,6 +2404,7 @@ export type Database = {
         }
         Returns: Json
       }
+      complete_makeup_session: { Args: { p_session_id: string }; Returns: Json }
       compute_quality_score: {
         Args: {
           p_avg_grading: number
@@ -2507,6 +2521,16 @@ export type Database = {
       }
       save_attendance: {
         Args: { p_group_id: string; p_records: Json; p_session_id: string }
+        Returns: Json
+      }
+      schedule_makeup_session: {
+        Args: {
+          p_date: string
+          p_instructor_id?: string
+          p_makeup_id: string
+          p_notes?: string
+          p_time: string
+        }
         Returns: Json
       }
       update_curriculum_session: {
