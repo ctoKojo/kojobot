@@ -138,6 +138,8 @@ interface StudentData {
   student_name: string;
   student_name_ar: string;
   attendance_status: string | null;
+  compensation_status: string | null;
+  makeup_session_id: string | null;
   quiz_score: number | null;
   quiz_max_score: number | null;
   quiz_percentage: number | null;
@@ -208,54 +210,7 @@ export default function SessionDetails() {
   const [assignmentSubmissionsDialogOpen, setAssignmentSubmissionsDialogOpen] = useState(false);
   const [savingAttendance, setSavingAttendance] = useState(false);
 
-  // Auto-confirm instructor attendance when they perform any activity on the session
-  const autoConfirmInstructorAttendance = async () => {
-    if (!user || !group || !session) return;
-    // Only for instructors who own this group
-    if (user.id !== group.instructor_id) return;
-    // Don't auto-confirm cancelled sessions
-    if (session.status === 'cancelled') return;
-
-    try {
-      // Check if a staff attendance record already exists (don't override manual decisions)
-      const { data: existing } = await supabase
-        .from('session_staff_attendance')
-        .select('id')
-        .eq('session_id', session.id)
-        .eq('staff_id', user.id)
-        .maybeSingle();
-
-      if (existing) return; // Record exists, don't override
-
-      // Insert auto-confirmed attendance
-      const actualHours = session.duration_minutes / 60;
-      await supabase
-        .from('session_staff_attendance')
-        .insert({
-          session_id: session.id,
-          staff_id: user.id,
-          status: 'confirmed',
-          actual_hours: actualHours,
-        });
-
-      // Auto-complete session if time has passed
-      if (session.status === 'scheduled') {
-        const sessionDateTime = new Date(`${session.session_date}T${session.session_time}`);
-        const sessionEndTime = new Date(sessionDateTime.getTime() + session.duration_minutes * 60 * 1000);
-        if (new Date() >= sessionEndTime) {
-          await supabase
-            .from('sessions')
-            .update({ status: 'completed' })
-            .eq('id', session.id);
-        }
-      }
-
-      // Refresh data to reflect changes
-      fetchSessionData();
-    } catch (error) {
-      console.error('Auto-confirm instructor attendance error:', error);
-    }
-  };
+  // autoConfirmInstructorAttendance removed - handled by save_attendance RPC
 
   // Check and update session status based on time
   const checkAndUpdateSessionStatus = useCallback(async () => {
@@ -338,7 +293,7 @@ export default function SessionDetails() {
       // Fetch attendance for this session
       const { data: attendanceData } = await supabase
         .from('attendance')
-        .select('student_id, status')
+        .select('student_id, status, compensation_status, makeup_session_id')
         .eq('session_id', sessionId);
       
       // Fetch quiz assignment for this session
@@ -401,6 +356,8 @@ export default function SessionDetails() {
           student_name: profile?.full_name || 'Unknown',
           student_name_ar: profile?.full_name_ar || profile?.full_name || 'غير معروف',
           attendance_status: attendance?.status || null,
+          compensation_status: attendance?.compensation_status || null,
+          makeup_session_id: attendance?.makeup_session_id || null,
           quiz_score: quizSubmission?.score || null,
           quiz_max_score: quizSubmission?.max_score || null,
           quiz_percentage: quizSubmission?.percentage || null,
@@ -544,7 +501,6 @@ export default function SessionDetails() {
         description: isRTL ? 'تم اسناد كويز المنهج بنجاح' : 'Curriculum quiz assigned successfully',
       });
       fetchSessionData();
-      autoConfirmInstructorAttendance();
     } catch (error: any) {
       toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -592,7 +548,6 @@ export default function SessionDetails() {
         description: isRTL ? 'تم اسناد واجب المنهج بنجاح' : 'Curriculum assignment assigned successfully',
       });
       fetchSessionData();
-      autoConfirmInstructorAttendance();
     } catch (error: any) {
       toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -673,7 +628,6 @@ export default function SessionDetails() {
       setAssignmentForm({ title: '', description: '', max_score: 100, due_date: '' });
       setAssignmentFile(null);
       fetchSessionData();
-      autoConfirmInstructorAttendance();
     } catch (error: any) {
       toast({
         title: isRTL ? 'خطأ' : 'Error',
@@ -823,35 +777,35 @@ export default function SessionDetails() {
     
     setSavingAttendance(true);
     try {
-      // First, delete existing attendance for this session
-      await supabase
-        .from('attendance')
-        .delete()
-        .eq('session_id', session.id);
-      
-      // Insert new attendance records
-      const attendanceToInsert = Object.entries(attendanceRecords).map(([studentId, status]) => ({
-        session_id: session.id,
+      const records = Object.entries(attendanceRecords).map(([studentId, status]) => ({
         student_id: studentId,
         status,
-        recorded_by: user.id,
+        notes: null,
       }));
-      
-      const { error } = await supabase
-        .from('attendance')
-        .insert(attendanceToInsert);
+
+      const { data, error } = await supabase.rpc('save_attendance', {
+        p_session_id: session.id,
+        p_group_id: session.group_id,
+        p_records: records,
+      });
       
       if (error) throw error;
+
+      const result = data as any;
+      const parts: string[] = [];
+      if (result?.saved) parts.push(isRTL ? `${result.saved} سجل` : `${result.saved} records`);
+      if (result?.makeups_created > 0) parts.push(isRTL ? `${result.makeups_created} تعويضية جديدة` : `${result.makeups_created} makeups created`);
+      if (result?.makeups_cancelled > 0) parts.push(isRTL ? `${result.makeups_cancelled} تعويضية ملغية` : `${result.makeups_cancelled} makeups cancelled`);
+      if (result?.instructor_confirmed) parts.push(isRTL ? 'تم تأكيد حضور المدرب' : 'Instructor confirmed');
+      if (result?.session_completed) parts.push(isRTL ? 'تم اكتمال السيشن' : 'Session completed');
       
       toast({
         title: isRTL ? 'تم الحفظ' : 'Attendance Saved',
-        description: isRTL ? 'تم حفظ سجل الحضور بنجاح' : 'Attendance records saved successfully',
+        description: parts.join(' • ') || (isRTL ? 'تم حفظ سجل الحضور بنجاح' : 'Attendance records saved successfully'),
       });
       
       setAttendanceDialogOpen(false);
       fetchSessionData();
-      // Auto-confirm instructor attendance
-      autoConfirmInstructorAttendance();
     } catch (error: any) {
       toast({
         title: isRTL ? 'خطأ' : 'Error',
@@ -1213,7 +1167,16 @@ export default function SessionDetails() {
               </div>
             </CardContent>
           </Card>
-        ) : null}
+        ) : (
+          <Card className="border-muted">
+            <CardContent className="flex items-center gap-3 py-4">
+              <BookOpen className="h-5 w-5 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                {isRTL ? 'لا يوجد محتوى متاح لهذه السيشن' : 'No content available for this session'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1656,9 +1619,21 @@ export default function SessionDetails() {
             <div className="space-y-3 py-4">
               {students.map((student) => (
                 <div key={student.student_id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                  <span className="font-medium">
-                    {language === 'ar' ? student.student_name_ar : student.student_name}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {language === 'ar' ? student.student_name_ar : student.student_name}
+                    </span>
+                    {student.compensation_status === 'pending_compensation' && (
+                      <Badge variant="outline" className="text-xs border-orange-300 text-orange-600 bg-orange-50">
+                        {isRTL ? 'في انتظار التعويض' : 'Pending Compensation'}
+                      </Badge>
+                    )}
+                    {student.compensation_status === 'compensated' && (
+                      <Badge variant="outline" className="text-xs border-green-300 text-green-600 bg-green-50">
+                        {isRTL ? 'تم التعويض' : 'Compensated'}
+                      </Badge>
+                    )}
+                  </div>
                   <Select 
                     value={attendanceRecords[student.student_id] || 'absent'} 
                     onValueChange={(value) => setAttendanceRecords(prev => ({ ...prev, [student.student_id]: value }))}

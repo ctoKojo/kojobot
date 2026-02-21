@@ -24,7 +24,7 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import Quizzes from "./pages/Quizzes";
 import Assignments from "./pages/Assignments";
-import Attendance from "./pages/Attendance";
+
 import Sessions from "./pages/Sessions";
 import TakeQuiz from "./pages/TakeQuiz";
 import SubmitAssignment from "./pages/SubmitAssignment";
@@ -85,7 +85,7 @@ const App = () => (
                   <Route path="/groups" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'reception']}><Groups /></ProtectedRoute>} />
                   <Route path="/quizzes" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Quizzes /></ProtectedRoute>} />
                   <Route path="/assignments" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student']}><Assignments /></ProtectedRoute>} />
-                  <Route path="/attendance" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception']}><Attendance /></ProtectedRoute>} />
+                  
                   <Route path="/sessions" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'reception']}><Sessions /></ProtectedRoute>} />
                   <Route path="/age-groups" element={<ProtectedRoute allowedRoles={['admin']}><AgeGroups /></ProtectedRoute>} />
                   <Route path="/levels" element={<ProtectedRoute allowedRoles={['admin']}><Levels /></ProtectedRoute>} />
