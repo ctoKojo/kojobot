@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDate } from '@/lib/timeUtils';
 import { AlertTriangle, Search, X, Calendar, Filter, MessageSquare, Clock } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -163,13 +164,7 @@ export default function InstructorWarnings() {
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  // formatDate centralized in timeUtils.ts (SSOT)
 
   const getWarningTypeBadge = (type: string) => {
     const badges: Record<string, { label: string; variant: 'destructive' | 'secondary' | 'outline' | 'default' }> = {
@@ -420,7 +415,7 @@ export default function InstructorWarnings() {
                           <TableCell>
                             <div className="flex items-center gap-1 text-sm text-muted-foreground">
                               <Calendar className="h-4 w-4" />
-                              {formatDate(warning.created_at)}
+                              {formatDate(warning.created_at, language)}
                             </div>
                           </TableCell>
                           <TableCell className="text-center">

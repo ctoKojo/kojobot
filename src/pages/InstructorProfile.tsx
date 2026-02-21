@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { formatTime12Hour } from '@/lib/timeUtils';
+import { formatTime12Hour, formatDate } from '@/lib/timeUtils';
 import { InstructorPerformanceCharts } from '@/components/instructor/InstructorPerformanceCharts';
 import { IssueEmployeeWarningDialog } from '@/components/instructor/IssueEmployeeWarningDialog';
 import { TerminateEmployeeDialog } from '@/components/employee/TerminateEmployeeDialog';
@@ -346,13 +346,7 @@ export default function InstructorProfile() {
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+  // SSOT: uses centralized formatDate from timeUtils.ts
 
   const handleDismissWarning = async (warningId: string) => {
     setDismissingWarningId(warningId);

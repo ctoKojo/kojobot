@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDateTime } from '@/lib/timeUtils';
 import { cn } from '@/lib/utils';
 
 interface StudentQuizPreviewDialogProps {
@@ -135,6 +136,8 @@ export function StudentQuizPreviewDialog({
     return { en: [], ar: [] };
   };
 
+  // formatDateTime centralized in timeUtils.ts (SSOT)
+  // StudentQuizPreview uses Egypt timezone override
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
       year: 'numeric',

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { formatDate } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
 import { DollarSign, Users, AlertTriangle, TrendingUp, CreditCard, Ban, Search } from 'lucide-react';
 import { DataTablePagination } from '@/components/ui/data-table-pagination';
@@ -220,7 +221,7 @@ export default function Finance() {
   const payTotalPages = Math.max(1, Math.ceil(payments.length / payPageSize));
   const paginatedPayments = payments.slice((payPage - 1) * payPageSize, payPage * payPageSize);
 
-  const formatDate = (d: string) => d ? new Date(d).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
+  // formatDate centralized in timeUtils.ts (SSOT)
 
   return (
     <DashboardLayout title={isRTL ? 'الإدارة المالية' : 'Finance Management'}>
@@ -311,7 +312,7 @@ export default function Finance() {
                           </TableCell>
                           <TableCell className="text-green-600 font-medium">{sub.paid_amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
                           <TableCell className={Number(sub.remaining_amount) > 0 ? 'text-orange-600 font-medium' : ''}>{sub.remaining_amount || 0} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
-                          <TableCell>{sub.next_payment_date ? formatDate(sub.next_payment_date) : '-'}</TableCell>
+                          <TableCell>{sub.next_payment_date ? formatDate(sub.next_payment_date, language) : '-'}</TableCell>
                           <TableCell>
                             {sub.is_suspended ? <Badge variant="destructive">{isRTL ? 'موقوف' : 'Suspended'}</Badge>
                               : isOverdue ? <Badge className="bg-orange-100 text-orange-800">{isRTL ? 'متأخر' : 'Overdue'}</Badge>
@@ -364,7 +365,7 @@ export default function Finance() {
                   <TableBody>
                     {paginatedPayments.map((p: any) => (
                       <TableRow key={p.id}>
-                        <TableCell>{formatDate(p.payment_date)}</TableCell>
+                        <TableCell>{formatDate(p.payment_date, language)}</TableCell>
                         <TableCell className="font-medium text-green-600">{p.amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
                         <TableCell>{p.payment_method === 'cash' ? (isRTL ? 'كاش' : 'Cash') : (isRTL ? 'تحويل' : 'Transfer')}</TableCell>
                         <TableCell>

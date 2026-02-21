@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDate as _formatDate, formatDateTime } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
 import { FileQuestion, Play, CheckCircle, Clock, Calendar } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -103,27 +104,15 @@ export default function MyQuizzes() {
     }
   };
 
+  // formatDate/formatDateTime centralized in timeUtils.ts (SSOT)
+  // MyQuizzes uses Egypt timezone override
   const formatDate = (dateStr: string) => {
-    // Parse the date and format in local timezone
     const date = new Date(dateStr);
     return date.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      timeZone: 'Africa/Cairo', // Use Egypt timezone for consistency
-    });
-  };
-
-  const formatDateTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-      timeZone: 'Africa/Cairo', // Use Egypt timezone for consistency
+      timeZone: 'Africa/Cairo',
     });
   };
 

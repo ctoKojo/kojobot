@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDateTime } from '@/lib/timeUtils';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, CheckCircle, Clock, FileText } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -102,15 +103,8 @@ export default function AssignmentSubmissions() {
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
+  // formatDateTime centralized in timeUtils.ts (SSOT)
+  const formatDate = (date: string) => formatDateTime(date, language);
 
   const stats = {
     total: submissions.length,
