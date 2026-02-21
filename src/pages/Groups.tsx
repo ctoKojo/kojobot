@@ -51,10 +51,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatTime12Hour } from '@/lib/timeUtils';
 import { notificationService } from '@/lib/notificationService';
 import { logCreate, logUpdate, logDelete, logFreeze, logActivate } from '@/lib/activityLogger';
-
-type GroupType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
-type AttendanceMode = 'online' | 'offline';
-type GroupStatus = 'active' | 'frozen';
+import { GROUP_TYPES_LIST, DAYS_OF_WEEK, type GroupType, type AttendanceMode, type GroupStatus } from '@/lib/constants';
+import { getGroupStatusBadge } from '@/lib/statusBadges';
 
 interface Group {
   id: string;
@@ -171,21 +169,8 @@ export default function GroupsPage() {
   });
   const [startGroupLoading, setStartGroupLoading] = useState(false);
 
-  const groupTypes: { value: GroupType; label: string; labelAr: string; maxStudents: number }[] = [
-    { value: 'kojo_squad', label: 'Kojo Squad', labelAr: 'كوجو سكواد', maxStudents: 8 },
-    { value: 'kojo_core', label: 'Kojo Core', labelAr: 'كوجو كور', maxStudents: 3 },
-    { value: 'kojo_x', label: 'Kojo X', labelAr: 'كوجو اكس', maxStudents: 1 },
-  ];
-
-  const days = [
-    { en: 'Sunday', ar: 'الأحد' },
-    { en: 'Monday', ar: 'الاثنين' },
-    { en: 'Tuesday', ar: 'الثلاثاء' },
-    { en: 'Wednesday', ar: 'الأربعاء' },
-    { en: 'Thursday', ar: 'الخميس' },
-    { en: 'Friday', ar: 'الجمعة' },
-    { en: 'Saturday', ar: 'السبت' },
-  ];
+  const groupTypes = GROUP_TYPES_LIST;
+  const days = DAYS_OF_WEEK;
 
   useEffect(() => {
     fetchData();
