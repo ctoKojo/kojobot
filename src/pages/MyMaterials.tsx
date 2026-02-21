@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { formatDate } from '@/lib/timeUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -75,7 +76,7 @@ export default function MyMaterials() {
                     <div className="flex items-center gap-2 mt-2">
                       <Badge variant="secondary" className="text-xs capitalize">{m.file_type}</Badge>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(m.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US')}
+                        {formatDate(m.created_at, isRTL ? 'ar' : 'en')}
                       </span>
                     </div>
                   </div>

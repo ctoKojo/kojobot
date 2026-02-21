@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { formatDate } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -323,9 +324,7 @@ export default function Profile() {
                     {isRTL ? 'تاريخ الميلاد' : 'Date of Birth'}
                   </Label>
                   <Input
-                    value={new Date(profile.date_of_birth).toLocaleDateString(
-                      isRTL ? 'ar-EG' : 'en-US'
-                    )}
+                    value={formatDate(profile.date_of_birth, language)}
                     disabled
                     className="bg-muted"
                   />

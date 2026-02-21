@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCairoNow, getCairoCurrentMonth, getCairoDatePlusDays } from "../_shared/cairoTime.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,10 +48,11 @@ serve(async (req) => {
     };
 
     const now = new Date();
-    const egyptTime = new Date(now.toLocaleString("en-US", { timeZone: "Africa/Cairo" }));
-    const todayStr = egyptTime.toISOString().split('T')[0];
-    const currentTime = egyptTime.toTimeString().split(' ')[0];
-    const currentMonth = todayStr.substring(0, 7) + '-01';
+    // Use Cairo SSOT instead of brittle toLocaleString→new Date parsing
+    const cairo = getCairoNow();
+    const todayStr = cairo.today;
+    const currentTime = cairo.timeHHMMSS;
+    const currentMonth = getCairoCurrentMonth();
 
     console.log(`[Compliance Monitor] Running at ${todayStr} ${currentTime} Egypt time`);
 
@@ -177,9 +179,8 @@ serve(async (req) => {
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
-        const yesterday = new Date(egyptTime);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        // Use Cairo-aware "yesterday" calculation
+        const yesterdayStr = getCairoDatePlusDays(-1);
 
         const { data: oldSessions, error: assignmentCheckError } = await supabase
           .from('sessions')
@@ -617,7 +618,7 @@ serve(async (req) => {
           let qualityScore = scoreResult || 100;
 
           // Consistency Bonus: +5 if 0 warnings for 3 consecutive months
-          const threeMonthsAgo = new Date(egyptTime);
+          const threeMonthsAgo = new Date(now);
           threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
           const { count: recentWarnings } = await supabase
             .from('instructor_warnings').select('*', { count: 'exact', head: true })
@@ -655,9 +656,9 @@ serve(async (req) => {
     try {
       if (!checkCircuitBreaker()) {
         // Only run on last day of month
-        const tomorrow = new Date(egyptTime);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const isLastDayOfMonth = tomorrow.getDate() === 1;
+        // Use Cairo day to determine last day of month
+        const tomorrowCairo = getCairoDatePlusDays(1);
+        const isLastDayOfMonth = tomorrowCairo.endsWith('-01');
 
         if (isLastDayOfMonth) {
           const { data: instructorRoles } = await supabase

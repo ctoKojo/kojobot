@@ -160,7 +160,7 @@ export function StudentQuizPreviewDialog({
             </Badge>
             <span className="flex items-center gap-1 text-sm">
               <Clock className="h-3 w-3" />
-              {formatDateTime(submittedAt, language, 'Africa/Cairo')}
+              {formatDateTime(submittedAt, language)}
             </span>
           </DialogDescription>
         </DialogHeader>

@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateSalarySlip } from '@/lib/pdfReports';
 import { getRoleLabel } from '@/lib/constants';
+import { formatDate } from '@/lib/timeUtils';
 
 interface SalaryEvent {
   id: string;
@@ -406,7 +407,7 @@ export function SalariesTab() {
                           {snapshot && (
                             <Button size="sm" variant="ghost" onClick={() => {
                               const monthDate = new Date(snapshot.month);
-                              const monthLabel = monthDate.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long' });
+                              const monthLabel = formatDate(snapshot.month, language);
                               generateSalarySlip(
                                 { name: getName(emp), email: emp.email, type: getRoleLabel(emp.role === 'reception' ? 'reception' : 'instructor', isRTL) },
                                 { month: monthLabel, baseSalary: Number(snapshot.base_amount), earnings: Number(snapshot.total_earnings), bonuses: Number(snapshot.total_bonuses), deductions: Number(snapshot.total_deductions), netAmount: Number(snapshot.net_amount) },
@@ -501,7 +502,7 @@ export function SalariesTab() {
                   const emp = employees.find(e => e.user_id === p.employee_id);
                   return (
                     <TableRow key={p.id}>
-                      <TableCell>{new Date(p.month).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'long' })}</TableCell>
+                      <TableCell>{formatDate(p.month, language)}</TableCell>
                       <TableCell className="font-medium">{emp ? getName(emp) : p.employee_id}</TableCell>
                       <TableCell>{p.base_amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
                       <TableCell className="text-green-600">{Number(p.bonus) > 0 ? `+${p.bonus}` : '-'}</TableCell>

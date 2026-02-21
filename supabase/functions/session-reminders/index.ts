@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getCairoTimeWindowDates, getCairoNow } from '../_shared/cairoTime.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,48 +72,62 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
-    // Get current time and time 1 hour from now
-    const now = new Date()
-    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000)
-    
-    const today = now.toISOString().split('T')[0]
-    const currentTime = now.toTimeString().slice(0, 5) // HH:MM format
-    const targetTime = oneHourLater.toTimeString().slice(0, 5)
+    // AC-3: Use Cairo timezone for time window calculation
+    const window = getCairoTimeWindowDates(1)
+    const cairo = getCairoNow()
 
-    console.log(`Checking sessions for ${today} between ${currentTime} and ${targetTime}`)
+    console.log(`Cairo time: ${cairo.today} ${cairo.timeHHMMSS}`)
+    console.log(`Window: ${window.startDate} ${window.startTime} → ${window.endDate} ${window.endTime} (midnight: ${window.crossesMidnight})`)
 
-    // Find sessions that start within the next hour
-    const { data: upcomingSessions, error: sessionsError } = await supabase
-      .from('sessions')
-      .select(`
-        id,
-        group_id,
-        session_date,
-        session_time,
-        groups (
-          name,
-          name_ar,
-          instructor_id
-        )
-      `)
-      .eq('session_date', today)
-      .eq('status', 'scheduled')
-      .gte('session_time', currentTime)
-      .lte('session_time', targetTime)
+    // AC-3: Build query based on whether window crosses midnight
+    let upcomingSessions: unknown[] = []
 
-    if (sessionsError) {
-      console.error('Error fetching sessions:', sessionsError)
-      throw sessionsError
+    if (window.crossesMidnight) {
+      // Dual query for midnight crossing
+      // Part 1: sessions today from startTime to 23:59:59
+      const { data: todaySessions, error: e1 } = await supabase
+        .from('sessions')
+        .select(`id, group_id, session_date, session_time, groups (name, name_ar, instructor_id)`)
+        .eq('session_date', window.startDate)
+        .eq('status', 'scheduled')
+        .gte('session_time', window.startTime)
+
+      if (e1) throw e1
+
+      // Part 2: sessions tomorrow from 00:00:00 to endTime (exclusive)
+      const { data: tomorrowSessions, error: e2 } = await supabase
+        .from('sessions')
+        .select(`id, group_id, session_date, session_time, groups (name, name_ar, instructor_id)`)
+        .eq('session_date', window.endDate)
+        .eq('status', 'scheduled')
+        .lt('session_time', window.endTime)
+
+      if (e2) throw e2
+
+      upcomingSessions = [...(todaySessions || []), ...(tomorrowSessions || [])]
+    } else {
+      // AC-3: Normal window — gte startTime, lt endTime (exclusive end)
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('sessions')
+        .select(`id, group_id, session_date, session_time, groups (name, name_ar, instructor_id)`)
+        .eq('session_date', window.startDate)
+        .eq('status', 'scheduled')
+        .gte('session_time', window.startTime)
+        .lt('session_time', window.endTime)
+
+      if (sessionsError) throw sessionsError
+      upcomingSessions = sessions || []
     }
 
-    console.log(`Found ${upcomingSessions?.length || 0} sessions starting soon`)
+    console.log(`Found ${upcomingSessions.length} sessions starting soon`)
 
-    if (!upcomingSessions || upcomingSessions.length === 0) {
+    if (upcomingSessions.length === 0) {
       return new Response(
         JSON.stringify({ 
           success: true, 
           message: 'No upcoming sessions in the next hour',
-          notificationsSent: 0 
+          notificationsSent: 0,
+          cairoTime: `${cairo.today} ${cairo.timeHHMMSS}`,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
@@ -129,12 +144,13 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Check if notification already sent for this session
+      // AC-4: Duplicate check via action_url which contains session ID
+      const actionUrl = `/attendance?session=${session.id}&group=${session.group_id}`
       const { data: existingNotification } = await supabase
         .from('notifications')
         .select('id')
         .eq('user_id', instructorId)
-        .eq('action_url', `/sessions?highlight=${session.id}`)
+        .eq('action_url', actionUrl)
         .single()
 
       if (existingNotification) {
@@ -156,7 +172,7 @@ Deno.serve(async (req) => {
           message_ar: `سيشن ${groupNameAr} سيبدأ الساعة ${session.session_time}`,
           type: 'reminder',
           category: 'session',
-          action_url: `/attendance?session=${session.id}&group=${session.group_id}`,
+          action_url: actionUrl,
         })
 
       if (notifError) {
@@ -172,6 +188,7 @@ Deno.serve(async (req) => {
       success: true,
       message: `Processed ${upcomingSessions.length} upcoming sessions`,
       notificationsSent,
+      cairoTime: `${cairo.today} ${cairo.timeHHMMSS}`,
       errors: errors.length > 0 ? errors : undefined,
     }
 

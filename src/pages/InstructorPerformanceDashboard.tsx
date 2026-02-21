@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { formatDate } from '@/lib/timeUtils';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -500,7 +501,7 @@ export default function InstructorPerformanceDashboard() {
                         <span className="ml-2 text-muted-foreground">{e.profile?.full_name || ''}</span>
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        {new Date(e.created_at).toLocaleDateString()}
+                        {formatDate(e.created_at, language)}
                       </span>
                     </div>
                   ))}
