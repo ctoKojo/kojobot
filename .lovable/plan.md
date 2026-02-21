@@ -1,159 +1,147 @@
 
 
-# صفحة "سيشناتي" للطلاب - عرض السيشنات المحضورة كمحتوى تعليمي
+# تحقيق Single Source of Truth في المشروع
 
 ---
 
-## الفكرة
+## ملخص المراجعة
 
-بدل اضافة الطالب لصفحة `/sessions` الادارية، ننشئ صفحة جديدة `/my-sessions` مخصصة للطلاب تعرض **فقط السيشنات اللي حضرها** كمحتوى تعليمي (سلايدات، فيديوهات) مش كجدول مواعيد.
+بعد فحص شامل للمشروع، تم رصد **6 فئات رئيسية** من انتهاكات مبدأ "مصدر واحد للحقيقة":
 
 ---
 
-## الخطوة 1: انشاء صفحة `MySessions.tsx`
+## 1. `formatDate` - مكرر في 19 ملف
 
-صفحة جديدة `src/pages/MySessions.tsx` تعرض:
+نفس الفانكشن بالظبط (مع اختلافات طفيفة) مكررة في:
+- `Notifications.tsx`, `InstructorWarnings.tsx`, `StudentWarnings.tsx`, `GradeAssignment.tsx`, `Finance.tsx`, `SubmitAssignment.tsx`, `ActivityLog.tsx`, `GroupDetails.tsx`, `MyInstructorWarnings.tsx`, `Assignments.tsx`, `AssignmentSubmissions.tsx`, `InstructorProfile.tsx`, `StudentProfile.tsx`, `MyQuizzes.tsx`, `ExpensesTab.tsx`, `StudentDashboard.tsx`, `StudentQuizPreviewDialog.tsx`, `TakeQuiz.tsx`, `MyInstructorQuizzes.tsx`
 
-1. جلب مجموعات الطالب من `group_students`
-2. جلب كل السيشنات لهذه المجموعات
-3. جلب سجلات الحضور للطالب من `attendance`
-4. فلترة: عرض فقط السيشنات اللي حضرها (present/late) او تم تعويضها (compensated)
-5. لكل سيشن، جلب محتوى المنهج عبر `get_curriculum_with_access` RPC (حسب باقة الطالب)
+### الحل:
+انشاء `formatDate` و `formatDateTime` مركزية في `src/lib/timeUtils.ts` (الملف موجود بالفعل ويحتوي `formatTime12Hour`). كل الملفات تستورد منه.
 
-### شكل الصفحة:
+---
 
-- **هيدر**: "سيشناتي" / "My Sessions"
-- **كروت**: كل سيشن كارت يعرض:
-  - رقم السيشن + التاريخ + اسم المجموعة
-  - العنوان من المنهج
-  - ازرار المحتوى (سلايدات / فيديو ملخص / فيديو كامل) حسب باقة الطالب
-  - badge "تعويضية" لو كانت makeup session
-- **فلتر**: كل السيشنات / حسب المجموعة
-- **ترتيب**: من الاحدث للاقدم
+## 2. Group Type Labels و Max Students - مكرر في 7+ ملفات
 
-### منطق جلب البيانات:
-
+نفس البيانات مكررة:
 ```text
-// 1. جلب مجموعات الطالب
-const { data: studentGroups } = await supabase
-  .from('group_students')
-  .select('group_id, groups(name, name_ar, age_group_id, level_id)')
-  .eq('student_id', user.id)
-  .eq('is_active', true);
-
-// 2. جلب سجلات الحضور للطالب
-const { data: attendanceData } = await supabase
-  .from('attendance')
-  .select('session_id, status, compensation_status')
-  .eq('student_id', user.id);
-
-// 3. فلترة السيشنات المحضورة فقط
-const attendedSessionIds = attendanceData
-  .filter(a => a.status === 'present' || a.status === 'late' || a.compensation_status === 'compensated')
-  .map(a => a.session_id);
-
-// 4. جلب بيانات السيشنات المحضورة
-const { data: sessionsData } = await supabase
-  .from('sessions')
-  .select('*')
-  .in('id', attendedSessionIds)
-  .order('session_date', { ascending: false });
-
-// 5. لكل سيشن، جلب المحتوى حسب الباقة
-for (const session of sessionsData) {
-  const { data: curriculum } = await supabase.rpc('get_curriculum_with_access', {
-    p_age_group_id, p_level_id, p_session_number,
-    p_subscription_type, p_attendance_mode
-  });
-}
+kojo_squad -> "Kojo Squad" / "كوجو سكواد" / maxStudents: 8
+kojo_core  -> "Kojo Core"  / "كوجو كور"  / maxStudents: 3
+kojo_x     -> "Kojo X"     / "كوجو اكس"  / maxStudents: 1
 ```
 
+مكرر في: `Groups.tsx`, `GroupDetails.tsx`, `Students.tsx`, `Settings.tsx`, `PricingPlans.tsx`, `Materials.tsx`, `AdminAnalytics.tsx`
+
+ملاحظة: الحد الاقصى موجود ايضا كدالة في قاعدة البيانات (`get_group_max_students`) لكن الفرونت يعرفها بشكل مستقل.
+
+### الحل:
+انشاء `src/lib/constants.ts` يحتوي:
+- `GROUP_TYPES` مع labels (en/ar) و maxStudents
+- `SUBSCRIPTION_TYPES` مع labels
+- `ATTENDANCE_MODES`
+- فانكشنز مساعدة: `getGroupTypeLabel(type, lang)`, `getMaxStudents(type)`
+
 ---
 
-## الخطوة 2: اضافة Route و Sidebar
+## 3. `getStatusBadge` - مكرر بانماط مختلفة في 7 ملفات
 
-### `src/App.tsx`:
-اضافة route جديد:
+كل ملف يعيد تعريف session/quiz/assignment/salary status badges بشكل مستقل:
+- `Sessions.tsx` (session status)
+- `MakeupSessions.tsx` (makeup status)
+- `Groups.tsx` (group status)
+- `QuizReports.tsx` (quiz submission status)
+- `MyInstructorQuizzes.tsx` (quiz submission status)
+- `SalariesTab.tsx` (salary month status)
+- `AssignmentSubmissionsDialog.tsx` (assignment submission status)
+
+### الحل:
+انشاء `src/lib/statusBadges.tsx` يحتوي فانكشنز مركزية:
+- `getSessionStatusBadge(status, isRTL)`
+- `getMakeupStatusBadge(status, isRTL)`
+- `getQuizSubmissionStatusBadge(status, percentage, passingScore, isRTL)`
+- `getAssignmentSubmissionStatusBadge(status, score, isRTL)`
+
+---
+
+## 4. Role Labels - مكرر في 3+ ملفات
+
 ```text
-<Route path="/my-sessions" element={
-  <ProtectedRoute allowedRoles={['student']}>
-    <MySessions />
-  </ProtectedRoute>
-} />
+isRTL ? 'مدرب' : 'Instructor'
+isRTL ? 'ريسيبشن' : 'Reception'
 ```
+مكرر في: `Instructors.tsx`, `InstructorProfile.tsx`, `SalariesTab.tsx`
 
-### `src/components/AppSidebar.tsx`:
-اضافة في قسم "My Learning" للطالب:
+### الحل:
+اضافة role labels في `src/lib/constants.ts`:
 ```text
-{ title: isRTL ? 'سيشناتي' : 'My Sessions', url: '/my-sessions', icon: BookOpen, roles: ['student'] }
+ROLE_LABELS = { admin: { en, ar }, instructor: { en, ar }, ... }
 ```
 
 ---
 
-## الخطوة 3: اخفاء المحتوى عن الغائبين في `SessionDetails.tsx`
+## 5. Session Auto-Completion - منطق مكرر
 
-اذا الطالب فتح سيشن من اي مكان (رابط مباشر مثلا)، نتحقق من حضوره:
+تحديث حالة السيشن لـ "completed" يحصل في:
+1. `SessionDetails.tsx` - `checkAndUpdateSessionStatus` (فرونت، كل دقيقة)
+2. `auto-complete-sessions/index.ts` (Edge Function - باك اند)
+3. `save_attendance` RPC (داخل قاعدة البيانات)
+4. `auto_generate_next_session` trigger (عند التحويل لـ completed)
 
-### اضافة state:
-```text
-const [studentCanViewContent, setStudentCanViewContent] = useState(true);
-```
+هذا ليس انتهاك حقيقي لانهم يعملون في طبقات مختلفة (defense in depth) لكن يجب توثيقها. الفرونت يكرر المنطق كـ "optimistic update" - وده مقبول.
 
-### في `fetchSessionData`:
-```text
-if (role === 'student' && user) {
-  const myAttendance = attendanceData?.find(a => a.student_id === user.id);
-  if (myAttendance) {
-    const isPresent = myAttendance.status === 'present' || myAttendance.status === 'late';
-    const isCompensated = myAttendance.compensation_status === 'compensated';
-    setStudentCanViewContent(isPresent || isCompensated);
-  } else {
-    setStudentCanViewContent(true); // لم يسجل حضور بعد
-  }
-}
-```
-
-### في عرض المحتوى (سطر 1177-1315):
-لف قسم المحتوى بشرط - اذا `studentCanViewContent = false`:
-
-```text
-<Card className="border-amber-300 bg-amber-50 dark:bg-amber-900/10">
-  <CardContent className="flex items-center gap-3 py-4">
-    <AlertCircle className="h-5 w-5 text-amber-600" />
-    <div>
-      <p className="font-medium text-amber-800">
-        {isRTL ? 'المحتوى غير متاح' : 'Content Not Available'}
-      </p>
-      <p className="text-sm text-amber-600">
-        {isRTL 
-          ? 'ستتمكن من مشاهدة محتوى هذه السيشن بعد حضور السيشن التعويضية'
-          : 'You can view this content after attending your makeup session'}
-      </p>
-    </div>
-  </CardContent>
-</Card>
-```
+### الحل:
+لا تغيير مطلوب - هذا تصميم متعمد (layers of defense). لكن يمكن اضافة تعليق توثيقي يوضح ان الـ SSOT الحقيقي هو الـ RPC والـ trigger.
 
 ---
 
-## الملفات المتأثرة
+## 6. Subscription Type Options - مكرر في 4 ملفات
+
+قوائم `kojo_squad/kojo_core/kojo_x` كخيارات Select مكررة في:
+- `Students.tsx`, `Settings.tsx`, `PricingPlans.tsx`, `Materials.tsx`
+
+### الحل:
+يُستهلك من `src/lib/constants.ts` المقترح في النقطة 2.
+
+---
+
+## خطة التنفيذ
+
+### الملفات الجديدة:
+
+| الملف | المحتوى |
+|---|---|
+| `src/lib/constants.ts` | GROUP_TYPES, SUBSCRIPTION_TYPES, ROLE_LABELS, ATTENDANCE_MODES مع labels ثنائية اللغة وفانكشنز مساعدة |
+| `src/lib/statusBadges.tsx` | فانكشنز getSessionStatusBadge, getMakeupStatusBadge, getQuizSubmissionStatusBadge, getAssignmentSubmissionStatusBadge |
+
+### الملفات المعدلة:
 
 | الملف | التعديل |
 |---|---|
-| `src/pages/MySessions.tsx` | صفحة جديدة - عرض السيشنات المحضورة كمحتوى تعليمي |
-| `src/App.tsx` | اضافة route `/my-sessions` للطالب |
-| `src/components/AppSidebar.tsx` | اضافة رابط "سيشناتي" في sidebar الطالب |
-| `src/pages/SessionDetails.tsx` | اخفاء المحتوى عن الطلاب الغائبين |
+| `src/lib/timeUtils.ts` | اضافة `formatDate(date, lang)` و `formatDateTime(date, lang)` |
+| 19 ملف يحتوي `formatDate` | استبدال التعريف المحلي باستيراد من `timeUtils` |
+| 7 ملفات تحتوي group type labels | استبدال بـ import من `constants.ts` |
+| 4 ملفات تحتوي subscription type options | استبدال بـ import من `constants.ts` |
+| 7 ملفات تحتوي `getStatusBadge` | استبدال بـ import من `statusBadges.tsx` |
+| 3 ملفات تحتوي role labels | استبدال بـ import من `constants.ts` |
 
 ---
 
-## جدول الوصول
+## ملخص التأثير
 
-| حالة الطالب | يظهر في "سيشناتي"؟ | يشوف المحتوى؟ |
-|---|---|---|
-| حاضر (present/late) | نعم | نعم (حسب الباقة) |
-| غائب + لم يتعوض | لا | لا |
-| غائب + تم التعويض (compensated) | نعم | نعم (حسب الباقة) |
-| لم يسجل حضور بعد | لا | نعم (من SessionDetails) |
-| مدرب/ادمن | لا يرى هذه الصفحة | نعم دائما |
+- **~30 ملف** سيتم تعديلهم
+- **3 ملفات جديدة** (constants, statusBadges, توسيع timeUtils)
+- **صفر تغيير في قاعدة البيانات** - كل التغييرات فرونت فقط
+- **صفر تغيير في السلوك** - refactoring بحت
+
+---
+
+## ما هو سليم بالفعل (SSOT محقق):
+
+- **Authentication & Roles**: `AuthContext` + `user_roles` table + `has_role()` RPC - مصدر واحد
+- **Attendance Logic**: `save_attendance` RPC - مصدر واحد للمنطق الذري
+- **Curriculum Access**: `get_curriculum_with_access` RPC - مصدر واحد
+- **Makeup Credits**: `create_makeup_session` RPC - مصدر واحد (ledger pattern)
+- **Notifications**: `notificationService.ts` - مصدر واحد
+- **Activity Logging**: `activityLogger.ts` - مصدر واحد
+- **Salary Events**: database triggers + RPCs - مصدر واحد
+- **Time Formatting**: `formatTime12Hour` في `timeUtils.ts` - مصدر واحد (لكن formatDate مش موجود)
 
