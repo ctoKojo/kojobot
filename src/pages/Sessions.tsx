@@ -49,6 +49,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatTime12Hour } from '@/lib/timeUtils';
 import { logUpdate, logDelete } from '@/lib/activityLogger';
+import { isSessionEndedCairo } from '@/lib/sessionTimeGuard';
 import { getSessionStatusBadge } from '@/lib/statusBadges';
 
 interface Session {
@@ -267,6 +268,18 @@ export default function SessionsPage() {
   };
 
   const handleMarkComplete = async (session: Session) => {
+    // Cairo time guard — block completion before session end
+    if (!isSessionEndedCairo(session.session_date, session.session_time, session.duration_minutes)) {
+      toast({
+        variant: 'destructive',
+        title: isRTL ? 'السيشن لسه ما خلصتش' : "Session hasn't ended yet",
+        description: isRTL
+          ? 'لا يمكن اكتمال السيشن قبل انتهاء وقتها بتوقيت القاهرة'
+          : 'Cannot complete session before its end time (Cairo)',
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('sessions')

@@ -56,6 +56,7 @@ interface SessionWithAttendance {
   topic: string | null;
   topic_ar: string | null;
   session_number: number | null;
+  duration_minutes: number;
   presentCount: number;
   absentCount: number;
   lateCount: number;
@@ -790,6 +791,7 @@ export default function GroupDetails() {
                             <EditSessionDialog
                               session={session}
                               onUpdated={fetchGroupData}
+                              durationMinutes={session.duration_minutes}
                             />
                           )}
                         </div>

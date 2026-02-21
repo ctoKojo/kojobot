@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { notificationService } from '@/lib/notificationService';
 import { logUpdate } from '@/lib/activityLogger';
+import { isSessionEndedCairo } from '@/lib/sessionTimeGuard';
 
 interface EditSessionDialogProps {
   session: {
@@ -35,16 +36,27 @@ interface EditSessionDialogProps {
     group_id?: string;
   };
   groupId?: string;
+  durationMinutes?: number;
   onUpdated: () => void;
 }
 
-export function EditSessionDialog({ session, groupId, onUpdated }: EditSessionDialogProps) {
+export function EditSessionDialog({ session, groupId, durationMinutes, onUpdated }: EditSessionDialogProps) {
   const { isRTL } = useLanguage();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sessionDate, setSessionDate] = useState(session.session_date);
   const [sessionTime, setSessionTime] = useState(session.session_time);
   const [status, setStatus] = useState(session.status);
+
+  // Reactive check based on current form values
+  const isEnded = isSessionEndedCairo(sessionDate, sessionTime, durationMinutes);
+
+  // Safety: revert to scheduled if user picked completed then changed date/time to future
+  useEffect(() => {
+    if (status === 'completed' && !isEnded) {
+      setStatus('scheduled');
+    }
+  }, [sessionDate, sessionTime, isEnded]);
 
   const handleSave = async () => {
     setLoading(true);
@@ -172,7 +184,7 @@ export function EditSessionDialog({ session, groupId, onUpdated }: EditSessionDi
                 <SelectItem value="scheduled">
                   {isRTL ? 'مجدولة' : 'Scheduled'}
                 </SelectItem>
-                <SelectItem value="completed">
+                <SelectItem value="completed" disabled={!isEnded}>
                   {isRTL ? 'مكتملة' : 'Completed'}
                 </SelectItem>
                 <SelectItem value="cancelled">
@@ -180,6 +192,13 @@ export function EditSessionDialog({ session, groupId, onUpdated }: EditSessionDi
                 </SelectItem>
               </SelectContent>
             </Select>
+            {!isEnded && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {isRTL
+                  ? 'لا يمكن اكتمال السيشن قبل انتهاء وقتها بتوقيت القاهرة'
+                  : 'Cannot mark as completed before session end time (Cairo)'}
+              </p>
+            )}
           </div>
         </div>
 

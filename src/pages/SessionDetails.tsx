@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { isSessionEndedCairo } from '@/lib/sessionTimeGuard';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -221,11 +222,12 @@ export default function SessionDetails() {
   const checkAndUpdateSessionStatus = useCallback(async () => {
     if (!session || session.status === 'completed') return;
     
-    const sessionDateTime = new Date(`${session.session_date}T${session.session_time}`);
-    const sessionEndTime = new Date(sessionDateTime.getTime() + session.duration_minutes * 60 * 1000);
-    const now = new Date();
-    
-    if (now >= sessionEndTime) {
+    // Cairo parts-based guard — no new Date() in completion decision
+    if (!isSessionEndedCairo(session.session_date, session.session_time, session.duration_minutes)) {
+      return; // not ended yet — skip any auto-complete
+    }
+
+    {
       // For makeup sessions, use the complete_makeup_session RPC
       if (session.is_makeup && session.makeup_session_id) {
         const { error } = await supabase.rpc('complete_makeup_session', {
