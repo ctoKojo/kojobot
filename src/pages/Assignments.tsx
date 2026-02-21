@@ -136,8 +136,7 @@ export default function AssignmentsPage() {
     return group ? (language === 'ar' ? group.name_ar : group.name) : '-';
   };
 
-  // formatDateTime centralized in timeUtils.ts (SSOT)
-  const formatDate = (date: string) => formatDateTime(date, language);
+  // SSOT: using centralized formatDateTime from timeUtils.ts
 
   const isOverdue = (dueDate: string) => {
     return new Date(dueDate) < new Date();
@@ -263,7 +262,7 @@ export default function AssignmentsPage() {
                     )}
                   </div>
                   <div className="flex items-center justify-between mt-3">
-                    <p className="text-xs text-muted-foreground">{formatDate(assignment.due_date)}</p>
+                    <p className="text-xs text-muted-foreground">{formatDateTime(assignment.due_date, language)}</p>
                     {isOverdue(assignment.due_date) ? (
                       <Badge variant="destructive" className="text-xs">
                         {isRTL ? 'منتهي' : 'Overdue'}
@@ -316,7 +315,7 @@ export default function AssignmentsPage() {
                         {language === 'ar' ? assignment.title_ar : assignment.title}
                       </TableCell>
                       <TableCell>{getGroupName(assignment.group_id)}</TableCell>
-                      <TableCell>{formatDate(assignment.due_date)}</TableCell>
+                      <TableCell>{formatDateTime(assignment.due_date, language)}</TableCell>
                       <TableCell>
                         {isOverdue(assignment.due_date) ? (
                           <Badge variant="destructive">

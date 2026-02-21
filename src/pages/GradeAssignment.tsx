@@ -224,8 +224,7 @@ export default function GradeAssignment() {
     }
   };
 
-  // formatDateTime centralized in timeUtils.ts (SSOT)
-  const formatDate = (date: string) => formatDateTime(date, language);
+  // SSOT: using centralized formatDateTime from timeUtils.ts
 
   const getFileIcon = (type: string | null) => {
     if (!type) return <FileText className="w-6 h-6" />;
@@ -279,7 +278,7 @@ export default function GradeAssignment() {
               <div className="flex items-center gap-1">
                 <Clock className="w-4 h-4" />
                 {isRTL ? 'موعد التسليم: ' : 'Due: '}
-                {assignment && formatDate(assignment.due_date)}
+                {assignment && formatDateTime(assignment.due_date, language)}
               </div>
             </div>
           </CardContent>
@@ -307,7 +306,7 @@ export default function GradeAssignment() {
             </div>
             <div className="mt-4 text-sm text-muted-foreground">
               {isRTL ? 'تاريخ التسليم: ' : 'Submitted: '}
-              {submission && formatDate(submission.submitted_at)}
+              {submission && formatDateTime(submission.submitted_at, language)}
             </div>
           </CardContent>
         </Card>

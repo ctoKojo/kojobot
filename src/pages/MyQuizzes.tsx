@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { formatDate as _formatDate, formatDateTime } from '@/lib/timeUtils';
+import { formatDate, formatDateTime } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
 import { FileQuestion, Play, CheckCircle, Clock, Calendar } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -104,17 +104,7 @@ export default function MyQuizzes() {
     }
   };
 
-  // formatDate/formatDateTime centralized in timeUtils.ts (SSOT)
-  // MyQuizzes uses Egypt timezone override
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      timeZone: 'Africa/Cairo',
-    });
-  };
+  // SSOT: using centralized formatDate from timeUtils.ts with Cairo timezone
 
   const getQuizStatus = (quiz: QuizAssignment) => {
     const now = new Date().getTime();
@@ -307,7 +297,7 @@ export default function MyQuizzes() {
                         </CardTitle>
                         <CardDescription>
                           {isRTL ? 'تم التسليم: ' : 'Submitted: '}
-                          {quiz.submission && formatDate(quiz.submission.submitted_at)}
+                          {quiz.submission && formatDate(quiz.submission.submitted_at, language, 'Africa/Cairo')}
                         </CardDescription>
                       </div>
                       <Badge 

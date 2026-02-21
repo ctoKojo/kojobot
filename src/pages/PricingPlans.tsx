@@ -13,7 +13,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { getGroupTypeLabel } from '@/lib/constants';
+import { getGroupTypeLabel, GROUP_TYPES_LIST } from '@/lib/constants';
 
 interface PricingPlan {
   id: string;
@@ -182,9 +182,9 @@ export default function PricingPlans() {
                   <Select value={form.group_type} onValueChange={v => setForm({...form, group_type: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="kojo_squad">Kojo Squad</SelectItem>
-                      <SelectItem value="kojo_core">Kojo Core</SelectItem>
-                      <SelectItem value="kojo_x">Kojo X</SelectItem>
+                      {GROUP_TYPES_LIST.map(gt => (
+                        <SelectItem key={gt.value} value={gt.value}>{isRTL ? gt.labelAr : gt.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select></div>
               </div>

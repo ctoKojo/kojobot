@@ -504,7 +504,7 @@ export default function InstructorsPage() {
                         onChange={() => setFormData({ ...formData, employee_type: 'instructor' })}
                         className="h-4 w-4 text-primary"
                       />
-                      <span className="text-sm">{isRTL ? 'مدرب' : 'Instructor'}</span>
+                      <span className="text-sm">{getRoleLabel('instructor', isRTL)}</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -515,7 +515,7 @@ export default function InstructorsPage() {
                         onChange={() => setFormData({ ...formData, employee_type: 'reception', specialization: '', specialization_ar: '' })}
                         className="h-4 w-4 text-primary"
                       />
-                      <span className="text-sm">{isRTL ? 'ريسيبشن' : 'Reception'}</span>
+                      <span className="text-sm">{getRoleLabel('reception', isRTL)}</span>
                     </label>
                   </div>
                 </div>

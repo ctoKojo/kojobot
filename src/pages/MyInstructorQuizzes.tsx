@@ -318,18 +318,7 @@ export default function MyInstructorQuizzes() {
     return <Badge variant="secondary">{status}</Badge>;
   };
 
-  const formatDateTime = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-      timeZone: 'Africa/Cairo',
-    });
-  };
+  // SSOT: using centralized formatDateTime from timeUtils.ts with Cairo timezone
 
   // Stats
   const totalAssigned = assignedQuizzes.length;
@@ -432,7 +421,7 @@ export default function MyInstructorQuizzes() {
                           {language === 'ar' ? quiz.group_name_ar : quiz.group_name}
                         </Badge>
                         <span>•</span>
-                        <span>{formatDateTime(quiz.start_time)}</span>
+                        <span>{formatDateTime(quiz.start_time, language, 'Africa/Cairo')}</span>
                       </div>
                     </div>
                     
@@ -500,7 +489,7 @@ export default function MyInstructorQuizzes() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">{isRTL ? 'البداية' : 'Start'}</p>
-                      <p className="font-medium">{formatDateTime(selectedAssignment.start_time)}</p>
+                      <p className="font-medium">{formatDateTime(selectedAssignment.start_time, language, 'Africa/Cairo')}</p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">{isRTL ? 'متوسط الدرجات' : 'Avg. Score'}</p>
@@ -552,7 +541,7 @@ export default function MyInstructorQuizzes() {
                           ) : '-'}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {formatDateTime(result.submitted_at)}
+                          {formatDateTime(result.submitted_at, language, 'Africa/Cairo')}
                         </TableCell>
                         <TableCell>
                           {result.answers && (

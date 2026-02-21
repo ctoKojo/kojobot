@@ -103,8 +103,7 @@ export default function AssignmentSubmissions() {
     }
   };
 
-  // formatDateTime centralized in timeUtils.ts (SSOT)
-  const formatDate = (date: string) => formatDateTime(date, language);
+  // SSOT: using centralized formatDateTime from timeUtils.ts
 
   const stats = {
     total: submissions.length,
@@ -149,7 +148,7 @@ export default function AssignmentSubmissions() {
             <CardTitle>{language === 'ar' ? assignment?.title_ar : assignment?.title}</CardTitle>
             <CardDescription>
               {isRTL ? 'موعد التسليم: ' : 'Due: '}
-              {assignment && formatDate(assignment.due_date)}
+              {assignment && formatDateTime(assignment.due_date, language)}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -217,7 +216,7 @@ export default function AssignmentSubmissions() {
                     </div>
                     <div className="flex items-center justify-between mt-3 pt-3 border-t">
                       <div className="text-sm">
-                        <p className="text-xs text-muted-foreground">{formatDate(submission.submitted_at)}</p>
+                        <p className="text-xs text-muted-foreground">{formatDateTime(submission.submitted_at, language)}</p>
                         {submission.score !== null && (
                           <p className="font-medium mt-1">
                             {submission.score} / {assignment?.max_score}
@@ -285,10 +284,10 @@ export default function AssignmentSubmissions() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>{formatDate(submission.submitted_at)}</TableCell>
+                        <TableCell>{formatDateTime(submission.submitted_at, language)}</TableCell>
                         <TableCell>
                           <span className="text-sm">
-                            {formatDate(lastModified.date.toISOString())}
+                            {formatDateTime(lastModified.date.toISOString(), language)}
                           </span>
                         </TableCell>
                         <TableCell>
