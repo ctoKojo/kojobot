@@ -13,8 +13,26 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    // Authenticate: only service role or matching cron secret allowed
+    const authHeader = req.headers.get("Authorization");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const cronSecret = Deno.env.get("CRON_SECRET");
+
+    const token = authHeader?.replace("Bearer ", "") ?? "";
+    const isServiceRole = token === supabaseKey;
+    const isCronAuth = cronSecret && token === cronSecret;
+
+    if (!isServiceRole && !isCronAuth) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Use Cairo time for "today" comparison
