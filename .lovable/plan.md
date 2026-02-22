@@ -1,123 +1,99 @@
 
-# تحويل الكويز ليكون جزء من المنهج -- خطة التنفيذ النهائية
 
-## الهدف
-الكويز يتعمل مباشرة من داخل سيشن المنهج (زي الواجب بالظبط). مفيش إنشاء يدوي مستقل.
+# ضبط توقيت إسناد الكويز -- الكويز يبدأ لحظة الإسناد فقط أثناء السيشن
 
----
+## المشكلة الحالية
+- `start_time` بتاع الكويز بيتحط = وقت بداية السيشن النظري (من الجدول)، مش لحظة الإسناد الفعلية
+- المدرب يقدر يسند الكويز في أي وقت -- قبل السيشن أو بعدها
+- ده بيأثر على عدالة العد التنازلي
 
-## الخطوة 1: Migration -- إنشاء RPCs
-
-### RPC: `create_curriculum_quiz`
-- يستخدم `auth.uid()` (مش parameter) للأمان
-- يتحقق `has_role(auth.uid(), 'admin')` صراحة
-- `SET search_path = 'public'`
-- `SELECT ... FOR UPDATE` على `curriculum_sessions` لمنع race conditions
-- لو `quiz_id IS NOT NULL` يرجع error: `'Session already has a quiz attached'`
-- ينشئ record في `quizzes` بنفس `age_group_id` و `level_id` من السيشن
-- العنوان التلقائي: `'Quiz - Session X'` / `'كويز - سيشن X'`
-- القيم الافتراضية: `duration_minutes = 30`, `passing_score = 60`
-- يحدث `curriculum_sessions.quiz_id` و `updated_at = now()`
-- يرجع `jsonb` فيه `quiz_id` الجديد
-- صلاحية `EXECUTE` للـ `authenticated` فقط
-
-### RPC: `unassign_curriculum_quiz`
-- يستخدم `auth.uid()` + `has_role` admin check
-- يستقبل `p_session_id` و `p_expected_quiz_id`
-- `SET search_path = 'public'`
-- يعمل `SELECT ... FOR UPDATE` على `curriculum_sessions`
-- optimistic check: `quiz_id = p_expected_quiz_id`
-- لو مطابق: `quiz_id = null`, `updated_at = now()`, يرجع `{unassigned: true}`
-- لو مش مطابق: يرجع `{unassigned: false, reason: 'conflict'}`
-- الكويز نفسه يفضل موجود في `quizzes` (مش بيتحذف -- يحافظ على التاريخ والتقارير)
+## سياسة انتهاء الكويز
+الطالب ياخد مدة الكويز كاملة حتى لو السيشن خلصت. يعني `due_date = start_time + duration` دائما.
 
 ---
 
-## الخطوة 2: تعديل `SessionEditDialog.tsx`
+## التغييرات
 
-### إزالة
-- Props: `filteredQuizzes` و `allQuizzesCount`
-- الـ `Select` dropdown لاختيار كويز
-- زرار "جديد" اللي بيفتح `/quizzes`
-- icons: `Plus` (مش محتاجينه بعد كدا)
+### 1. إضافة `isSessionActiveCairo` في `src/lib/sessionTimeGuard.ts`
 
-### تاب الكويز الجديد
+دالة جديدة تستخدم نفس منطق `buildSessionEndParts` و `compareParts` الموجودين:
+- تبني start parts من `sessionDate` + `sessionTime`
+- تبني end parts من `sessionDate` + `sessionTime` + `durationMinutes`
+- تقارن Cairo now مع الاتنين
+- ترجع `true` لو: `now >= start` **و** `now < end`
+- ترجع `false` على أي input ناقص أو غلط (safe default)
 
-**لو مفيش كويز (`session.quiz_id` = null):**
-- زرار واحد "إنشاء كويز لهذا السيشن" مع loading state (يمنع double click)
-- يستدعي RPC `create_curriculum_quiz({ p_session_id })`
-- بعد النجاح: navigate لـ `/quiz-editor/{quizId}?origin=curriculum&sessionId=...&ageGroupId=...&levelId=...`
-- لو error: toast بالرسالة (مثلا "Session already has a quiz attached")
+ده بيستخدم نفس الـ `getCairoNowParts()` و `compareParts()` و `buildSessionEndParts()` الموجودين بالفعل، فمحتاج بس دالة parse بسيطة لبداية السيشن + الدالة الجديدة.
 
-**لو فيه كويز مربوط:**
-- State داخلي يحمل بيانات الكويز (fetch عند فتح التاب)
-- عرض اسم الكويز (editable input) + زرار reset للاسم الافتراضي (`Quiz - Session {session_number}`)
-- حقول editable: المدة (دقيقة)، درجة النجاح (%)
-- عدد الأسئلة (من count على `quiz_questions`)
-- زرار "تعديل الأسئلة" -- navigate مع query params للـ origin
-- زرار "إلغاء ربط الكويز" -- مع AlertDialog confirm -- يستدعي `unassign_curriculum_quiz`
-- تحديث اعدادات الكويز (title, duration, passing_score) يتم ضمن `handleSave` الموجود عبر `supabase.from('quizzes').update(...)` قبل استدعاء `update_curriculum_session`
+### 2. تعديل `handleAssignCurriculumQuiz` في `src/pages/SessionDetails.tsx`
 
----
+**إضافة guard في أول الدالة:**
+```text
+if (!isSessionActiveCairo(session.session_date, session.session_time, group.duration_minutes)) {
+  toast: "لا يمكن إسناد الكويز إلا أثناء وقت السيشن"
+  return
+}
+```
 
-## الخطوة 3: تعديل `CurriculumManagement.tsx`
+**تغيير حساب `start_time` و `due_date`:**
+- `start_time` = `new Date().toISOString()` (لحظة الإسناد الحقيقية)
+- `due_date` = `new Date(now + quiz.duration_minutes * 60000).toISOString()`
+- الطالب ياخد مدته كاملة دائما
 
-- إزالة `useQuery` بـ key `['quizzes-list']` (الخاص بـ `allQuizzes`)
-- إزالة متغير `filteredQuizzes`
-- إزالة props `filteredQuizzes` و `allQuizzesCount` من `<SessionEditDialog>`
+### 3. تعديل زرار الإسناد في UI (نفس الملف)
 
----
-
-## الخطوة 4: تحويل `Quizzes.tsx` لعرض فقط
-
-### إزالة
-- زرار "إضافة كويز" (`Plus` button + `kojo-gradient`)
-- Dialog إنشاء/تعديل الكويز بالكامل (state: `isDialogOpen`, `editingQuiz`, `formData`)
-- `handleSubmit`, `handleEdit`, `handleDelete`, `resetForm`
-- من القائمة المنسدلة: إزالة "تعديل" و "حذف"
-
-### إضافة
-- رسالة توضيحية أعلى الصفحة (Alert): "الكويزات تُنشأ من داخل المنهج" / "Quizzes are created from within the curriculum"
-- لكل كويز عرض curriculum label من `curriculumMap` الموجود (session_number + age group + level)
-- لو الكويز unlinked يظهر badge "غير مربوط"
-- الإبقاء على: البحث، فلتر linked/unlinked، التقارير، navigate لمحرر الأسئلة
+الزرار الحالي (سطر 1289-1298) يبقى:
+- `disabled` لو السيشن مش active (باستخدام `isSessionActiveCairo`)
+- مع `Tooltip` يوضح السبب: "متاح أثناء وقت السيشن فقط" / "Available during session time only"
 
 ---
 
-## الخطوة 5: تعديل `QuizEditor.tsx`
+## التفاصيل التقنية
 
-### زرار رجوع ذكي
-- يقرا `useLocation().state` أولا (لو navigate مع state)
-- fallback: يقرا `useSearchParams()` -- query params (`origin`, `sessionId`, `ageGroupId`, `levelId`)
-- لو `origin === 'curriculum'`: يرجع لـ `/curriculum` (وممكن يحدد age group/level عبر state)
-- لو مفيش origin: يرجع لـ `/quizzes` (السلوك الحالي)
+### `isSessionActiveCairo` -- المنطق
+```text
+function isSessionActiveCairo(sessionDate, sessionTime, durationMinutes): boolean
+  1. Parse start parts من sessionDate + sessionTime
+  2. Build end parts (start + duration) عبر buildSessionEndParts الموجود
+  3. Get Cairo now parts
+  4. Return: compareParts(now, start) >= 0 AND compareParts(now, end) < 0
+```
 
-### Activity logging
-- بعد حفظ الأسئلة بنجاح: `logUpdate('quiz', quizId, { questions_count: questions.length })`
+### `handleAssignCurriculumQuiz` -- التغيير
+```text
+// قبل (حاليا سطر 539-540):
+const startDate = new Date(`${session.session_date}T${session.session_time.slice(0, 5)}`);
+const dueDate = new Date(startDate.getTime() + (quiz?.duration_minutes || 30) * 60 * 1000);
+
+// بعد:
+const now = new Date();
+const durationMs = (quiz?.duration_minutes || 30) * 60 * 1000;
+const dueDate = new Date(now.getTime() + durationMs);
+// ثم في insert:
+start_time: now.toISOString()
+due_date: dueDate.toISOString()
+```
+
+### الزرار -- التعديل
+```text
+// سطر 1289-1298: إضافة شرط disabled + Tooltip
+const isActive = isSessionActiveCairo(session.session_date, session.session_time, group?.duration_minutes);
+
+<Tooltip> wrapper لو !isActive
+<Button disabled={!isActive || assigningCurriculumQuiz} ...>
+```
 
 ---
 
-## ملخص الملفات المتأثرة
+## الملفات المتأثرة
 
 | الملف | التغيير |
 |-------|---------|
-| Migration SQL | RPC `create_curriculum_quiz` + `unassign_curriculum_quiz` |
-| `src/components/curriculum/SessionEditDialog.tsx` | إعادة بناء تاب الكويز -- إزالة select dropdown، إضافة create/unassign/edit flow |
-| `src/pages/CurriculumManagement.tsx` | إزالة quiz query و props (3 أسطر) |
-| `src/pages/Quizzes.tsx` | تحويل لعرض فقط -- إزالة CRUD، إضافة info alert |
-| `src/pages/QuizEditor.tsx` | زرار رجوع ذكي (state + query params fallback) + activity logging |
+| `src/lib/sessionTimeGuard.ts` | إضافة `isSessionActiveCairo()` + helper `buildSessionStartParts()` |
+| `src/pages/SessionDetails.tsx` | guard في `handleAssignCurriculumQuiz` + تغيير `start_time` + تعطيل الزرار |
 
 ## ما لن يتغير
-- جدول `quizzes` (نفس الهيكل)
-- جدول `quiz_questions` (نفس الهيكل)
-- آلية الإسناد في SessionDetails (one-click assign من الكويز المرتبط بالمنهج)
+- منطق `isSessionEndedCairo` (موجود ومستخدم لأغراض تانية)
 - تجربة الطالب في حل الكويز
-- QuizResultsDialog و StudentQuizPreviewDialog
-- صفحة التقارير
+- مدة الكويز (الطالب ياخد مدته كاملة دائما)
 
-## ترتيب التنفيذ
-1. Migration (RPCs)
-2. SessionEditDialog (تاب الكويز الجديد)
-3. CurriculumManagement (إزالة props)
-4. Quizzes (read-only)
-5. QuizEditor (back logic + logging)
