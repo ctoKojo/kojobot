@@ -1,44 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, FileQuestion, ListChecks, BarChart3 } from 'lucide-react';
+import { Search, MoreHorizontal, FileQuestion, ListChecks, BarChart3, Info } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -56,12 +34,6 @@ interface Quiz {
   created_at: string;
 }
 
-interface AgeGroup {
-  id: string;
-  name: string;
-  name_ar: string;
-}
-
 interface Level {
   id: string;
   name: string;
@@ -77,26 +49,14 @@ interface CurriculumLink {
 
 export default function QuizzesPage() {
   const { t, isRTL, language } = useLanguage();
-  const { toast } = useToast();
-  const { user, role } = useAuth();
+  const { role } = useAuth();
   const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [curriculumMap, setCurriculumMap] = useState<Map<string, CurriculumLink>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [linkFilter, setLinkFilter] = useState<'all' | 'linked' | 'unlinked'>('all');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    duration_minutes: 30,
-    passing_score: 60,
-    age_group_id: '',
-    level_id: '',
-  });
 
   useEffect(() => {
     fetchData();
@@ -104,18 +64,15 @@ export default function QuizzesPage() {
 
   const fetchData = async () => {
     try {
-      const [quizzesRes, ageGroupsRes, levelsRes] = await Promise.all([
+      const [quizzesRes, levelsRes] = await Promise.all([
         supabase.from('quizzes').select('*').order('created_at', { ascending: false }),
-        supabase.from('age_groups').select('id, name, name_ar').eq('is_active', true),
         supabase.from('levels').select('id, name, name_ar').eq('is_active', true),
       ]);
 
       const quizzesData = quizzesRes.data || [];
       setQuizzes(quizzesData);
-      setAgeGroups(ageGroupsRes.data || []);
       setLevels(levelsRes.data || []);
 
-      // Fetch curriculum links for all quizzes
       const quizIds = quizzesData.map(q => q.id);
       if (quizIds.length > 0) {
         const { data: curriculumLinks } = await supabase
@@ -123,7 +80,7 @@ export default function QuizzesPage() {
           .select('quiz_id, session_number, age_groups(name, name_ar), levels(name, name_ar)')
           .in('quiz_id', quizIds)
           .eq('is_active', true);
-        
+
         const map = new Map<string, CurriculumLink>();
         (curriculumLinks || []).forEach((c: any) => {
           if (c.quiz_id) map.set(c.quiz_id, c);
@@ -134,102 +91,6 @@ export default function QuizzesPage() {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!user) return;
-
-    try {
-      const payload = {
-        title: formData.title,
-        title_ar: formData.title,
-        description: formData.description || null,
-        description_ar: formData.description || null,
-        duration_minutes: formData.duration_minutes,
-        passing_score: formData.passing_score,
-        age_group_id: formData.age_group_id || null,
-        level_id: formData.level_id || null,
-        created_by: user.id,
-      };
-
-      if (editingQuiz) {
-        const { error } = await supabase
-          .from('quizzes')
-          .update(payload)
-          .eq('id', editingQuiz.id);
-
-        if (error) throw error;
-        toast({
-          title: t.common.success,
-          description: isRTL ? 'تم تحديث الكويز' : 'Quiz updated successfully',
-        });
-      } else {
-        const { error } = await supabase
-          .from('quizzes')
-          .insert([payload]);
-
-        if (error) throw error;
-        toast({
-          title: t.common.success,
-          description: isRTL ? 'تم إضافة الكويز' : 'Quiz added successfully',
-        });
-      }
-
-      setIsDialogOpen(false);
-      setEditingQuiz(null);
-      resetForm();
-      fetchData();
-    } catch (error) {
-      console.error('Error saving quiz:', error);
-      toast({
-        variant: 'destructive',
-        title: t.common.error,
-        description: isRTL ? 'فشل في حفظ الكويز' : 'Failed to save quiz',
-      });
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      duration_minutes: 30,
-      passing_score: 60,
-      age_group_id: '',
-      level_id: '',
-    });
-  };
-
-  const handleEdit = (quiz: Quiz) => {
-    setEditingQuiz(quiz);
-    setFormData({
-      title: quiz.title,
-      description: quiz.description || '',
-      duration_minutes: quiz.duration_minutes,
-      passing_score: quiz.passing_score,
-      age_group_id: quiz.age_group_id || '',
-      level_id: quiz.level_id || '',
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase.from('quizzes').delete().eq('id', id);
-      if (error) throw error;
-      toast({
-        title: t.common.success,
-        description: isRTL ? 'تم حذف الكويز' : 'Quiz deleted successfully',
-      });
-      fetchData();
-    } catch (error) {
-      console.error('Error deleting quiz:', error);
-      toast({
-        variant: 'destructive',
-        title: t.common.error,
-        description: isRTL ? 'فشل في حذف الكويز' : 'Failed to delete quiz',
-      });
     }
   };
 
@@ -259,6 +120,14 @@ export default function QuizzesPage() {
   return (
     <DashboardLayout title={t.nav.questionBank}>
       <div className="space-y-6">
+        {/* Info Alert */}
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            {isRTL ? 'الكويزات تُنشأ من داخل المنهج. اذهب لإدارة المنهج لإنشاء أو تعديل كويز.' : 'Quizzes are created from within the curriculum. Go to Curriculum Management to create or edit a quiz.'}
+          </AlertDescription>
+        </Alert>
+
         {/* Header Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative w-full sm:w-80">
@@ -288,115 +157,8 @@ export default function QuizzesPage() {
                 {isRTL ? 'التقارير' : 'Reports'}
               </Button>
             )}
-
-            {role === 'admin' && (
-              <Button className="kojo-gradient" onClick={() => {
-                setEditingQuiz(null);
-                resetForm();
-                setIsDialogOpen(true);
-              }}>
-                <Plus className="h-4 w-4 mr-2" />
-                {t.quizzes.addQuiz}
-              </Button>
-            )}
           </div>
         </div>
-
-        {/* Create/Edit Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>
-                {editingQuiz ? t.quizzes.editQuiz : t.quizzes.addQuiz}
-              </DialogTitle>
-              <DialogDescription>
-                {isRTL ? 'أدخل بيانات الكويز' : 'Enter quiz details'}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
-              <div className="grid gap-2">
-                <Label>{t.quizzes.quizName}</Label>
-                <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder={isRTL ? 'مثال: اختبار سكراتش' : 'e.g., Scratch Basics Quiz'}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>{t.assignments.description}</Label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder={isRTL ? 'وصف الكويز...' : 'Quiz description...'}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label>{t.quizzes.duration} ({isRTL ? 'دقيقة' : 'min'})</Label>
-                  <Input
-                    type="number"
-                    value={formData.duration_minutes}
-                    onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 30 })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label>{isRTL ? 'درجة النجاح %' : 'Pass Score %'}</Label>
-                  <Input
-                    type="number"
-                    value={formData.passing_score}
-                    onChange={(e) => setFormData({ ...formData, passing_score: parseInt(e.target.value) || 60 })}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label>{t.students.ageGroup}</Label>
-                  <Select
-                    value={formData.age_group_id}
-                    onValueChange={(value) => setFormData({ ...formData, age_group_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isRTL ? 'اختر' : 'Select'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ageGroups.map((group) => (
-                        <SelectItem key={group.id} value={group.id}>
-                          {language === 'ar' ? group.name_ar : group.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label>{t.students.level}</Label>
-                  <Select
-                    value={formData.level_id}
-                    onValueChange={(value) => setFormData({ ...formData, level_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={isRTL ? 'اختر' : 'Select'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {levels.map((level) => (
-                        <SelectItem key={level.id} value={level.id}>
-                          {language === 'ar' ? level.name_ar : level.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                {t.common.cancel}
-              </Button>
-              <Button className="kojo-gradient" onClick={handleSubmit}>
-                {t.common.save}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
         {/* Mobile Cards View */}
         <div className="block md:hidden space-y-3">
@@ -427,6 +189,18 @@ export default function QuizzesPage() {
                       <p className="text-sm text-muted-foreground mt-1">
                         {getLevelName(quiz.level_id)}
                       </p>
+                      {(() => {
+                        const label = getCurriculumLabel(quiz.id);
+                        return label ? (
+                          <Badge className="text-xs bg-primary/10 text-primary border-primary/20 mt-1">
+                            {label}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-muted-foreground mt-1">
+                            {isRTL ? 'غير مربوط' : 'Unlinked'}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                     {role === 'admin' && (
                       <DropdownMenu>
@@ -440,17 +214,6 @@ export default function QuizzesPage() {
                             <ListChecks className="h-4 w-4 mr-2" />
                             {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(quiz)}>
-                            <Pencil className="h-4 w-4 mr-2" />
-                            {t.common.edit}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(quiz.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            {t.common.delete}
-                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
@@ -462,15 +225,6 @@ export default function QuizzesPage() {
                     <Badge variant="secondary" className="text-xs">
                       {quiz.passing_score}% {isRTL ? 'للنجاح' : 'to pass'}
                     </Badge>
-                    {curriculumMap.has(quiz.id) ? (
-                      <Badge className="text-xs bg-primary/10 text-primary border-primary/20">
-                        {isRTL ? 'مربوط' : 'Linked'}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs text-muted-foreground">
-                        {isRTL ? 'غير مربوط' : 'Unlinked'}
-                      </Badge>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -545,17 +299,6 @@ export default function QuizzesPage() {
                               <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
                                 <ListChecks className="h-4 w-4 mr-2" />
                                 {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEdit(quiz)}>
-                                <Pencil className="h-4 w-4 mr-2" />
-                                {t.common.edit}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDelete(quiz.id)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                {t.common.delete}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
