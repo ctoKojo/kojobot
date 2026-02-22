@@ -123,11 +123,12 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
+  // clip card
   ctx.save();
   roundRect(ctx, 0, 0, W, H, RADIUS);
   ctx.clip();
 
-  // background modern gradient using your theme
+  // background gradient using your theme
   const grad = ctx.createLinearGradient(0, 0, W, H);
   grad.addColorStop(0, "#61C9E0");
   grad.addColorStop(0.6, "#6F7CF2");
@@ -151,14 +152,14 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   // logo
   const logo = await loadImage("/kojobot-logo-white.png");
   if (logo) {
-    const logoH = 58;
+    const logoH = 72;
     const logoW = (logo.naturalWidth / logo.naturalHeight) * logoH;
     ctx.globalAlpha = 0.95;
     ctx.drawImage(logo, PAD, PAD, logoW, logoH);
     ctx.globalAlpha = 1;
   }
 
-  // level badge modern
+  // level badge
   if (levelName) {
     ctx.font = `800 24px ${FONT}`;
     const tw = ctx.measureText(levelName).width;
@@ -185,18 +186,18 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
     ctx.textBaseline = "top";
   }
 
-  // content area bounds
+  // content bounds (extended down to fill removed footer line area)
   const contentTop = 170;
-  const contentBottom = H - 130;
+  const contentBottom = H - 80;
 
-  // glass panel behind main content
+  // main glass panel
   const panelX = PAD;
   const panelY = contentTop;
   const panelW = W - PAD * 2;
   const panelH = contentBottom - contentTop;
   drawGlassPanel(ctx, panelX, panelY, panelW, panelH, 40);
 
-  // avatar circle
+  // avatar
   const avatarSize = 260;
   const avatarX = panelX + 56;
   const avatarY = panelY + (panelH - avatarSize) / 2;
@@ -216,7 +217,7 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   ctx.fill();
   ctx.restore();
 
-  // avatar clip circle
+  // avatar clip
   ctx.save();
   circlePath(ctx, avatarCx, avatarCy, avatarR);
   ctx.clip();
@@ -259,7 +260,7 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   ctx.fillText(name, textX, textY, maxTextW);
   textY += 82;
 
-  // modern gradient divider
+  // divider under name
   const lineW = Math.min(maxTextW, 640);
   const lineG = ctx.createLinearGradient(textX, textY, textX + lineW, textY);
   lineG.addColorStop(0, "rgba(255,255,255,0.55)");
@@ -272,17 +273,18 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   ctx.stroke();
   textY += 28;
 
-  // fields as modern pills
+  // modern fields
   const fieldW = Math.min(maxTextW, 720);
   const fieldH = 92;
   const fieldR = 24;
+
   drawInputPill(ctx, textX, textY, fieldW, fieldH, fieldR, "Email", email, FONT);
   textY += fieldH + 20;
 
   drawInputPill(ctx, textX, textY, fieldW, fieldH, fieldR, "Password", password, FONT);
-  textY += fieldH + 24;
+  textY += fieldH + 22;
 
-  // pills row (subscription, attendance, age group) fixed and modern
+  // pills row with old emojis restored
   const pills: string[] = [];
   if (subscriptionType) {
     const subMap: Record<string, string> = {
@@ -293,7 +295,7 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
     pills.push(subMap[subscriptionType] || subscriptionType);
   }
   if (attendanceMode) {
-    pills.push(attendanceMode === "online" ? "Online" : "Offline");
+    pills.push(attendanceMode === "online" ? "🌐 Online" : "🏫 Offline");
   }
   if (ageGroupName) {
     pills.push(ageGroupName);
@@ -334,25 +336,15 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
     }
   }
 
-  // footer
-  const footerY = H - PAD - 30;
-  const footerG = ctx.createLinearGradient(PAD, footerY, W - PAD, footerY);
-  footerG.addColorStop(0, "rgba(255,255,255,0.05)");
-  footerG.addColorStop(0.5, "rgba(255,255,255,0.22)");
-  footerG.addColorStop(1, "rgba(255,255,255,0.05)");
+  // bottom glass strip instead of the thin footer line
+  const bottomStripH = 90;
+  drawGlassPanel(ctx, PAD, H - PAD - bottomStripH, W - PAD * 2, bottomStripH, 28);
 
-  ctx.strokeStyle = footerG;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(PAD, footerY);
-  ctx.lineTo(W - PAD, footerY);
-  ctx.stroke();
-
-  ctx.fillStyle = "rgba(255,255,255,0.40)";
+  ctx.fillStyle = "rgba(255,255,255,0.42)";
   ctx.font = `700 20px ${FONT}`;
   ctx.textAlign = "center";
-  ctx.textBaseline = "bottom";
-  ctx.fillText("KOJOBOT ACADEMY", W / 2, H - PAD + 6);
+  ctx.textBaseline = "middle";
+  ctx.fillText("KOJOBOT ACADEMY", W / 2, H - PAD - bottomStripH / 2 + 4);
 
   ctx.restore();
 
