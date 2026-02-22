@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { generateStudentIdCard } from '@/lib/generateIdCard';
+import { generateStudentBusinessCard } from '@/lib/generateIdCard';
 
 interface CredentialsDialogProps {
   open: boolean;
@@ -34,7 +34,7 @@ export function CredentialsDialog({ open, onClose, email, password, userName, av
     if (!password || downloading) return;
     setDownloading(true);
     try {
-      await generateStudentIdCard({ name: userName, email, password, avatarUrl, levelName, subscriptionType, attendanceMode, ageGroupName });
+      await generateStudentBusinessCard({ name: userName, email, password, avatarUrl, levelName, subscriptionType, attendanceMode, ageGroupName });
     } finally {
       setDownloading(false);
     }
