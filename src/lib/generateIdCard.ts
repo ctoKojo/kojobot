@@ -1,8 +1,82 @@
+// ── Types ──
+interface IdCardOptions {
+  name: string;
+  email: string;
+  password: string;
+  avatarUrl?: string | null;
+  levelName?: string;
+  subscriptionType?: string;
+  attendanceMode?: string;
+  ageGroupName?: string;
+}
+
+// ── Helper utilities ──
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function circlePath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.closePath();
+}
+
+function drawGlassPanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  roundRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.18)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function drawInputPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, label: string, value: string, font: string) {
+  roundRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.16)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = `700 16px ${font}`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillText(label, x + 18, y + 12);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `800 22px ${font}`;
+  ctx.textBaseline = "bottom";
+  ctx.fillText(value, x + 18, y + h - 12, w - 36);
+}
+
+function loadImage(src: string, crossOrigin?: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    if (crossOrigin) img.crossOrigin = crossOrigin;
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+// ── Main export ──
+
 export async function generateStudentBusinessCard(options: IdCardOptions): Promise<void> {
   const { name, email, password, avatarUrl, levelName } = options;
   if (!password) return;
 
-  // Business card size 3.5x2 in at 300dpi
   const W = 1050;
   const H = 600;
   const SCALE = 3;
@@ -25,7 +99,7 @@ export async function generateStudentBusinessCard(options: IdCardOptions): Promi
   roundRect(ctx, 0, 0, W, H, RADIUS);
   ctx.clip();
 
-  // background gradient theme
+  // background gradient
   const grad = ctx.createLinearGradient(0, 0, W, H);
   grad.addColorStop(0, "#61C9E0");
   grad.addColorStop(1, "#6455F0");
@@ -39,14 +113,14 @@ export async function generateStudentBusinessCard(options: IdCardOptions): Promi
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
 
-  // main glass lite panel
+  // main glass panel
   const panelX = PAD;
   const panelY = PAD;
   const panelW = W - PAD * 2;
   const panelH = H - PAD * 2;
   drawGlassPanel(ctx, panelX, panelY, panelW, panelH, 28);
 
-  // logo small top left inside panel
+  // logo
   const logo = await loadImage("/kojobot-logo-white.png");
   const logoX = panelX + 28;
   const logoY = panelY + 22;
@@ -64,7 +138,7 @@ export async function generateStudentBusinessCard(options: IdCardOptions): Promi
     ctx.fillText("Kojobot", logoX, logoY);
   }
 
-  // level badge top right inside panel
+  // level badge
   if (levelName) {
     ctx.font = `800 18px ${FONT}`;
     const tw = ctx.measureText(levelName).width;
@@ -96,7 +170,7 @@ export async function generateStudentBusinessCard(options: IdCardOptions): Promi
   const contentY = panelY + topBarH;
   const contentH = panelH - topBarH;
 
-  // avatar left
+  // avatar
   const avatarSize = 220;
   const avatarX = panelX + 34;
   const avatarY = contentY + Math.floor((contentH - avatarSize) / 2);
@@ -144,7 +218,7 @@ export async function generateStudentBusinessCard(options: IdCardOptions): Promi
   ctx.stroke();
   ctx.restore();
 
-  // text right
+  // text area
   const textX = avatarX + avatarSize + 44;
   const textW = panelX + panelW - textX - 34;
 
@@ -169,7 +243,7 @@ export async function generateStudentBusinessCard(options: IdCardOptions): Promi
   ctx.lineTo(textX + lineW, divY);
   ctx.stroke();
 
-  // fields compact
+  // fields
   const fieldW = Math.min(textW, 560);
   const fieldH = 78;
   const fieldR = 22;
@@ -206,3 +280,6 @@ export async function generateStudentBusinessCard(options: IdCardOptions): Promi
     }, "image/png");
   });
 }
+
+// Alias for backward compatibility
+export const generateStudentIdCard = generateStudentBusinessCard;
