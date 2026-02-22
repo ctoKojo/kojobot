@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { isSessionEndedCairo, isSessionActiveCairo } from '@/lib/sessionTimeGuard';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -216,6 +216,33 @@ export default function SessionDetails() {
   const [assignmentSubmissionsDialogOpen, setAssignmentSubmissionsDialogOpen] = useState(false);
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [makeupStudentId, setMakeupStudentId] = useState<string | null>(null);
+
+  // Live session status
+  const [liveStatus, setLiveStatus] = useState<'not_started' | 'active' | 'ended'>('not_started');
+  const [elapsedMinutes, setElapsedMinutes] = useState(0);
+
+  useEffect(() => {
+    if (!session) return;
+    const compute = () => {
+      const active = isSessionActiveCairo(session.session_date, session.session_time, session.duration_minutes);
+      const ended = isSessionEndedCairo(session.session_date, session.session_time, session.duration_minutes);
+      if (active) {
+        setLiveStatus('active');
+        // Compute elapsed minutes from session start
+        const [h, m] = session.session_time.split(':').map(Number);
+        const startTs = new Date(`${session.session_date}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`).getTime();
+        const nowTs = Date.now();
+        setElapsedMinutes(Math.max(0, Math.floor((nowTs - startTs) / 60000)));
+      } else if (ended) {
+        setLiveStatus('ended');
+      } else {
+        setLiveStatus('not_started');
+      }
+    };
+    compute();
+    const id = setInterval(compute, 60_000);
+    return () => clearInterval(id);
+  }, [session]);
 
   // autoConfirmInstructorAttendance removed - handled by save_attendance RPC
 
@@ -1172,6 +1199,25 @@ export default function SessionDetails() {
                 <Badge className={session.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}>
                   {session.status === 'completed' ? (isRTL ? 'مكتمل' : 'Completed') : (isRTL ? 'مجدول' : 'Scheduled')}
                 </Badge>
+                {liveStatus === 'active' && (
+                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 flex items-center gap-1.5">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                    </span>
+                    {isRTL ? `شغالة - ${elapsedMinutes} دقيقة` : `Live - ${elapsedMinutes} min elapsed`}
+                  </Badge>
+                )}
+                {liveStatus === 'not_started' && session.status !== 'completed' && (
+                  <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                    {isRTL ? 'لسه مبدأتش' : 'Not Started Yet'}
+                  </Badge>
+                )}
+                {liveStatus === 'ended' && session.status !== 'completed' && (
+                  <Badge className="bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300">
+                    {isRTL ? 'انتهت' : 'Session Ended'}
+                  </Badge>
+                )}
               </div>
             </div>
           </CardHeader>
