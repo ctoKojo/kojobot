@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { SimplifiedQuestionEditor } from '@/components/quiz/SimplifiedQuestionEd
 import { ExcelImporter } from '@/components/quiz/ExcelImporter';
 import { StudentPreviewDialog } from '@/components/quiz/StudentPreviewDialog';
 import { ImportFromQuizzesDialog } from '@/components/quiz/ImportFromQuizzesDialog';
+import { logUpdate } from '@/lib/activityLogger';
 
 interface SimplifiedQuestion {
   id?: string;
@@ -32,8 +33,20 @@ interface Quiz {
 export default function QuizEditor() {
   const { quizId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
+
+  // Smart back navigation
+  const getBackDestination = () => {
+    const state = location.state as any;
+    const origin = state?.origin || searchParams.get('origin');
+    if (origin === 'curriculum') {
+      return '/curriculum';
+    }
+    return '/quizzes';
+  };
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<SimplifiedQuestion[]>([]);
@@ -137,6 +150,9 @@ export default function QuizEditor() {
         title: t.common.success,
         description: isRTL ? 'تم حفظ الأسئلة بنجاح' : 'Questions saved successfully',
       });
+
+      // Activity logging
+      logUpdate('quiz', quizId, { questions_count: questions.length });
     } catch (error) {
       console.error('Error saving questions:', error);
       toast({
@@ -164,7 +180,7 @@ export default function QuizEditor() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <Button variant="ghost" onClick={() => navigate('/quizzes')}>
+          <Button variant="ghost" onClick={() => navigate(getBackDestination())}>
             {isRTL ? <ArrowLeft className="w-4 h-4 mr-2 rotate-180" /> : <ArrowLeft className="w-4 h-4 mr-2" />}
             {t.common.back}
           </Button>

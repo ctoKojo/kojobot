@@ -2476,6 +2476,7 @@ export type Database = {
         }
         Returns: number
       }
+      create_curriculum_quiz: { Args: { p_session_id: string }; Returns: Json }
       create_group_makeup_sessions: {
         Args: {
           p_group_id: string
@@ -2592,6 +2593,10 @@ export type Database = {
           p_notes?: string
           p_time: string
         }
+        Returns: Json
+      }
+      unassign_curriculum_quiz: {
+        Args: { p_expected_quiz_id: string; p_session_id: string }
         Returns: Json
       }
       update_curriculum_session: {

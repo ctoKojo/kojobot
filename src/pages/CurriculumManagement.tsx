@@ -88,20 +88,6 @@ export default function CurriculumManagement() {
     },
   });
 
-  const { data: allQuizzes = [] } = useQuery({
-    queryKey: ['quizzes-list'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('quizzes').select('id, title, title_ar, age_group_id, level_id').eq('is_active', true).order('title');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const filteredQuizzes = allQuizzes.filter(q =>
-    (!q.age_group_id || q.age_group_id === selectedAgeGroup) &&
-    (!q.level_id || q.level_id === selectedLevel)
-  );
-
   // Fetch sessions for selected age group + level
   const { data: sessions = [], isLoading: loadingSessions } = useQuery({
     queryKey: ['curriculum-sessions', selectedAgeGroup, selectedLevel, viewingVersion],
@@ -494,8 +480,6 @@ export default function CurriculumManagement() {
         <SessionEditDialog
           session={editSession}
           onClose={() => setEditSession(null)}
-          filteredQuizzes={filteredQuizzes}
-          allQuizzesCount={allQuizzes.length}
         />
       </div>
     </DashboardLayout>
