@@ -309,17 +309,25 @@ export function StudentDashboard() {
                   {stats.groupInfo.schedule_day} - {formatTime12Hour(stats.groupInfo.schedule_time, isRTL)}
                 </p>
                 {/* Session Link for Online Groups */}
-                {stats.groupInfo.attendance_mode === 'online' && stats.groupInfo.session_link && (
-                  <Button 
-                    size="sm" 
-                    className="mt-2 w-full bg-green-600 hover:bg-green-700"
-                    asChild
-                  >
-                    <a href={stats.groupInfo.session_link} target="_blank" rel="noopener noreferrer">
+                {stats.groupInfo.attendance_mode === 'online' && (
+                  <div className="flex flex-col gap-1 mt-2">
+                    <Button 
+                      size="sm" 
+                      className="w-full bg-green-600 hover:bg-green-700"
+                      onClick={() => navigate(`/live-session/${stats.groupInfo!.id}`)}
+                    >
                       <Video className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                       {isRTL ? 'انضم للجلسة' : 'Join Session'}
-                    </a>
-                  </Button>
+                    </Button>
+                    {stats.groupInfo.session_link && (
+                      <Button size="sm" variant="outline" className="w-full" asChild>
+                        <a href={stats.groupInfo.session_link} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          {isRTL ? 'رابط خارجي' : 'External Link'}
+                        </a>
+                      </Button>
+                    )}
+                  </div>
                 )}
               </>
             ) : (
