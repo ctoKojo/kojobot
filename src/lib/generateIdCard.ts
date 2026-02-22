@@ -124,6 +124,7 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
 
   const W = 1600;
   const H = 900;
+  const SCALE = 3; // 3x resolution for ultra-high quality
   const PAD = 80;
   const RADIUS = 36;
   const FONT = "'Inter', 'Segoe UI', system-ui, sans-serif";
@@ -131,9 +132,12 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   const HEADER_H = 140;
 
   const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = W * SCALE;
+  canvas.height = H * SCALE;
+  canvas.style.width = `${W}px`;
+  canvas.style.height = `${H}px`;
   const ctx = canvas.getContext("2d")!;
+  ctx.scale(SCALE, SCALE);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
