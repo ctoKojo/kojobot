@@ -165,6 +165,104 @@ export const generateSalarySlip = (
   });
 };
 
+// Student ID Card
+interface StudentCardData {
+  name: string;
+  nameAr?: string;
+  email: string;
+  phone?: string;
+  avatarUrl?: string;
+  ageGroup?: string;
+  level?: string;
+  subscriptionType?: string;
+  attendanceMode?: string;
+  group?: string;
+}
+
+interface StudentCardOptions {
+  password?: string;
+  isRTL: boolean;
+}
+
+const isEmptyField = (val?: string) => !val || val === '-';
+
+const buildCardHTML = (student: StudentCardData, options: StudentCardOptions) => {
+  const dir = options.isRTL ? 'rtl' : 'ltr';
+  const initial = (student.nameAr || student.name || '?').charAt(0);
+
+  const avatarHTML = student.avatarUrl
+    ? `<div style="position:relative;width:50px;height:50px;border-radius:50%;border:2px solid white;overflow:hidden;flex-shrink:0;">
+        <img src="${student.avatarUrl}" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+        <div style="display:none;position:absolute;inset:0;background:linear-gradient(135deg,#61BAE2,#6455F0);align-items:center;justify-content:center;color:white;font-size:20px;font-weight:bold;">${initial}</div>
+      </div>`
+    : `<div style="width:50px;height:50px;border-radius:50%;border:2px solid white;background:linear-gradient(135deg,#61BAE2,#6455F0);display:flex;align-items:center;justify-content:center;color:white;font-size:20px;font-weight:bold;flex-shrink:0;">${initial}</div>`;
+
+  const nameDisplay = options.isRTL
+    ? `<div style="font-size:14px;font-weight:bold;color:white;">${student.nameAr || student.name}</div>${student.nameAr && student.name !== student.nameAr ? `<div style="font-size:10px;color:rgba(255,255,255,0.85);">${student.name}</div>` : ''}`
+    : `<div style="font-size:14px;font-weight:bold;color:white;">${student.name}</div>${!isEmptyField(student.nameAr) ? `<div style="font-size:10px;color:rgba(255,255,255,0.85);">${student.nameAr}</div>` : ''}`;
+
+  const field = (label: string, value?: string) =>
+    isEmptyField(value) ? '' : `<div style="display:flex;gap:4px;font-size:10px;"><span style="color:#666;white-space:nowrap;">${label}:</span><span style="color:#1a1a2e;">${value}</span></div>`;
+
+  const labels = options.isRTL
+    ? { email: 'الإيميل', phone: 'الهاتف', age: 'الفئة العمرية', level: 'المستوى', sub: 'الاشتراك', mode: 'الحضور', group: 'المجموعة', pw: 'كلمة المرور' }
+    : { email: 'Email', phone: 'Phone', age: 'Age Group', level: 'Level', sub: 'Subscription', mode: 'Attendance', group: 'Group', pw: 'Password' };
+
+  const fields = [
+    field(labels.email, student.email),
+    field(labels.phone, student.phone),
+    field(labels.age, student.ageGroup),
+    field(labels.level, student.level),
+    field(labels.sub, student.subscriptionType),
+    field(labels.mode, student.attendanceMode),
+    field(labels.group, student.group),
+  ].filter(Boolean).join('');
+
+  const passwordHTML = !isEmptyField(options.password)
+    ? `<div style="margin-top:3px;padding:3px 6px;background:#fff3cd;border-radius:4px;font-size:10px;display:flex;gap:4px;"><span style="color:#856404;white-space:nowrap;">${labels.pw}:</span><span style="color:#856404;font-weight:bold;font-family:monospace;" dir="ltr">${options.password}</span></div>`
+    : '';
+
+  return `
+    <div class="student-card" style="direction:${dir};">
+      <div style="background:linear-gradient(135deg,#61BAE2,#6455F0);color:white;padding:4mm;display:flex;align-items:center;gap:10px;">
+        ${avatarHTML}
+        <div style="flex:1;min-width:0;">
+          ${nameDisplay}
+        </div>
+        <div style="font-size:8px;opacity:0.7;writing-mode:vertical-rl;text-orientation:mixed;">Kojobot</div>
+      </div>
+      <div style="padding:3mm 4mm;display:flex;flex-direction:column;gap:2px;">
+        ${fields}
+        ${passwordHTML}
+      </div>
+    </div>`;
+};
+
+export const generateStudentCard = (student: StudentCardData, options: StudentCardOptions) => {
+  const isRTL = options.isRTL;
+  const studentLabel = isRTL ? 'نسخة الطالب' : 'Student Copy';
+  const archiveLabel = isRTL ? 'نسخة الأرشيف' : 'Archive Copy';
+
+  const content = `
+    <style>
+      .student-card { width: 86mm; height: 54mm; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; margin: 5mm auto; }
+      .copy-label { text-align: center; font-size: 10px; color: #999; margin: 8mm auto 1mm; }
+      body { line-height: 1.6; }
+      @media print { .student-card { box-shadow: none; } body { margin: 5mm; } }
+    </style>
+    <div class="copy-label">${studentLabel}</div>
+    ${buildCardHTML(student, options)}
+    <div class="copy-label">${archiveLabel}</div>
+    ${buildCardHTML(student, options)}
+  `;
+
+  openPrintWindow(content, {
+    title: isRTL ? 'بطاقة هوية الطالب' : 'Student ID Card',
+    subtitle: student.name,
+    direction: isRTL ? 'rtl' : 'ltr',
+  });
+};
+
 // Generic Data Export as printable report
 export const generateDataReport = (
   title: string,
