@@ -186,9 +186,9 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
     ctx.textBaseline = "top";
   }
 
-  // content bounds (extended down to fill removed footer line area)
+  // content bounds expanded down (no extra glass strip)
   const contentTop = 170;
-  const contentBottom = H - 80;
+  const contentBottom = H - 40;
 
   // main glass panel
   const panelX = PAD;
@@ -284,7 +284,7 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   drawInputPill(ctx, textX, textY, fieldW, fieldH, fieldR, "Password", password, FONT);
   textY += fieldH + 22;
 
-  // pills row with old emojis restored
+  // pills row with old emojis
   const pills: string[] = [];
   if (subscriptionType) {
     const subMap: Record<string, string> = {
@@ -336,15 +336,12 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
     }
   }
 
-  // bottom glass strip instead of the thin footer line
-  const bottomStripH = 90;
-  drawGlassPanel(ctx, PAD, H - PAD - bottomStripH, W - PAD * 2, bottomStripH, 28);
-
+  // footer text inside the same main glass panel
   ctx.fillStyle = "rgba(255,255,255,0.42)";
   ctx.font = `700 20px ${FONT}`;
   ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("KOJOBOT ACADEMY", W / 2, H - PAD - bottomStripH / 2 + 4);
+  ctx.textBaseline = "bottom";
+  ctx.fillText("KOJOBOT ACADEMY", W / 2, panelY + panelH - 22);
 
   ctx.restore();
 
