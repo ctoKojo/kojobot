@@ -1,99 +1,73 @@
 
 
-# ضبط توقيت إسناد الكويز -- الكويز يبدأ لحظة الإسناد فقط أثناء السيشن
+# Live Session Status Indicator -- حالة السيشن لحظياً
 
-## المشكلة الحالية
-- `start_time` بتاع الكويز بيتحط = وقت بداية السيشن النظري (من الجدول)، مش لحظة الإسناد الفعلية
-- المدرب يقدر يسند الكويز في أي وقت -- قبل السيشن أو بعدها
-- ده بيأثر على عدالة العد التنازلي
-
-## سياسة انتهاء الكويز
-الطالب ياخد مدة الكويز كاملة حتى لو السيشن خلصت. يعني `due_date = start_time + duration` دائما.
+## الهدف
+عرض حالة السيشن الحية في صفحة `SessionDetails`:
+- **لسه مبدأتش** (قبل وقت البداية)
+- **شغالة بقالها X دقيقة** (أثناء السيشن) -- بيتحدث كل دقيقة
+- **انتهت** (بعد انتهاء المدة)
 
 ---
 
 ## التغييرات
 
-### 1. إضافة `isSessionActiveCairo` في `src/lib/sessionTimeGuard.ts`
+### ملف واحد فقط: `src/pages/SessionDetails.tsx`
 
-دالة جديدة تستخدم نفس منطق `buildSessionEndParts` و `compareParts` الموجودين:
-- تبني start parts من `sessionDate` + `sessionTime`
-- تبني end parts من `sessionDate` + `sessionTime` + `durationMinutes`
-- تقارن Cairo now مع الاتنين
-- ترجع `true` لو: `now >= start` **و** `now < end`
-- ترجع `false` على أي input ناقص أو غلط (safe default)
+### 1. إضافة حساب الحالة الحية
 
-ده بيستخدم نفس الـ `getCairoNowParts()` و `compareParts()` و `buildSessionEndParts()` الموجودين بالفعل، فمحتاج بس دالة parse بسيطة لبداية السيشن + الدالة الجديدة.
+- استخدام `useState` + `useEffect` مع `setInterval` كل 60 ثانية لتحديث الحالة
+- الحالة بتتحسب باستخدام الدوال الموجودة بالفعل:
+  - `isSessionActiveCairo(session_date, session_time, duration_minutes)` -- شغالة؟
+  - `isSessionEndedCairo(session_date, session_time, duration_minutes)` -- خلصت؟
+  - لو الاتنين `false` -- لسه مبدأتش
+- حساب الدقايق المنقضية: الفرق بين Cairo now ووقت بداية السيشن (بالدقايق)
 
-### 2. تعديل `handleAssignCurriculumQuiz` في `src/pages/SessionDetails.tsx`
+### 2. تعديل منطقة الـ Badge الحالية (سطر 1172-1174)
 
-**إضافة guard في أول الدالة:**
+بدل الـ Badge الحالي اللي بيعرض `completed`/`scheduled` من الداتابيز، هيتضاف **بجانبه** badge حي:
+
+**الحالات الثلاثة:**
+
+| الحالة | اللون | النص (EN) | النص (AR) |
+|--------|-------|-----------|-----------|
+| لسه مبدأتش | رمادي/amber | Not Started Yet | لسه مبدأتش |
+| شغالة | أخضر نابض (animate-pulse) | Live - 25 min elapsed | شغالة - 25 دقيقة |
+| انتهت | رمادي | Session Ended | انتهت |
+
+- لو السيشن `completed` في الداتابيز، الـ badge الأصلي يفضل كما هو
+- الـ live badge يظهر بجانبه كمعلومة إضافية
+- حالة "شغالة" فيها دائرة خضرا صغيرة بـ `animate-pulse` عشان تبين إنها لايف
+
+### 3. مكان العرض
+
+داخل Session Info Card، بجانب الـ Badge الحالي (سطر 1162-1175):
 ```text
-if (!isSessionActiveCairo(session.session_date, session.session_time, group.duration_minutes)) {
-  toast: "لا يمكن إسناد الكويز إلا أثناء وقت السيشن"
-  return
-}
+[Completed Badge]  [Live: شغالة - 25 دقيقة]
 ```
-
-**تغيير حساب `start_time` و `due_date`:**
-- `start_time` = `new Date().toISOString()` (لحظة الإسناد الحقيقية)
-- `due_date` = `new Date(now + quiz.duration_minutes * 60000).toISOString()`
-- الطالب ياخد مدته كاملة دائما
-
-### 3. تعديل زرار الإسناد في UI (نفس الملف)
-
-الزرار الحالي (سطر 1289-1298) يبقى:
-- `disabled` لو السيشن مش active (باستخدام `isSessionActiveCairo`)
-- مع `Tooltip` يوضح السبب: "متاح أثناء وقت السيشن فقط" / "Available during session time only"
 
 ---
 
 ## التفاصيل التقنية
 
-### `isSessionActiveCairo` -- المنطق
-```text
-function isSessionActiveCairo(sessionDate, sessionTime, durationMinutes): boolean
-  1. Parse start parts من sessionDate + sessionTime
-  2. Build end parts (start + duration) عبر buildSessionEndParts الموجود
-  3. Get Cairo now parts
-  4. Return: compareParts(now, start) >= 0 AND compareParts(now, end) < 0
-```
+### حساب الدقايق المنقضية
+- يستخدم نفس `getCairoNowParts` الموجود في `sessionTimeGuard.ts` (محتاج export)
+- أو بديل أبسط: حساب الفرق بالدقايق عبر `Intl.DateTimeFormat` مباشرة في الـ component
+- الأبسط: parse session start كـ timestamp، طرح من `Date.now()`، قسمة على 60000
 
-### `handleAssignCurriculumQuiz` -- التغيير
-```text
-// قبل (حاليا سطر 539-540):
-const startDate = new Date(`${session.session_date}T${session.session_time.slice(0, 5)}`);
-const dueDate = new Date(startDate.getTime() + (quiz?.duration_minutes || 30) * 60 * 1000);
+### الـ interval
+- `useEffect` بـ `setInterval(60_000)` -- تحديث كل دقيقة
+- cleanup عند unmount
+- أول تشغيل فوري (بدون انتظار الدقيقة الأولى)
 
-// بعد:
-const now = new Date();
-const durationMs = (quiz?.duration_minutes || 30) * 60 * 1000;
-const dueDate = new Date(now.getTime() + durationMs);
-// ثم في insert:
-start_time: now.toISOString()
-due_date: dueDate.toISOString()
-```
-
-### الزرار -- التعديل
-```text
-// سطر 1289-1298: إضافة شرط disabled + Tooltip
-const isActive = isSessionActiveCairo(session.session_date, session.session_time, group?.duration_minutes);
-
-<Tooltip> wrapper لو !isActive
-<Button disabled={!isActive || assigningCurriculumQuiz} ...>
-```
-
----
-
-## الملفات المتأثرة
+### الملفات المتأثرة
 
 | الملف | التغيير |
 |-------|---------|
-| `src/lib/sessionTimeGuard.ts` | إضافة `isSessionActiveCairo()` + helper `buildSessionStartParts()` |
-| `src/pages/SessionDetails.tsx` | guard في `handleAssignCurriculumQuiz` + تغيير `start_time` + تعطيل الزرار |
+| `src/pages/SessionDetails.tsx` | إضافة live status state + interval + badge في Session Info Card |
 
-## ما لن يتغير
-- منطق `isSessionEndedCairo` (موجود ومستخدم لأغراض تانية)
-- تجربة الطالب في حل الكويز
-- مدة الكويز (الطالب ياخد مدته كاملة دائما)
+### ما لن يتغير
+- الـ Badge الأصلي (completed/scheduled) يفضل كما هو
+- لا تغيير في `sessionTimeGuard.ts` (الدوال الموجودة كافية)
+- لا تغيير في أي ملف تاني
 
