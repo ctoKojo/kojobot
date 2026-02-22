@@ -4,6 +4,9 @@ interface IdCardOptions {
   password: string;
   avatarUrl?: string | null;
   levelName?: string;
+  subscriptionType?: string;
+  attendanceMode?: string;
+  ageGroupName?: string;
 }
 
 function loadImage(src: string, crossOrigin?: string, timeoutMs = 5000): Promise<HTMLImageElement | null> {
@@ -36,7 +39,7 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 }
 
 export async function generateStudentIdCard(options: IdCardOptions): Promise<void> {
-  const { name, email, password, avatarUrl, levelName } = options;
+  const { name, email, password, avatarUrl, levelName, subscriptionType, attendanceMode, ageGroupName } = options;
   if (!password) return;
 
   const W = 1400;
@@ -145,32 +148,75 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
 
   // Student name
   ctx.fillStyle = '#ffffff';
-  ctx.font = `bold 52px ${FONT}`;
-  ctx.fillText(name, textX, 195, maxTextW);
+  ctx.font = `bold 46px ${FONT}`;
+  ctx.fillText(name, textX, 180, maxTextW);
 
   // Divider line under name
   ctx.strokeStyle = 'rgba(255,255,255,0.25)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(textX, 268);
-  ctx.lineTo(textX + Math.min(maxTextW, 500), 268);
+  ctx.moveTo(textX, 240);
+  ctx.lineTo(textX + Math.min(maxTextW, 500), 240);
   ctx.stroke();
 
-  // Email label + value
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = `24px ${FONT}`;
-  ctx.fillText('Email', textX, 295);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `30px ${FONT}`;
-  ctx.fillText(email, textX, 330, maxTextW);
+  // Info rows - compact layout
+  let rowY = 260;
+  const labelFont = `22px ${FONT}`;
+  const valueFont = `26px ${FONT}`;
+  const rowGap = 52;
 
-  // Password label + value
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = `24px ${FONT}`;
-  ctx.fillText('Password', textX, 390);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold 32px ${FONT}`;
-  ctx.fillText(password, textX, 425, maxTextW);
+  const drawField = (label: string, value: string) => {
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = labelFont;
+    ctx.fillText(label, textX, rowY);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = valueFont;
+    ctx.fillText(value, textX, rowY + 24, maxTextW);
+    rowY += rowGap;
+  };
+
+  drawField('Email', email);
+  drawField('Password', password);
+
+  // ── Info pills row (subscription type, attendance mode, age group) ──
+  const pills: string[] = [];
+  if (subscriptionType) {
+    const subMap: Record<string, string> = {
+      kojo_squad: 'Kojo Squad',
+      kojo_core: 'Kojo Core',
+      kojo_x: 'Kojo X',
+    };
+    pills.push(subMap[subscriptionType] || subscriptionType);
+  }
+  if (attendanceMode) {
+    pills.push(attendanceMode === 'online' ? '🌐 Online' : '🏫 Offline');
+  }
+  if (ageGroupName) {
+    pills.push(ageGroupName);
+  }
+
+  if (pills.length > 0) {
+    const pillY = rowY + 10;
+    const pillH = 38;
+    const pillGap = 14;
+    let pillX = textX;
+    ctx.font = `bold 20px ${FONT}`;
+
+    for (const label of pills) {
+      const tw = ctx.measureText(label).width;
+      const pw = tw + 32;
+      roundRect(ctx, pillX, pillY, pw, pillH, pillH / 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, pillX + pw / 2, pillY + pillH / 2);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      pillX += pw + pillGap;
+    }
+  }
 
   // ── Footer ──
   ctx.textAlign = 'center';
@@ -179,7 +225,6 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   ctx.font = `20px ${FONT}`;
   ctx.fillText('Kojobot Academy', W / 2, H - PAD + 10);
 
-  // Footer line
   ctx.strokeStyle = 'rgba(255,255,255,0.1)';
   ctx.lineWidth = 1;
   ctx.beginPath();

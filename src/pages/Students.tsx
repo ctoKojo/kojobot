@@ -158,7 +158,7 @@ export default function StudentsPage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   // Credentials dialog state
-  const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string; name: string; avatarUrl?: string | null; levelName?: string }>({ open: false, email: '', password: '', name: '' });
+  const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string; name: string; avatarUrl?: string | null; levelName?: string; subscriptionType?: string; attendanceMode?: string; ageGroupName?: string }>({ open: false, email: '', password: '', name: '' });
 
   // Validation results computed from form data
   const validationErrors = useMemo(() => {
@@ -411,6 +411,8 @@ export default function StudentsPage() {
         }
 
         const levelName = levels.find(l => l.id === formData.level_id)?.name;
+        const ageGroup = ageGroups.find(a => a.id === formData.age_group_id);
+        const ageGroupName = ageGroup?.name;
 
         // Show credentials dialog
         setCredentialsDialog({
@@ -420,6 +422,9 @@ export default function StudentsPage() {
           name: formData.full_name,
           avatarUrl: createdAvatarUrl,
           levelName,
+          subscriptionType: formData.subscription_type || undefined,
+          attendanceMode: formData.attendance_mode,
+          ageGroupName,
         });
       }
 
@@ -1303,7 +1308,7 @@ export default function StudentsPage() {
       <CredentialsDialog
         open={credentialsDialog.open}
         onClose={() => {
-          setCredentialsDialog({ open: false, email: '', password: '', name: '', avatarUrl: null, levelName: undefined });
+          setCredentialsDialog({ open: false, email: '', password: '', name: '', avatarUrl: null, levelName: undefined, subscriptionType: undefined, attendanceMode: undefined, ageGroupName: undefined });
           setIsDialogOpen(false);
           setEditingStudent(null);
           resetForm();
@@ -1314,6 +1319,9 @@ export default function StudentsPage() {
         userName={credentialsDialog.name}
         avatarUrl={credentialsDialog.avatarUrl}
         levelName={credentialsDialog.levelName}
+        subscriptionType={credentialsDialog.subscriptionType}
+        attendanceMode={credentialsDialog.attendanceMode}
+        ageGroupName={credentialsDialog.ageGroupName}
       />
     </DashboardLayout>
   );
