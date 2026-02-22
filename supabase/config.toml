@@ -14,6 +14,3 @@ verify_jwt = false
 
 [functions.send-push]
 verify_jwt = false
-
-[functions.finalize-online-attendance]
-verify_jwt = false

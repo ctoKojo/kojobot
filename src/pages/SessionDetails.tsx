@@ -1146,21 +1146,14 @@ export default function SessionDetails() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                {isOnline && (
-                  <>
-                    <Button variant="outline" size="sm" onClick={() => window.open(`/live-session/${group?.id}`, '_blank')} className="flex items-center gap-2">
+                {isOnline && group?.session_link && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={group.session_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                       <Video className="h-4 w-4" />
-                      {isRTL ? 'انضم للسيشن' : 'Join Session'}
-                    </Button>
-                    {group?.session_link && (
-                      <Button variant="ghost" size="sm" asChild>
-                        <a href={group.session_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                          <ExternalLink className="h-3 w-3" />
-                          {isRTL ? 'رابط خارجي' : 'External'}
-                        </a>
-                      </Button>
-                    )}
-                  </>
+                      {isRTL ? 'رابط السيشن' : 'Join Session'}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </Button>
                 )}
                 <Badge className={session.status === 'completed' ? 'bg-green-500' : 'bg-blue-500'}>
                   {session.status === 'completed' ? (isRTL ? 'مكتمل' : 'Completed') : (isRTL ? 'مجدول' : 'Scheduled')}
@@ -1185,21 +1178,14 @@ export default function SessionDetails() {
                 <UserCheck className="h-4 w-4" />
                 {isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
               </Button>
-              {isOnline && (
-                <>
-                  <Button variant="outline" onClick={() => window.open(`/live-session/${group?.id}`, '_blank')} className="flex items-center gap-2">
+              {isOnline && group?.session_link && (
+                <Button variant="outline" asChild>
+                  <a href={group.session_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                     <Video className="h-4 w-4" />
                     {isRTL ? 'انضم للسيشن' : 'Join Session'}
-                  </Button>
-                  {group?.session_link && (
-                    <Button variant="ghost" size="sm" asChild>
-                      <a href={group.session_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                        <ExternalLink className="h-3 w-3" />
-                        {isRTL ? 'رابط خارجي' : 'External'}
-                      </a>
-                    </Button>
-                  )}
-                </>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </Button>
               )}
             </CardContent>
           </Card>
