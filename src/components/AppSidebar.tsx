@@ -26,6 +26,7 @@ import {
   MessageSquare,
   TrendingUp,
   Briefcase,
+  Shield,
   GraduationCap as AcademicCap,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -122,6 +123,7 @@ export function AppSidebar() {
               { title: isRTL ? 'أداء المدربين' : 'Instructor Performance', url: '/instructor-performance', icon: TrendingUp, roles: ['admin'] },
               { title: isRTL ? 'إنذارات المدربين' : 'Instructor Warnings', url: '/instructor-warnings', icon: AlertTriangle, roles: ['admin'] },
               { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['admin'] },
+              { title: isRTL ? 'إدارة الأدوار' : 'User Roles', url: '/user-roles', icon: Shield, roles: ['admin'] },
               { title: t.nav.activityLog, url: '/activity-log', icon: Activity, roles: ['admin'] },
             ],
           },
