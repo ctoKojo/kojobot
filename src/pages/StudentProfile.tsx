@@ -291,6 +291,9 @@ export default function StudentProfile() {
                   userEmail={data?.profile?.email || ''}
                   avatarUrl={data?.profile?.avatar_url}
                   levelName={data?.profile?.levels?.name}
+                  subscriptionType={data?.profile?.subscription_type}
+                  attendanceMode={data?.profile?.attendance_mode}
+                  ageGroupName={data?.profile?.age_groups?.name}
                 />
               )}
               <Button

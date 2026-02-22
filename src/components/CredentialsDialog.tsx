@@ -20,9 +20,12 @@ interface CredentialsDialogProps {
   userName: string;
   avatarUrl?: string | null;
   levelName?: string;
+  subscriptionType?: string;
+  attendanceMode?: string;
+  ageGroupName?: string;
 }
 
-export function CredentialsDialog({ open, onClose, email, password, userName, avatarUrl, levelName }: CredentialsDialogProps) {
+export function CredentialsDialog({ open, onClose, email, password, userName, avatarUrl, levelName, subscriptionType, attendanceMode, ageGroupName }: CredentialsDialogProps) {
   const { t, isRTL } = useLanguage();
   const [copiedField, setCopiedField] = useState<'email' | 'password' | 'both' | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -31,7 +34,7 @@ export function CredentialsDialog({ open, onClose, email, password, userName, av
     if (!password || downloading) return;
     setDownloading(true);
     try {
-      await generateStudentIdCard({ name: userName, email, password, avatarUrl, levelName });
+      await generateStudentIdCard({ name: userName, email, password, avatarUrl, levelName, subscriptionType, attendanceMode, ageGroupName });
     } finally {
       setDownloading(false);
     }
