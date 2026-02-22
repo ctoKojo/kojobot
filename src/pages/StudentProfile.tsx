@@ -289,6 +289,8 @@ export default function StudentProfile() {
                   userId={studentId!}
                   userName={data?.profile?.full_name || ''}
                   userEmail={data?.profile?.email || ''}
+                  avatarUrl={data?.profile?.avatar_url}
+                  levelName={data?.profile?.levels?.name}
                 />
               )}
               <Button

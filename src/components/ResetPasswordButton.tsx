@@ -13,9 +13,11 @@ interface ResetPasswordButtonProps {
   userId: string;
   userName: string;
   userEmail: string;
+  avatarUrl?: string | null;
+  levelName?: string;
 }
 
-export function ResetPasswordButton({ userId, userName, userEmail }: ResetPasswordButtonProps) {
+export function ResetPasswordButton({ userId, userName, userEmail, avatarUrl, levelName }: ResetPasswordButtonProps) {
   const { isRTL } = useLanguage();
   const { toast } = useToast();
   const [showDialog, setShowDialog] = useState(false);
@@ -125,6 +127,8 @@ export function ResetPasswordButton({ userId, userName, userEmail }: ResetPasswo
         email={userEmail}
         password={savedPassword}
         userName={userName}
+        avatarUrl={avatarUrl}
+        levelName={levelName}
       />
     </>
   );
