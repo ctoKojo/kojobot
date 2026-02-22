@@ -41,61 +41,79 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
 
   const W = 1400;
   const H = 800;
-  const PAD = 40;
-  const RADIUS = 24;
-  const FONT_STACK = "'Inter', 'Segoe UI', system-ui, sans-serif";
+  const PAD = 60;
+  const RADIUS = 28;
+  const FONT = "'Inter', 'Segoe UI', system-ui, sans-serif";
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d')!;
 
-  // Clip to rounded rect
+  // Clip rounded card
   ctx.save();
   roundRect(ctx, 0, 0, W, H, RADIUS);
   ctx.clip();
 
-  // Background gradient
-  const grad = ctx.createLinearGradient(0, 0, W, 0);
+  // Background gradient (left-to-right, blue to purple)
+  const grad = ctx.createLinearGradient(0, 0, W, H * 0.4);
   grad.addColorStop(0, '#7BB8D4');
   grad.addColorStop(1, '#8B7BE8');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
-  // Load logo (same-origin, no CORS needed)
+  // Subtle decorative circles
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  ctx.beginPath();
+  ctx.arc(W * 0.85, H * 0.7, 250, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(W * 0.15, H * 0.9, 180, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── Logo top-left ──
   const logo = await loadImage('/kojobot-logo-white.png');
   if (logo) {
-    const logoH = 50;
+    const logoH = 55;
     const logoW = (logo.naturalWidth / logo.naturalHeight) * logoH;
     ctx.drawImage(logo, PAD, PAD, logoW, logoH);
   }
 
-  // Level badge top-right
+  // ── Level badge top-right (pill shape) ──
   if (levelName) {
-    const badgeR = 40;
-    const badgeCX = W - PAD - badgeR;
-    const badgeCY = PAD + badgeR;
-    ctx.beginPath();
-    ctx.arc(badgeCX, badgeCY, badgeR, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = `bold 22px ${FONT}`;
+    const textWidth = ctx.measureText(levelName).width;
+    const pillW = textWidth + 48;
+    const pillH = 44;
+    const pillX = W - PAD - pillW;
+    const pillY = PAD + 5;
+
+    roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
     ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 18px ${FONT_STACK}`;
+    ctx.font = `bold 22px ${FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(levelName, badgeCX, badgeCY, badgeR * 1.6);
+    ctx.fillText(levelName, pillX + pillW / 2, pillY + pillH / 2);
   }
 
-  // Avatar area
-  const avatarSize = 200;
-  const avatarX = PAD + 40;
-  const avatarY = 180;
-  const avatarR = 24;
+  // ── Avatar ──
+  const avatarSize = 220;
+  const avatarX = PAD + 20;
+  const avatarY = 170;
+  const avatarR = 28;
 
   const avatarImg = avatarUrl ? await loadImage(avatarUrl, 'anonymous') : null;
+
+  // Avatar shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.1)';
+  roundRect(ctx, avatarX + 4, avatarY + 6, avatarSize, avatarSize, avatarR);
+  ctx.fill();
 
   ctx.save();
   roundRect(ctx, avatarX, avatarY, avatarSize, avatarSize, avatarR);
@@ -104,45 +122,74 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   if (avatarImg) {
     ctx.drawImage(avatarImg, avatarX, avatarY, avatarSize, avatarSize);
   } else {
+    // Fallback: frosted glass + initial
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
-    // Draw initial
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 80px ${FONT_STACK}`;
+    ctx.font = `bold 90px ${FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const initial = name.trim().charAt(0).toUpperCase();
-    ctx.fillText(initial, avatarX + avatarSize / 2, avatarY + avatarSize / 2);
+    ctx.fillText(
+      name.trim().charAt(0).toUpperCase(),
+      avatarX + avatarSize / 2,
+      avatarY + avatarSize / 2,
+    );
   }
   ctx.restore();
 
-  // Text area - right of avatar
-  const textX = avatarX + avatarSize + 60;
+  // ── Text area (right of avatar) ──
+  const textX = avatarX + avatarSize + 70;
+  const maxTextW = W - textX - PAD;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
 
-  // Name
+  // Student name
   ctx.fillStyle = '#ffffff';
-  ctx.font = `bold 48px ${FONT_STACK}`;
-  ctx.fillText(name, textX, 220, W - textX - PAD);
+  ctx.font = `bold 52px ${FONT}`;
+  ctx.fillText(name, textX, 195, maxTextW);
 
-  // Email
-  ctx.font = `28px ${FONT_STACK}`;
-  ctx.fillStyle = 'rgba(255,255,255,0.9)';
-  ctx.fillText(`Email:  ${email}`, textX, 300, W - textX - PAD);
+  // Divider line under name
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(textX, 268);
+  ctx.lineTo(textX + Math.min(maxTextW, 500), 268);
+  ctx.stroke();
 
-  // Password
-  ctx.fillText(`Password:  ${password}`, textX, 360, W - textX - PAD);
+  // Email label + value
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = `24px ${FONT}`;
+  ctx.fillText('Email', textX, 295);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `30px ${FONT}`;
+  ctx.fillText(email, textX, 330, maxTextW);
 
-  // Footer
+  // Password label + value
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = `24px ${FONT}`;
+  ctx.fillText('Password', textX, 390);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold 32px ${FONT}`;
+  ctx.fillText(password, textX, 425, maxTextW);
+
+  // ── Footer ──
   ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.font = `20px ${FONT_STACK}`;
-  ctx.fillText('Kojobot Academy', W / 2, H - PAD - 20);
+  ctx.textBaseline = 'bottom';
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = `20px ${FONT}`;
+  ctx.fillText('Kojobot Academy', W / 2, H - PAD + 10);
 
-  ctx.restore(); // restore the main clip
+  // Footer line
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD, H - PAD - 20);
+  ctx.lineTo(W - PAD, H - PAD - 20);
+  ctx.stroke();
 
-  // Download
+  ctx.restore();
+
+  // ── Download ──
   return new Promise<void>((resolve) => {
     canvas.toBlob((blob) => {
       if (!blob) { resolve(); return; }
