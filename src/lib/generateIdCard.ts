@@ -7,6 +7,8 @@ interface IdCardOptions {
   subscriptionType?: string;
   attendanceMode?: string;
   ageGroupName?: string;
+  // optional future
+  qrText?: string;
 }
 
 function loadImage(src: string, crossOrigin?: string, timeoutMs = 5000): Promise<HTMLImageElement | null> {
@@ -51,69 +53,117 @@ function circlePath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: nu
   ctx.closePath();
 }
 
-function drawGlassPanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+function softShadow(ctx: CanvasRenderingContext2D, blur = 30, alpha = 0.22, y = 14) {
+  ctx.shadowBlur = blur;
+  ctx.shadowColor = `rgba(0,0,0,${alpha})`;
+  ctx.shadowOffsetY = y;
+}
+
+function drawPill(ctx: CanvasRenderingContext2D, x: number, y: number, h: number, text: string, font: string) {
   ctx.save();
+  ctx.font = `800 ${Math.floor(h * 0.42)}px ${font}`;
+  const tw = ctx.measureText(text).width;
+  const w = tw + h * 1.1;
 
-  // depth shadow
-  ctx.shadowBlur = 24;
-  ctx.shadowColor = "rgba(0,0,0,0.18)";
-  ctx.shadowOffsetY = 10;
-
-  roundRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  roundRect(ctx, x, y, w, h, h / 2);
+  const g = ctx.createLinearGradient(x, y, x + w, y + h);
+  g.addColorStop(0, "rgba(255,255,255,0.20)");
+  g.addColorStop(1, "rgba(255,255,255,0.08)");
+  ctx.fillStyle = g;
   ctx.fill();
 
-  // reset shadow
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
-
-  // border
   ctx.strokeStyle = "rgba(255,255,255,0.22)";
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // inner highlight
-  const g = ctx.createLinearGradient(x, y, x, y + h);
-  g.addColorStop(0, "rgba(255,255,255,0.22)");
-  g.addColorStop(0.35, "rgba(255,255,255,0.08)");
-  g.addColorStop(1, "rgba(255,255,255,0.04)");
-  ctx.fillStyle = g;
-  roundRect(ctx, x + 2, y + 2, w - 4, h - 4, r - 2);
-  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, x + w / 2, y + h / 2);
 
   ctx.restore();
+  return w;
 }
 
-function drawInputPill(
+function drawFieldCard(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   w: number,
   h: number,
-  r: number,
   label: string,
   value: string,
-  fontFamily: string,
+  font: string,
 ) {
   ctx.save();
 
-  roundRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  // card
+  softShadow(ctx, 26, 0.14, 10);
+  roundRect(ctx, x, y, w, h, 26);
+  ctx.fillStyle = "#ffffff";
   ctx.fill();
 
-  ctx.strokeStyle = "rgba(255,255,255,0.18)";
-  ctx.lineWidth = 1.5;
+  // subtle border
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.strokeStyle = "rgba(15, 23, 42, 0.08)";
+  ctx.lineWidth = 2;
   ctx.stroke();
 
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.font = `600 20px ${fontFamily}`;
+  // label
+  ctx.fillStyle = "rgba(15, 23, 42, 0.55)";
+  ctx.font = `700 20px ${font}`;
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
-  ctx.fillText(label, x + 22, y + 14, w - 44);
+  ctx.fillText(label, x + 26, y + 18, w - 52);
 
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `700 28px ${fontFamily}`;
-  ctx.fillText(value, x + 22, y + 42, w - 44);
+  // value
+  ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
+  ctx.font = `900 30px ${font}`;
+  ctx.fillText(value, x + 26, y + 44, w - 52);
+
+  ctx.restore();
+}
+
+function drawDiagonalPattern(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.strokeStyle = "rgba(255,255,255,0.55)";
+  ctx.lineWidth = 2;
+
+  const step = 36;
+  for (let i = -h; i < w + h; i += step) {
+    ctx.beginPath();
+    ctx.moveTo(x + i, y + h);
+    ctx.lineTo(x + i + h, y);
+    ctx.stroke();
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawQrPlaceholder(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+  ctx.save();
+
+  roundRect(ctx, x, y, size, size, 18);
+  ctx.fillStyle = "rgba(15, 23, 42, 0.04)";
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(15, 23, 42, 0.10)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // simple qr like blocks
+  ctx.fillStyle = "rgba(15, 23, 42, 0.18)";
+  const cell = size / 11;
+  for (let r = 0; r < 11; r++) {
+    for (let c = 0; c < 11; c++) {
+      const on = (r * 7 + c * 13) % 5 === 0 || (r === c && r % 2 === 0);
+      if (!on) continue;
+      ctx.fillRect(x + c * cell + cell * 0.18, y + r * cell + cell * 0.18, cell * 0.64, cell * 0.64);
+    }
+  }
 
   ctx.restore();
 }
@@ -122,20 +172,20 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   const { name, email, password, avatarUrl, levelName, subscriptionType, attendanceMode, ageGroupName } = options;
   if (!password) return;
 
-  const W = 1600;
-  const H = 900;
-  const SCALE = 3; // 3x resolution for ultra-high quality
-  const PAD = 80;
-  const RADIUS = 36;
+  // modern ratio portrait
+  const W = 1080;
+  const H = 1350;
+  const SCALE = 3;
+  const PAD = 64;
+  const R = 48;
   const FONT = "'Inter', 'Segoe UI', system-ui, sans-serif";
-
-  const HEADER_H = 140;
 
   const canvas = document.createElement("canvas");
   canvas.width = W * SCALE;
   canvas.height = H * SCALE;
   canvas.style.width = `${W}px`;
   canvas.style.height = `${H}px`;
+
   const ctx = canvas.getContext("2d")!;
   ctx.scale(SCALE, SCALE);
   ctx.imageSmoothingEnabled = true;
@@ -143,99 +193,81 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
 
   // clip card
   ctx.save();
-  roundRect(ctx, 0, 0, W, H, RADIUS);
+  roundRect(ctx, 0, 0, W, H, R);
   ctx.clip();
 
-  // background gradient using your theme
-  const grad = ctx.createLinearGradient(0, 0, W, H);
-  grad.addColorStop(0, "#61C9E0");
-  grad.addColorStop(0.6, "#6F7CF2");
-  grad.addColorStop(1, "#6455F0");
-  ctx.fillStyle = grad;
+  // base bg
+  ctx.fillStyle = "#0B1220";
   ctx.fillRect(0, 0, W, H);
 
-  // soft light blobs
-  const blob1 = ctx.createRadialGradient(W * 0.18, H * 0.25, 20, W * 0.18, H * 0.25, 520);
-  blob1.addColorStop(0, "rgba(255,255,255,0.22)");
-  blob1.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = blob1;
-  ctx.fillRect(0, 0, W, H);
+  // split layout
+  const leftW = Math.floor(W * 0.42);
+  const rightW = W - leftW;
 
-  const blob2 = ctx.createRadialGradient(W * 0.85, H * 0.72, 20, W * 0.85, H * 0.72, 560);
-  blob2.addColorStop(0, "rgba(0,0,0,0.14)");
-  blob2.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = blob2;
-  ctx.fillRect(0, 0, W, H);
+  // left gradient panel
+  const lg = ctx.createLinearGradient(0, 0, leftW, H);
+  lg.addColorStop(0, "#61C9E0");
+  lg.addColorStop(0.55, "#6F7CF2");
+  lg.addColorStop(1, "#6455F0");
+  ctx.fillStyle = lg;
+  ctx.fillRect(0, 0, leftW, H);
 
-  // header positions
-  const headerY = PAD;
-  const headerCenterY = headerY + HEADER_H / 2;
+  // pattern + glow
+  drawDiagonalPattern(ctx, 0, 0, leftW, H);
 
-  // logo
+  const glow = ctx.createRadialGradient(leftW * 0.1, H * 0.2, 30, leftW * 0.1, H * 0.2, 520);
+  glow.addColorStop(0, "rgba(255,255,255,0.28)");
+  glow.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, leftW, H);
+
+  // right clean panel
+  ctx.save();
+  softShadow(ctx, 40, 0.28, 18);
+  roundRect(ctx, leftW - 24, 42, rightW + 24, H - 84, 44);
+  ctx.fillStyle = "rgba(255,255,255,0.94)";
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+  ctx.strokeStyle = "rgba(15, 23, 42, 0.06)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  // logo on left top
   const logo = await loadImage("/kojobot-logo-white.png");
   if (logo) {
     const logoH = 70;
     const logoW = (logo.naturalWidth / logo.naturalHeight) * logoH;
-    ctx.globalAlpha = 0.95;
-    ctx.drawImage(logo, PAD, headerCenterY - logoH / 2, logoW, logoH);
+    ctx.globalAlpha = 0.98;
+    ctx.drawImage(logo, PAD, PAD - 6, logoW, logoH);
     ctx.globalAlpha = 1;
-  }
-
-  // level badge
-  if (levelName) {
-    ctx.font = `800 24px ${FONT}`;
-    const tw = ctx.measureText(levelName).width;
-    const pillW = tw + 62;
-    const pillH = 54;
-    const pillX = W - PAD - pillW;
-    const pillY = headerCenterY - pillH / 2;
-
-    const bg = ctx.createLinearGradient(pillX, pillY, pillX + pillW, pillY + pillH);
-    bg.addColorStop(0, "rgba(255,255,255,0.22)");
-    bg.addColorStop(1, "rgba(255,255,255,0.10)");
-    roundRect(ctx, pillX, pillY, pillW, pillH, pillH / 2);
-    ctx.fillStyle = bg;
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.28)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(levelName, pillX + pillW / 2, pillY + pillH / 2);
+  } else {
+    ctx.fillStyle = "rgba(255,255,255,0.90)";
+    ctx.font = `900 34px ${FONT}`;
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
+    ctx.fillText("KOJOBOT", PAD, PAD);
   }
 
-  // content bounds (panel under header)
-  const contentTop = PAD + HEADER_H;
-  const contentBottom = H - PAD;
-
-  // main glass panel
-  const panelX = PAD;
-  const panelY = contentTop;
-  const panelW = W - PAD * 2;
-  const panelH = contentBottom - contentTop;
-  drawGlassPanel(ctx, panelX, panelY, panelW, panelH, 40);
-
-  // avatar
-  const avatarSize = 260;
-  const avatarX = panelX + 56;
-  const avatarY = panelY + (panelH - avatarSize) / 2;
+  // avatar big on left
+  const avatarSize = 420;
+  const avatarX = Math.floor((leftW - avatarSize) / 2);
+  const avatarY = 220;
   const avatarCx = avatarX + avatarSize / 2;
   const avatarCy = avatarY + avatarSize / 2;
   const avatarR = avatarSize / 2;
 
   const avatarImg = avatarUrl ? await loadImage(avatarUrl, "anonymous") : null;
 
-  // avatar glow
+  // avatar shadow ring
   ctx.save();
-  ctx.globalAlpha = 0.7;
-  ctx.shadowBlur = 28;
-  ctx.shadowColor = "rgba(255,255,255,0.25)";
-  circlePath(ctx, avatarCx, avatarCy, avatarR + 6);
-  ctx.fillStyle = "rgba(255,255,255,0.06)";
+  ctx.globalAlpha = 0.9;
+  ctx.shadowBlur = 40;
+  ctx.shadowColor = "rgba(0,0,0,0.22)";
+  ctx.shadowOffsetY = 16;
+  circlePath(ctx, avatarCx, avatarCy, avatarR + 10);
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
   ctx.fill();
   ctx.restore();
 
@@ -243,142 +275,157 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   ctx.save();
   circlePath(ctx, avatarCx, avatarCy, avatarR);
   ctx.clip();
-
   if (avatarImg) {
     ctx.drawImage(avatarImg, avatarX, avatarY, avatarSize, avatarSize);
   } else {
     const ag = ctx.createLinearGradient(avatarX, avatarY, avatarX + avatarSize, avatarY + avatarSize);
-    ag.addColorStop(0, "rgba(255,255,255,0.20)");
-    ag.addColorStop(1, "rgba(255,255,255,0.06)");
+    ag.addColorStop(0, "rgba(255,255,255,0.22)");
+    ag.addColorStop(1, "rgba(255,255,255,0.08)");
     ctx.fillStyle = ag;
     ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
 
     ctx.fillStyle = "#ffffff";
-    ctx.font = `900 120px ${FONT}`;
+    ctx.font = `1000 160px ${FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(name.trim().charAt(0).toUpperCase(), avatarCx, avatarCy);
   }
   ctx.restore();
 
-  // avatar ring
+  // avatar outer ring
   ctx.save();
   circlePath(ctx, avatarCx, avatarCy, avatarR + 2);
-  ctx.strokeStyle = "rgba(255,255,255,0.65)";
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(255,255,255,0.70)";
+  ctx.lineWidth = 5;
   ctx.stroke();
   ctx.restore();
 
-  // text area
-  const textX = avatarX + avatarSize + 90;
-  const maxTextW = panelX + panelW - textX - 56;
+  // left bottom meta pills
+  const meta: string[] = [];
+  if (attendanceMode) meta.push(attendanceMode === "online" ? "🌐 Online" : "🏫 Offline");
+  if (ageGroupName) meta.push(ageGroupName);
 
-  // pills list prepared BEFORE centering calculations
-  const pills: string[] = [];
-  if (subscriptionType) {
-    const subMap: Record<string, string> = {
-      kojo_squad: "Kojo Squad",
-      kojo_core: "Kojo Core",
-      kojo_x: "Kojo X",
-    };
-    pills.push(subMap[subscriptionType] || subscriptionType);
+  const subMap: Record<string, string> = {
+    kojo_squad: "Kojo Squad",
+    kojo_core: "Kojo Core",
+    kojo_x: "Kojo X",
+  };
+  if (subscriptionType) meta.push(subMap[subscriptionType] || subscriptionType);
+
+  let pillY = avatarY + avatarSize + 56;
+  const pillH = 58;
+  for (const t of meta.slice(0, 4)) {
+    const pillX = Math.floor((leftW - 10) / 2) - 260;
+    const w = drawPill(ctx, Math.max(24, pillX), pillY, pillH, t, FONT);
+    // center by shifting
+    const cx = Math.floor((leftW - w) / 2);
+    // redraw centered
+    ctx.clearRect(0, pillY - 2, leftW, pillH + 4);
+    drawPill(ctx, cx, pillY, pillH, t, FONT);
+    pillY += pillH + 16;
   }
-  if (attendanceMode) {
-    pills.push(attendanceMode === "online" ? "🌐 Online" : "🏫 Offline");
+
+  // level badge top right on left panel
+  if (levelName) {
+    ctx.save();
+    ctx.font = `900 26px ${FONT}`;
+    const tw = ctx.measureText(levelName).width;
+    const bw = tw + 64;
+    const bh = 58;
+    const bx = leftW - bw - 26;
+    const by = 26;
+
+    roundRect(ctx, bx, by, bw, bh, bh / 2);
+    ctx.fillStyle = "rgba(0,0,0,0.16)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.26)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(levelName, bx + bw / 2, by + bh / 2);
+    ctx.restore();
   }
-  if (ageGroupName) {
-    pills.push(ageGroupName);
-  }
 
-  // center text block vertically inside the glass panel
-  const NAME_H = 82;
-  const DIVIDER_H = 28;
-  const FIELD_H = 92;
-  const GAP1 = 20;
-  const GAP2 = 22;
-  const PILLS_H = pills.length > 0 ? 46 : 0;
-  const FOOTER_H = 28;
+  // right side content
+  const rightX = leftW + 26;
+  const rightTop = 110;
+  const rightInnerW = rightW - 52;
 
-  const textBlockH = NAME_H + DIVIDER_H + FIELD_H + GAP1 + FIELD_H + GAP2 + PILLS_H + FOOTER_H;
-
-  const textStartY = panelY + (panelH - textBlockH) / 2;
-
-  // name
-  let textY = textStartY;
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `900 60px ${FONT}`;
+  // name and headline
+  ctx.save();
+  ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
+  ctx.font = `1000 62px ${FONT}`;
   ctx.textAlign = "left";
   ctx.textBaseline = "top";
-  ctx.fillText(name, textX, textY, maxTextW);
-  textY += 82;
+  ctx.fillText(name, rightX, rightTop, rightInnerW);
 
-  // divider under name
-  const lineW = Math.min(maxTextW, 640);
-  const lineG = ctx.createLinearGradient(textX, textY, textX + lineW, textY);
-  lineG.addColorStop(0, "rgba(255,255,255,0.55)");
-  lineG.addColorStop(1, "rgba(255,255,255,0.05)");
-  ctx.strokeStyle = lineG;
+  ctx.fillStyle = "rgba(15, 23, 42, 0.52)";
+  ctx.font = `800 22px ${FONT}`;
+  ctx.fillText("Student Access Card", rightX, rightTop + 74, rightInnerW);
+  ctx.restore();
+
+  // divider
+  ctx.save();
+  ctx.strokeStyle = "rgba(15, 23, 42, 0.08)";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(textX, textY);
-  ctx.lineTo(textX + lineW, textY);
+  ctx.moveTo(rightX, rightTop + 120);
+  ctx.lineTo(rightX + rightInnerW, rightTop + 120);
   ctx.stroke();
-  textY += 28;
+  ctx.restore();
 
-  // modern fields
-  const fieldW = Math.min(maxTextW, 720);
-  const fieldH = 92;
-  const fieldR = 24;
+  // fields
+  const cardW = rightInnerW;
+  const cardH = 116;
+  const gap = 22;
 
-  drawInputPill(ctx, textX, textY, fieldW, fieldH, fieldR, "Email", email, FONT);
-  textY += fieldH + 20;
+  const f1Y = rightTop + 150;
+  drawFieldCard(ctx, rightX, f1Y, cardW, cardH, "Email", email, FONT);
 
-  drawInputPill(ctx, textX, textY, fieldW, fieldH, fieldR, "Password", password, FONT);
-  textY += fieldH + 22;
+  const f2Y = f1Y + cardH + gap;
+  drawFieldCard(ctx, rightX, f2Y, cardW, cardH, "Password", password, FONT);
 
-  // pills row
-  if (pills.length > 0) {
-    const pillY = textY;
-    const pillH = 46;
-    const pillGap = 14;
-    let pillX = textX;
+  // extras row
+  const extraY = f2Y + cardH + 34;
 
-    ctx.font = `800 22px ${FONT}`;
-    for (const label of pills) {
-      const tw = ctx.measureText(label).width;
-      const pw = tw + 44;
+  // mini cards
+  const miniGap = 18;
+  const miniW = Math.floor((cardW - miniGap) / 2);
+  const miniH = 146;
 
-      if (pillX + pw > textX + fieldW) break;
+  const leftMiniX = rightX;
+  const rightMiniX = rightX + miniW + miniGap;
 
-      const pg = ctx.createLinearGradient(pillX, pillY, pillX + pw, pillY + pillH);
-      pg.addColorStop(0, "rgba(255,255,255,0.18)");
-      pg.addColorStop(1, "rgba(255,255,255,0.10)");
+  const attText = attendanceMode ? (attendanceMode === "online" ? "Online" : "Offline") : "Mode";
+  const subText = subscriptionType ? subMap[subscriptionType] || subscriptionType : "Subscription";
 
-      roundRect(ctx, pillX, pillY, pw, pillH, pillH / 2);
-      ctx.fillStyle = pg;
-      ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.18)";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+  drawFieldCard(ctx, leftMiniX, extraY, miniW, miniH, "Attendance", attText, FONT);
+  drawFieldCard(ctx, rightMiniX, extraY, miniW, miniH, "Plan", subText, FONT);
 
-      ctx.fillStyle = "#ffffff";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(label, pillX + pw / 2, pillY + pillH / 2);
+  // QR placeholder
+  const qrSize = 190;
+  const qrX = rightX;
+  const qrY = H - 84 - qrSize - 64;
 
-      ctx.textAlign = "left";
-      ctx.textBaseline = "top";
-      pillX += pw + pillGap;
-    }
-  }
+  drawQrPlaceholder(ctx, qrX, qrY, qrSize);
 
-  // footer inside the glass panel
-  ctx.fillStyle = "rgba(255,255,255,0.42)";
-  ctx.font = `700 20px ${FONT}`;
-  ctx.textAlign = "center";
+  // footer text
+  ctx.save();
+  ctx.fillStyle = "rgba(15, 23, 42, 0.45)";
+  ctx.font = `900 22px ${FONT}`;
+  ctx.textAlign = "left";
   ctx.textBaseline = "bottom";
-  ctx.fillText("KOJOBOT ACADEMY", W / 2, panelY + panelH - 24);
+  ctx.fillText("KOJOBOT ACADEMY", qrX + qrSize + 26, qrY + qrSize - 8);
 
+  ctx.fillStyle = "rgba(15, 23, 42, 0.40)";
+  ctx.font = `700 18px ${FONT}`;
+  ctx.fillText("Scan for quick verification", qrX + qrSize + 26, qrY + qrSize - 36);
+  ctx.restore();
+
+  // release clip
   ctx.restore();
 
   // download
