@@ -1168,6 +1168,67 @@ export type Database = {
         }
         Relationships: []
       }
+      online_attendance_logs: {
+        Row: {
+          attendance_status_initial: string
+          created_at: string
+          first_joined_at: string
+          group_id: string
+          heartbeat_count: number
+          id: string
+          last_seen_at: string
+          session_id: string
+          status: string
+          student_id: string
+        }
+        Insert: {
+          attendance_status_initial: string
+          created_at?: string
+          first_joined_at?: string
+          group_id: string
+          heartbeat_count?: number
+          id?: string
+          last_seen_at?: string
+          session_id: string
+          status?: string
+          student_id: string
+        }
+        Update: {
+          attendance_status_initial?: string
+          created_at?: string
+          first_joined_at?: string
+          group_id?: string
+          heartbeat_count?: number
+          id?: string
+          last_seen_at?: string
+          session_id?: string
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "online_attendance_logs_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_attendance_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "online_attendance_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
