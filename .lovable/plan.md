@@ -1,75 +1,127 @@
 
-
-# تنفيذ بطاقة الطالب بـ Canvas (PNG)
+# منع اكتمال السيشن قبل معادها - Cairo Parts-Based Guard
 
 ---
 
-## الملفات (4 تعديلات)
+## الملخص
+
+انشاء دالة `isSessionEndedCairo` في ملف جديد تعتمد على Intl.DateTimeFormat parts بالكامل، بدون new Date في قرار الاكتمال وبدون luxon في الفرونت. تطبيقها على 3 اماكن + تحديث callsite واحد.
+
+---
+
+## الملفات (5 ملفات: 1 جديد + 4 تعديل)
 
 | # | الملف | التغيير |
 |---|---|---|
-| 1 | `src/lib/pdfReports.ts` | حذف `buildCardHTML` (سطر 189-239) واستبدالها بـ `loadImage` + `drawCardToCanvas` + تحويل `generateStudentCard` لـ `async` |
-| 2 | `src/components/CredentialsDialog.tsx` | `onClick` يبقى `async` مع `await` |
-| 3 | `src/pages/Students.tsx` | `onClick` في الموبايل (سطر 1117) والديسكتوب (سطر 1269) يبقى `async` مع `await` |
-| 4 | `src/pages/StudentProfile.tsx` | `onClick` (سطر 298) يبقى `async` مع `await` |
+| 1 | `src/lib/sessionTimeGuard.ts` | **جديد** - الدالة المشتركة وكل الـ helpers |
+| 2 | `src/pages/Sessions.tsx` | guard في `handleMarkComplete` (سطر 269) |
+| 3 | `src/components/group/EditSessionDialog.tsx` | prop `durationMinutes` + disable completed + useEffect safety + رسالة توضيح |
+| 4 | `src/pages/SessionDetails.tsx` | استبدال `new Date()` (سطر 224-226) بـ guard في auto-check |
+| 5 | `src/pages/GroupDetails.tsx` | تمرير `durationMinutes` للـ EditSessionDialog (سطر 790) |
 
 ---
 
-## التفاصيل
+## التفاصيل التقنية
 
-### 1. `src/lib/pdfReports.ts`
+### 1. `src/lib/sessionTimeGuard.ts` (ملف جديد)
 
-**يتحذف**: `buildCardHTML` (سطر 189-239)
+**الهيكل:**
 
-**يتضاف**:
+- **`cairoFormatter`** - module-scope `Intl.DateTimeFormat` مع `Africa/Cairo` و `hourCycle: h23` (يتنشئ مرة واحدة)
+- **`getCairoNowParts()`** - `formatToParts(new Date())` مع تجاهل `literal` parts، يرجع `{ year, month, day, hour, minute, second }` كأرقام
+- **`isLeapYear(year)`** - `(year % 4 === 0 && year % 100 !== 0) || year % 400 === 0`
+- **`daysInMonth(year, month)`** - يدعم 28/29/30/31 مع السنة الكبيسة
+- **`addDaysToDate(year, month, day, daysToAdd)`** - loop يدعم اي عدد ايام (مش بس 0 او 1)، يعبر حدود الشهور والسنين
+- **`buildSessionEndParts(sessionDate, sessionTime, durationMinutes)`**:
+  - parse sessionDate: `split("-")` -> 3 ارقام، لو اي واحد NaN يرجع `null`
+  - parse sessionTime: `split(":")` -> لو `HH:MM` يكمل `:00`، لو فيه NaN يرجع `null`
+  - durationMinutes: لو `null` او `undefined` او `<= 0` يستخدم `120`
+  - carry: `minute += duration` ثم `second->minute->hour->daysToAdd` ثم `addDaysToDate`
+  - يرجع `{ year, month, day, hour, minute, second }`
+- **`compareParts(a, b)`** - مقارنة بالارقام مش strings: year ثم month ثم day ثم hour ثم minute ثم second. اول فرق يحدد النتيجة
+- **`isSessionEndedCairo(sessionDate, sessionTime, durationMinutes?)`** - الدالة العامة:
+  - guard: لو `!sessionDate` او `!sessionTime` يرجع `false`
+  - لو `buildSessionEndParts` رجع `null` يرجع `false`
+  - `return compareParts(getCairoNowParts(), end) >= 0`
 
-- `loadImage(src, timeout=2000)`: ترجع `Promise<HTMLImageElement | null>` - تحمل الصورة بـ `crossOrigin="anonymous"` مع timeout
-- `drawCardToCanvas(student, options)`: ترجع `Promise<string>` (data URL PNG):
-  - Canvas بمقاس **1016 x 638** بكسل
-  - Clip rounded corners (radius 24px) على كل الرسم
-  - خلفية بيضاء
-  - Header gradient (اعلى 35%) من `#61BAE2` لـ `#6455F0`
-  - Avatar دائري 100px مع `ctx.arc` clip:
-    - لو الصورة نجحت: `drawImage`
-    - لو فشلت/timeout: دائرة gradient + حرف اول بخط ابيض 44px
-  - الاسم: سطر او سطرين (عربي+انجليزي) بخط ابيض 32px/22px
-  - "Kojobot" عمودي بـ `ctx.rotate(-PI/2)` على الطرف (يتعكس في RTL)
-  - الحقول: كل حقل غير فاضي يترسم بـ label رمادي + value اسود
-  - الباسورد: مستطيل `#fff3cd` بـ rounded corners + label وقيمة بلون `#856404`
-  - RTL/LTR: `textAlign` و `x` positions يدوي
+**مثال عبور نهاية الشهر:**
+سيشن `2025-01-31` الساعة `23:30` ومدته `90` دقيقة:
+- `minute = 30 + 90 = 120` -> carry: `hour += 2, minute = 0` -> `hour = 25` -> carry: `daysToAdd = 1, hour = 1`
+- `addDaysToDate(2025, 1, 31, 1)` -> `day = 32 > 31` -> `day = 1, month = 2`
+- النتيجة: `2025-02-01 01:00:00`
 
-- `generateStudentCard` يبقى `async`:
-  - يستدعي `await drawCardToCanvas(...)` مرة واحدة
-  - يفتح `openPrintWindow` بـ `<img>` مكرر مرتين (طالب + ارشيف)
-  - الصورة بمقاس `width: 86mm; height: 54mm`
-  - `@media print { body { margin: 5mm; } }`
+### 2. `src/pages/Sessions.tsx`
 
-### 2. `src/components/CredentialsDialog.tsx` (سطر 111)
+في `handleMarkComplete` (سطر 269) - قبل اي mutation:
 
-- `onClick` يبقى `async () => { if (!password) return; await generateStudentCard(...) }`
+```text
+import { isSessionEndedCairo } from '@/lib/sessionTimeGuard';
 
-### 3. `src/pages/Students.tsx` (سطر 1117 و 1269)
+// سطر 270 (قبل الـ supabase update):
+if (!isSessionEndedCairo(session.session_date, session.session_time, session.duration_minutes)) {
+  toast({
+    variant: 'destructive',
+    title: isRTL ? 'السيشن لسه ما خلصتش' : "Session hasn't ended yet",
+    description: isRTL
+      ? 'لا يمكن اكتمال السيشن قبل انتهاء وقتها بتوقيت القاهرة'
+      : 'Cannot complete session before its end time (Cairo)',
+  });
+  return;
+}
+```
 
-- الموبايل والديسكتوب: `onClick` يبقى `async` مع `await generateStudentCard(...)`
+الـ interface `Session` (سطر 54) فيها `duration_minutes: number` جاهزة.
 
-### 4. `src/pages/StudentProfile.tsx` (سطر 298)
+### 3. `src/components/group/EditSessionDialog.tsx`
 
-- `onClick` يبقى `async` مع `await generateStudentCard(...)`
+- اضافة `durationMinutes?: number` في interface (سطر 38)
+- import `isSessionEndedCairo` و `useEffect`
+- حساب reactive يعتمد على قيم الفورم الحالية:
+  ```text
+  const isEnded = isSessionEndedCairo(sessionDate, sessionTime, durationMinutes);
+  ```
+- `useEffect`: لو `status === 'completed' && !isEnded` يرجع `setStatus('scheduled')`
+- خيار completed (سطر 175): `disabled={!isEnded}`
+- رسالة توضيح تحت الـ Select لو `!isEnded`:
+  - عربي: "لا يمكن اكتمال السيشن قبل انتهاء وقتها بتوقيت القاهرة"
+  - انجليزي: "Cannot mark as completed before session end time (Cairo)"
+
+### 4. `src/pages/SessionDetails.tsx` (سطر 221-256)
+
+استبدال كامل لمنطق المقارنة:
+
+```text
+// بدل سطر 224-226 (new Date parsing):
+if (!isSessionEndedCairo(session.session_date, session.session_time, session.duration_minutes)) {
+  return; // مش منتهية - لا تعمل اي auto-complete
+}
+// باقي اللوجيك (makeup RPC سطر 230-253 او direct update) بدون تغيير
+```
+
+### 5. `src/pages/GroupDetails.tsx` (سطر 790)
+
+الـ sessions في GroupDetails بتيجي من `data.sessions` (type `any[]`) وبتتحمل من `sessions` table اللي فيها `duration_minutes`. التمرير:
+
+```text
+<EditSessionDialog
+  session={session}
+  onUpdated={fetchGroupData}
+  durationMinutes={session.duration_minutes}
+/>
+```
 
 ---
 
 ## معايير القبول
 
-- PNG بمقاس 1016x638px (300 DPI)
-- الطباعة ثابتة (صورة مش HTML)
-- مقاس 86mm x 54mm في الطباعة
-- نسختين (طالب + ارشيف)
-- Avatar fallback تلقائي لو CORS/timeout
-- حقول فاضية ما تظهرش
-- الباسورد فقط لو موجود
-- RTL/LTR يدوي بـ textAlign و x
-- "Kojobot" عمودي بـ rotate
-- Shadow لا يظهر في print
-- هوامش print 5mm
-- `openPrintWindow` الحالي مستخدم
-
+- Mark Complete لا يعمل قبل نهاية السيشن بتوقيت القاهرة (toast تحذيري)
+- completed في EditSessionDialog يكون disabled قبل نهاية السيشن مع توضيح السبب
+- تغيير التاريخ/الوقت في الفورم يعيد حساب الحالة تلقائيا (reactive)
+- useEffect يرجع status لـ scheduled لو completed اتختار وبعدين الوقت اتغير
+- SessionDetails auto-check يعتمد على Cairo مش UTC ولا توقيت الجهاز
+- يدعم HH:MM و HH:MM:SS بدون crash
+- لا يوجد new Date() في اي قرار اكتمال
+- المنع صحيح في نهاية الشهر ونهاية السنة والسنة الكبيسة وسيشنات بتعدي منتصف الليل
+- بيانات فاسدة (NaN, null, سالب) ترجع false بدل اكتمال بالغلط
+- getCairoNowParts بيتجاهل literal parts فعلا
+- compareParts بيقارن ارقام مش strings

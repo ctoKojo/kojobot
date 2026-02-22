@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Award, AlertTriangle, BookOpen, 
-  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw, DollarSign, Printer, CreditCard
+  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw, DollarSign, Printer
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,8 +22,7 @@ import { IssueWarningDialog } from '@/components/student/IssueWarningDialog';
 import { CreateSubscriptionDialog } from '@/components/student/CreateSubscriptionDialog';
 import { EditSubscriptionDialog } from '@/components/student/EditSubscriptionDialog';
 import { ResetPasswordButton } from '@/components/ResetPasswordButton';
-import { generateStudentReport, generateStudentCard } from '@/lib/pdfReports';
-import { getSubscriptionTypeLabel, getAttendanceModeLabel } from '@/lib/constants';
+import { generateStudentReport } from '@/lib/pdfReports';
 
 interface StudentData {
   profile: any;
@@ -291,29 +290,6 @@ export default function StudentProfile() {
                   userName={data?.profile?.full_name || ''}
                   userEmail={data?.profile?.email || ''}
                 />
-              )}
-              {(role === 'admin' || role === 'reception') && (
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    if (role !== 'admin' && role !== 'reception') return;
-                    await generateStudentCard({
-                      name: data?.profile?.full_name || '',
-                      nameAr: data?.profile?.full_name_ar || undefined,
-                      email: data?.profile?.email || '',
-                      phone: data?.profile?.phone || undefined,
-                      avatarUrl: data?.profile?.avatar_url || undefined,
-                      ageGroup: data?.profile?.age_groups ? (isRTL ? data.profile.age_groups.name_ar : data.profile.age_groups.name) : undefined,
-                      level: data?.profile?.levels ? (isRTL ? data.profile.levels.name_ar : data.profile.levels.name) : undefined,
-                      subscriptionType: data?.subscription?.subscription_type ? getSubscriptionTypeLabel(data.subscription.subscription_type, isRTL) : undefined,
-                      attendanceMode: data?.subscription?.attendance_mode ? getAttendanceModeLabel(data.subscription.attendance_mode, isRTL) : undefined,
-                      group: data?.group ? (isRTL ? data.group.name_ar : data.group.name) : undefined,
-                    }, { isRTL });
-                  }}
-                >
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  {isRTL ? 'بطاقة الطالب' : 'Student Card'}
-                </Button>
               )}
               <Button
                 variant="outline"

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, KeyRound, CreditCard } from 'lucide-react';
+import { Copy, Check, KeyRound } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { generateStudentCard } from '@/lib/pdfReports';
 
 interface CredentialsDialogProps {
   open: boolean;
@@ -105,18 +104,6 @@ export function CredentialsDialog({ open, onClose, email, password, userName }: 
         </div>
 
         <DialogFooter className={isRTL ? 'flex-row-reverse gap-2' : 'gap-2'}>
-          {password && (
-            <Button
-              variant="outline"
-            onClick={async () => {
-                if (!password) return;
-                await generateStudentCard({ name: userName, email }, { password, isRTL });
-              }}
-            >
-              <CreditCard className="h-4 w-4 me-2" />
-              {isRTL ? 'طباعة البطاقة' : 'Print Card'}
-            </Button>
-          )}
           <Button variant="outline" onClick={handleCopyAll}>
             {copiedField === 'both' ? (
               <Check className="h-4 w-4 me-2 text-green-500" />
