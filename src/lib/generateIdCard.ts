@@ -1,75 +1,3 @@
-interface IdCardOptions {
-  name: string;
-  email: string;
-  password: string;
-  avatarUrl?: string | null;
-  levelName?: string;
-  subscriptionType?: string;
-  attendanceMode?: string;
-  ageGroupName?: string;
-}
-
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
-function circlePath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.closePath();
-}
-
-function drawGlassPanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  roundRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = "rgba(255,255,255,0.10)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.18)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-}
-
-function drawInputPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, label: string, value: string, font: string) {
-  const g = ctx.createLinearGradient(x, y, x + w, y + h);
-  g.addColorStop(0, "rgba(255,255,255,0.12)");
-  g.addColorStop(1, "rgba(255,255,255,0.04)");
-  roundRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = g;
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.15)";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.font = `700 14px ${font}`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.fillText(label, x + 20, y + 14);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `600 20px ${font}`;
-  ctx.fillText(value, x + 20, y + 40, w - 40);
-}
-
-function loadImage(src: string, crossOrigin?: string): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    if (crossOrigin) img.crossOrigin = crossOrigin;
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-}
-
 export async function generateStudentBusinessCard(options: IdCardOptions): Promise<void> {
   const { name, email, password, avatarUrl, levelName, subscriptionType, attendanceMode, ageGroupName } = options;
   if (!password) return;
@@ -216,7 +144,30 @@ export async function generateStudentBusinessCard(options: IdCardOptions): Promi
   const nameY = contentY + 44;
   ctx.fillText(name, textX, nameY, textW);
 
-  // subscription details badges under name
+  // divider directly after name
+  const divY = nameY + 64;
+  const lineW = Math.min(textW, 520);
+  const lineG = ctx.createLinearGradient(textX, divY, textX + lineW, divY);
+  lineG.addColorStop(0, "rgba(255,255,255,0.55)");
+  lineG.addColorStop(1, "rgba(255,255,255,0.08)");
+  ctx.strokeStyle = lineG;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(textX, divY);
+  ctx.lineTo(textX + lineW, divY);
+  ctx.stroke();
+
+  const fieldW = Math.min(textW, 560);
+  const fieldH = 78;
+  const fieldR = 22;
+
+  const f1Y = divY + 18;
+  drawInputPill(ctx, textX, f1Y, fieldW, fieldH, fieldR, "Email", email, FONT);
+
+  const f2Y = f1Y + fieldH + 14;
+  drawInputPill(ctx, textX, f2Y, fieldW, fieldH, fieldR, "Password", password, FONT);
+
+  // subscription badges under password
   const subMap: Record<string, string> = {
     kojo_squad: "Kojo Squad",
     kojo_core: "Kojo Core",
@@ -228,13 +179,15 @@ export async function generateStudentBusinessCard(options: IdCardOptions): Promi
   if (attendanceMode) badges.push(attendanceMode === "online" ? "Online" : "Offline");
   if (ageGroupName) badges.push(ageGroupName);
 
-  const badgesY = nameY + 56;
+  const badgesY = f2Y + fieldH + 14;
+
   if (badges.length) {
     const pillH = 34;
     const gap = 12;
     let x = textX;
 
     ctx.font = `800 16px ${FONT}`;
+
     for (const t of badges) {
       const tw = ctx.measureText(t).width;
       const w = tw + 34;
@@ -263,29 +216,6 @@ export async function generateStudentBusinessCard(options: IdCardOptions): Promi
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
   }
-
-  // divider
-  const divY = nameY + 104;
-  const lineW = Math.min(textW, 520);
-  const lineG = ctx.createLinearGradient(textX, divY, textX + lineW, divY);
-  lineG.addColorStop(0, "rgba(255,255,255,0.55)");
-  lineG.addColorStop(1, "rgba(255,255,255,0.08)");
-  ctx.strokeStyle = lineG;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(textX, divY);
-  ctx.lineTo(textX + lineW, divY);
-  ctx.stroke();
-
-  const fieldW = Math.min(textW, 560);
-  const fieldH = 78;
-  const fieldR = 22;
-
-  const f1Y = divY + 18;
-  drawInputPill(ctx, textX, f1Y, fieldW, fieldH, fieldR, "Email", email, FONT);
-
-  const f2Y = f1Y + fieldH + 14;
-  drawInputPill(ctx, textX, f2Y, fieldW, fieldH, fieldR, "Password", password, FONT);
 
   ctx.fillStyle = "rgba(255,255,255,0.40)";
   ctx.font = `800 16px ${FONT}`;
