@@ -295,9 +295,9 @@ export default function StudentProfile() {
               {(role === 'admin' || role === 'reception') && (
                 <Button
                   variant="outline"
-                  onClick={() => {
+                  onClick={async () => {
                     if (role !== 'admin' && role !== 'reception') return;
-                    generateStudentCard({
+                    await generateStudentCard({
                       name: data?.profile?.full_name || '',
                       nameAr: data?.profile?.full_name_ar || undefined,
                       email: data?.profile?.email || '',

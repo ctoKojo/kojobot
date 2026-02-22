@@ -186,74 +186,213 @@ interface StudentCardOptions {
 
 const isEmptyField = (val?: string) => !val || val === '-';
 
-const buildCardHTML = (student: StudentCardData, options: StudentCardOptions) => {
-  const dir = options.isRTL ? 'rtl' : 'ltr';
-  const initial = (student.nameAr || student.name || '?').charAt(0);
+const loadImage = (src: string, timeout = 2000): Promise<HTMLImageElement | null> =>
+  new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    const timer = setTimeout(() => { img.onload = null; img.onerror = null; resolve(null); }, timeout);
+    img.onload = () => { clearTimeout(timer); resolve(img); };
+    img.onerror = () => { clearTimeout(timer); resolve(null); };
+    img.src = src;
+  });
 
-  const avatarHTML = student.avatarUrl
-    ? `<div style="position:relative;width:50px;height:50px;border-radius:50%;border:2px solid white;overflow:hidden;flex-shrink:0;">
-        <img src="${student.avatarUrl}" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
-        <div style="display:none;position:absolute;inset:0;background:linear-gradient(135deg,#61BAE2,#6455F0);align-items:center;justify-content:center;color:white;font-size:20px;font-weight:bold;">${initial}</div>
-      </div>`
-    : `<div style="width:50px;height:50px;border-radius:50%;border:2px solid white;background:linear-gradient(135deg,#61BAE2,#6455F0);display:flex;align-items:center;justify-content:center;color:white;font-size:20px;font-weight:bold;flex-shrink:0;">${initial}</div>`;
+const drawCardToCanvas = async (student: StudentCardData, options: StudentCardOptions): Promise<string> => {
+  const W = 1016, H = 638, R = 24;
+  const isRTL = options.isRTL;
+  const headerH = Math.round(H * 0.35); // ~223px
+  const font = "'Segoe UI', Tahoma, sans-serif";
+  const marginX = 40;
 
-  const nameDisplay = options.isRTL
-    ? `<div style="font-size:14px;font-weight:bold;color:white;">${student.nameAr || student.name}</div>${student.nameAr && student.name !== student.nameAr ? `<div style="font-size:10px;color:rgba(255,255,255,0.85);">${student.name}</div>` : ''}`
-    : `<div style="font-size:14px;font-weight:bold;color:white;">${student.name}</div>${!isEmptyField(student.nameAr) ? `<div style="font-size:10px;color:rgba(255,255,255,0.85);">${student.nameAr}</div>` : ''}`;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d')!;
 
-  const field = (label: string, value?: string) =>
-    isEmptyField(value) ? '' : `<div style="display:flex;gap:4px;font-size:10px;"><span style="color:#666;white-space:nowrap;">${label}:</span><span style="color:#1a1a2e;">${value}</span></div>`;
+  // Clip rounded rect for entire card
+  ctx.beginPath();
+  ctx.roundRect(0, 0, W, H, R);
+  ctx.clip();
 
-  const labels = options.isRTL
+  // White background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  // Header gradient
+  const grad = ctx.createLinearGradient(0, 0, W, 0);
+  grad.addColorStop(0, '#61BAE2');
+  grad.addColorStop(1, '#6455F0');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, headerH);
+
+  // --- Avatar ---
+  const avatarSize = 100;
+  const avatarX = isRTL ? W - marginX - avatarSize : marginX;
+  const avatarY = (headerH - avatarSize) / 2;
+  const avatarCX = avatarX + avatarSize / 2;
+  const avatarCY = avatarY + avatarSize / 2;
+  const avatarR = avatarSize / 2;
+
+  let avatarImg: HTMLImageElement | null = null;
+  if (student.avatarUrl) {
+    avatarImg = await loadImage(student.avatarUrl);
+  }
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2);
+  ctx.clip();
+
+  if (avatarImg) {
+    ctx.drawImage(avatarImg, avatarX, avatarY, avatarSize, avatarSize);
+  } else {
+    const aGrad = ctx.createLinearGradient(avatarX, avatarY, avatarX + avatarSize, avatarY + avatarSize);
+    aGrad.addColorStop(0, '#61BAE2');
+    aGrad.addColorStop(1, '#6455F0');
+    ctx.fillStyle = aGrad;
+    ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
+    const initial = (student.nameAr || student.name || '?').charAt(0);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold 44px ${font}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(initial, avatarCX, avatarCY);
+  }
+  ctx.restore();
+
+  // White border around avatar
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // --- Name ---
+  const nameX = isRTL ? avatarX - 20 : avatarX + avatarSize + 20;
+  const nameAlign: CanvasTextAlign = isRTL ? 'right' : 'left';
+  ctx.fillStyle = '#ffffff';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = nameAlign;
+
+  const primaryName = isRTL ? (student.nameAr || student.name) : student.name;
+  const secondaryName = isRTL
+    ? (student.nameAr && student.name !== student.nameAr ? student.name : null)
+    : (!isEmptyField(student.nameAr) ? student.nameAr : null);
+
+  if (secondaryName) {
+    ctx.font = `bold 32px ${font}`;
+    ctx.fillText(primaryName, nameX, headerH / 2 - 16, W - avatarSize - marginX * 2 - 80);
+    ctx.font = `22px ${font}`;
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillText(secondaryName, nameX, headerH / 2 + 20, W - avatarSize - marginX * 2 - 80);
+  } else {
+    ctx.font = `bold 32px ${font}`;
+    ctx.fillText(primaryName, nameX, headerH / 2, W - avatarSize - marginX * 2 - 80);
+  }
+
+  // --- Kojobot vertical text ---
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = `12px ${font}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const kojoX = isRTL ? 18 : W - 18;
+  ctx.translate(kojoX, headerH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Kojobot', 0, 0);
+  ctx.restore();
+
+  // --- Fields section ---
+  const labels = isRTL
     ? { email: 'الإيميل', phone: 'الهاتف', age: 'الفئة العمرية', level: 'المستوى', sub: 'الاشتراك', mode: 'الحضور', group: 'المجموعة', pw: 'كلمة المرور' }
     : { email: 'Email', phone: 'Phone', age: 'Age Group', level: 'Level', sub: 'Subscription', mode: 'Attendance', group: 'Group', pw: 'Password' };
 
-  const fields = [
-    field(labels.email, student.email),
-    field(labels.phone, student.phone),
-    field(labels.age, student.ageGroup),
-    field(labels.level, student.level),
-    field(labels.sub, student.subscriptionType),
-    field(labels.mode, student.attendanceMode),
-    field(labels.group, student.group),
-  ].filter(Boolean).join('');
+  const fields: [string, string | undefined][] = [
+    [labels.email, student.email],
+    [labels.phone, student.phone],
+    [labels.age, student.ageGroup],
+    [labels.level, student.level],
+    [labels.sub, student.subscriptionType],
+    [labels.mode, student.attendanceMode],
+    [labels.group, student.group],
+  ];
 
-  const passwordHTML = !isEmptyField(options.password)
-    ? `<div style="margin-top:3px;padding:3px 6px;background:#fff3cd;border-radius:4px;font-size:10px;display:flex;gap:4px;"><span style="color:#856404;white-space:nowrap;">${labels.pw}:</span><span style="color:#856404;font-weight:bold;font-family:monospace;" dir="ltr">${options.password}</span></div>`
-    : '';
+  const fieldX = isRTL ? W - marginX : marginX;
+  const fieldAlign: CanvasTextAlign = isRTL ? 'right' : 'left';
+  let fieldY = headerH + 30;
+  const lineH = 34;
 
-  return `
-    <div class="student-card" style="direction:${dir};">
-      <div style="background:linear-gradient(135deg,#61BAE2,#6455F0);color:white;padding:4mm;display:flex;align-items:center;gap:10px;">
-        ${avatarHTML}
-        <div style="flex:1;min-width:0;">
-          ${nameDisplay}
-        </div>
-        <div style="font-size:8px;opacity:0.7;writing-mode:vertical-rl;text-orientation:mixed;">Kojobot</div>
-      </div>
-      <div style="padding:3mm 4mm;display:flex;flex-direction:column;gap:2px;">
-        ${fields}
-        ${passwordHTML}
-      </div>
-    </div>`;
+  for (const [label, value] of fields) {
+    if (isEmptyField(value)) continue;
+    ctx.textAlign = fieldAlign;
+    ctx.textBaseline = 'top';
+
+    // Label
+    ctx.fillStyle = '#666666';
+    ctx.font = `13px ${font}`;
+    const labelText = `${label}: `;
+    const labelWidth = ctx.measureText(labelText).width;
+
+    ctx.fillText(labelText, fieldX, fieldY);
+
+    // Value
+    ctx.fillStyle = '#1a1a2e';
+    ctx.font = `bold 14px ${font}`;
+    const valueX = isRTL ? fieldX - labelWidth : fieldX + labelWidth;
+    ctx.fillText(value!, valueX, fieldY, W - marginX * 2 - labelWidth);
+
+    fieldY += lineH;
+  }
+
+  // --- Password ---
+  if (!isEmptyField(options.password)) {
+    fieldY += 4;
+    const pwBoxH = 34;
+    const pwBoxW = W - marginX * 2;
+    const pwBoxX = marginX;
+
+    // Rounded rect background
+    ctx.fillStyle = '#fff3cd';
+    ctx.beginPath();
+    ctx.roundRect(pwBoxX, fieldY, pwBoxW, pwBoxH, 6);
+    ctx.fill();
+
+    const pwTextY = fieldY + pwBoxH / 2;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = fieldAlign;
+
+    const pwLabelText = `${labels.pw}: `;
+    ctx.fillStyle = '#856404';
+    ctx.font = `13px ${font}`;
+    const pwLabelW = ctx.measureText(pwLabelText).width;
+    const pwFieldX = isRTL ? W - marginX - 10 : marginX + 10;
+    ctx.fillText(pwLabelText, pwFieldX, pwTextY);
+
+    ctx.font = `bold 14px monospace`;
+    const pwValueX = isRTL ? pwFieldX - pwLabelW : pwFieldX + pwLabelW;
+    ctx.fillText(options.password!, pwValueX, pwTextY);
+  }
+
+  return canvas.toDataURL('image/png');
 };
 
-export const generateStudentCard = (student: StudentCardData, options: StudentCardOptions) => {
+export const generateStudentCard = async (student: StudentCardData, options: StudentCardOptions) => {
   const isRTL = options.isRTL;
   const studentLabel = isRTL ? 'نسخة الطالب' : 'Student Copy';
   const archiveLabel = isRTL ? 'نسخة الأرشيف' : 'Archive Copy';
 
+  const dataURL = await drawCardToCanvas(student, options);
+
   const content = `
     <style>
-      .student-card { width: 86mm; height: 54mm; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; margin: 5mm auto; }
+      .card-img { display: block; width: 86mm; height: 54mm; margin: 3mm auto; }
       .copy-label { text-align: center; font-size: 10px; color: #999; margin: 8mm auto 1mm; }
       body { line-height: 1.6; }
-      @media print { .student-card { box-shadow: none; } body { margin: 5mm; } }
+      @media print { body { margin: 5mm; } }
     </style>
     <div class="copy-label">${studentLabel}</div>
-    ${buildCardHTML(student, options)}
+    <img class="card-img" src="${dataURL}" />
     <div class="copy-label">${archiveLabel}</div>
-    ${buildCardHTML(student, options)}
+    <img class="card-img" src="${dataURL}" />
   `;
 
   openPrintWindow(content, {
