@@ -219,7 +219,7 @@ export default function SessionDetails() {
 
   // Live session status
   const [liveStatus, setLiveStatus] = useState<'not_started' | 'active' | 'ended'>('not_started');
-  const [elapsedMinutes, setElapsedMinutes] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
     if (!session) return;
@@ -228,11 +228,11 @@ export default function SessionDetails() {
       const ended = isSessionEndedCairo(session.session_date, session.session_time, session.duration_minutes);
       if (active) {
         setLiveStatus('active');
-        // Compute elapsed minutes from session start
+        // Compute elapsed seconds from session start
         const [h, m] = session.session_time.split(':').map(Number);
         const startTs = new Date(`${session.session_date}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`).getTime();
         const nowTs = Date.now();
-        setElapsedMinutes(Math.max(0, Math.floor((nowTs - startTs) / 60000)));
+        setElapsedSeconds(Math.max(0, Math.floor((nowTs - startTs) / 1000)));
       } else if (ended) {
         setLiveStatus('ended');
       } else {
@@ -240,7 +240,7 @@ export default function SessionDetails() {
       }
     };
     compute();
-    const id = setInterval(compute, 60_000);
+    const id = setInterval(compute, 1_000);
     return () => clearInterval(id);
   }, [session]);
 
@@ -1205,7 +1205,12 @@ export default function SessionDetails() {
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
                     </span>
-                    {isRTL ? `شغالة - ${elapsedMinutes} دقيقة` : `Live - ${elapsedMinutes} min elapsed`}
+                    {(() => {
+                      const mins = Math.floor(elapsedSeconds / 60);
+                      const secs = elapsedSeconds % 60;
+                      const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                      return isRTL ? `شغالة - ${timeStr}` : `Live - ${timeStr}`;
+                    })()}
                   </Badge>
                 )}
                 {liveStatus === 'not_started' && session.status !== 'completed' && (
