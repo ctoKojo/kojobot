@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, UserPlus, AlertCircle, Check } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, UserPlus, AlertCircle, Check, CreditCard } from 'lucide-react';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -64,6 +64,7 @@ import {
 } from '@/lib/validationUtils';
 import { cn } from '@/lib/utils';
 import { GROUP_TYPES_LIST, type GroupType as SubscriptionType } from '@/lib/constants';
+import { generateStudentCard } from '@/lib/pdfReports';
 type PaymentType = 'full' | 'installment';
 
 interface PricingPlan {
@@ -1112,6 +1113,26 @@ export default function StudentsPage() {
                           <Pencil className="h-4 w-4 mr-2" />
                           {t.common.edit}
                         </DropdownMenuItem>
+                        {(role === 'admin' || role === 'reception') && (
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation();
+                            if (role !== 'admin' && role !== 'reception') return;
+                            generateStudentCard({
+                              name: student.full_name,
+                              nameAr: student.full_name_ar || undefined,
+                              email: student.email,
+                              phone: student.phone || undefined,
+                              avatarUrl: student.avatar_url || undefined,
+                              ageGroup: getAgeGroupName(student.age_group_id) === '-' ? undefined : getAgeGroupName(student.age_group_id),
+                              level: getLevelName(student.level_id) === '-' ? undefined : getLevelName(student.level_id),
+                              subscriptionType: getSubscriptionTypeName(student.subscription_type) === '-' ? undefined : getSubscriptionTypeName(student.subscription_type),
+                              attendanceMode: getAttendanceModeName(student.attendance_mode),
+                            }, { isRTL });
+                          }}>
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            {isRTL ? 'بطاقة الطالب' : 'Student Card'}
+                          </DropdownMenuItem>
+                        )}
                         {isAdmin && (
                           <DropdownMenuItem 
                             onClick={(e) => { e.stopPropagation(); setDeleteTarget(student); }}
@@ -1244,6 +1265,25 @@ export default function StudentsPage() {
                               <Pencil className="h-4 w-4 mr-2" />
                               {t.common.edit}
                             </DropdownMenuItem>
+                            {(role === 'admin' || role === 'reception') && (
+                              <DropdownMenuItem onClick={() => {
+                                if (role !== 'admin' && role !== 'reception') return;
+                                generateStudentCard({
+                                  name: student.full_name,
+                                  nameAr: student.full_name_ar || undefined,
+                                  email: student.email,
+                                  phone: student.phone || undefined,
+                                  avatarUrl: student.avatar_url || undefined,
+                                  ageGroup: getAgeGroupName(student.age_group_id) === '-' ? undefined : getAgeGroupName(student.age_group_id),
+                                  level: getLevelName(student.level_id) === '-' ? undefined : getLevelName(student.level_id),
+                                  subscriptionType: getSubscriptionTypeName(student.subscription_type) === '-' ? undefined : getSubscriptionTypeName(student.subscription_type),
+                                  attendanceMode: getAttendanceModeName(student.attendance_mode),
+                                }, { isRTL });
+                              }}>
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                {isRTL ? 'بطاقة الطالب' : 'Student Card'}
+                              </DropdownMenuItem>
+                            )}
                             {isAdmin && (
                               <DropdownMenuItem 
                                 onClick={() => setDeleteTarget(student)}
