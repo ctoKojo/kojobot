@@ -105,17 +105,24 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
     ctx.fillText(levelName, pillX + pillW / 2, pillY + pillH / 2);
   }
 
+  // ── Content vertical centering ──
+  // Header area: y=0..160, Footer area: H-100..H
+  // Content zone: 170 to H-120 = ~610px on 900H card
+  const contentTop = 180;
+  const contentBottom = H - 120;
+  const contentH = contentBottom - contentTop;
+
   // ── Avatar ──
-  const avatarSize = 240;
-  const avatarX = PAD + 20;
-  const avatarY = 190;
-  const avatarR = 32;
+  const avatarSize = 260;
+  const avatarX = PAD + 30;
+  const avatarY = contentTop + (contentH - avatarSize) / 2;
+  const avatarR = 36;
 
   const avatarImg = avatarUrl ? await loadImage(avatarUrl, 'anonymous') : null;
 
   // Avatar shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.1)';
-  roundRect(ctx, avatarX + 5, avatarY + 7, avatarSize, avatarSize, avatarR);
+  ctx.fillStyle = 'rgba(0,0,0,0.12)';
+  roundRect(ctx, avatarX + 6, avatarY + 8, avatarSize, avatarSize, avatarR);
   ctx.fill();
 
   ctx.save();
@@ -125,11 +132,10 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   if (avatarImg) {
     ctx.drawImage(avatarImg, avatarX, avatarY, avatarSize, avatarSize);
   } else {
-    // Fallback: frosted glass + initial
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
     ctx.fillStyle = '#ffffff';
-    ctx.font = `bold 100px ${FONT}`;
+    ctx.font = `bold 110px ${FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(
@@ -141,38 +147,40 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   ctx.restore();
 
   // ── Text area (right of avatar) ──
-  const textX = avatarX + avatarSize + 90;
+  const textX = avatarX + avatarSize + 100;
   const maxTextW = W - textX - PAD;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
 
   // Student name
+  let textY = contentTop + 20;
   ctx.fillStyle = '#ffffff';
-  ctx.font = `bold 52px ${FONT}`;
-  ctx.fillText(name, textX, 200, maxTextW);
+  ctx.font = `bold 56px ${FONT}`;
+  ctx.fillText(name, textX, textY, maxTextW);
+  textY += 70;
 
   // Divider line under name
-  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(textX, 270);
-  ctx.lineTo(textX + Math.min(maxTextW, 540), 270);
+  ctx.moveTo(textX, textY);
+  ctx.lineTo(textX + Math.min(maxTextW, 560), textY);
   ctx.stroke();
+  textY += 30;
 
   // Info rows
-  let rowY = 300;
-  const labelFont = `24px ${FONT}`;
-  const valueFont = `30px ${FONT}`;
-  const rowGap = 70;
+  const labelFont = `26px ${FONT}`;
+  const valueFont = `32px ${FONT}`;
+  const rowGap = 80;
 
   const drawField = (label: string, value: string) => {
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.font = labelFont;
-    ctx.fillText(label, textX, rowY);
+    ctx.fillText(label, textX, textY);
     ctx.fillStyle = '#ffffff';
     ctx.font = valueFont;
-    ctx.fillText(value, textX, rowY + 30, maxTextW);
-    rowY += rowGap;
+    ctx.fillText(value, textX, textY + 34, maxTextW);
+    textY += rowGap;
   };
 
   drawField('Email', email);
@@ -196,22 +204,22 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   }
 
   if (pills.length > 0) {
-    const pillY = rowY + 20;
-    const pillH = 44;
+    const pillY2 = textY + 20;
+    const pillH = 48;
     const pillGap = 18;
     let pillX = textX;
-    ctx.font = `bold 22px ${FONT}`;
+    ctx.font = `bold 24px ${FONT}`;
 
     for (const label of pills) {
       const tw = ctx.measureText(label).width;
-      const pw = tw + 40;
-      roundRect(ctx, pillX, pillY, pw, pillH, pillH / 2);
+      const pw = tw + 44;
+      roundRect(ctx, pillX, pillY2, pw, pillH, pillH / 2);
       ctx.fillStyle = 'rgba(255,255,255,0.18)';
       ctx.fill();
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, pillX + pw / 2, pillY + pillH / 2);
+      ctx.fillText(label, pillX + pw / 2, pillY2 + pillH / 2);
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       pillX += pw + pillGap;
