@@ -272,7 +272,7 @@ export function InstructorDashboard() {
                   <div 
                     key={session.id} 
                     className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/attendance?session=${session.id}&group=${session.group_id}`)}
+                    onClick={() => navigate(`/session/${session.id}`)}
                   >
                     <div>
                       <p className="font-medium">
