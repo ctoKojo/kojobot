@@ -314,7 +314,7 @@ export function StudentDashboard() {
                     <Button 
                       size="sm" 
                       className="w-full bg-green-600 hover:bg-green-700"
-                      onClick={() => navigate(`/live-session/${stats.groupInfo!.id}`)}
+                      onClick={() => window.open(`/live-session/${stats.groupInfo!.id}`, '_blank')}
                     >
                       <Video className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                       {isRTL ? 'انضم للجلسة' : 'Join Session'}

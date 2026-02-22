@@ -390,7 +390,7 @@ export default function GroupDetails() {
               <div className="flex flex-col gap-3">
                 <Button 
                   className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-                  onClick={() => navigate(`/live-session/${data.group.id}`)}
+                  onClick={() => window.open(`/live-session/${data.group.id}`, '_blank')}
                 >
                   <Video className="h-4 w-4 mr-2" />
                   {isRTL ? 'انضم من داخل المنصة' : 'Join from Platform'}

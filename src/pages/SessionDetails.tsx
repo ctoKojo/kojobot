@@ -1148,7 +1148,7 @@ export default function SessionDetails() {
               <div className="flex items-center gap-2">
                 {isOnline && (
                   <>
-                    <Button variant="outline" size="sm" onClick={() => navigate(`/live-session/${group?.id}`)} className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => window.open(`/live-session/${group?.id}`, '_blank')} className="flex items-center gap-2">
                       <Video className="h-4 w-4" />
                       {isRTL ? 'انضم للسيشن' : 'Join Session'}
                     </Button>
@@ -1187,7 +1187,7 @@ export default function SessionDetails() {
               </Button>
               {isOnline && (
                 <>
-                  <Button variant="outline" onClick={() => navigate(`/live-session/${group?.id}`)} className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => window.open(`/live-session/${group?.id}`, '_blank')} className="flex items-center gap-2">
                     <Video className="h-4 w-4" />
                     {isRTL ? 'انضم للسيشن' : 'Join Session'}
                   </Button>
