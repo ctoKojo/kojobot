@@ -378,31 +378,42 @@ export default function GroupDetails() {
         </Card>
 
         {/* Session Link Card - for online groups */}
-        {data.group.attendance_mode === 'online' && data.group.session_link && (
+        {data.group.attendance_mode === 'online' && (
           <Card className="border-green-500/20 bg-gradient-to-r from-green-500/5 to-transparent">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Video className="h-5 w-5 text-green-600" />
-                {isRTL ? 'رابط الجلسة' : 'Session Link'}
+                {isRTL ? 'الجلسة المباشرة' : 'Live Session'}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                <div className="flex-1 p-3 bg-muted rounded-lg font-mono text-sm break-all">
-                  {data.group.session_link}
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                    <Copy className="h-4 w-4 mr-2" />
-                    {isRTL ? 'نسخ' : 'Copy'}
-                  </Button>
-                  <Button size="sm" className="bg-green-600 hover:bg-green-700" asChild>
-                    <a href={data.group.session_link} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      {isRTL ? 'انضم للجلسة' : 'Join Session'}
-                    </a>
-                  </Button>
-                </div>
+              <div className="flex flex-col gap-3">
+                <Button 
+                  className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                  onClick={() => navigate(`/live-session/${data.group.id}`)}
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  {isRTL ? 'انضم من داخل المنصة' : 'Join from Platform'}
+                </Button>
+                {data.group.session_link && (
+                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                    <div className="flex-1 p-3 bg-muted rounded-lg font-mono text-sm break-all">
+                      {data.group.session_link}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        {isRTL ? 'نسخ' : 'Copy'}
+                      </Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={data.group.session_link} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          {isRTL ? 'رابط خارجي' : 'External Link'}
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
