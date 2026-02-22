@@ -1,75 +1,3 @@
-interface IdCardOptions {
-  name: string;
-  email: string;
-  password: string;
-  avatarUrl?: string | null;
-  levelName?: string;
-  subscriptionType?: string;
-  attendanceMode?: string;
-  ageGroupName?: string;
-}
-
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-}
-
-function circlePath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.closePath();
-}
-
-function drawGlassPanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  roundRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = "rgba(255,255,255,0.10)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.18)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-}
-
-function drawInputPill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, label: string, value: string, font: string) {
-  roundRect(ctx, x, y, w, h, r);
-  const bg = ctx.createLinearGradient(x, y, x + w, y + h);
-  bg.addColorStop(0, "rgba(255,255,255,0.12)");
-  bg.addColorStop(1, "rgba(255,255,255,0.04)");
-  ctx.fillStyle = bg;
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.16)";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.font = `700 14px ${font}`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
-  ctx.fillText(label, x + 20, y + 14);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `700 20px ${font}`;
-  ctx.fillText(value, x + 20, y + 38, w - 40);
-}
-
-function loadImage(src: string, crossOrigin?: string): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    if (crossOrigin) img.crossOrigin = crossOrigin;
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-}
-
 export async function generateStudentBusinessCard(options: IdCardOptions): Promise<void> {
   const { name, email, password, avatarUrl, levelName, subscriptionType, attendanceMode, ageGroupName } = options;
   if (!password) return;
@@ -293,7 +221,7 @@ export async function generateStudentBusinessCard(options: IdCardOptions): Promi
   ctx.font = `800 16px ${FONT}`;
   ctx.textAlign = "right";
   ctx.textBaseline = "bottom";
-  ctx.fillText("KOJOBOT ACADEMY", panelX + panelW - 26, panelY + panelH - 18);
+  ctx.fillText("KOJOBOT ACADEMY®", panelX + panelW - 26, panelY + panelH - 18);
 
   ctx.restore();
 
