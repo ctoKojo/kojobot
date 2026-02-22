@@ -156,3 +156,39 @@ export function isSessionEndedCairo(
 
   return compareParts(getCairoNowParts(), end) >= 0;
 }
+
+/**
+ * Returns true when the current Cairo time is within the session window:
+ *   start <= now < end
+ * Safe: returns false on missing/invalid inputs (never allows accidental assignment).
+ */
+export function isSessionActiveCairo(
+  sessionDate: string | null | undefined,
+  sessionTime: string | null | undefined,
+  durationMinutes?: number | null,
+): boolean {
+  if (!sessionDate || !sessionTime) return false;
+
+  // Build start parts
+  const dateParts = sessionDate.split('-');
+  if (dateParts.length !== 3) return false;
+  const year = Number(dateParts[0]);
+  const month = Number(dateParts[1]);
+  const day = Number(dateParts[2]);
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) return false;
+
+  const timeParts = sessionTime.split(':');
+  if (timeParts.length < 2) return false;
+  const hour = Number(timeParts[0]);
+  const minute = Number(timeParts[1]);
+  const second = timeParts.length >= 3 ? Number(timeParts[2]) : 0;
+  if (Number.isNaN(hour) || Number.isNaN(minute) || Number.isNaN(second)) return false;
+
+  const start: DateTimeParts = { year, month, day, hour, minute, second };
+
+  const end = buildSessionEndParts(sessionDate, sessionTime, durationMinutes);
+  if (!end) return false;
+
+  const now = getCairoNowParts();
+  return compareParts(now, start) >= 0 && compareParts(now, end) < 0;
+}

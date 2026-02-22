@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { isSessionEndedCairo } from '@/lib/sessionTimeGuard';
+import { isSessionEndedCairo, isSessionActiveCairo } from '@/lib/sessionTimeGuard';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +42,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -528,6 +529,18 @@ export default function SessionDetails() {
       }
     }
 
+    // Guard: only allow assignment during active session time (Cairo)
+    if (!isSessionActiveCairo(session.session_date, session.session_time, session.duration_minutes)) {
+      toast({
+        title: isRTL ? 'غير متاح' : 'Not Available',
+        description: isRTL
+          ? 'لا يمكن إسناد الكويز إلا أثناء وقت السيشن'
+          : 'Quiz can only be assigned during session time',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setAssigningCurriculumQuiz(true);
     try {
       const { data: quiz } = await supabase
@@ -536,8 +549,9 @@ export default function SessionDetails() {
         .eq('id', curriculumContent.quiz_id)
         .single();
 
-      const startDate = new Date(`${session.session_date}T${session.session_time.slice(0, 5)}`);
-      const dueDate = new Date(startDate.getTime() + (quiz?.duration_minutes || 30) * 60 * 1000);
+      const now = new Date();
+      const durationMs = (quiz?.duration_minutes || 30) * 60 * 1000;
+      const dueDate = new Date(now.getTime() + durationMs);
 
       const snapshot = {
         curriculum_session_id: curriculumContent.id,
@@ -560,7 +574,7 @@ export default function SessionDetails() {
           session_id: session.id,
           student_id: s.student_id,
           assigned_by: user.id,
-          start_time: startDate.toISOString(),
+          start_time: now.toISOString(),
           due_date: dueDate.toISOString(),
           curriculum_snapshot: snapshot,
         }));
@@ -573,7 +587,7 @@ export default function SessionDetails() {
           session_id: session.id,
           group_id: session.group_id,
           assigned_by: user.id,
-          start_time: startDate.toISOString(),
+          start_time: now.toISOString(),
           due_date: dueDate.toISOString(),
           curriculum_snapshot: snapshot,
         });
@@ -1286,17 +1300,33 @@ export default function SessionDetails() {
                     </div>
                   )}
                   <div className="flex flex-wrap gap-3">
-                    {curriculumContent.quiz_id && !quizAssignment && (
-                      <Button
-                        size="sm"
-                        onClick={handleAssignCurriculumQuiz}
-                        disabled={assigningCurriculumQuiz}
-                        className="flex items-center gap-2"
-                      >
-                        {assigningCurriculumQuiz ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileQuestion className="h-4 w-4" />}
-                        {isRTL ? 'اسناد كويز المنهج' : 'Assign Curriculum Quiz'}
-                      </Button>
-                    )}
+                    {curriculumContent.quiz_id && !quizAssignment && (() => {
+                      const sessionActive = isSessionActiveCairo(session?.session_date, session?.session_time, session?.duration_minutes);
+                      return (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex">
+                                <Button
+                                  size="sm"
+                                  onClick={handleAssignCurriculumQuiz}
+                                  disabled={!sessionActive || assigningCurriculumQuiz}
+                                  className="flex items-center gap-2"
+                                >
+                                  {assigningCurriculumQuiz ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileQuestion className="h-4 w-4" />}
+                                  {isRTL ? 'اسناد كويز المنهج' : 'Assign Curriculum Quiz'}
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            {!sessionActive && (
+                              <TooltipContent>
+                                {isRTL ? 'متاح أثناء وقت السيشن فقط' : 'Available during session time only'}
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })()}
                     {curriculumContent.quiz_id && quizAssignment && (
                       <Button size="sm" variant="outline" disabled className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-primary" />
