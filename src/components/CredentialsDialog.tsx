@@ -108,9 +108,9 @@ export function CredentialsDialog({ open, onClose, email, password, userName }: 
           {password && (
             <Button
               variant="outline"
-              onClick={() => {
+            onClick={async () => {
                 if (!password) return;
-                generateStudentCard({ name: userName, email }, { password, isRTL });
+                await generateStudentCard({ name: userName, email }, { password, isRTL });
               }}
             >
               <CreditCard className="h-4 w-4 me-2" />

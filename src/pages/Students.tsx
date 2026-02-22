@@ -1114,10 +1114,10 @@ export default function StudentsPage() {
                           {t.common.edit}
                         </DropdownMenuItem>
                         {(role === 'admin' || role === 'reception') && (
-                          <DropdownMenuItem onClick={(e) => {
+                          <DropdownMenuItem onClick={async (e) => {
                             e.stopPropagation();
                             if (role !== 'admin' && role !== 'reception') return;
-                            generateStudentCard({
+                            await generateStudentCard({
                               name: student.full_name,
                               nameAr: student.full_name_ar || undefined,
                               email: student.email,
@@ -1266,9 +1266,9 @@ export default function StudentsPage() {
                               {t.common.edit}
                             </DropdownMenuItem>
                             {(role === 'admin' || role === 'reception') && (
-                              <DropdownMenuItem onClick={() => {
+                              <DropdownMenuItem onClick={async () => {
                                 if (role !== 'admin' && role !== 'reception') return;
-                                generateStudentCard({
+                                await generateStudentCard({
                                   name: student.full_name,
                                   nameAr: student.full_name_ar || undefined,
                                   email: student.email,
