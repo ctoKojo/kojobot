@@ -1,127 +1,151 @@
 
-# منع اكتمال السيشن قبل معادها - Cairo Parts-Based Guard
+# بطاقة هوية الطالب (Student ID Card) - قابلة للطباعة
 
 ---
 
 ## الملخص
 
-انشاء دالة `isSessionEndedCairo` في ملف جديد تعتمد على Intl.DateTimeFormat parts بالكامل، بدون new Date في قرار الاكتمال وبدون luxon في الفرونت. تطبيقها على 3 اماكن + تحديث callsite واحد.
+اضافة دالة `generateStudentCard` في `pdfReports.ts` تعتمد على `openPrintWindow` الحالي، وتطبيقها في 3 اماكن مع حماية الباسورد والصلاحيات.
 
 ---
 
-## الملفات (5 ملفات: 1 جديد + 4 تعديل)
+## الملفات (4 تعديلات)
 
 | # | الملف | التغيير |
 |---|---|---|
-| 1 | `src/lib/sessionTimeGuard.ts` | **جديد** - الدالة المشتركة وكل الـ helpers |
-| 2 | `src/pages/Sessions.tsx` | guard في `handleMarkComplete` (سطر 269) |
-| 3 | `src/components/group/EditSessionDialog.tsx` | prop `durationMinutes` + disable completed + useEffect safety + رسالة توضيح |
-| 4 | `src/pages/SessionDetails.tsx` | استبدال `new Date()` (سطر 224-226) بـ guard في auto-check |
-| 5 | `src/pages/GroupDetails.tsx` | تمرير `durationMinutes` للـ EditSessionDialog (سطر 790) |
+| 1 | `src/lib/pdfReports.ts` | اضافة `generateStudentCard` بعد `generateSalarySlip` |
+| 2 | `src/components/CredentialsDialog.tsx` | زرار "طباعة البطاقة" في الفوتر (بالباسورد) |
+| 3 | `src/pages/Students.tsx` | زرار "بطاقة الطالب" في dropdown الموبايل (سطر 1111) والديسكتوب (سطر 1243) |
+| 4 | `src/pages/StudentProfile.tsx` | زرار "بطاقة الطالب" في شريط الازرار العلوي (سطر 294) |
 
 ---
 
 ## التفاصيل التقنية
 
-### 1. `src/lib/sessionTimeGuard.ts` (ملف جديد)
+### 1. `src/lib/pdfReports.ts` - دالة `generateStudentCard`
 
-**الهيكل:**
+**تضاف بعد `generateSalarySlip` (سطر 163) وقبل `generateDataReport`.**
 
-- **`cairoFormatter`** - module-scope `Intl.DateTimeFormat` مع `Africa/Cairo` و `hourCycle: h23` (يتنشئ مرة واحدة)
-- **`getCairoNowParts()`** - `formatToParts(new Date())` مع تجاهل `literal` parts، يرجع `{ year, month, day, hour, minute, second }` كأرقام
-- **`isLeapYear(year)`** - `(year % 4 === 0 && year % 100 !== 0) || year % 400 === 0`
-- **`daysInMonth(year, month)`** - يدعم 28/29/30/31 مع السنة الكبيسة
-- **`addDaysToDate(year, month, day, daysToAdd)`** - loop يدعم اي عدد ايام (مش بس 0 او 1)، يعبر حدود الشهور والسنين
-- **`buildSessionEndParts(sessionDate, sessionTime, durationMinutes)`**:
-  - parse sessionDate: `split("-")` -> 3 ارقام، لو اي واحد NaN يرجع `null`
-  - parse sessionTime: `split(":")` -> لو `HH:MM` يكمل `:00`، لو فيه NaN يرجع `null`
-  - durationMinutes: لو `null` او `undefined` او `<= 0` يستخدم `120`
-  - carry: `minute += duration` ثم `second->minute->hour->daysToAdd` ثم `addDaysToDate`
-  - يرجع `{ year, month, day, hour, minute, second }`
-- **`compareParts(a, b)`** - مقارنة بالارقام مش strings: year ثم month ثم day ثم hour ثم minute ثم second. اول فرق يحدد النتيجة
-- **`isSessionEndedCairo(sessionDate, sessionTime, durationMinutes?)`** - الدالة العامة:
-  - guard: لو `!sessionDate` او `!sessionTime` يرجع `false`
-  - لو `buildSessionEndParts` رجع `null` يرجع `false`
-  - `return compareParts(getCairoNowParts(), end) >= 0`
-
-**مثال عبور نهاية الشهر:**
-سيشن `2025-01-31` الساعة `23:30` ومدته `90` دقيقة:
-- `minute = 30 + 90 = 120` -> carry: `hour += 2, minute = 0` -> `hour = 25` -> carry: `daysToAdd = 1, hour = 1`
-- `addDaysToDate(2025, 1, 31, 1)` -> `day = 32 > 31` -> `day = 1, month = 2`
-- النتيجة: `2025-02-01 01:00:00`
-
-### 2. `src/pages/Sessions.tsx`
-
-في `handleMarkComplete` (سطر 269) - قبل اي mutation:
-
+Interface:
 ```text
-import { isSessionEndedCairo } from '@/lib/sessionTimeGuard';
+interface StudentCardData {
+  name: string;
+  nameAr?: string;
+  email: string;
+  phone?: string;
+  avatarUrl?: string;
+  ageGroup?: string;
+  level?: string;
+  subscriptionType?: string;
+  attendanceMode?: string;
+  group?: string;
+}
 
-// سطر 270 (قبل الـ supabase update):
-if (!isSessionEndedCairo(session.session_date, session.session_time, session.duration_minutes)) {
-  toast({
-    variant: 'destructive',
-    title: isRTL ? 'السيشن لسه ما خلصتش' : "Session hasn't ended yet",
-    description: isRTL
-      ? 'لا يمكن اكتمال السيشن قبل انتهاء وقتها بتوقيت القاهرة'
-      : 'Cannot complete session before its end time (Cairo)',
-  });
-  return;
+interface StudentCardOptions {
+  password?: string;
+  isRTL: boolean;
 }
 ```
 
-الـ interface `Session` (سطر 54) فيها `duration_minutes: number` جاهزة.
+المنطق:
+- تستخدم `openPrintWindow` الموجود مع styles مخصصة للكارد تتضاف في الـ content نفسه (inline styles)
+- مقاس الكارد: `86mm x 54mm` مع `padding: 2mm` كـ bleed
+- Header gradient: `linear-gradient(135deg, #61BAE2, #6455F0)` مع اسم Kojobot وشعار
+- صورة دائرية `50px`:
+  - لو `avatarUrl` موجود: `<img>` مع `crossorigin="anonymous"` و `onerror` يخفي الصورة ويظهر الـ fallback
+  - الـ fallback: `<div>` دائري بلون gradient فيه اول حرف من الاسم (fontsize 20px، ابيض)
+  - الحل: الصورة والـ fallback يتعرضوا مع بعض، الـ `onerror` يعمل `this.style.display='none'` والـ fallback يظهر تلقائي (CSS: fallback يظهر لو الصورة hidden)
+- الحقول تظهر فقط لو فيها قيمة (كل حقل ملفوف في `${field ? '...' : ''}`)
+- ترتيب الحقول: الاسم (عربي + انجليزي لو متاح) -> ايميل -> هاتف -> فئة عمرية -> مستوى -> اشتراك -> حضور -> مجموعة
+- الباسورد: لو `password` موجود يظهر في حقل بخلفية `#fff3cd` مميزة
+- الصفحة فيها كاردين (نسخة الطالب + نسخة الارشيف) مع label صغير فوق كل كارد
+- `direction` يتحدد من `isRTL`
+- `line-height: 1.6` على body و card
+- CSS:
+  - `.student-card { width: 86mm; height: 54mm; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden; margin: 10mm auto; }`
+  - `@media print { .student-card { box-shadow: none; } body { margin: 5mm; } }`
+  - `.card-header { background: linear-gradient(...); color: white; padding: 4mm; }`
+  - `.avatar-circle { width: 50px; height: 50px; border-radius: 50%; border: 2px solid white; }`
+  - `.fallback-avatar { background: linear-gradient(135deg, #61BAE2, #6455F0); display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; font-weight: bold; }`
 
-### 3. `src/components/group/EditSessionDialog.tsx`
+### 2. `src/components/CredentialsDialog.tsx`
 
-- اضافة `durationMinutes?: number` في interface (سطر 38)
-- import `isSessionEndedCairo` و `useEffect`
-- حساب reactive يعتمد على قيم الفورم الحالية:
+- اضافة import: `CreditCard` من lucide + `generateStudentCard` من `@/lib/pdfReports`
+- في الفوتر (سطر 106)، قبل زرار "نسخ الكل":
+  - زرار `Button variant="outline"` بايقونة `CreditCard`
+  - نص: "طباعة البطاقة" / "Print Card"
+  - يظهر فقط لو `password` موجود وغير فارغ: `{password && ( ... )}`
+  - `onClick`: يتحقق ان `password` مش فاضي قبل التنفيذ (double guard)
+  - يستدعي: `generateStudentCard({ name: userName, email }, { password, isRTL })`
+  - الكارد هنا مختصر (اسم + ايميل + باسورد فقط) لان باقي البيانات مش متاحة في الـ dialog
+
+### 3. `src/pages/Students.tsx`
+
+- اضافة `CreditCard` في import lucide (سطر 3)
+- اضافة import: `generateStudentCard` من `@/lib/pdfReports`
+- **Mobile dropdown** (سطر 1111، بعد Edit وقبل Delete):
   ```text
-  const isEnded = isSessionEndedCairo(sessionDate, sessionTime, durationMinutes);
+  <DropdownMenuItem onClick={(e) => {
+    e.stopPropagation();
+    if (role !== 'admin' && role !== 'reception') return;
+    generateStudentCard({
+      name: student.full_name,
+      nameAr: student.full_name_ar || undefined,
+      email: student.email,
+      phone: student.phone || undefined,
+      avatarUrl: student.avatar_url || undefined,
+      ageGroup: getAgeGroupName(student.age_group_id),
+      level: getLevelName(student.level_id),
+      subscriptionType: getSubscriptionTypeName(student.subscription_type),
+      attendanceMode: getAttendanceModeName(student.attendance_mode),
+    }, { isRTL });
+  }}>
+    <CreditCard className="h-4 w-4 mr-2" />
+    {isRTL ? 'بطاقة الطالب' : 'Student Card'}
+  </DropdownMenuItem>
   ```
-- `useEffect`: لو `status === 'completed' && !isEnded` يرجع `setStatus('scheduled')`
-- خيار completed (سطر 175): `disabled={!isEnded}`
-- رسالة توضيح تحت الـ Select لو `!isEnded`:
-  - عربي: "لا يمكن اكتمال السيشن قبل انتهاء وقتها بتوقيت القاهرة"
-  - انجليزي: "Cannot mark as completed before session end time (Cairo)"
+  - ملاحظة: `getAgeGroupName` وغيرها ترجع `-` لو القيمة null، فالدالة `generateStudentCard` هتتعامل مع `-` كقيمة فارغة وما تعرضهاش
+- **Desktop dropdown** (سطر 1243، بعد Edit وقبل Delete): نفس الكود بدون `e.stopPropagation()`
+- الزرار يظهر فقط لو `role === 'admin' || role === 'reception'` (شرط عرض + شرط onClick)
 
-### 4. `src/pages/SessionDetails.tsx` (سطر 221-256)
+### 4. `src/pages/StudentProfile.tsx`
 
-استبدال كامل لمنطق المقارنة:
-
-```text
-// بدل سطر 224-226 (new Date parsing):
-if (!isSessionEndedCairo(session.session_date, session.session_time, session.duration_minutes)) {
-  return; // مش منتهية - لا تعمل اي auto-complete
-}
-// باقي اللوجيك (makeup RPC سطر 230-253 او direct update) بدون تغيير
-```
-
-### 5. `src/pages/GroupDetails.tsx` (سطر 790)
-
-الـ sessions في GroupDetails بتيجي من `data.sessions` (type `any[]`) وبتتحمل من `sessions` table اللي فيها `duration_minutes`. التمرير:
-
-```text
-<EditSessionDialog
-  session={session}
-  onUpdated={fetchGroupData}
-  durationMinutes={session.duration_minutes}
-/>
-```
+- اضافة `CreditCard` في import lucide (سطر 5)
+- اضافة import: `generateStudentCard` من `@/lib/pdfReports`
+- اضافة import: `getSubscriptionTypeLabel, getAttendanceModeLabel` من `@/lib/constants`
+- زرار جديد (سطر 294، قبل زرار PDF Report):
+  - يظهر لـ `role === 'admin' || role === 'reception'` فقط
+  - `onClick` يتحقق من الصلاحية قبل التنفيذ
+  - يمرر كل البيانات المتاحة من `data.profile`, `data.group`, `data.subscription`:
+    ```text
+    generateStudentCard({
+      name: data.profile.full_name,
+      nameAr: data.profile.full_name_ar || undefined,
+      email: data.profile.email,
+      phone: data.profile.phone || undefined,
+      avatarUrl: data.profile.avatar_url || undefined,
+      ageGroup: data.profile.age_groups ? (isRTL ? data.profile.age_groups.name_ar : data.profile.age_groups.name) : undefined,
+      level: data.profile.levels ? (isRTL ? data.profile.levels.name_ar : data.profile.levels.name) : undefined,
+      subscriptionType: data.subscription?.subscription_type ? getSubscriptionTypeLabel(data.subscription.subscription_type, isRTL) : undefined,
+      attendanceMode: data.subscription?.attendance_mode ? getAttendanceModeLabel(data.subscription.attendance_mode, isRTL) : undefined,
+      group: data.group ? (isRTL ? data.group.name_ar : data.group.name) : undefined,
+    }, { isRTL });
+    ```
+  - بدون باسورد
 
 ---
 
 ## معايير القبول
 
-- Mark Complete لا يعمل قبل نهاية السيشن بتوقيت القاهرة (toast تحذيري)
-- completed في EditSessionDialog يكون disabled قبل نهاية السيشن مع توضيح السبب
-- تغيير التاريخ/الوقت في الفورم يعيد حساب الحالة تلقائيا (reactive)
-- useEffect يرجع status لـ scheduled لو completed اتختار وبعدين الوقت اتغير
-- SessionDetails auto-check يعتمد على Cairo مش UTC ولا توقيت الجهاز
-- يدعم HH:MM و HH:MM:SS بدون crash
-- لا يوجد new Date() في اي قرار اكتمال
-- المنع صحيح في نهاية الشهر ونهاية السنة والسنة الكبيسة وسيشنات بتعدي منتصف الليل
-- بيانات فاسدة (NaN, null, سالب) ترجع false بدل اكتمال بالغلط
-- getCairoNowParts بيتجاهل literal parts فعلا
-- compareParts بيقارن ارقام مش strings
+- كارد branded بمقاس 86mm x 54mm مع gradient header و padding 2mm
+- نسختين في صفحة الطباعة (طالب + ارشيف) مع label فوق كل نسخة
+- صورة دائرية مع fallback (حرف اول) يشتغل حتى لو CORS منع الصورة
+- كل حقل فاضي او يساوي "-" ما يظهرش على الكارد
+- الباسورد يظهر فقط من CredentialsDialog ولو password فعلا موجود
+- onClick محمي بشرط role حتى لو الزرار ظهر بالغلط
+- الازرار مخفية عن غير admin و reception
+- shadow على الشاشة فقط ويتشال في print
+- هوامش الطباعة صغيرة (5mm)
+- line-height 1.6 للعربي
+- RTL/LTR كامل في كل الحقول والاتجاهات
+- `openPrintWindow` الحالي مستخدم بدون تكرار كود
