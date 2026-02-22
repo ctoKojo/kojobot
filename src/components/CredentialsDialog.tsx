@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, KeyRound } from 'lucide-react';
+import { Copy, Check, KeyRound, Download, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { generateStudentIdCard } from '@/lib/generateIdCard';
 
 interface CredentialsDialogProps {
   open: boolean;
@@ -17,11 +18,24 @@ interface CredentialsDialogProps {
   email: string;
   password: string;
   userName: string;
+  avatarUrl?: string | null;
+  levelName?: string;
 }
 
-export function CredentialsDialog({ open, onClose, email, password, userName }: CredentialsDialogProps) {
+export function CredentialsDialog({ open, onClose, email, password, userName, avatarUrl, levelName }: CredentialsDialogProps) {
   const { t, isRTL } = useLanguage();
   const [copiedField, setCopiedField] = useState<'email' | 'password' | 'both' | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadCard = async () => {
+    if (!password || downloading) return;
+    setDownloading(true);
+    try {
+      await generateStudentIdCard({ name: userName, email, password, avatarUrl, levelName });
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const handleCopy = async (text: string, field: 'email' | 'password') => {
     await navigator.clipboard.writeText(text);
@@ -104,6 +118,16 @@ export function CredentialsDialog({ open, onClose, email, password, userName }: 
         </div>
 
         <DialogFooter className={isRTL ? 'flex-row-reverse gap-2' : 'gap-2'}>
+          {password && (
+            <Button variant="outline" onClick={handleDownloadCard} disabled={downloading}>
+              {downloading ? (
+                <Loader2 className="h-4 w-4 me-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 me-2" />
+              )}
+              {isRTL ? 'تحميل كارت الطالب' : 'Download ID Card'}
+            </Button>
+          )}
           <Button variant="outline" onClick={handleCopyAll}>
             {copiedField === 'both' ? (
               <Check className="h-4 w-4 me-2 text-green-500" />

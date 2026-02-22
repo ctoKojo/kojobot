@@ -158,7 +158,7 @@ export default function StudentsPage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   // Credentials dialog state
-  const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string; name: string }>({ open: false, email: '', password: '', name: '' });
+  const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string; name: string; avatarUrl?: string | null; levelName?: string }>({ open: false, email: '', password: '', name: '' });
 
   // Validation results computed from form data
   const validationErrors = useMemo(() => {
@@ -358,10 +358,11 @@ export default function StudentsPage() {
         if (data?.error) throw { error: data.error, error_ar: data.error_ar };
 
         // Upload avatar for new user
+        let createdAvatarUrl: string | null = null;
         if (avatarFile && data?.user_id) {
-          const avatarUrl = await uploadAvatar(data.user_id);
-          if (avatarUrl) {
-            await supabase.from('profiles').update({ avatar_url: avatarUrl } as any).eq('user_id', data.user_id);
+          createdAvatarUrl = await uploadAvatar(data.user_id);
+          if (createdAvatarUrl) {
+            await supabase.from('profiles').update({ avatar_url: createdAvatarUrl } as any).eq('user_id', data.user_id);
           }
         }
 
@@ -409,12 +410,16 @@ export default function StudentsPage() {
           }
         }
 
+        const levelName = levels.find(l => l.id === formData.level_id)?.name;
+
         // Show credentials dialog
         setCredentialsDialog({
           open: true,
           email: formData.email,
           password: formData.password,
           name: formData.full_name,
+          avatarUrl: createdAvatarUrl,
+          levelName,
         });
       }
 
@@ -1298,7 +1303,7 @@ export default function StudentsPage() {
       <CredentialsDialog
         open={credentialsDialog.open}
         onClose={() => {
-          setCredentialsDialog({ open: false, email: '', password: '', name: '' });
+          setCredentialsDialog({ open: false, email: '', password: '', name: '', avatarUrl: null, levelName: undefined });
           setIsDialogOpen(false);
           setEditingStudent(null);
           resetForm();
@@ -1307,6 +1312,8 @@ export default function StudentsPage() {
         email={credentialsDialog.email}
         password={credentialsDialog.password}
         userName={credentialsDialog.name}
+        avatarUrl={credentialsDialog.avatarUrl}
+        levelName={credentialsDialog.levelName}
       />
     </DashboardLayout>
   );
