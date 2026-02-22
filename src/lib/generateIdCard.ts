@@ -186,7 +186,7 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
     ctx.textBaseline = "top";
   }
 
-  // content bounds expanded down (no extra glass strip)
+  // content bounds expanded down
   const contentTop = 170;
   const contentBottom = H - 40;
 
@@ -251,8 +251,38 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   const textX = avatarX + avatarSize + 90;
   const maxTextW = panelX + panelW - textX - 56;
 
+  // pills list prepared BEFORE centering calculations
+  const pills: string[] = [];
+  if (subscriptionType) {
+    const subMap: Record<string, string> = {
+      kojo_squad: "Kojo Squad",
+      kojo_core: "Kojo Core",
+      kojo_x: "Kojo X",
+    };
+    pills.push(subMap[subscriptionType] || subscriptionType);
+  }
+  if (attendanceMode) {
+    pills.push(attendanceMode === "online" ? "🌐 Online" : "🏫 Offline");
+  }
+  if (ageGroupName) {
+    pills.push(ageGroupName);
+  }
+
+  // center text block vertically inside the glass panel
+  const NAME_H = 82;
+  const DIVIDER_H = 28;
+  const FIELD_H = 92;
+  const GAP1 = 20;
+  const GAP2 = 22;
+  const PILLS_H = pills.length > 0 ? 46 : 0;
+  const FOOTER_H = 28;
+
+  const textBlockH = NAME_H + DIVIDER_H + FIELD_H + GAP1 + FIELD_H + GAP2 + PILLS_H + FOOTER_H;
+
+  const textStartY = panelY + (panelH - textBlockH) / 2;
+
   // name
-  let textY = panelY + 56;
+  let textY = textStartY;
   ctx.fillStyle = "#ffffff";
   ctx.font = `900 60px ${FONT}`;
   ctx.textAlign = "left";
@@ -284,23 +314,7 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   drawInputPill(ctx, textX, textY, fieldW, fieldH, fieldR, "Password", password, FONT);
   textY += fieldH + 22;
 
-  // pills row with old emojis
-  const pills: string[] = [];
-  if (subscriptionType) {
-    const subMap: Record<string, string> = {
-      kojo_squad: "Kojo Squad",
-      kojo_core: "Kojo Core",
-      kojo_x: "Kojo X",
-    };
-    pills.push(subMap[subscriptionType] || subscriptionType);
-  }
-  if (attendanceMode) {
-    pills.push(attendanceMode === "online" ? "🌐 Online" : "🏫 Offline");
-  }
-  if (ageGroupName) {
-    pills.push(ageGroupName);
-  }
-
+  // pills row
   if (pills.length > 0) {
     const pillY = textY;
     const pillH = 46;
@@ -334,14 +348,16 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
       ctx.textBaseline = "top";
       pillX += pw + pillGap;
     }
+
+    textY += 46;
   }
 
-  // footer text inside the same main glass panel
+  // footer text as part of the centered block
   ctx.fillStyle = "rgba(255,255,255,0.42)";
   ctx.font = `700 20px ${FONT}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
-  ctx.fillText("KOJOBOT ACADEMY", W / 2, panelY + panelH - 22);
+  ctx.fillText("KOJOBOT ACADEMY", W / 2, textStartY + textBlockH - 6);
 
   ctx.restore();
 
