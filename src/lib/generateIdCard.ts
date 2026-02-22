@@ -53,18 +53,30 @@ function circlePath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: nu
 
 function drawGlassPanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.save();
+
+  // depth shadow
+  ctx.shadowBlur = 24;
+  ctx.shadowColor = "rgba(0,0,0,0.18)";
+  ctx.shadowOffsetY = 10;
+
   roundRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  ctx.fillStyle = "rgba(255,255,255,0.10)";
   ctx.fill();
 
+  // reset shadow
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+
+  // border
   ctx.strokeStyle = "rgba(255,255,255,0.22)";
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  ctx.globalAlpha = 0.25;
-  const g = ctx.createLinearGradient(x, y, x + w, y + h);
+  // inner highlight
+  const g = ctx.createLinearGradient(x, y, x, y + h);
   g.addColorStop(0, "rgba(255,255,255,0.22)");
-  g.addColorStop(1, "rgba(255,255,255,0.00)");
+  g.addColorStop(0.35, "rgba(255,255,255,0.08)");
+  g.addColorStop(1, "rgba(255,255,255,0.04)");
   ctx.fillStyle = g;
   roundRect(ctx, x + 2, y + 2, w - 4, h - 4, r - 2);
   ctx.fill();
@@ -116,6 +128,8 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   const RADIUS = 36;
   const FONT = "'Inter', 'Segoe UI', system-ui, sans-serif";
 
+  const HEADER_H = 140;
+
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -149,13 +163,17 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
   ctx.fillStyle = blob2;
   ctx.fillRect(0, 0, W, H);
 
+  // header positions
+  const headerY = PAD;
+  const headerCenterY = headerY + HEADER_H / 2;
+
   // logo
   const logo = await loadImage("/kojobot-logo-white.png");
   if (logo) {
-    const logoH = 72;
+    const logoH = 70;
     const logoW = (logo.naturalWidth / logo.naturalHeight) * logoH;
     ctx.globalAlpha = 0.95;
-    ctx.drawImage(logo, PAD, PAD, logoW, logoH);
+    ctx.drawImage(logo, PAD, headerCenterY - logoH / 2, logoW, logoH);
     ctx.globalAlpha = 1;
   }
 
@@ -166,7 +184,7 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
     const pillW = tw + 62;
     const pillH = 54;
     const pillX = W - PAD - pillW;
-    const pillY = PAD;
+    const pillY = headerCenterY - pillH / 2;
 
     const bg = ctx.createLinearGradient(pillX, pillY, pillX + pillW, pillY + pillH);
     bg.addColorStop(0, "rgba(255,255,255,0.22)");
@@ -186,9 +204,9 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
     ctx.textBaseline = "top";
   }
 
-  // content bounds expanded down
-  const contentTop = 170;
-  const contentBottom = H - 40;
+  // content bounds (panel under header)
+  const contentTop = PAD + HEADER_H;
+  const contentBottom = H - PAD;
 
   // main glass panel
   const panelX = PAD;
@@ -348,16 +366,14 @@ export async function generateStudentIdCard(options: IdCardOptions): Promise<voi
       ctx.textBaseline = "top";
       pillX += pw + pillGap;
     }
-
-    textY += 46;
   }
 
-  // footer text as part of the centered block
+  // footer inside the glass panel
   ctx.fillStyle = "rgba(255,255,255,0.42)";
   ctx.font = `700 20px ${FONT}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
-  ctx.fillText("KOJOBOT ACADEMY", W / 2, textStartY + textBlockH - 6);
+  ctx.fillText("KOJOBOT ACADEMY", W / 2, panelY + panelH - 24);
 
   ctx.restore();
 
