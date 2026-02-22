@@ -205,6 +205,18 @@ interface Translations {
     newWarning: string;
     subscriptionExpiring: string;
     subscriptionExpired: string;
+    allCategories: string;
+    categoryGeneral: string;
+    categoryQuiz: string;
+    categoryAssignment: string;
+    categoryAttendance: string;
+    categorySubscription: string;
+    categorySystem: string;
+    categorySchedule: string;
+    unread: string;
+    read: string;
+    deleteAll: string;
+    deleteRead: string;
   };
   activityLog: {
     title: string;
@@ -465,6 +477,18 @@ export const translations: Record<Language, Translations> = {
       newWarning: 'New warning',
       subscriptionExpiring: 'Subscription expiring soon',
       subscriptionExpired: 'Subscription expired',
+      allCategories: 'All',
+      categoryGeneral: 'General',
+      categoryQuiz: 'Quizzes',
+      categoryAssignment: 'Assignments',
+      categoryAttendance: 'Attendance',
+      categorySubscription: 'Subscription',
+      categorySystem: 'System',
+      categorySchedule: 'Schedule',
+      unread: 'Unread',
+      read: 'Read',
+      deleteAll: 'Delete All',
+      deleteRead: 'Delete Read',
     },
 
     // Activity Log
@@ -728,6 +752,18 @@ export const translations: Record<Language, Translations> = {
       newWarning: 'إنذار جديد',
       subscriptionExpiring: 'اشتراكك ينتهي قريباً',
       subscriptionExpired: 'انتهى اشتراكك',
+      allCategories: 'الكل',
+      categoryGeneral: 'عام',
+      categoryQuiz: 'الكويزات',
+      categoryAssignment: 'الواجبات',
+      categoryAttendance: 'الحضور',
+      categorySubscription: 'الاشتراك',
+      categorySystem: 'النظام',
+      categorySchedule: 'الجدول',
+      unread: 'غير مقروء',
+      read: 'مقروء',
+      deleteAll: 'حذف الكل',
+      deleteRead: 'حذف المقروء',
     },
 
     // Activity Log
