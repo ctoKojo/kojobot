@@ -1,127 +1,246 @@
 
-# منع اكتمال السيشن قبل معادها - Cairo Parts-Based Guard
+
+# Student ID Card - كارت الطالب PNG
 
 ---
 
 ## الملخص
 
-انشاء دالة `isSessionEndedCairo` في ملف جديد تعتمد على Intl.DateTimeFormat parts بالكامل، بدون new Date في قرار الاكتمال وبدون luxon في الفرونت. تطبيقها على 3 اماكن + تحديث callsite واحد.
+اضافة زر "Download ID Card" داخل CredentialsDialog لتوليد كارت طالب كصورة PNG عبر Canvas API بدون اي dependency جديدة. الكارت يظهر فقط عند وجود الباسورد (انشاء طالب او اعادة تعيين).
 
 ---
 
-## الملفات (5 ملفات: 1 جديد + 4 تعديل)
+## الملفات (4 ملفات: 1 جديد + 3 تعديل)
 
 | # | الملف | التغيير |
 |---|---|---|
-| 1 | `src/lib/sessionTimeGuard.ts` | **جديد** - الدالة المشتركة وكل الـ helpers |
-| 2 | `src/pages/Sessions.tsx` | guard في `handleMarkComplete` (سطر 269) |
-| 3 | `src/components/group/EditSessionDialog.tsx` | prop `durationMinutes` + disable completed + useEffect safety + رسالة توضيح |
-| 4 | `src/pages/SessionDetails.tsx` | استبدال `new Date()` (سطر 224-226) بـ guard في auto-check |
-| 5 | `src/pages/GroupDetails.tsx` | تمرير `durationMinutes` للـ EditSessionDialog (سطر 790) |
+| 1 | `src/lib/generateIdCard.ts` | **جديد** - Canvas API لتوليد PNG |
+| 2 | `src/components/CredentialsDialog.tsx` | props جديدة + زر Download |
+| 3 | `src/pages/Students.tsx` | تمرير avatarUrl و levelName |
+| 4 | `src/components/ResetPasswordButton.tsx` | تمرير avatarUrl و levelName |
 
 ---
 
 ## التفاصيل التقنية
 
-### 1. `src/lib/sessionTimeGuard.ts` (ملف جديد)
+### 1. `src/lib/generateIdCard.ts` (ملف جديد)
 
-**الهيكل:**
-
-- **`cairoFormatter`** - module-scope `Intl.DateTimeFormat` مع `Africa/Cairo` و `hourCycle: h23` (يتنشئ مرة واحدة)
-- **`getCairoNowParts()`** - `formatToParts(new Date())` مع تجاهل `literal` parts، يرجع `{ year, month, day, hour, minute, second }` كأرقام
-- **`isLeapYear(year)`** - `(year % 4 === 0 && year % 100 !== 0) || year % 400 === 0`
-- **`daysInMonth(year, month)`** - يدعم 28/29/30/31 مع السنة الكبيسة
-- **`addDaysToDate(year, month, day, daysToAdd)`** - loop يدعم اي عدد ايام (مش بس 0 او 1)، يعبر حدود الشهور والسنين
-- **`buildSessionEndParts(sessionDate, sessionTime, durationMinutes)`**:
-  - parse sessionDate: `split("-")` -> 3 ارقام، لو اي واحد NaN يرجع `null`
-  - parse sessionTime: `split(":")` -> لو `HH:MM` يكمل `:00`، لو فيه NaN يرجع `null`
-  - durationMinutes: لو `null` او `undefined` او `<= 0` يستخدم `120`
-  - carry: `minute += duration` ثم `second->minute->hour->daysToAdd` ثم `addDaysToDate`
-  - يرجع `{ year, month, day, hour, minute, second }`
-- **`compareParts(a, b)`** - مقارنة بالارقام مش strings: year ثم month ثم day ثم hour ثم minute ثم second. اول فرق يحدد النتيجة
-- **`isSessionEndedCairo(sessionDate, sessionTime, durationMinutes?)`** - الدالة العامة:
-  - guard: لو `!sessionDate` او `!sessionTime` يرجع `false`
-  - لو `buildSessionEndParts` رجع `null` يرجع `false`
-  - `return compareParts(getCairoNowParts(), end) >= 0`
-
-**مثال عبور نهاية الشهر:**
-سيشن `2025-01-31` الساعة `23:30` ومدته `90` دقيقة:
-- `minute = 30 + 90 = 120` -> carry: `hour += 2, minute = 0` -> `hour = 25` -> carry: `daysToAdd = 1, hour = 1`
-- `addDaysToDate(2025, 1, 31, 1)` -> `day = 32 > 31` -> `day = 1, month = 2`
-- النتيجة: `2025-02-01 01:00:00`
-
-### 2. `src/pages/Sessions.tsx`
-
-في `handleMarkComplete` (سطر 269) - قبل اي mutation:
+دالة واحدة exported:
 
 ```text
-import { isSessionEndedCairo } from '@/lib/sessionTimeGuard';
+export async function generateStudentIdCard(options: {
+  name: string;
+  email: string;
+  password: string;
+  avatarUrl?: string | null;
+  levelName?: string;
+}): Promise<void>
+```
 
-// سطر 270 (قبل الـ supabase update):
-if (!isSessionEndedCairo(session.session_date, session.session_time, session.duration_minutes)) {
-  toast({
-    variant: 'destructive',
-    title: isRTL ? 'السيشن لسه ما خلصتش' : "Session hasn't ended yet",
-    description: isRTL
-      ? 'لا يمكن اكتمال السيشن قبل انتهاء وقتها بتوقيت القاهرة'
-      : 'Cannot complete session before its end time (Cairo)',
-  });
-  return;
+**التنفيذ خطوة بخطوة:**
+
+1. انشاء canvas 1400x800
+2. رسم rounded rect path كامل (radius ~24px) ثم `ctx.clip()` -- كل الرسم بعد الـ clip
+3. رسم linear gradient خلفية (`#7BB8D4` -> `#8B7BE8` من اليسار لليمين)
+4. تحميل لوجو `/kojobot-logo-white.png` عبر `new Image()` (same-origin، بدون CORS) -- رسمه top-left مع padding
+5. لو `levelName` موجود: رسم دائرة top-right بـ border ابيض شفاف (`rgba(255,255,255,0.3)`) + نص الليفل ابيض بالنص
+6. تحميل avatar من `avatarUrl` عبر `new Image()` مع `crossOrigin = 'anonymous'` (الـ bucket عام فمفيش مشكلة CORS):
+   - نجاح: رسم الصورة في مربع rounded (clipping path دائري) يسار الكارت
+   - فشل / مفيش url: رسم مربع rounded بخلفية `rgba(255,255,255,0.15)` + حرف اول من الاسم كبير ابيض bold
+7. كتابة النصوص يمين الافاتار:
+   - الاسم: خط كبير bold ابيض (48px)
+   - "Email:" + القيمة (28px)
+   - "Password:" + القيمة (28px)
+   - خط system stack: `'Inter', 'Segoe UI', system-ui, sans-serif`
+8. تحويل: `canvas.toBlob(blob => ...)` بصيغة `image/png`
+9. تنزيل: `URL.createObjectURL(blob)` -> `<a>` مخفي مع `download` = اسم منظف (replace `/\\:*?"<>|` بـ `_`) -> click -> `URL.revokeObjectURL`
+
+**ملاحظات امان:**
+- تحميل الصور ملفوف في Promise مع timeout 5 ثواني -- لو فشل يكمل بـ fallback
+- لو `password` فاضي الدالة ترجع فورا بدون توليد
+- الاسم يتعمله sanitize قبل استخدامه في اسم الملف
+
+### 2. `src/components/CredentialsDialog.tsx`
+
+**تعديل الـ interface (سطر 17-23):**
+
+```text
+interface CredentialsDialogProps {
+  open: boolean;
+  onClose: () => void;
+  email: string;
+  password: string;
+  userName: string;
+  avatarUrl?: string | null;    // جديد
+  levelName?: string;           // جديد
 }
 ```
 
-الـ interface `Session` (سطر 54) فيها `duration_minutes: number` جاهزة.
-
-### 3. `src/components/group/EditSessionDialog.tsx`
-
-- اضافة `durationMinutes?: number` في interface (سطر 38)
-- import `isSessionEndedCairo` و `useEffect`
-- حساب reactive يعتمد على قيم الفورم الحالية:
-  ```text
-  const isEnded = isSessionEndedCairo(sessionDate, sessionTime, durationMinutes);
-  ```
-- `useEffect`: لو `status === 'completed' && !isEnded` يرجع `setStatus('scheduled')`
-- خيار completed (سطر 175): `disabled={!isEnded}`
-- رسالة توضيح تحت الـ Select لو `!isEnded`:
-  - عربي: "لا يمكن اكتمال السيشن قبل انتهاء وقتها بتوقيت القاهرة"
-  - انجليزي: "Cannot mark as completed before session end time (Cairo)"
-
-### 4. `src/pages/SessionDetails.tsx` (سطر 221-256)
-
-استبدال كامل لمنطق المقارنة:
+**اضافة state:**
 
 ```text
-// بدل سطر 224-226 (new Date parsing):
-if (!isSessionEndedCairo(session.session_date, session.session_time, session.duration_minutes)) {
-  return; // مش منتهية - لا تعمل اي auto-complete
-}
-// باقي اللوجيك (makeup RPC سطر 230-253 او direct update) بدون تغيير
+const [downloading, setDownloading] = useState(false);
 ```
 
-### 5. `src/pages/GroupDetails.tsx` (سطر 790)
-
-الـ sessions في GroupDetails بتيجي من `data.sessions` (type `any[]`) وبتتحمل من `sessions` table اللي فيها `duration_minutes`. التمرير:
+**اضافة handler:**
 
 ```text
-<EditSessionDialog
-  session={session}
-  onUpdated={fetchGroupData}
-  durationMinutes={session.duration_minutes}
+const handleDownloadCard = async () => {
+  if (!password || downloading) return;
+  setDownloading(true);
+  try {
+    await generateStudentIdCard({
+      name: userName, email, password, avatarUrl, levelName
+    });
+  } finally {
+    setDownloading(false);
+  }
+};
+```
+
+**اضافة زر في DialogFooter (بجانب Copy All):**
+
+زر "Download ID Card" مع ايقونة `Download` من lucide-react. لو `downloading` يعرض spinner. الزر يظهر فقط لو `password` موجود.
+
+### 3. `src/pages/Students.tsx`
+
+**تعديل state (سطر 161):**
+
+```text
+const [credentialsDialog, setCredentialsDialog] = useState<{
+  open: boolean; email: string; password: string; name: string;
+  avatarUrl?: string | null; levelName?: string;
+}>({ open: false, email: '', password: '', name: '' });
+```
+
+**تعديل setCredentialsDialog عند الانشاء (سطر 412-418):**
+
+بعد رفع الافاتار (سطر 362-366) الـ `avatarUrl` متاح. والـ `levelName` من `levels.find`:
+
+```text
+// بعد سطر 366:
+const levelName = levels.find(l => l.id === formData.level_id)?.name;
+const createdAvatarUrl = avatarFile && data?.user_id
+  ? (await uploadAvatar(data.user_id)) // هو اصلا بيتعمل upload فوق
+  : null;
+
+setCredentialsDialog({
+  open: true,
+  email: formData.email,
+  password: formData.password,
+  name: formData.full_name,
+  avatarUrl: createdAvatarUrl || null,  // الـ url اللي اتعمله upload
+  levelName,
+});
+```
+
+ملاحظة: الـ avatar upload بيحصل فعلا في سطر 362 ونتيجته بتتحفظ في profiles. هنحتاج نخزن الـ url المرجع من `uploadAvatar` في متغير ونمرره.
+
+**تعديل CredentialsDialog JSX (سطر 1298-1310):**
+
+```text
+<CredentialsDialog
+  open={credentialsDialog.open}
+  onClose={...}
+  email={credentialsDialog.email}
+  password={credentialsDialog.password}
+  userName={credentialsDialog.name}
+  avatarUrl={credentialsDialog.avatarUrl}
+  levelName={credentialsDialog.levelName}
 />
+```
+
+**تعديل onClose (سطر 1300-1306):**
+
+```text
+onClose={() => {
+  setCredentialsDialog({ open: false, email: '', password: '', name: '', avatarUrl: null, levelName: undefined });
+  ...
+}}
+```
+
+### 4. `src/components/ResetPasswordButton.tsx`
+
+**تعديل interface (سطر 12-16):**
+
+```text
+interface ResetPasswordButtonProps {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  avatarUrl?: string | null;    // جديد
+  levelName?: string;           // جديد
+}
+```
+
+**تعديل destructuring (سطر 18):**
+
+```text
+export function ResetPasswordButton({ userId, userName, userEmail, avatarUrl, levelName }: ResetPasswordButtonProps)
+```
+
+**تمرير للـ CredentialsDialog (سطر 122-128):**
+
+```text
+<CredentialsDialog
+  open={showCredentials}
+  onClose={() => setShowCredentials(false)}
+  email={userEmail}
+  password={savedPassword}
+  userName={userName}
+  avatarUrl={avatarUrl}
+  levelName={levelName}
+/>
+```
+
+**تحديث الاستدعاء في StudentProfile.tsx (سطر 288-292):**
+
+```text
+<ResetPasswordButton
+  userId={studentId!}
+  userName={data?.profile?.full_name || ''}
+  userEmail={data?.profile?.email || ''}
+  avatarUrl={data?.profile?.avatar_url}
+  levelName={data?.profile?.levels?.name}
+/>
+```
+
+---
+
+## Layout الكارت (1400x800)
+
+```text
+padding = 40px كل الجوانب
+
++----------------------------------------------------------+
+|  [Logo 180x50]                          ( Level r=40 )   |  y=40
+|                                                          |
+|   +-----------+                                          |
+|   |           |  y=180                                   |
+|   |  Avatar   |     Student Full Name  (48px bold)       |  y=260
+|   |  200x200  |                                          |
+|   |  rounded  |     Email: student@email.com (28px)      |  y=340
+|   |           |                                          |
+|   +-----------+     Password: Abc123xyz (28px)           |  y=400
+|                                                          |
+|                     Kojobot Academy  (20px, شفاف)        |  y=720
++----------------------------------------------------------+
 ```
 
 ---
 
 ## معايير القبول
 
-- Mark Complete لا يعمل قبل نهاية السيشن بتوقيت القاهرة (toast تحذيري)
-- completed في EditSessionDialog يكون disabled قبل نهاية السيشن مع توضيح السبب
-- تغيير التاريخ/الوقت في الفورم يعيد حساب الحالة تلقائيا (reactive)
-- useEffect يرجع status لـ scheduled لو completed اتختار وبعدين الوقت اتغير
-- SessionDetails auto-check يعتمد على Cairo مش UTC ولا توقيت الجهاز
-- يدعم HH:MM و HH:MM:SS بدون crash
-- لا يوجد new Date() في اي قرار اكتمال
-- المنع صحيح في نهاية الشهر ونهاية السنة والسنة الكبيسة وسيشنات بتعدي منتصف الليل
-- بيانات فاسدة (NaN, null, سالب) ترجع false بدل اكتمال بالغلط
-- getCairoNowParts بيتجاهل literal parts فعلا
-- compareParts بيقارن ارقام مش strings
+- زر "Download ID Card" يظهر في CredentialsDialog فقط لو password موجود
+- downloading state يمنع double click
+- الكارت PNG بجودة عالية 1400x800
+- gradient ازرق-بنفسجي مع rounded corners (clip path)
+- لوجو Kojobot top-left من `/kojobot-logo-white.png` (same-origin)
+- باج الليفل top-right (لو متاح)
+- صورة الطالب rounded (لو متاحة) او fallback حرف اول
+- الاسم والايميل والباسورد بخط ابيض واضح
+- تنزيل عبر `toBlob` + `createObjectURL` + `revokeObjectURL`
+- اسم الملف منظف من الرموز
+- متاح للادمن والريسيبشن فقط (CredentialsDialog يظهر فقط في flows الادمن/الريسيبشن)
+- بدون اي dependency جديدة
+
