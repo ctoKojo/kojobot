@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, FileQuestion, ExternalLink } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,26 +47,39 @@ interface Level {
   name_ar: string;
   level_order: number;
   track: string | null;
+  track_id: string | null;
   parent_level_id: string | null;
   is_active: boolean;
   expected_sessions_count: number;
+  final_exam_quiz_id: string | null;
+  pass_threshold: number | null;
+}
+
+interface Track {
+  id: string;
+  name: string;
+  name_ar: string;
 }
 
 export default function LevelsPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [levels, setLevels] = useState<Level[]>([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLevel, setEditingLevel] = useState<Level | null>(null);
+  const [examLoading, setExamLoading] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     name_ar: '',
     level_order: 0,
-    track: '',
+    track_id: '',
     parent_level_id: '',
     expected_sessions_count: 12,
+    pass_threshold: 50,
   });
 
   useEffect(() => {
@@ -99,9 +113,10 @@ export default function LevelsPage() {
         name: formData.name,
         name_ar: formData.name_ar || formData.name,
         level_order: formData.level_order,
-        track: formData.track || null,
+        track_id: formData.track_id || null,
         parent_level_id: formData.parent_level_id || null,
         expected_sessions_count: formData.expected_sessions_count,
+        pass_threshold: formData.pass_threshold,
       };
 
       if (editingLevel) {
@@ -129,7 +144,7 @@ export default function LevelsPage() {
 
       setIsDialogOpen(false);
       setEditingLevel(null);
-      setFormData({ name: '', name_ar: '', level_order: 0, track: '', parent_level_id: '', expected_sessions_count: 12 });
+      setFormData({ name: '', name_ar: '', level_order: 0, track_id: '', parent_level_id: '', expected_sessions_count: 12, pass_threshold: 50 });
       fetchLevels();
     } catch (error) {
       console.error('Error saving level:', error);
@@ -147,9 +162,10 @@ export default function LevelsPage() {
       name: level.name,
       name_ar: level.name_ar,
       level_order: level.level_order,
-      track: level.track || '',
+      track_id: level.track_id || '',
       parent_level_id: level.parent_level_id || '',
       expected_sessions_count: level.expected_sessions_count ?? 12,
+      pass_threshold: level.pass_threshold ?? 50,
     });
     setIsDialogOpen(true);
   };
@@ -220,7 +236,7 @@ export default function LevelsPage() {
             <DialogTrigger asChild>
               <Button className="kojo-gradient" onClick={() => {
                 setEditingLevel(null);
-                setFormData({ name: '', name_ar: '', level_order: levels.length, track: '', parent_level_id: '', expected_sessions_count: 12 });
+                setFormData({ name: '', name_ar: '', level_order: levels.length, track_id: '', parent_level_id: '', expected_sessions_count: 12, pass_threshold: 50 });
               }}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t.levels.addLevel}
@@ -281,16 +297,17 @@ export default function LevelsPage() {
                 <div className="grid gap-2">
                   <Label htmlFor="track">{t.levels.track}</Label>
                   <Select
-                    value={formData.track}
-                    onValueChange={(value) => setFormData({ ...formData, track: value })}
+                    value={formData.track_id}
+                    onValueChange={(value) => setFormData({ ...formData, track_id: value === 'none' ? '' : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={isRTL ? 'اختر المسار' : 'Select track'} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">{isRTL ? 'بدون مسار' : 'No track'}</SelectItem>
-                      <SelectItem value="software">{t.levels.software}</SelectItem>
-                      <SelectItem value="hardware">{t.levels.hardware}</SelectItem>
+                      {tracks.map(tr => (
+                        <SelectItem key={tr.id} value={tr.id}>{isRTL ? tr.name_ar : tr.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

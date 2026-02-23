@@ -666,6 +666,92 @@ export type Database = {
           },
         ]
       }
+      group_student_progress: {
+        Row: {
+          created_at: string | null
+          current_level_id: string
+          current_track_id: string | null
+          exam_scheduled_at: string | null
+          exam_submitted_at: string | null
+          graded_at: string | null
+          group_id: string
+          id: string
+          level_completed_at: string | null
+          level_started_at: string | null
+          next_level_id: string | null
+          notes: string | null
+          outcome: string | null
+          status: string
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_level_id: string
+          current_track_id?: string | null
+          exam_scheduled_at?: string | null
+          exam_submitted_at?: string | null
+          graded_at?: string | null
+          group_id: string
+          id?: string
+          level_completed_at?: string | null
+          level_started_at?: string | null
+          next_level_id?: string | null
+          notes?: string | null
+          outcome?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_level_id?: string
+          current_track_id?: string | null
+          exam_scheduled_at?: string | null
+          exam_submitted_at?: string | null
+          graded_at?: string | null
+          group_id?: string
+          id?: string
+          level_completed_at?: string | null
+          level_started_at?: string | null
+          next_level_id?: string | null
+          notes?: string | null
+          outcome?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_student_progress_current_level_id_fkey"
+            columns: ["current_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_student_progress_current_track_id_fkey"
+            columns: ["current_track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_student_progress_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_student_progress_next_level_id_fkey"
+            columns: ["next_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_students: {
         Row: {
           group_id: string
@@ -710,6 +796,7 @@ export type Database = {
           instructor_id: string | null
           is_active: boolean | null
           level_id: string | null
+          level_status: string | null
           name: string
           name_ar: string
           schedule_day: string
@@ -731,6 +818,7 @@ export type Database = {
           instructor_id?: string | null
           is_active?: boolean | null
           level_id?: string | null
+          level_status?: string | null
           name: string
           name_ar: string
           schedule_day: string
@@ -752,6 +840,7 @@ export type Database = {
           instructor_id?: string | null
           is_active?: boolean | null
           level_id?: string | null
+          level_status?: string | null
           name?: string
           name_ar?: string
           schedule_day?: string
@@ -923,49 +1012,135 @@ export type Database = {
           },
         ]
       }
+      level_grades: {
+        Row: {
+          created_at: string | null
+          evaluation_avg: number | null
+          final_exam_score: number | null
+          graded_by: string | null
+          group_id: string
+          id: string
+          level_id: string
+          notes: string | null
+          outcome: string | null
+          percentage: number | null
+          student_id: string
+          total_score: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          evaluation_avg?: number | null
+          final_exam_score?: number | null
+          graded_by?: string | null
+          group_id: string
+          id?: string
+          level_id: string
+          notes?: string | null
+          outcome?: string | null
+          percentage?: number | null
+          student_id: string
+          total_score?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          evaluation_avg?: number | null
+          final_exam_score?: number | null
+          graded_by?: string | null
+          group_id?: string
+          id?: string
+          level_id?: string
+          notes?: string | null
+          outcome?: string | null
+          percentage?: number | null
+          student_id?: string
+          total_score?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "level_grades_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "level_grades_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       levels: {
         Row: {
           created_at: string
           expected_sessions_count: number
+          final_exam_quiz_id: string | null
           id: string
           is_active: boolean | null
           level_order: number
           name: string
           name_ar: string
           parent_level_id: string | null
+          pass_threshold: number | null
           track: string | null
+          track_id: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           expected_sessions_count?: number
+          final_exam_quiz_id?: string | null
           id?: string
           is_active?: boolean | null
           level_order: number
           name: string
           name_ar: string
           parent_level_id?: string | null
+          pass_threshold?: number | null
           track?: string | null
+          track_id?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           expected_sessions_count?: number
+          final_exam_quiz_id?: string | null
           id?: string
           is_active?: boolean | null
           level_order?: number
           name?: string
           name_ar?: string
           parent_level_id?: string | null
+          pass_threshold?: number | null
           track?: string | null
+          track_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "levels_final_exam_quiz_id_fkey"
+            columns: ["final_exam_quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "levels_parent_level_id_fkey"
             columns: ["parent_level_id"]
             isOneToOne: false
             referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "levels_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
             referencedColumns: ["id"]
           },
         ]
@@ -2094,6 +2269,7 @@ export type Database = {
           group_id: string
           id: string
           is_makeup: boolean
+          level_id: string | null
           makeup_session_id: string | null
           notes: string | null
           session_date: string
@@ -2110,6 +2286,7 @@ export type Database = {
           group_id: string
           id?: string
           is_makeup?: boolean
+          level_id?: string | null
           makeup_session_id?: string | null
           notes?: string | null
           session_date: string
@@ -2126,6 +2303,7 @@ export type Database = {
           group_id?: string
           id?: string
           is_makeup?: boolean
+          level_id?: string | null
           makeup_session_id?: string | null
           notes?: string | null
           session_date?: string
@@ -2145,10 +2323,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sessions_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sessions_makeup_session_id_fkey"
             columns: ["makeup_session_id"]
             isOneToOne: true
             referencedRelation: "makeup_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_level_transitions: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          from_level_id: string
+          group_id: string
+          id: string
+          reason: string | null
+          student_id: string
+          to_level_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          from_level_id: string
+          group_id: string
+          id?: string
+          reason?: string | null
+          student_id: string
+          to_level_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          from_level_id?: string
+          group_id?: string
+          id?: string
+          reason?: string | null
+          student_id?: string
+          to_level_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_level_transitions_from_level_id_fkey"
+            columns: ["from_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_level_transitions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_level_transitions_to_level_id_fkey"
+            columns: ["to_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
             referencedColumns: ["id"]
           },
         ]
@@ -2187,6 +2427,61 @@ export type Database = {
             columns: ["level_id"]
             isOneToOne: false
             referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_track_choices: {
+        Row: {
+          chosen_at: string | null
+          chosen_by: string
+          chosen_track_id: string
+          created_at: string | null
+          from_level_id: string
+          group_id: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          chosen_at?: string | null
+          chosen_by: string
+          chosen_track_id: string
+          created_at?: string | null
+          from_level_id: string
+          group_id: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          chosen_at?: string | null
+          chosen_by?: string
+          chosen_track_id?: string
+          created_at?: string | null
+          from_level_id?: string
+          group_id?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_track_choices_chosen_track_id_fkey"
+            columns: ["chosen_track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_track_choices_from_level_id_fkey"
+            columns: ["from_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_track_choices_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
         ]
@@ -2313,6 +2608,30 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           value?: Json
+        }
+        Relationships: []
+      }
+      tracks: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          name_ar: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          name_ar: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          name_ar?: string
         }
         Relationships: []
       }
@@ -2675,6 +2994,10 @@ export type Database = {
         Returns: Json
       }
       complete_makeup_session: { Args: { p_session_id: string }; Returns: Json }
+      compute_level_grades_batch: {
+        Args: { p_group_id: string }
+        Returns: Json
+      }
       compute_quality_score: {
         Args: {
           p_avg_grading: number
@@ -2696,6 +3019,7 @@ export type Database = {
         }
         Returns: Json
       }
+      create_level_final_exam: { Args: { p_level_id: string }; Returns: Json }
       create_makeup_session: {
         Args: {
           p_group_id: string
@@ -2753,6 +3077,7 @@ export type Database = {
           version: number
         }[]
       }
+      get_group_level_status: { Args: { p_group_id: string }; Returns: Json }
       get_group_max_students: {
         Args: { g_type: Database["public"]["Enums"]["group_type"] }
         Returns: number
@@ -2782,6 +3107,10 @@ export type Database = {
         Returns: boolean
       }
       is_student: { Args: { _user_id: string }; Returns: boolean }
+      mark_student_repeat: {
+        Args: { p_group_id: string; p_student_id: string }
+        Returns: Json
+      }
       publish_curriculum: {
         Args: { p_age_group_id: string; p_level_id: string }
         Returns: Json
@@ -2792,6 +3121,15 @@ export type Database = {
       }
       save_attendance: {
         Args: { p_group_id: string; p_records: Json; p_session_id: string }
+        Returns: Json
+      }
+      schedule_final_exam_for_students: {
+        Args: {
+          p_date: string
+          p_duration: number
+          p_group_id: string
+          p_student_ids: string[]
+        }
         Returns: Json
       }
       schedule_makeup_session: {
@@ -2810,6 +3148,14 @@ export type Database = {
       }
       update_curriculum_session: {
         Args: { p_data: Json; p_expected_updated_at: string; p_id: string }
+        Returns: Json
+      }
+      upgrade_student_level: {
+        Args: {
+          p_chosen_track_id?: string
+          p_group_id: string
+          p_student_id: string
+        }
         Returns: Json
       }
     }

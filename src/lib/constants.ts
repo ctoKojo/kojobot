@@ -97,3 +97,45 @@ export function getDayName(day: string, isRTL: boolean): string {
   const d = DAYS_MAP[day];
   return d ? (isRTL ? d.ar : d.en) : day;
 }
+
+// --- Student Progress Status ---
+export type StudentProgressStatus = 'in_progress' | 'awaiting_exam' | 'exam_scheduled' | 'graded' | 'paused';
+export type StudentOutcome = 'passed' | 'failed' | 'repeat';
+export type GroupLevelStatus = 'in_progress' | 'sessions_completed' | 'exam_scheduled' | 'exam_done' | 'grades_computed';
+
+export const STUDENT_PROGRESS_STATUSES: Record<StudentProgressStatus, { en: string; ar: string }> = {
+  in_progress:    { en: 'In Progress',     ar: 'جاري' },
+  awaiting_exam:  { en: 'Awaiting Exam',   ar: 'في انتظار الامتحان' },
+  exam_scheduled: { en: 'Exam Scheduled',  ar: 'امتحان مجدول' },
+  graded:         { en: 'Graded',          ar: 'تم التقييم' },
+  paused:         { en: 'Paused',          ar: 'متوقف' },
+};
+
+export function getStudentProgressStatusLabel(status: string, isRTL: boolean): string {
+  const s = STUDENT_PROGRESS_STATUSES[status as StudentProgressStatus];
+  return s ? (isRTL ? s.ar : s.en) : status;
+}
+
+export const STUDENT_OUTCOMES: Record<StudentOutcome, { en: string; ar: string }> = {
+  passed: { en: 'Passed', ar: 'ناجح' },
+  failed: { en: 'Failed', ar: 'راسب' },
+  repeat: { en: 'Repeat', ar: 'إعادة' },
+};
+
+export function getStudentOutcomeLabel(outcome: string, isRTL: boolean): string {
+  const o = STUDENT_OUTCOMES[outcome as StudentOutcome];
+  return o ? (isRTL ? o.ar : o.en) : outcome;
+}
+
+export const GROUP_LEVEL_STATUSES: Record<GroupLevelStatus, { en: string; ar: string }> = {
+  in_progress:         { en: 'In Progress',         ar: 'جاري' },
+  sessions_completed:  { en: 'Sessions Completed',  ar: 'السيشنات اكتملت' },
+  exam_scheduled:      { en: 'Exam Scheduled',      ar: 'امتحان مجدول' },
+  exam_done:           { en: 'Exam Done',            ar: 'الامتحان انتهى' },
+  grades_computed:     { en: 'Grades Computed',      ar: 'الدرجات محسوبة' },
+};
+
+export function getGroupLevelStatusLabel(status: string, isRTL: boolean): string {
+  const s = GROUP_LEVEL_STATUSES[status as GroupLevelStatus];
+  return s ? (isRTL ? s.ar : s.en) : status;
+}

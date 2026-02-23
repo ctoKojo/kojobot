@@ -146,6 +146,7 @@ Deno.serve(async (req) => {
         duration_minutes: group.duration_minutes,
         status,
         session_number: i,
+        level_id: group.level_id,
       })
     }
 

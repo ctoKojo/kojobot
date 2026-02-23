@@ -109,6 +109,13 @@ Deno.serve(async (req) => {
       lastDate.setDate(lastDate.getDate() + 7)
       const nextDate = lastDate.toISOString().split('T')[0]
 
+      // Get group's level_id for the session
+      const { data: groupFull } = await adminSupabase
+        .from('groups')
+        .select('level_id')
+        .eq('id', group.id)
+        .single()
+
       const { error: insertError } = await adminSupabase
         .from('sessions')
         .insert({
@@ -118,6 +125,7 @@ Deno.serve(async (req) => {
           duration_minutes: group.duration_minutes,
           status: 'scheduled',
           session_number: nextNum,
+          level_id: groupFull?.level_id || null,
         })
 
       if (insertError) {
