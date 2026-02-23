@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Star, TrendingUp, Tag, Loader2, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/timeUtils';
+import { CurrentLevelStatus } from '@/components/student/CurrentLevelStatus';
 
 interface EvaluationSummaryProps {
   studentId: string;
@@ -164,6 +165,9 @@ export function EvaluationSummary({ studentId }: EvaluationSummaryProps) {
 
   return (
     <div className="space-y-6">
+      {/* Current Level Status */}
+      <CurrentLevelStatus studentId={studentId} />
+
       {/* Overview Card */}
       <Card className="border-2 border-primary/20">
         <CardHeader>

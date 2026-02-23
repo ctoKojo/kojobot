@@ -27,6 +27,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { RescheduleDialog } from '@/components/group/RescheduleDialog';
 import { EditSessionDialog } from '@/components/group/EditSessionDialog';
+import { LevelProgressTab } from '@/components/group/LevelProgressTab';
 import { formatTime12Hour, formatDate } from '@/lib/timeUtils';
 import { getGroupTypeLabel, getDayName } from '@/lib/constants';
 import { isSessionActiveCairo } from '@/lib/sessionTimeGuard';
@@ -538,18 +539,30 @@ export default function GroupDetails() {
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="students" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 h-auto">
+          <TabsList className="grid w-full grid-cols-3 md:grid-cols-6 h-auto">
             <TabsTrigger value="students" className="text-xs md:text-sm py-2">{isRTL ? 'الطلاب' : 'Students'}</TabsTrigger>
+            <TabsTrigger value="level-progress" className="text-xs md:text-sm py-2">{isRTL ? 'تقدم المستوى' : 'Level Progress'}</TabsTrigger>
             <TabsTrigger value="attendance" className="text-xs md:text-sm py-2">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
-            <TabsTrigger value="sessions" className="text-xs md:text-sm py-2">{isRTL ? 'الجلسات' : 'Sessions'}</TabsTrigger>
+            <TabsTrigger value="sessions" className="text-xs md:text-sm py-2 hidden md:flex">{isRTL ? 'الجلسات' : 'Sessions'}</TabsTrigger>
             <TabsTrigger value="quizzes" className="text-xs md:text-sm py-2 hidden md:flex">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
             <TabsTrigger value="assignments" className="text-xs md:text-sm py-2 hidden md:flex">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
           </TabsList>
           {/* Mobile-only additional tabs */}
-          <TabsList className="grid w-full grid-cols-2 md:hidden mt-2 h-auto">
+          <TabsList className="grid w-full grid-cols-3 md:hidden mt-2 h-auto">
+            <TabsTrigger value="sessions" className="text-xs py-2">{isRTL ? 'الجلسات' : 'Sessions'}</TabsTrigger>
             <TabsTrigger value="quizzes" className="text-xs py-2">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
             <TabsTrigger value="assignments" className="text-xs py-2">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
           </TabsList>
+
+          {/* Level Progress Tab */}
+          <TabsContent value="level-progress">
+            <LevelProgressTab
+              groupId={groupId!}
+              levelId={data.group.level_id}
+              levelName={language === 'ar' ? data.group.levels?.name_ar || data.group.levels?.name || '' : data.group.levels?.name || ''}
+              onRefresh={fetchGroupData}
+            />
+          </TabsContent>
 
           {/* Students Tab with Attendance Stats */}
           <TabsContent value="students">

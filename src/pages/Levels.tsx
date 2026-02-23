@@ -84,7 +84,30 @@ export default function LevelsPage() {
 
   useEffect(() => {
     fetchLevels();
+    fetchTracks();
   }, []);
+
+  const fetchTracks = async () => {
+    const { data } = await supabase.from('tracks').select('*').eq('is_active', true);
+    setTracks((data || []) as Track[]);
+  };
+
+  const handleCreateExam = async (levelId: string) => {
+    setExamLoading(levelId);
+    try {
+      const { data, error } = await supabase.rpc('create_level_final_exam', { p_level_id: levelId });
+      if (error) throw error;
+      toast({
+        title: isRTL ? 'تم إنشاء الامتحان' : 'Exam Created',
+        description: isRTL ? 'تم إنشاء الامتحان النهائي بنجاح' : 'Final exam created successfully',
+      });
+      fetchLevels();
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: err.message });
+    } finally {
+      setExamLoading(null);
+    }
+  };
 
   const fetchLevels = async () => {
     try {
@@ -294,8 +317,20 @@ export default function LevelsPage() {
                     />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>{isRTL ? 'نسبة النجاح' : 'Pass Threshold (%)'}</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={formData.pass_threshold}
+                      onChange={(e) => setFormData({ ...formData, pass_threshold: parseInt(e.target.value) || 50 })}
+                    />
+                  </div>
+                </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="track">{t.levels.track}</Label>
+                   <Label htmlFor="track">{t.levels.track}</Label>
                   <Select
                     value={formData.track_id}
                     onValueChange={(value) => setFormData({ ...formData, track_id: value === 'none' ? '' : value })}
@@ -351,24 +386,26 @@ export default function LevelsPage() {
                 <TableRow>
                   <TableHead>{isRTL ? 'الترتيب' : 'Order'}</TableHead>
                   <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
-                  <TableHead>{isRTL ? 'عدد السيشنات' : 'Sessions'}</TableHead>
-                  <TableHead>{t.levels.track}</TableHead>
-                  <TableHead>{t.levels.parentLevel}</TableHead>
-                  <TableHead className="w-[100px]">{t.common.actions}</TableHead>
+                   <TableHead>{isRTL ? 'عدد السيشنات' : 'Sessions'}</TableHead>
+                   <TableHead>{isRTL ? 'نسبة النجاح' : 'Pass %'}</TableHead>
+                   <TableHead>{isRTL ? 'الامتحان النهائي' : 'Final Exam'}</TableHead>
+                   <TableHead>{t.levels.track}</TableHead>
+                   <TableHead>{t.levels.parentLevel}</TableHead>
+                   <TableHead className="w-[100px]">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      {t.common.loading}
-                    </TableCell>
+                       <TableCell colSpan={8} className="text-center py-8">
+                       {t.common.loading}
+                     </TableCell>
                   </TableRow>
                 ) : filteredLevels.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      {isRTL ? 'لا توجد مستويات' : 'No levels found'}
-                    </TableCell>
+                       <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                       {isRTL ? 'لا توجد مستويات' : 'No levels found'}
+                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredLevels.map((level) => (
@@ -378,9 +415,25 @@ export default function LevelsPage() {
                         {language === 'ar' ? level.name_ar : level.name}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{level.expected_sessions_count ?? 12}</Badge>
-                      </TableCell>
-                      <TableCell>{getTrackBadge(level.track)}</TableCell>
+                         <Badge variant="outline">{level.expected_sessions_count ?? 12}</Badge>
+                       </TableCell>
+                       <TableCell>
+                         <Badge variant="outline">{level.pass_threshold ?? 50}%</Badge>
+                       </TableCell>
+                       <TableCell>
+                         {level.final_exam_quiz_id ? (
+                           <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => navigate(`/quiz-editor/${level.final_exam_quiz_id}`)}>
+                             <ExternalLink className="h-3 w-3 mr-1" />
+                             {isRTL ? 'تعديل' : 'Edit'}
+                           </Button>
+                         ) : (
+                           <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => handleCreateExam(level.id)} disabled={examLoading === level.id}>
+                             <FileQuestion className="h-3 w-3 mr-1" />
+                             {examLoading === level.id ? '...' : (isRTL ? 'إنشاء' : 'Create')}
+                           </Button>
+                         )}
+                       </TableCell>
+                       <TableCell>{getTrackBadge(level.track)}</TableCell>
                       <TableCell>{getParentLevelName(level.parent_level_id)}</TableCell>
                       <TableCell>
                         <DropdownMenu>

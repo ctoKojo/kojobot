@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatDate } from '@/lib/timeUtils';
 import { notificationService } from '@/lib/notificationService';
 import { StudentPerformanceCharts } from '@/components/student/StudentPerformanceCharts';
+import { LevelHistorySection } from '@/components/student/LevelHistorySection';
 import { EvaluationSummary } from '@/components/student/EvaluationSummary';
 import { IssueWarningDialog } from '@/components/student/IssueWarningDialog';
 import { CreateSubscriptionDialog } from '@/components/student/CreateSubscriptionDialog';
@@ -516,6 +517,9 @@ export default function StudentProfile() {
             </CardContent>
           </Card>
         )}
+
+        {/* Level History */}
+        <LevelHistorySection studentId={studentId!} />
 
         {/* Evaluation Summary */}
         <EvaluationSummary studentId={studentId!} />
