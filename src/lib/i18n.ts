@@ -242,6 +242,47 @@ interface Translations {
     lightMode: string;
     darkMode: string;
   };
+  evaluation: {
+    title: string;
+    criteria: string;
+    score: string;
+    totalScore: string;
+    percentage: string;
+    save: string;
+    saveAll: string;
+    autoSaved: string;
+    saving: string;
+    notes: string;
+    feedbackTags: string;
+    noAttendance: string;
+    evaluationLocked: string;
+    behaviorScore: string;
+    quizScore: string;
+    assignmentScore: string;
+    total: string;
+    rubricTooltip: string;
+    leaderboard: string;
+    rank: string;
+    points: string;
+    gap: string;
+    grade: string;
+    mostImproved: string;
+    bestProblemSolver: string;
+    bestCodeQuality: string;
+    bestConsistency: string;
+    starsOfTheWeek: string;
+    starOfEffort: string;
+    starOfTeamwork: string;
+    starOfImprovement: string;
+    lastSession: string;
+    monthly: string;
+    byLevel: string;
+    weak: string;
+    good: string;
+    excellent: string;
+    noEvaluations: string;
+    attendanceNotComplete: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -518,6 +559,48 @@ export const translations: Record<Language, Translations> = {
       lightMode: 'Light Mode',
       darkMode: 'Dark Mode',
     },
+    // Evaluation
+    evaluation: {
+      title: 'Evaluation',
+      criteria: 'Criteria',
+      score: 'Score',
+      totalScore: 'Total Score',
+      percentage: 'Percentage',
+      save: 'Save',
+      saveAll: 'Save All',
+      autoSaved: 'Auto-saved',
+      saving: 'Saving...',
+      notes: 'Notes',
+      feedbackTags: 'Feedback Tags',
+      noAttendance: 'Attendance must be recorded first',
+      evaluationLocked: 'Evaluation locked after 24 hours',
+      behaviorScore: 'Behavior Score',
+      quizScore: 'Quiz Score',
+      assignmentScore: 'Assignment Score',
+      total: 'Total',
+      rubricTooltip: 'Click to see rubric levels',
+      leaderboard: 'Leaderboard',
+      rank: 'Rank',
+      points: 'Points',
+      gap: 'Gap',
+      grade: 'Grade',
+      mostImproved: 'Most Improved',
+      bestProblemSolver: 'Best Problem Solver',
+      bestCodeQuality: 'Best Code Quality',
+      bestConsistency: 'Best Consistency',
+      starsOfTheWeek: 'Stars of the Week',
+      starOfEffort: 'Star of Effort',
+      starOfTeamwork: 'Star of Teamwork',
+      starOfImprovement: 'Star of Improvement',
+      lastSession: 'Last Session',
+      monthly: 'Monthly',
+      byLevel: 'By Level',
+      weak: 'Weak',
+      good: 'Good',
+      excellent: 'Excellent',
+      noEvaluations: 'No evaluations yet',
+      attendanceNotComplete: 'Complete attendance for all students first',
+    },
   },
   
   ar: {
@@ -792,6 +875,48 @@ export const translations: Record<Language, Translations> = {
       theme: 'المظهر',
       lightMode: 'الوضع الفاتح',
       darkMode: 'الوضع الداكن',
+    },
+    // Evaluation
+    evaluation: {
+      title: 'التقييم',
+      criteria: 'المعايير',
+      score: 'الدرجة',
+      totalScore: 'المجموع',
+      percentage: 'النسبة',
+      save: 'حفظ',
+      saveAll: 'حفظ الكل',
+      autoSaved: 'تم الحفظ تلقائياً',
+      saving: 'جاري الحفظ...',
+      notes: 'ملاحظات',
+      feedbackTags: 'تعليقات',
+      noAttendance: 'يجب تسجيل الحضور أولاً',
+      evaluationLocked: 'التقييم مغلق بعد 24 ساعة',
+      behaviorScore: 'درجة السلوك',
+      quizScore: 'درجة الكويز',
+      assignmentScore: 'درجة الواجب',
+      total: 'الإجمالي',
+      rubricTooltip: 'اضغط لعرض مستويات التقييم',
+      leaderboard: 'لوحة الترتيب',
+      rank: 'المركز',
+      points: 'النقاط',
+      gap: 'الفرق',
+      grade: 'التقدير',
+      mostImproved: 'الأكثر تطوراً',
+      bestProblemSolver: 'أفضل حل مشكلات',
+      bestCodeQuality: 'أفضل جودة كود',
+      bestConsistency: 'الأكثر ثباتاً',
+      starsOfTheWeek: 'نجوم الأسبوع',
+      starOfEffort: 'نجمة الاجتهاد',
+      starOfTeamwork: 'نجمة التعاون',
+      starOfImprovement: 'نجمة التطور',
+      lastSession: 'آخر سيشن',
+      monthly: 'الشهري',
+      byLevel: 'حسب الليفل',
+      weak: 'ضعيف',
+      good: 'جيد',
+      excellent: 'ممتاز',
+      noEvaluations: 'لا توجد تقييمات بعد',
+      attendanceNotComplete: 'أكمل الحضور لكل الطلاب أولاً',
     },
   },
 };
