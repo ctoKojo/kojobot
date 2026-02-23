@@ -245,6 +245,48 @@ serve(async (req) => {
 
     console.log(`Quiz graded for user ${userId}: ${score}/${maxScore} (${percentage}%)`)
 
+    // Check if this quiz is a level final exam
+    try {
+      const { data: finalExamLevel } = await adminSupabase
+        .from('levels')
+        .select('id')
+        .eq('final_exam_quiz_id', assignment.quiz_id)
+        .maybeSingle()
+
+      if (finalExamLevel) {
+        // Update exam_submitted_at in group_student_progress
+        const groupId = assignment.group_id
+        if (groupId) {
+          await adminSupabase
+            .from('group_student_progress')
+            .update({ exam_submitted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+            .eq('group_id', groupId)
+            .eq('student_id', userId)
+            .eq('status', 'exam_scheduled')
+
+          console.log(`Updated exam_submitted_at for student ${userId} in group ${groupId}`)
+
+          // Check if all scheduled students have submitted
+          const { data: pendingStudents } = await adminSupabase
+            .from('group_student_progress')
+            .select('id')
+            .eq('group_id', groupId)
+            .eq('status', 'exam_scheduled')
+            .is('exam_submitted_at', null)
+
+          if (!pendingStudents || pendingStudents.length === 0) {
+            await adminSupabase
+              .from('groups')
+              .update({ level_status: 'exam_done' })
+              .eq('id', groupId)
+            console.log(`All students submitted - group ${groupId} level_status set to exam_done`)
+          }
+        }
+      }
+    } catch (finalExamError) {
+      console.error('Error checking final exam status:', finalExamError)
+    }
+
     // Notify admins if student failed
     if (!passed) {
       try {
