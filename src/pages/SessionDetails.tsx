@@ -1187,7 +1187,7 @@ export default function SessionDetails() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                {isOnline && group?.session_link && (
+                {isOnline && group?.session_link && liveStatus === 'active' && (
                   <Button variant="outline" size="sm" asChild>
                     <a href={group.session_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                       <Video className="h-4 w-4" />
@@ -1243,7 +1243,7 @@ export default function SessionDetails() {
                 <UserCheck className="h-4 w-4" />
                 {isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
               </Button>
-              {isOnline && group?.session_link && (
+              {isOnline && group?.session_link && liveStatus === 'active' && (
                 <Button variant="outline" asChild>
                   <a href={group.session_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                     <Video className="h-4 w-4" />
