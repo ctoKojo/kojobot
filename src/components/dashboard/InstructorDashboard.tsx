@@ -185,7 +185,7 @@ export function InstructorDashboard() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-5">
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/groups')}>
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
@@ -239,6 +239,22 @@ export function InstructorDashboard() {
           </CardHeader>
           <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             <div className="text-2xl sm:text-3xl font-bold">{loading ? '...' : stats.pendingSubmissions}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/my-instructor-warnings')}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground line-clamp-2">
+              {isRTL ? 'الإنذارات النشطة' : 'Active Warnings'}
+            </CardTitle>
+            <div className={`p-1.5 sm:p-2 rounded-lg ${stats.activeWarnings.length > 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
+              <AlertTriangle className={`h-4 w-4 sm:h-5 sm:w-5 ${stats.activeWarnings.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`} />
+            </div>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+            <div className={`text-2xl sm:text-3xl font-bold ${stats.activeWarnings.length > 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
+              {loading ? '...' : stats.activeWarnings.length}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -298,27 +314,27 @@ export function InstructorDashboard() {
       </Card>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/attendance')}>
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/my-instructor-warnings')}>
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              {isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
+              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
+              {isRTL ? 'إنذاراتي' : 'My Warnings'}
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              {isRTL ? 'سجل حضور وغياب الطلاب' : 'Mark student attendance'}
+              {isRTL ? 'عرض وتتبع الإنذارات الصادرة' : 'View and track issued warnings'}
             </CardDescription>
           </CardHeader>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow sm:col-span-2 md:col-span-1" onClick={() => navigate('/my-instructor-quizzes')}>
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/instructor-schedule')}>
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <FileQuestion className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
-              {isRTL ? 'إسناد الكويزات' : 'Quiz Assignments'}
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              {isRTL ? 'جدولي' : 'My Schedule'}
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              {isRTL ? 'أسند كويزات وتابع نتائج الطلاب' : 'Assign quizzes and track student results'}
+              {isRTL ? 'عرض جدول المواعيد والسيشنات' : 'View your schedule and sessions'}
             </CardDescription>
           </CardHeader>
         </Card>

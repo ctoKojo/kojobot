@@ -102,7 +102,7 @@ export function ReceptionDashboard() {
       icon: AlertTriangle,
       color: stats.unrecordedAttendance > 0 ? 'text-orange-600' : 'text-green-600',
       bg: stats.unrecordedAttendance > 0 ? 'bg-orange-100' : 'bg-green-100',
-      onClick: () => navigate('/attendance'),
+      onClick: () => navigate('/sessions'),
     },
     {
       title: isRTL ? 'مدفوعات متأخرة' : 'Overdue Payments',
