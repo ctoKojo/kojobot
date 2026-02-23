@@ -11,10 +11,25 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // Auth: only service role or CRON_SECRET allowed
+  const authHeader = req.headers.get('Authorization');
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const cronSecret = Deno.env.get('CRON_SECRET');
+  const token = authHeader?.replace('Bearer ', '') ?? '';
+  const isServiceRole = token === supabaseKey;
+  const isCronAuth = cronSecret && token === cronSecret;
+
+  if (!isServiceRole && !isCronAuth) {
+    console.warn('[Process Deductions] Unauthorized access attempt');
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+    );
+  }
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const now = new Date();
     const currentMonth = now.toISOString().substring(0, 7) + '-01';
