@@ -526,6 +526,59 @@ export type Database = {
         }
         Relationships: []
       }
+      evaluation_criteria: {
+        Row: {
+          age_group_id: string
+          created_at: string | null
+          description: string | null
+          description_ar: string | null
+          display_order: number | null
+          id: string
+          is_active: boolean | null
+          key: string
+          max_score: number
+          name: string
+          name_ar: string
+          rubric_levels: Json
+        }
+        Insert: {
+          age_group_id: string
+          created_at?: string | null
+          description?: string | null
+          description_ar?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          max_score: number
+          name: string
+          name_ar: string
+          rubric_levels?: Json
+        }
+        Update: {
+          age_group_id?: string
+          created_at?: string | null
+          description?: string | null
+          description_ar?: string | null
+          display_order?: number | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          max_score?: number
+          name?: string
+          name_ar?: string
+          rubric_levels?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_criteria_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -1911,6 +1964,87 @@ export type Database = {
           },
         ]
       }
+      session_evaluations: {
+        Row: {
+          assignment_max_score: number | null
+          assignment_score: number | null
+          created_at: string | null
+          criteria_snapshot: Json
+          evaluated_by: string
+          id: string
+          max_behavior_score: number
+          max_total_score: number | null
+          notes: string | null
+          percentage: number | null
+          quiz_max_score: number | null
+          quiz_score: number | null
+          scores: Json
+          session_id: string
+          student_feedback_tags: string[] | null
+          student_id: string
+          total_behavior_score: number
+          total_score: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          assignment_max_score?: number | null
+          assignment_score?: number | null
+          created_at?: string | null
+          criteria_snapshot: Json
+          evaluated_by: string
+          id?: string
+          max_behavior_score?: number
+          max_total_score?: number | null
+          notes?: string | null
+          percentage?: number | null
+          quiz_max_score?: number | null
+          quiz_score?: number | null
+          scores: Json
+          session_id: string
+          student_feedback_tags?: string[] | null
+          student_id: string
+          total_behavior_score?: number
+          total_score?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          assignment_max_score?: number | null
+          assignment_score?: number | null
+          created_at?: string | null
+          criteria_snapshot?: Json
+          evaluated_by?: string
+          id?: string
+          max_behavior_score?: number
+          max_total_score?: number | null
+          notes?: string | null
+          percentage?: number | null
+          quiz_max_score?: number | null
+          quiz_score?: number | null
+          scores?: Json
+          session_id?: string
+          student_feedback_tags?: string[] | null
+          student_id?: string
+          total_behavior_score?: number
+          total_score?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_evaluations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "session_evaluations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_staff_attendance: {
         Row: {
           actual_hours: number
@@ -2432,6 +2566,81 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_session_evaluations_view: {
+        Row: {
+          assignment_max_score: number | null
+          assignment_score: number | null
+          created_at: string | null
+          evaluated_by: string | null
+          id: string | null
+          max_behavior_score: number | null
+          max_total_score: number | null
+          percentage: number | null
+          quiz_max_score: number | null
+          quiz_score: number | null
+          scores: Json | null
+          session_id: string | null
+          student_feedback_tags: string[] | null
+          student_id: string | null
+          total_behavior_score: number | null
+          total_score: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          assignment_max_score?: number | null
+          assignment_score?: number | null
+          created_at?: string | null
+          evaluated_by?: string | null
+          id?: string | null
+          max_behavior_score?: number | null
+          max_total_score?: number | null
+          percentage?: number | null
+          quiz_max_score?: number | null
+          quiz_score?: number | null
+          scores?: Json | null
+          session_id?: string | null
+          student_feedback_tags?: string[] | null
+          student_id?: string | null
+          total_behavior_score?: number | null
+          total_score?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          assignment_max_score?: number | null
+          assignment_score?: number | null
+          created_at?: string | null
+          evaluated_by?: string | null
+          id?: string | null
+          max_behavior_score?: number | null
+          max_total_score?: number | null
+          percentage?: number | null
+          quiz_max_score?: number | null
+          quiz_score?: number | null
+          scores?: Json | null
+          session_id?: string | null
+          student_feedback_tags?: string[] | null
+          student_id?: string | null
+          total_behavior_score?: number | null
+          total_score?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_evaluations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "session_evaluations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
         ]
