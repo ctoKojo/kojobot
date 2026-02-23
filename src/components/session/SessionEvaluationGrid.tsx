@@ -623,7 +623,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
                 <TableIcon className="h-4 w-4" />
               </button>
             </div>
-            <Button onClick={handleSaveAll} disabled={savingAll || rows.every(r => r.saved)} size="sm">
+            <Button onClick={handleSaveAll} disabled={savingAll} size="sm">
               {savingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               <span className="hidden sm:inline ms-1">{t.evaluation.saveAll}</span>
             </Button>
