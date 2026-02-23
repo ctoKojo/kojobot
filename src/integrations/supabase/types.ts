@@ -3142,6 +3142,10 @@ export type Database = {
         }
         Returns: Json
       }
+      student_choose_track_and_upgrade: {
+        Args: { p_chosen_track_id?: string; p_group_id: string }
+        Returns: Json
+      }
       unassign_curriculum_quiz: {
         Args: { p_expected_quiz_id: string; p_session_id: string }
         Returns: Json

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw } from 'lucide-react';
+import { LevelPassedBanner } from '@/components/student/LevelPassedBanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -267,6 +268,9 @@ export function StudentDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* Level Passed - Track Selection Banner */}
+      {user && <LevelPassedBanner studentId={user.id} onUpgraded={fetchStats} />}
 
       {/* Welcome Banner */}
       {stats.profile && (

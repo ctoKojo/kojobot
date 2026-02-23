@@ -66,6 +66,8 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
   const [filter, setFilter] = useState<FilterType>('all');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [studentSessionCounts, setStudentSessionCounts] = useState<Record<string, number>>({});
+  const [expectedSessions, setExpectedSessions] = useState<number>(12);
 
   // Schedule exam dialog
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
@@ -82,6 +84,13 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
   useEffect(() => {
     fetchData();
   }, [groupId]);
+
+  useEffect(() => {
+    if (levelId) {
+      supabase.from('levels').select('expected_sessions_count').eq('id', levelId).single()
+        .then(({ data }) => { if (data) setExpectedSessions(data.expected_sessions_count); });
+    }
+  }, [levelId]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -108,6 +117,27 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
         ...p,
         profiles: profiles.find((pr: any) => pr.user_id === p.student_id),
       }));
+
+      // Fetch per-student completed session counts for current level
+      if (levelId && studentIds.length > 0) {
+        const { data: attendanceCounts } = await supabase
+          .from('attendance')
+          .select('student_id, session_id, status, sessions!inner(group_id, level_id, status)')
+          .eq('sessions.group_id', groupId)
+          .eq('sessions.level_id', levelId)
+          .eq('sessions.status', 'completed')
+          .in('student_id', studentIds)
+          .in('status', ['present', 'late']);
+
+        const counts: Record<string, Set<string>> = {};
+        (attendanceCounts || []).forEach((a: any) => {
+          if (!counts[a.student_id]) counts[a.student_id] = new Set();
+          counts[a.student_id].add(a.session_id);
+        });
+        const countMap: Record<string, number> = {};
+        Object.entries(counts).forEach(([sid, set]) => { countMap[sid] = set.size; });
+        setStudentSessionCounts(countMap);
+      }
 
       setProgress(enrichedProgress);
       setGrades((gradesRes.data || []) as LevelGrade[]);
@@ -253,6 +283,13 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
   };
 
   const banner = getBanner();
+
+  // Eligible students = those with enough completed sessions and status in_progress/awaiting_exam
+  const eligibleForExam = progress.filter(p => 
+    (p.status === 'in_progress' || p.status === 'awaiting_exam') &&
+    (studentSessionCounts[p.student_id] || 0) >= expectedSessions
+  );
+
   const filterCounts = {
     all: progress.length,
     awaiting_exam: progress.filter(p => p.status === 'awaiting_exam' || p.status === 'in_progress').length,
@@ -290,14 +327,20 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
 
       {/* Admin Actions */}
       {isAdmin && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           <Button variant="outline" size="sm" onClick={() => {
-            setSelectedStudents(progress.filter(p => p.status === 'in_progress' || p.status === 'awaiting_exam').map(p => p.student_id));
+            setSelectedStudents(eligibleForExam.map(p => p.student_id));
             setShowScheduleDialog(true);
-          }}>
+          }} disabled={eligibleForExam.length === 0}>
             <CalendarCheck className="h-4 w-4 mr-2" />
             {isRTL ? 'جدول الامتحان النهائي' : 'Schedule Final Exam'}
+            {eligibleForExam.length > 0 && ` (${eligibleForExam.length})`}
           </Button>
+          {eligibleForExam.length === 0 && progress.some(p => p.status === 'in_progress' || p.status === 'awaiting_exam') && (
+            <span className="text-xs text-muted-foreground">
+              {isRTL ? `لا يوجد طالب أكمل ${expectedSessions} سيشن` : `No student completed ${expectedSessions} sessions yet`}
+            </span>
+          )}
           <Button variant="outline" size="sm" onClick={handleComputeGrades} disabled={actionLoading}>
             <Calculator className="h-4 w-4 mr-2" />
             {isRTL ? 'احسب الدرجات النهائية' : 'Compute Final Grades'}
@@ -342,6 +385,7 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
             <TableHeader>
               <TableRow>
                 <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                <TableHead className="text-center">{isRTL ? 'سيشنات' : 'Sessions'}</TableHead>
                 <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
                 <TableHead className="text-center">{isRTL ? 'النتيجة' : 'Outcome'}</TableHead>
                 <TableHead className="text-center">{isRTL ? 'تقييم' : 'Eval'}</TableHead>
@@ -364,6 +408,11 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
                         </Avatar>
                         <span className="text-sm font-medium">{name}</span>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className={`text-xs font-medium ${(studentSessionCounts[p.student_id] || 0) >= expectedSessions ? 'text-green-600' : 'text-muted-foreground'}`}>
+                        {studentSessionCounts[p.student_id] || 0}/{expectedSessions}
+                      </span>
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant="secondary" className="text-xs">
