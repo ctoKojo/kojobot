@@ -1,76 +1,129 @@
 
 
-# تحسين الداشبوردات -- Dashboard Improvements
+# تفعيل وتأمين نظام مراقبة الـ SLA -- التنفيذ النهائي
 
-## الوضع الحالي والمشاكل
+## الخطوات بالترتيب
 
-### داشبورد المدرب (InstructorDashboard)
-1. **"تسجيل الحضور"** -- يوجه لـ `/attendance` وهو route غير موجود أصلاً (صفحة الحضور محذوفة، الحضور بيتسجل من داخل السيشن)
-2. **"إسناد الكويزات"** -- يوجه لـ `/my-instructor-quizzes` لكن الكويزات أصبحت curriculum-first ولا تُسند من صفحة مستقلة
-3. **الإنذارات موجودة** في الكود لكن ممكن مش بتظهر لو مفيش إنذارات نشطة -- محتاج نتأكد إن الكارد بيظهر دايماً حتى لو العدد صفر كـ KPI
+### الخطوة 1: إضافة CRON_SECRET كـ Secret
 
-### داشبورد الطالب (StudentDashboard)
-- شغال بشكل جيد لكن ممكن نحسنه
+إنشاء secret باسم `CRON_SECRET` بقيمة عشوائية قوية (32+ bytes).
+سيُستخدم في:
+- `compliance-monitor`
+- `process-deductions`
+- `auto-complete-sessions` (موجود بالفعل في الكود لكن الـ secret مش مضاف)
 
-### داشبورد الأدمن (AdminDashboard)
-- شغال ومنطقي
+### الخطوة 2: تأمين `compliance-monitor/index.ts`
 
-### داشبورد الاستقبال (ReceptionDashboard)
-- عنده كارد "حضور غير مسجل" يوجه لـ `/attendance` وهو route غير موجود
+إضافة Auth Check بعد فحص OPTIONS مباشرة (نفس نمط `auto-complete-sessions`):
+
+```text
+// بعد سطر 27 (return 'ok' for OPTIONS)
+// إضافة:
+const authHeader = req.headers.get('Authorization');
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const cronSecret = Deno.env.get('CRON_SECRET');
+const token = authHeader?.replace('Bearer ', '') ?? '';
+const isServiceRole = token === supabaseKey;
+const isCronAuth = cronSecret && token === cronSecret;
+
+if (!isServiceRole && !isCronAuth) {
+  console.warn('[Compliance Monitor] Unauthorized access attempt');
+  return new Response(
+    JSON.stringify({ error: 'Unauthorized' }),
+    { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+```
+
+تعديل الكود بحيث يُقرأ `supabaseServiceKey` من المتغير اللي اتعرف فوق بدل ما يتعرف تاني.
+
+### الخطوة 3: تأمين `process-deductions/index.ts`
+
+نفس النمط بالظبط -- إضافة Auth Check بعد OPTIONS:
+
+```text
+// بعد سطر 12 (return 'ok' for OPTIONS)
+// إضافة:
+const authHeader = req.headers.get('Authorization');
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const cronSecret = Deno.env.get('CRON_SECRET');
+const token = authHeader?.replace('Bearer ', '') ?? '';
+const isServiceRole = token === supabaseKey;
+const isCronAuth = cronSecret && token === cronSecret;
+
+if (!isServiceRole && !isCronAuth) {
+  console.warn('[Process Deductions] Unauthorized access attempt');
+  return new Response(
+    JSON.stringify({ error: 'Unauthorized' }),
+    { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+```
+
+ثم تعديل الكود بحيث يستخدم `supabaseKey` اللي اتعرف فوق بدل `supabaseServiceKey` اللي جوه try.
+
+### الخطوة 4: تحديث `supabase/config.toml`
+
+إضافة:
+```toml
+[functions.compliance-monitor]
+verify_jwt = false
+
+[functions.process-deductions]
+verify_jwt = false
+```
+
+### الخطوة 5: إنشاء Cron Jobs
+
+تشغيل SQL مباشر (مش migration) لإنشاء الجدولة:
+
+```sql
+-- compliance-monitor: كل ساعة عند الدقيقة 0
+SELECT cron.schedule(
+  'compliance-monitor-hourly',
+  '0 * * * *',
+  $$
+  SELECT net.http_post(
+    url:='https://jwkoqnvkvlyqbwydehfm.supabase.co/functions/v1/compliance-monitor',
+    headers:=format('{"Content-Type": "application/json", "Authorization": "Bearer %s"}',
+      current_setting('app.settings.cron_secret', true))::jsonb,
+    body:=concat('{"time": "', now(), '"}')::jsonb
+  ) as request_id;
+  $$
+);
+
+-- process-deductions: كل ساعة عند الدقيقة 30
+SELECT cron.schedule(
+  'process-deductions-hourly',
+  '30 * * * *',
+  $$
+  SELECT net.http_post(
+    url:='https://jwkoqnvkvlyqbwydehfm.supabase.co/functions/v1/process-deductions',
+    headers:=format('{"Content-Type": "application/json", "Authorization": "Bearer %s"}',
+      current_setting('app.settings.cron_secret', true))::jsonb,
+    body:=concat('{"time": "', now(), '"}')::jsonb
+  ) as request_id;
+  $$
+);
+```
+
+ملاحظة: لو `current_setting('app.settings.cron_secret')` مش متاح، هنستخدم الـ CRON_SECRET مباشرة في الـ SQL (مرة واحدة من بيئة آمنة، مش في migration file).
+
+### الخطوة 6: اختبار
+
+- استدعاء الفانكشن بدون header -- لازم يرجع 401
+- استدعاء بالـ CRON_SECRET -- لازم يرجع 200
+- التأكد من ظهور الـ Cron Jobs في القائمة
 
 ---
 
-## التغييرات المقترحة
-
-### 1. داشبورد المدرب -- `InstructorDashboard.tsx`
-
-**حذف Quick Actions القديمة:**
-- حذف كارد "تسجيل الحضور" (Record Attendance) -- لأن الحضور بيتسجل من السيشن مباشرة
-- حذف كارد "إسناد الكويزات" (Quiz Assignments) -- لأن الكويزات أصبحت تُسند من المنهج
-
-**إضافة كارد إنذارات في Stats Grid:**
-- إضافة كارد "الإنذارات النشطة" في الـ Stats Grid (بجانب مجموعاتي / الطلاب / السيشنات / التسليمات)
-- يظهر العدد دائماً (حتى لو صفر)
-- لون تحذيري لو فيه إنذارات نشطة
-- كليكابل يوجه لـ `/my-instructor-warnings`
-
-**تحسين Quick Actions البديلة:**
-- إضافة كارد "إنذاراتي" → `/my-instructor-warnings`
-- إضافة كارد "المنهج" → `/curriculum` (أو حسب الموجود)
-- إضافة كارد "جدولي" → `/instructor-schedule`
-
-### 2. داشبورد الاستقبال -- `ReceptionDashboard.tsx`
-
-**تعديل كارد "حضور غير مسجل":**
-- تغيير التوجيه من `/attendance` إلى `/sessions` (لأن الحضور يُسجل من داخل السيشن)
-
----
-
-## التفاصيل التقنية
-
-### الملفات المتأثرة
+## الملفات المتأثرة
 
 | الملف | التغيير |
 |-------|---------|
-| `src/components/dashboard/InstructorDashboard.tsx` | حذف Quick Actions القديمة، إضافة كارد الإنذارات في Stats Grid، إضافة Quick Actions جديدة |
-| `src/components/dashboard/ReceptionDashboard.tsx` | تغيير navigate للحضور من `/attendance` إلى `/sessions` |
-
-### تفاصيل InstructorDashboard
-
-**Stats Grid (4 كاردات → 5 كاردات):**
-1. مجموعاتي → `/groups` (موجود)
-2. إجمالي الطلاب (موجود)
-3. السيشنات القادمة → `/sessions` (موجود)
-4. تسليمات بانتظار → `/assignments` (موجود)
-5. **جديد**: الإنذارات النشطة → `/my-instructor-warnings` (لون أحمر/تحذيري لو > 0)
-
-**Warnings Alert Card:** يبقى كما هو (يظهر تفاصيل الإنذارات لو فيه)
-
-**Quick Actions الجديدة (بدل القديمة):**
-- "إنذاراتي" → `/my-instructor-warnings` -- أيقونة AlertTriangle
-- "جدولي" → `/instructor-schedule` -- أيقونة Calendar
-
-### تفاصيل ReceptionDashboard
-
-- تغيير `onClick` لكارد "حضور غير مسجل" من `navigate('/attendance')` إلى `navigate('/sessions')`
+| Secret: `CRON_SECRET` | إنشاء جديد |
+| `supabase/functions/compliance-monitor/index.ts` | إضافة Auth Check |
+| `supabase/functions/process-deductions/index.ts` | إضافة Auth Check |
+| `supabase/config.toml` | إضافة verify_jwt = false للفانكشنين |
+| SQL (تنفيذ مباشر) | إنشاء cron jobs |
 
