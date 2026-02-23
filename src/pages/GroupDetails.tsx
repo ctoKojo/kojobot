@@ -29,6 +29,7 @@ import { RescheduleDialog } from '@/components/group/RescheduleDialog';
 import { EditSessionDialog } from '@/components/group/EditSessionDialog';
 import { formatTime12Hour, formatDate } from '@/lib/timeUtils';
 import { getGroupTypeLabel, getDayName } from '@/lib/constants';
+import { isSessionActiveCairo } from '@/lib/sessionTimeGuard';
 
 interface AttendanceRecord {
   id: string;
@@ -377,36 +378,42 @@ export default function GroupDetails() {
           </CardContent>
         </Card>
 
-        {/* Session Link Card - for online groups */}
-        {data.group.attendance_mode === 'online' && data.group.session_link && (
-          <Card className="border-green-500/20 bg-gradient-to-r from-green-500/5 to-transparent">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Video className="h-5 w-5 text-green-600" />
-                {isRTL ? 'رابط الجلسة' : 'Session Link'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                <div className="flex-1 p-3 bg-muted rounded-lg font-mono text-sm break-all">
-                  {data.group.session_link}
+        {/* Session Link Card - for online groups (only when a session is active) */}
+        {data.group.attendance_mode === 'online' && data.group.session_link && (() => {
+          const hasActiveSession = (data.sessions || []).some((s: any) => 
+            isSessionActiveCairo(s.session_date, s.session_time, s.duration_minutes)
+          );
+          if (!hasActiveSession) return null;
+          return (
+            <Card className="border-green-500/20 bg-gradient-to-r from-green-500/5 to-transparent">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Video className="h-5 w-5 text-green-600" />
+                  {isRTL ? 'رابط الجلسة' : 'Session Link'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                  <div className="flex-1 p-3 bg-muted rounded-lg font-mono text-sm break-all">
+                    {data.group.session_link}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      {isRTL ? 'نسخ' : 'Copy'}
+                    </Button>
+                    <Button size="sm" className="bg-green-600 hover:bg-green-700" asChild>
+                      <a href={data.group.session_link} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        {isRTL ? 'انضم للجلسة' : 'Join Session'}
+                      </a>
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleCopyLink}>
-                    <Copy className="h-4 w-4 mr-2" />
-                    {isRTL ? 'نسخ' : 'Copy'}
-                  </Button>
-                  <Button size="sm" className="bg-green-600 hover:bg-green-700" asChild>
-                    <a href={data.group.session_link} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      {isRTL ? 'انضم للجلسة' : 'Join Session'}
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Level Progress Card */}
         <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">

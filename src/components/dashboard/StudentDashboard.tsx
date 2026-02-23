@@ -9,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { formatTime12Hour, formatDate } from '@/lib/timeUtils';
+import { isSessionActiveCairo } from '@/lib/sessionTimeGuard';
 
 interface GroupInfo {
   id: string;
@@ -309,18 +310,24 @@ export function StudentDashboard() {
                   {stats.groupInfo.schedule_day} - {formatTime12Hour(stats.groupInfo.schedule_time, isRTL)}
                 </p>
                 {/* Session Link for Online Groups */}
-                {stats.groupInfo.attendance_mode === 'online' && stats.groupInfo.session_link && (
-                  <Button 
-                    size="sm" 
-                    className="mt-2 w-full bg-green-600 hover:bg-green-700"
-                    asChild
-                  >
-                    <a href={stats.groupInfo.session_link} target="_blank" rel="noopener noreferrer">
-                      <Video className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                      {isRTL ? 'انضم للجلسة' : 'Join Session'}
-                    </a>
-                  </Button>
-                )}
+                {stats.groupInfo.attendance_mode === 'online' && stats.groupInfo.session_link && (() => {
+                  const hasActiveSession = stats.upcomingSessions.some((s: any) => 
+                    isSessionActiveCairo(s.session_date, s.session_time, s.duration_minutes)
+                  );
+                  if (!hasActiveSession) return null;
+                  return (
+                    <Button 
+                      size="sm" 
+                      className="mt-2 w-full bg-green-600 hover:bg-green-700"
+                      asChild
+                    >
+                      <a href={stats.groupInfo.session_link} target="_blank" rel="noopener noreferrer">
+                        <Video className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                        {isRTL ? 'انضم للجلسة' : 'Join Session'}
+                      </a>
+                    </Button>
+                  );
+                })()}
               </>
             ) : (
               <p className="text-muted-foreground text-sm">{isRTL ? 'غير مسجل' : 'Not enrolled'}</p>
@@ -509,7 +516,8 @@ export function StudentDashboard() {
                       <p className="text-sm text-muted-foreground mt-1">{formatTime12Hour(session.session_time, isRTL)}</p>
                     </div>
                     {/* Join Session Button for Online Groups */}
-                    {session.groups?.attendance_mode === 'online' && session.groups?.session_link && (
+                    {session.groups?.attendance_mode === 'online' && session.groups?.session_link && 
+                      isSessionActiveCairo(session.session_date, session.session_time, session.duration_minutes) && (
                       <Button 
                         size="sm" 
                         className="bg-green-600 hover:bg-green-700"
