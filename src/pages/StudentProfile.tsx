@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatDate } from '@/lib/timeUtils';
 import { notificationService } from '@/lib/notificationService';
 import { StudentPerformanceCharts } from '@/components/student/StudentPerformanceCharts';
+import { EvaluationSummary } from '@/components/student/EvaluationSummary';
 import { IssueWarningDialog } from '@/components/student/IssueWarningDialog';
 import { CreateSubscriptionDialog } from '@/components/student/CreateSubscriptionDialog';
 import { EditSubscriptionDialog } from '@/components/student/EditSubscriptionDialog';
@@ -516,7 +517,10 @@ export default function StudentProfile() {
           </Card>
         )}
 
-        {/* Performance Charts - New Section */}
+        {/* Evaluation Summary */}
+        <EvaluationSummary studentId={studentId!} />
+
+        {/* Performance Charts */}
         <StudentPerformanceCharts
           attendance={data.attendance}
           quizSubmissions={data.quizSubmissions}
