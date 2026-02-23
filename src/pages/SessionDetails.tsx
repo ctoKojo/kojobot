@@ -50,6 +50,7 @@ import { toast } from '@/hooks/use-toast';
 import { formatTime12Hour } from '@/lib/timeUtils';
 import { QuizResultsDialog } from '@/components/session/QuizResultsDialog';
 import { AssignmentSubmissionsDialog } from '@/components/session/AssignmentSubmissionsDialog';
+import { SessionEvaluationGrid } from '@/components/session/SessionEvaluationGrid';
 import {
   ArrowLeft,
   ArrowRight,
@@ -1656,6 +1657,24 @@ export default function SessionDetails() {
           </CardContent>
         </Card>
 
+        {/* Evaluation Grid (Admin/Instructor only) */}
+        {canManage && group?.age_group_id && (
+          <SessionEvaluationGrid
+            sessionId={session.id}
+            groupId={session.group_id}
+            ageGroupId={group.age_group_id}
+            students={students.map(s => ({
+              student_id: s.student_id,
+              student_name: s.student_name,
+              student_name_ar: s.student_name_ar,
+              quiz_score: s.quiz_score,
+              quiz_max_score: s.quiz_max_score,
+              assignment_score: s.assignment_score,
+              assignment_max_score: s.assignment_max_score,
+            }))}
+            attendanceComplete={students.length > 0 && students.every(s => s.attendance_status !== null)}
+          />
+        )}
         {/* Edit Quiz Time Dialog */}
         <Dialog open={editQuizDialogOpen} onOpenChange={setEditQuizDialogOpen}>
           <DialogContent>
