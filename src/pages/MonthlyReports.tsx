@@ -18,6 +18,7 @@ interface MonthlyStats {
   attendance: { present: number; absent: number; late: number; total: number; rate: number };
   quizzes: { completed: number; avgScore: number; passRate: number };
   assignments: { submitted: number; graded: number; avgScore: number; total: number };
+  evaluations: { count: number; avgPercentage: number; avgBehavior: number };
   warnings: number;
 }
 
@@ -28,6 +29,7 @@ interface StudentSummary {
   attendanceRate: number;
   quizAvg: number;
   assignmentAvg: number;
+  evaluationAvg: number;
   warnings: number;
 }
 
@@ -234,12 +236,32 @@ export default function MonthlyReports() {
         warningsCount = count || 0;
       }
 
+      // Fetch session evaluations for the month
+      let evalData: any[] = [];
+      if (sessionIds.length > 0 && studentIds.length > 0) {
+        const { data: evals } = await supabase
+          .from('session_evaluations')
+          .select('percentage, total_behavior_score, max_behavior_score')
+          .in('session_id', sessionIds)
+          .in('student_id', studentIds);
+        evalData = evals || [];
+      }
+
+      const evalCount = evalData.length;
+      const evalAvgPct = evalCount > 0
+        ? Math.round(evalData.filter(e => e.percentage != null).reduce((sum: number, e: any) => sum + (e.percentage || 0), 0) / Math.max(1, evalData.filter(e => e.percentage != null).length))
+        : 0;
+      const evalAvgBehavior = evalCount > 0
+        ? Math.round(evalData.reduce((sum: number, e: any) => sum + (e.total_behavior_score || 0), 0) / evalCount)
+        : 0;
+
       setStats({
         month: months[currentMonth][language === 'ar' ? 'ar' : 'en'],
         year: currentYear,
         attendance: { present, absent, late, total: totalAttendance, rate: attendanceRate },
         quizzes: { completed: quizCompleted, avgScore: quizAvgScore, passRate: quizPassRate },
         assignments: { submitted: assignmentSubmitted, graded: assignmentGraded, avgScore: assignmentAvgScore, total: assignmentSubmitted },
+        evaluations: { count: evalCount, avgPercentage: evalAvgPct, avgBehavior: evalAvgBehavior },
         warnings: warningsCount,
       });
 
@@ -369,6 +391,18 @@ export default function MonthlyReports() {
         .eq('student_id', profile.user_id)
         .eq('is_active', true);
 
+      // Evaluation avg
+      const { data: evals } = await supabase
+        .from('session_evaluations')
+        .select('percentage')
+        .eq('student_id', profile.user_id)
+        .in('session_id', sessionIds);
+      
+      const evalWithPct = (evals || []).filter(e => e.percentage != null);
+      const evaluationAvg = evalWithPct.length > 0
+        ? Math.round(evalWithPct.reduce((sum, e) => sum + (e.percentage || 0), 0) / evalWithPct.length)
+        : 0;
+
       summaries.push({
         id: profile.user_id,
         name: profile.full_name,
@@ -376,6 +410,7 @@ export default function MonthlyReports() {
         attendanceRate,
         quizAvg,
         assignmentAvg,
+        evaluationAvg,
         warnings: warnings || 0,
       });
     }
@@ -466,7 +501,7 @@ export default function MonthlyReports() {
         ) : (
           <>
             {/* Stats Cards */}
-            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -508,6 +543,21 @@ export default function MonthlyReports() {
                   <div className="text-3xl font-bold text-purple-600">{stats?.assignments.avgScore || 0}%</div>
                   <p className="text-xs text-muted-foreground">
                     {stats?.assignments.submitted || 0} {isRTL ? 'تسليم' : 'submitted'}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Award className="h-4 w-4 text-amber-500" />
+                    {isRTL ? 'التقييم السلوكي' : 'Behavior Eval'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-amber-600">{stats?.evaluations.avgPercentage || 0}%</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stats?.evaluations.count || 0} {isRTL ? 'تقييم' : 'evaluations'}
                   </p>
                 </CardContent>
               </Card>
@@ -647,6 +697,7 @@ export default function MonthlyReports() {
                         <TableHead className="text-center">{isRTL ? 'الحضور' : 'Attendance'}</TableHead>
                         <TableHead className="text-center">{isRTL ? 'الكويزات' : 'Quizzes'}</TableHead>
                         <TableHead className="text-center">{isRTL ? 'الواجبات' : 'Assignments'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'التقييم' : 'Evaluation'}</TableHead>
                         <TableHead className="text-center">{isRTL ? 'الإنذارات' : 'Warnings'}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -685,6 +736,16 @@ export default function MonthlyReports() {
                               'bg-red-100 text-red-800'
                             }>
                               {student.assignmentAvg}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge className={
+                              student.evaluationAvg >= 80 ? 'bg-green-100 text-green-800' :
+                              student.evaluationAvg >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                              student.evaluationAvg > 0 ? 'bg-red-100 text-red-800' :
+                              'bg-muted text-muted-foreground'
+                            }>
+                              {student.evaluationAvg > 0 ? `${student.evaluationAvg}%` : '-'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
