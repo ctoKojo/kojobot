@@ -151,7 +151,7 @@ export default function StudentProfile() {
       // Fetch group membership
       const { data: groupStudent } = await supabase
         .from('group_students')
-        .select('*, groups(*, profiles!groups_instructor_id_fkey(full_name, full_name_ar))')
+        .select('*, groups(*)')
         .eq('student_id', studentId)
         .eq('is_active', true)
         .maybeSingle();
