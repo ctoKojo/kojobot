@@ -204,9 +204,12 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
       });
       if (error) throw error;
       const result = data as any;
+      const desc = rescheduleCount > 0
+        ? (isRTL ? `تم جدولة ${newExamCount} جديد + ${rescheduleCount} إعادة جدولة` : `${newExamCount} new + ${rescheduleCount} rescheduled`)
+        : (isRTL ? `تم جدولة ${result.scheduled} طالب` : `${result.scheduled} students scheduled`);
       toast({
         title: isRTL ? 'تم الجدولة' : 'Scheduled',
-        description: isRTL ? `تم جدولة ${result.scheduled} طالب` : `${result.scheduled} students scheduled`,
+        description: desc,
       });
       setShowScheduleDialog(false);
       fetchData();
@@ -284,11 +287,13 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
 
   const banner = getBanner();
 
-  // Eligible students = those with enough completed sessions and status in_progress/awaiting_exam
+  // Eligible students = those with enough completed sessions (including exam_scheduled for rescheduling)
   const eligibleForExam = progress.filter(p => 
-    (p.status === 'in_progress' || p.status === 'awaiting_exam') &&
+    (p.status === 'in_progress' || p.status === 'awaiting_exam' || p.status === 'exam_scheduled') &&
     (studentSessionCounts[p.student_id] || 0) >= expectedSessions
   );
+  const newExamCount = eligibleForExam.filter(p => p.status !== 'exam_scheduled').length;
+  const rescheduleCount = eligibleForExam.filter(p => p.status === 'exam_scheduled').length;
 
   const filterCounts = {
     all: progress.length,
@@ -334,7 +339,11 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
           }} disabled={eligibleForExam.length === 0}>
             <CalendarCheck className="h-4 w-4 mr-2" />
             {isRTL ? 'جدول الامتحان النهائي' : 'Schedule Final Exam'}
-            {eligibleForExam.length > 0 && ` (${eligibleForExam.length})`}
+            {eligibleForExam.length > 0 && (
+              rescheduleCount > 0
+                ? ` (${newExamCount} + ${rescheduleCount} ${isRTL ? 'إعادة' : 'resched.'})`
+                : ` (${eligibleForExam.length})`
+            )}
           </Button>
           {eligibleForExam.length === 0 && progress.some(p => p.status === 'in_progress' || p.status === 'awaiting_exam') && (
             <span className="text-xs text-muted-foreground">
