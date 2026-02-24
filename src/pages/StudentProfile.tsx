@@ -352,6 +352,16 @@ export default function StudentProfile() {
                   {language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
                 </h1>
                 <div className="flex flex-wrap gap-2 mt-2">
+                  {data.group && (
+                    <Badge 
+                      variant="default" 
+                      className="cursor-pointer hover:opacity-80 transition-opacity gap-1"
+                      onClick={() => navigate(`/groups/${data.group.id}`)}
+                    >
+                      <BookOpen className="h-3 w-3" />
+                      {language === 'ar' ? data.group.name_ar : data.group.name}
+                    </Badge>
+                  )}
                   {data.profile.age_groups && (
                     <Badge variant="secondary">
                       {language === 'ar' ? data.profile.age_groups.name_ar : data.profile.age_groups.name}
