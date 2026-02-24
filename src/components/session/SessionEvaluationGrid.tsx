@@ -336,7 +336,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
 
   // Default view based on screen size
   useEffect(() => {
-    setViewMode(isMobile ? 'cards' : 'cards');
+    setViewMode(isMobile ? 'cards' : 'table');
   }, [isMobile]);
 
   // Load criteria and existing evaluations
