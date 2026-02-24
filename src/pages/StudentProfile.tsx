@@ -356,7 +356,7 @@ export default function StudentProfile() {
                     <Badge 
                       variant="default" 
                       className="cursor-pointer hover:opacity-80 transition-opacity gap-1"
-                      onClick={() => navigate(`/groups/${data.group.id}`)}
+                      onClick={() => navigate(`/group/${data.group.id}`)}
                     >
                       <BookOpen className="h-3 w-3" />
                       {language === 'ar' ? data.group.name_ar : data.group.name}
