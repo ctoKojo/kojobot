@@ -261,8 +261,8 @@ export default function StudentProfile() {
       <div className="space-y-6">
         {/* Back Button & Actions */}
         <div className="flex justify-between items-center">
-          <Button variant="ghost" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
+          <Button variant="ghost" onClick={() => navigate('/students')}>
+            <ArrowLeft className={`h-4 w-4 ${isRTL ? "ml-2 rotate-180" : "mr-2"}`} />
             {isRTL ? 'رجوع' : 'Back'}
           </Button>
           
