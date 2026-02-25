@@ -25,6 +25,7 @@ import { CreateSubscriptionDialog } from '@/components/student/CreateSubscriptio
 import { EditSubscriptionDialog } from '@/components/student/EditSubscriptionDialog';
 import { ResetPasswordButton } from '@/components/ResetPasswordButton';
 import { generateStudentReport } from '@/lib/pdfReports';
+import { PaymentsHistory } from '@/components/student/PaymentsHistory';
 
 interface StudentData {
   profile: any;
@@ -546,8 +547,9 @@ export default function StudentProfile() {
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="attendance" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="attendance">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
+            <TabsTrigger value="payments">{isRTL ? 'الدفعات' : 'Payments'}</TabsTrigger>
             <TabsTrigger value="quizzes">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
             <TabsTrigger value="assignments">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
             <TabsTrigger value="makeup">{isRTL ? 'التعويضات' : 'Makeup'}</TabsTrigger>
@@ -598,6 +600,11 @@ export default function StudentProfile() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Payments Tab */}
+          <TabsContent value="payments">
+            <PaymentsHistory studentId={studentId!} />
           </TabsContent>
 
           {/* Quizzes Tab */}
