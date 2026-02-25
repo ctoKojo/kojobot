@@ -72,8 +72,11 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
   }, [open, studentId]);
 
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
-  const discountAmount = selectedPlan ? Math.round(selectedPlan.price_3_months * discountPercentage / 100) : 0;
-  const totalAmount = selectedPlan ? selectedPlan.price_3_months - discountAmount : 0;
+  const basePrice = selectedPlan
+    ? (paymentType === 'installment' ? selectedPlan.price_1_month * 3 : selectedPlan.price_3_months)
+    : 0;
+  const discountAmount = Math.round(basePrice * discountPercentage / 100);
+  const totalAmount = basePrice - discountAmount;
   const installmentAmount = selectedPlan ? Math.round(selectedPlan.price_1_month * (1 - discountPercentage / 100)) : 0;
   const remaining = Math.max(0, totalAmount - paidAmount);
 
@@ -234,11 +237,17 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
               {selectedPlan && (
                 <Card className="bg-muted/30">
                   <CardContent className="pt-4 space-y-2 text-sm">
+                    {paymentType === 'installment' && selectedPlan.price_1_month * 3 !== selectedPlan.price_3_months && (
+                      <div className="flex justify-between text-muted-foreground text-xs">
+                        <span>{isRTL ? 'سعر الدفع الكامل (3 شهور)' : 'Full payment price (3 months)'}</span>
+                        <span>{selectedPlan.price_3_months} {isRTL ? 'ج.م' : 'EGP'}</span>
+                      </div>
+                    )}
                     {discountPercentage > 0 && (
                       <>
                         <div className="flex justify-between">
                           <span>{isRTL ? 'السعر الأصلي' : 'Original Price'}</span>
-                          <span className="line-through text-muted-foreground">{selectedPlan.price_3_months} {isRTL ? 'ج.م' : 'EGP'}</span>
+                          <span className="line-through text-muted-foreground">{basePrice} {isRTL ? 'ج.م' : 'EGP'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>{isRTL ? `خصم ${discountPercentage}%` : `${discountPercentage}% Discount`}</span>

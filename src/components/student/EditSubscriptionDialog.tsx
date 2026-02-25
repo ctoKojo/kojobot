@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -21,7 +23,10 @@ interface Props {
 
 export function EditSubscriptionDialog({ open, onOpenChange, subscription, studentId, studentName, onSuccess }: Props) {
   const { isRTL, language } = useLanguage();
+  const { role } = useAuth();
   const { toast } = useToast();
+  const isAdmin = role === 'admin';
+
   const [plans, setPlans] = useState<any[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [paymentType, setPaymentType] = useState<'full' | 'installment'>('full');
@@ -57,27 +62,31 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
   const selectedPlan = plans.find(p => p.id === selectedPlanId);
   const remaining = Math.max(0, totalAmount - paidAmount);
 
-  // Recalculate amounts when plan or discount changes
+  // Shared calculation logic
+  const recalcAmounts = (plan: any, pt: 'full' | 'installment', disc: number) => {
+    if (!plan) return;
+    const base = pt === 'installment' ? plan.price_1_month * 3 : plan.price_3_months;
+    const discounted = Math.round(base * (1 - disc / 100));
+    const inst = Math.round(plan.price_1_month * (1 - disc / 100));
+    setTotalAmount(discounted);
+    setInstallmentAmount(inst);
+  };
+
   const handlePlanChange = (planId: string) => {
     setSelectedPlanId(planId);
     const plan = plans.find(p => p.id === planId);
-    if (plan) {
-      const discountedTotal = Math.round(plan.price_3_months * (1 - discountPercentage / 100));
-      const discountedInstallment = Math.round(plan.price_1_month * (1 - discountPercentage / 100));
-      setTotalAmount(discountedTotal);
-      setInstallmentAmount(discountedInstallment);
-    }
+    if (plan) recalcAmounts(plan, paymentType, discountPercentage);
+  };
+
+  const handlePaymentTypeChange = (pt: 'full' | 'installment') => {
+    setPaymentType(pt);
+    if (selectedPlan) recalcAmounts(selectedPlan, pt, discountPercentage);
   };
 
   const handleDiscountChange = (pct: number) => {
     const safePct = Math.min(100, Math.max(0, pct));
     setDiscountPercentage(safePct);
-    if (selectedPlan) {
-      const discountedTotal = Math.round(selectedPlan.price_3_months * (1 - safePct / 100));
-      const discountedInstallment = Math.round(selectedPlan.price_1_month * (1 - safePct / 100));
-      setTotalAmount(discountedTotal);
-      setInstallmentAmount(discountedInstallment);
-    }
+    if (selectedPlan) recalcAmounts(selectedPlan, paymentType, safePct);
   };
 
   const handleSave = async () => {
@@ -88,7 +97,6 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
         pricing_plan_id: selectedPlanId || null,
         payment_type: paymentType,
         total_amount: totalAmount,
-        paid_amount: paidAmount,
         installment_amount: paymentType === 'installment' ? installmentAmount : null,
         next_payment_date: nextPaymentDate || null,
         is_suspended: isSuspended,
@@ -96,6 +104,7 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
         notes: notes || null,
         discount_percentage: discountPercentage,
       };
+      // paid_amount removed — source of truth is payments table
 
       const { error } = await supabase
         .from('subscriptions')
@@ -125,9 +134,19 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
             <p className="font-medium">{studentName}</p>
           </div>
 
+          {/* Reception warning banner */}
+          {!isAdmin && (
+            <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 text-sm">
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+              <span className="text-amber-800 dark:text-amber-300">
+                {isRTL ? 'التعديلات المالية تحتاج موافقة الأدمن' : 'Financial changes require admin approval'}
+              </span>
+            </div>
+          )}
+
           <div>
             <Label>{isRTL ? 'الباقة' : 'Pricing Plan'}</Label>
-            <Select value={selectedPlanId} onValueChange={handlePlanChange}>
+            <Select value={selectedPlanId} onValueChange={handlePlanChange} disabled={!isAdmin}>
               <SelectTrigger><SelectValue placeholder={isRTL ? 'اختر الباقة' : 'Select plan'} /></SelectTrigger>
               <SelectContent>
                 {plans.map(p => (
@@ -141,7 +160,7 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
 
           <div>
             <Label>{isRTL ? 'نوع الدفع' : 'Payment Type'}</Label>
-            <Select value={paymentType} onValueChange={v => setPaymentType(v as 'full' | 'installment')}>
+            <Select value={paymentType} onValueChange={v => handlePaymentTypeChange(v as 'full' | 'installment')} disabled={!isAdmin}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="full">{isRTL ? 'كامل (3 شهور)' : 'Full (3 months)'}</SelectItem>
@@ -152,7 +171,7 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
 
           <div>
             <Label>{isRTL ? 'الحالة' : 'Status'}</Label>
-            <Select value={status} onValueChange={setStatus}>
+            <Select value={status} onValueChange={setStatus} disabled={!isAdmin}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">{isRTL ? 'فعال' : 'Active'}</SelectItem>
@@ -170,31 +189,15 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
               onChange={e => handleDiscountChange(+e.target.value)} 
               min={0} 
               max={100} 
-              placeholder="0" 
+              placeholder="0"
+              disabled={!isAdmin}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>{isRTL ? 'المبلغ الإجمالي' : 'Total Amount'}</Label>
-              <Input type="number" value={totalAmount} onChange={e => setTotalAmount(+e.target.value)} min={0} />
-            </div>
-            <div>
-              <Label>{isRTL ? 'المبلغ المدفوع' : 'Paid Amount'}</Label>
-              <Input type="number" value={paidAmount} onChange={e => setPaidAmount(+e.target.value)} min={0} />
-            </div>
-          </div>
-
           {paymentType === 'installment' && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>{isRTL ? 'القسط الشهري' : 'Monthly Installment'}</Label>
-                <Input type="number" value={installmentAmount || ''} onChange={e => setInstallmentAmount(+e.target.value || null)} min={0} />
-              </div>
-              <div>
-                <Label>{isRTL ? 'تاريخ الدفع القادم' : 'Next Payment Date'}</Label>
-                <Input type="date" value={nextPaymentDate} onChange={e => setNextPaymentDate(e.target.value)} />
-              </div>
+            <div>
+              <Label>{isRTL ? 'تاريخ الدفع القادم' : 'Next Payment Date'}</Label>
+              <Input type="date" value={nextPaymentDate} onChange={e => setNextPaymentDate(e.target.value)} />
             </div>
           )}
 
@@ -204,6 +207,7 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
               checked={isSuspended}
               onChange={e => setIsSuspended(e.target.checked)}
               className="h-4 w-4 rounded border-primary text-primary"
+              disabled={!isAdmin}
             />
             <Label className="cursor-pointer">{isRTL ? 'إيقاف الحساب' : 'Suspend Account'}</Label>
           </div>
@@ -213,18 +217,22 @@ export function EditSubscriptionDialog({ open, onOpenChange, subscription, stude
             <Input value={notes} onChange={e => setNotes(e.target.value)} />
           </div>
 
-          {/* Summary Card - matches creation flow */}
+          {/* Summary Card */}
           <Card className="bg-muted/30">
             <CardContent className="pt-4 space-y-2 text-sm">
               {selectedPlan && discountPercentage > 0 && (
                 <>
                   <div className="flex justify-between">
-                    <span>{isRTL ? 'السعر الأصلي (3 شهور)' : 'Original Price (3 months)'}</span>
-                    <span className="line-through text-muted-foreground">{selectedPlan.price_3_months} {isRTL ? 'ج.م' : 'EGP'}</span>
+                    <span>{isRTL ? 'السعر الأصلي' : 'Original Price'}</span>
+                    <span className="line-through text-muted-foreground">
+                      {paymentType === 'installment' ? selectedPlan.price_1_month * 3 : selectedPlan.price_3_months} {isRTL ? 'ج.م' : 'EGP'}
+                    </span>
                   </div>
                   <div className="flex justify-between text-green-600">
                     <span>{isRTL ? `خصم ${discountPercentage}%` : `${discountPercentage}% Discount`}</span>
-                    <span>-{Math.round(selectedPlan.price_3_months * discountPercentage / 100)} {isRTL ? 'ج.م' : 'EGP'}</span>
+                    <span>
+                      -{Math.round((paymentType === 'installment' ? selectedPlan.price_1_month * 3 : selectedPlan.price_3_months) * discountPercentage / 100)} {isRTL ? 'ج.م' : 'EGP'}
+                    </span>
                   </div>
                 </>
               )}
