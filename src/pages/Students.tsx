@@ -1005,6 +1005,7 @@ export default function StudentsPage() {
                             type="date"
                             value={formData.payment_date}
                             onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
+                            max={new Date().toISOString().split('T')[0]}
                           />
                         </div>
                       )}

@@ -42,6 +42,7 @@ export default function Finance() {
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportPeriod, setReportPeriod] = useState('6');
   const [reportPlan, setReportPlan] = useState('all');
   const [pricingPlans, setPricingPlans] = useState<any[]>([]);
@@ -151,6 +152,7 @@ export default function Finance() {
     setPaymentAmount(sub.installment_amount || sub.remaining_amount || 0);
     setPaymentMethod('cash');
     setPaymentNotes('');
+    setPaymentDate(new Date().toISOString().split('T')[0]);
     setPaymentDialog(true);
   };
 
@@ -162,6 +164,7 @@ export default function Finance() {
       subscription_id: selectedSub.id,
       student_id: selectedSub.student_id,
       amount: paymentAmount,
+      payment_date: paymentDate,
       payment_method: paymentMethod,
       payment_type: 'regular',
       notes: paymentNotes,
@@ -530,6 +533,8 @@ export default function Finance() {
                   </Select></div>
                 <div><Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>
                   <Input value={paymentNotes} onChange={e => setPaymentNotes(e.target.value)} /></div>
+                <div><Label>{isRTL ? 'تاريخ الدفع الفعلي' : 'Actual Payment Date'}</Label>
+                  <Input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} max={new Date().toISOString().split('T')[0]} /></div>
               </div>
             )}
             <DialogFooter>

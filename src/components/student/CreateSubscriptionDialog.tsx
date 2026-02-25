@@ -233,7 +233,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
               {paidAmount > 0 && (
                 <div>
                   <Label>{isRTL ? 'تاريخ الدفع الفعلي' : 'Actual Payment Date'}</Label>
-                  <Input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} />
+                  <Input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} max={new Date().toISOString().split('T')[0]} />
                 </div>
               )}
 
