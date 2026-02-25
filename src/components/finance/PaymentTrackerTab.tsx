@@ -409,7 +409,7 @@ export function PaymentTrackerTab() {
               <div><Label>{isRTL ? 'المبلغ' : 'Amount'}</Label>
                 <Input type="number" value={paymentAmount} onChange={e => setPaymentAmount(+e.target.value)} min={0} /></div>
               <div><Label>{isRTL ? 'تاريخ الدفع الفعلي' : 'Actual Payment Date'}</Label>
-                <Input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} /></div>
+                <Input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} max={new Date().toISOString().split('T')[0]} /></div>
               <div><Label>{isRTL ? 'طريقة الدفع' : 'Payment Method'}</Label>
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
