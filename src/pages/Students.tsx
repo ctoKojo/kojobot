@@ -152,6 +152,7 @@ export default function StudentsPage() {
     sub_paid_amount: 0,
     sub_notes: '',
     discount_percentage: 0,
+    payment_date: new Date().toISOString().split('T')[0],
   });
   const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -400,7 +401,7 @@ export default function StudentsPage() {
                 subscription_id: sub.id,
                 student_id: data.user_id,
                 amount: formData.sub_paid_amount,
-                payment_date: new Date().toISOString().split('T')[0],
+                payment_date: formData.payment_date,
                 payment_method: 'cash',
                 payment_type: 'prior_payment',
                 notes: isRTL ? 'دفعة مسبقة عند إنشاء الاشتراك' : 'Prior payment on subscription creation',
@@ -481,6 +482,7 @@ export default function StudentsPage() {
       sub_paid_amount: 0,
       sub_notes: '',
       discount_percentage: 0,
+      payment_date: new Date().toISOString().split('T')[0],
     });
     setFormTouched({});
     setAvatarFile(null);
@@ -505,6 +507,7 @@ export default function StudentsPage() {
       sub_paid_amount: 0,
       sub_notes: '',
       discount_percentage: 0,
+      payment_date: new Date().toISOString().split('T')[0],
     });
     setAvatarFile(null);
     setAvatarPreview(student.avatar_url || null);
@@ -994,6 +997,17 @@ export default function StudentsPage() {
                           min={0}
                         />
                       </div>
+
+                      {formData.sub_paid_amount > 0 && (
+                        <div className="grid gap-2">
+                          <Label>{isRTL ? 'تاريخ الدفع الفعلي' : 'Actual Payment Date'}</Label>
+                          <Input
+                            type="date"
+                            value={formData.payment_date}
+                            onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
+                          />
+                        </div>
+                      )}
 
                       <div className="grid gap-2">
                         <Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>

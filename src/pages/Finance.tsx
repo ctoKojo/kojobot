@@ -23,6 +23,8 @@ import { notificationService } from '@/lib/notificationService';
 import { ExpensesTab } from '@/components/finance/ExpensesTab';
 import { SalariesTab } from '@/components/finance/SalariesTab';
 import { NetProfitTab } from '@/components/finance/NetProfitTab';
+import { PaymentTrackerTab } from '@/components/finance/PaymentTrackerTab';
+import { CashFlowTab } from '@/components/finance/CashFlowTab';
 
 export default function Finance() {
   const { isRTL, language } = useLanguage();
@@ -172,9 +174,12 @@ export default function Finance() {
     
     let nextPaymentDate = selectedSub.next_payment_date;
     if (selectedSub.payment_type === 'installment' && selectedSub.installment_amount > 0) {
-      const paidInstallments = Math.floor(newPaid / selectedSub.installment_amount);
-      const startDate = new Date(selectedSub.start_date);
-      nextPaymentDate = new Date(startDate.getTime() + paidInstallments * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const installmentsCovered = Math.floor(paymentAmount / selectedSub.installment_amount);
+      if (installmentsCovered >= 1 && selectedSub.next_payment_date) {
+        const currentNPD = new Date(selectedSub.next_payment_date);
+        nextPaymentDate = new Date(currentNPD.getTime() + installmentsCovered * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      }
+      // Partial payment (less than 1 installment): don't move next_payment_date
     }
     if (newRemaining <= 0) nextPaymentDate = null;
 
@@ -257,6 +262,8 @@ export default function Finance() {
             {role === 'admin' && <TabsTrigger value="salaries">{isRTL ? 'الرواتب' : 'Salaries'}</TabsTrigger>}
             {role === 'admin' && <TabsTrigger value="profit">{isRTL ? 'صافي الربح' : 'Net Profit'}</TabsTrigger>}
             <TabsTrigger value="reports">{isRTL ? 'التقارير' : 'Reports'}</TabsTrigger>
+            <TabsTrigger value="tracker">{isRTL ? 'متابعة الأقساط' : 'Payment Tracker'}</TabsTrigger>
+            {role === 'admin' && <TabsTrigger value="cashflow">{isRTL ? 'التدفق النقدي' : 'Cash Flow'}</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="subscriptions">
@@ -493,6 +500,8 @@ export default function Finance() {
               </div>
             </div>
           </TabsContent>
+          <TabsContent value="tracker"><PaymentTrackerTab /></TabsContent>
+          <TabsContent value="cashflow"><CashFlowTab /></TabsContent>
         </Tabs>
 
         {/* Payment Dialog */}
