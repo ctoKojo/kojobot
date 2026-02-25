@@ -1,0 +1,185 @@
+import { useEffect, useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import type { LeaderboardScope, LeaderboardPeriod } from '@/lib/leaderboardService';
+
+interface FilterOption { id: string; name: string; name_ar: string; }
+interface SessionOption { id: string; session_number: number; session_date: string; }
+
+interface LeaderboardFiltersProps {
+  scope: LeaderboardScope;
+  period: LeaderboardPeriod;
+  groupId: string;
+  sessionId: string;
+  levelId: string;
+  ageGroupId: string;
+  onScopeChange: (s: LeaderboardScope) => void;
+  onPeriodChange: (p: LeaderboardPeriod) => void;
+  onGroupChange: (id: string) => void;
+  onSessionChange: (id: string) => void;
+  onLevelChange: (id: string) => void;
+  onAgeGroupChange: (id: string) => void;
+}
+
+export function LeaderboardFilters({
+  scope, period, groupId, sessionId, levelId, ageGroupId,
+  onScopeChange, onPeriodChange, onGroupChange, onSessionChange, onLevelChange, onAgeGroupChange,
+}: LeaderboardFiltersProps) {
+  const { language, t } = useLanguage();
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
+
+  const [groups, setGroups] = useState<FilterOption[]>([]);
+  const [levels, setLevels] = useState<FilterOption[]>([]);
+  const [ageGroups, setAgeGroups] = useState<FilterOption[]>([]);
+  const [sessions, setSessions] = useState<SessionOption[]>([]);
+
+  useEffect(() => {
+    loadDropdowns();
+  }, []);
+
+  useEffect(() => {
+    if (scope === 'session' && groupId) loadSessions(groupId);
+  }, [scope, groupId]);
+
+  const loadDropdowns = async () => {
+    const [gRes, lRes, agRes] = await Promise.all([
+      supabase.from('groups').select('id, name, name_ar').eq('is_active', true).order('name'),
+      supabase.from('levels').select('id, name, name_ar').eq('is_active', true).order('level_order'),
+      supabase.from('age_groups').select('id, name, name_ar').eq('is_active', true).order('min_age'),
+    ]);
+    const g = gRes.data || [];
+    setGroups(g);
+    setLevels(lRes.data || []);
+    setAgeGroups(agRes.data || []);
+    if (g.length > 0 && !groupId) onGroupChange(g[0].id);
+  };
+
+  const loadSessions = async (gId: string) => {
+    const { data } = await supabase
+      .from('sessions')
+      .select('id, session_number, session_date')
+      .eq('group_id', gId)
+      .eq('status', 'completed')
+      .order('session_date', { ascending: false })
+      .limit(50);
+    const s = data || [];
+    setSessions(s);
+    if (s.length > 0) onSessionChange(s[0].id);
+  };
+
+  const scopeOptions: { value: LeaderboardScope; label: string }[] = isAdmin
+    ? [
+        { value: 'group', label: t.evaluation.group },
+        { value: 'session', label: t.evaluation.session },
+        { value: 'level_age_group', label: t.evaluation.levelInAgeGroup },
+        { value: 'level', label: t.evaluation.levelGlobal },
+        { value: 'age_group', label: t.evaluation.ageGroupGlobal },
+        { value: 'all', label: t.evaluation.allStudents },
+      ]
+    : [{ value: 'group' as LeaderboardScope, label: t.evaluation.group }];
+
+  const periodOptions: { value: LeaderboardPeriod; label: string }[] = [
+    { value: 'all_time', label: t.evaluation.allTime },
+    { value: 'monthly', label: t.evaluation.thisMonth },
+    { value: 'weekly', label: t.evaluation.thisWeek },
+  ];
+
+  const needsGroup = scope === 'group' || scope === 'session';
+  const needsSession = scope === 'session';
+  const needsLevel = scope === 'level' || scope === 'level_age_group';
+  const needsAgeGroup = scope === 'age_group' || scope === 'level_age_group';
+
+  const label = (o: FilterOption) => language === 'ar' ? o.name_ar : o.name;
+
+  return (
+    <Card>
+      <CardContent className="flex flex-wrap items-center gap-3 pt-6">
+        {/* Scope */}
+        <Select value={scope} onValueChange={(v) => onScopeChange(v as LeaderboardScope)}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {scopeOptions.map(o => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Group */}
+        {needsGroup && (
+          <Select value={groupId} onValueChange={onGroupChange}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder={t.evaluation.selectGroup} />
+            </SelectTrigger>
+            <SelectContent>
+              {groups.map(g => (
+                <SelectItem key={g.id} value={g.id}>{label(g)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Session */}
+        {needsSession && (
+          <Select value={sessionId} onValueChange={onSessionChange}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder={t.evaluation.selectSession} />
+            </SelectTrigger>
+            <SelectContent>
+              {sessions.map(s => (
+                <SelectItem key={s.id} value={s.id}>
+                  #{s.session_number} — {s.session_date}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Level */}
+        {needsLevel && (
+          <Select value={levelId} onValueChange={onLevelChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder={t.evaluation.selectLevel} />
+            </SelectTrigger>
+            <SelectContent>
+              {levels.map(l => (
+                <SelectItem key={l.id} value={l.id}>{label(l)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Age Group */}
+        {needsAgeGroup && (
+          <Select value={ageGroupId} onValueChange={onAgeGroupChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder={t.evaluation.selectAgeGroup} />
+            </SelectTrigger>
+            <SelectContent>
+              {ageGroups.map(a => (
+                <SelectItem key={a.id} value={a.id}>{label(a)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Period */}
+        <Select value={period} onValueChange={(v) => onPeriodChange(v as LeaderboardPeriod)}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {periodOptions.map(o => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </CardContent>
+    </Card>
+  );
+}
