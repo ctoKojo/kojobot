@@ -237,12 +237,12 @@ export default function Finance() {
         {/* Stats */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
           {[
-            { label: isRTL ? 'إجمالي الإيرادات' : 'Total Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-100' },
-            { label: isRTL ? 'المبالغ المستحقة' : 'Outstanding', value: `${stats.totalOutstanding} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, color: 'text-orange-600', bg: 'bg-orange-100' },
-            { label: isRTL ? 'اشتراكات نشطة' : 'Active', value: stats.activeCount, icon: Users, color: 'text-blue-600', bg: 'bg-blue-100' },
-            { label: isRTL ? 'متأخرين' : 'Overdue', value: stats.overdueCount, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100' },
-            { label: isRTL ? 'موقوفين' : 'Suspended', value: stats.suspendedCount, icon: Ban, color: 'text-gray-600', bg: 'bg-gray-100' },
-          ].map(stat => (
+            { label: isRTL ? 'إجمالي الإيرادات' : 'Total Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-100', adminOnly: true },
+            { label: isRTL ? 'المبالغ المستحقة' : 'Outstanding', value: `${stats.totalOutstanding} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, color: 'text-orange-600', bg: 'bg-orange-100', adminOnly: true },
+            { label: isRTL ? 'اشتراكات نشطة' : 'Active', value: stats.activeCount, icon: Users, color: 'text-blue-600', bg: 'bg-blue-100', adminOnly: false },
+            { label: isRTL ? 'متأخرين' : 'Overdue', value: stats.overdueCount, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100', adminOnly: false },
+            { label: isRTL ? 'موقوفين' : 'Suspended', value: stats.suspendedCount, icon: Ban, color: 'text-gray-600', bg: 'bg-gray-100', adminOnly: false },
+          ].filter(stat => !stat.adminOnly || role === 'admin').map(stat => (
             <Card key={stat.label}>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
@@ -264,7 +264,7 @@ export default function Finance() {
             <TabsTrigger value="expenses">{isRTL ? 'المصروفات' : 'Expenses'}</TabsTrigger>
             {role === 'admin' && <TabsTrigger value="salaries">{isRTL ? 'الرواتب' : 'Salaries'}</TabsTrigger>}
             {role === 'admin' && <TabsTrigger value="profit">{isRTL ? 'صافي الربح' : 'Net Profit'}</TabsTrigger>}
-            <TabsTrigger value="reports">{isRTL ? 'التقارير' : 'Reports'}</TabsTrigger>
+            {role === 'admin' && <TabsTrigger value="reports">{isRTL ? 'التقارير' : 'Reports'}</TabsTrigger>}
             <TabsTrigger value="tracker">{isRTL ? 'متابعة الأقساط' : 'Payment Tracker'}</TabsTrigger>
             {role === 'admin' && <TabsTrigger value="cashflow">{isRTL ? 'التدفق النقدي' : 'Cash Flow'}</TabsTrigger>}
           </TabsList>
