@@ -1,61 +1,48 @@
 
 
-# تعديل منطق الاقساط والصلاحيات المالية
+# اصلاح حساب التقسيط في صفحة إضافة الطالب (`Students.tsx`)
 
-## المشاكل الحالية
+## المشكلة
 
-1. **التقسيط لا يغير الاجمالي**: `totalAmount` دايما = `price_3_months` سواء دفع كامل او تقسيط
-2. **reception يقدر يعدل كل الحقول المالية** بدون قيود
-3. **الاجمالي والمدفوع قابلين للتعديل اليدوي** في EditSubscriptionDialog
+الباج موجود في `src/pages/Students.tsx` مش في `CreateSubscriptionDialog.tsx` (اللي اتصلح قبل كده). صفحة "إضافة طالب" فيها نسخة منفصلة من حساب الاشتراك وهي اللي لسه بتستخدم `price_3_months` دايما بغض النظر عن نوع الدفع.
 
-## التعديلات
+## المطلوب
 
-### 1. `CreateSubscriptionDialog.tsx`
+تعديل مكانين في `src/pages/Students.tsx`:
 
-**تعديل حساب الاجمالي (سطر 74-78):**
-- حاليا: `totalAmount = price_3_months - discountAmount` دايما
-- الجديد:
-  - `full`: `totalAmount = price_3_months * (1 - discount/100)`
-  - `installment`: `totalAmount = (price_1_month * 3) * (1 - discount/100)`
-  - `installmentAmount = price_1_month * (1 - discount/100)`
+### 1. منطق الحفظ (سطر 374)
 
-**تعديل الملخص (Summary Card):**
-- عرض السعر الاصلي حسب نوع الدفع (3 شهور للكامل، شهر × 3 للتقسيط)
-- توضيح الفرق بين سعر الدفع الكامل وسعر التقسيط
+**الحالي:**
+```
+const baseTotal = selectedPlan.price_3_months;
+```
 
-### 2. `EditSubscriptionDialog.tsx`
+**الجديد:**
+```
+const baseTotal = formData.payment_type === 'installment' 
+  ? selectedPlan.price_1_month * 3 
+  : selectedPlan.price_3_months;
+```
 
-**اضافة صلاحيات الدور:**
-- `import { useAuth }` واستخدام `role`
-- `isAdmin = role === 'admin'`
-- الحقول المالية (`الباقة`، `نوع الدفع`، `الخصم`، `الحالة`، `ايقاف الحساب`) تكون `disabled` لغير الادمن
-- بانر تحذيري للـ reception: "التعديلات المالية تحتاج موافقة الادمن"
+### 2. الملخص في الواجهة (سطر 1012)
 
-**اضافة `handlePaymentTypeChange`:**
-- لما يتغير نوع الدفع يعيد حساب الاجمالي والقسط الشهري بنفس المنطق الجديد
+**الحالي:**
+```
+const originalTotal = plan.price_3_months;
+```
 
-**تعديل `handlePlanChange` و `handleDiscountChange`:**
-- يحسبوا الاجمالي حسب `paymentType` الحالي (مش دايما `price_3_months`)
+**الجديد:**
+```
+const originalTotal = formData.payment_type === 'installment' 
+  ? plan.price_1_month * 3 
+  : plan.price_3_months;
+```
 
-**جعل الاجمالي والمدفوع read-only:**
-- ازالة حقول التعديل اليدوي للـ `totalAmount` و `paidAmount`
-- عرضهم كقيم محسوبة في الملخص فقط
-- `paidAmount` يتحمل من الاشتراك الموجود (مصدره `payments` عبر الـ computed column)
-
-**تعديل `handleSave`:**
-- ازالة `paid_amount` من `updateData` (مصدره `payments` فقط)
-- ابقاء `total_amount` في `updateData` لانه محسوب من الباقة + الخصم + نوع الدفع (الادمن فقط يقدر يغيره عبر تغيير الباقة/الخصم/نوع الدفع)
-
-### ملاحظة امنية
-
-`remaining_amount` عمود محسوب بالفعل في قاعدة البيانات (`total_amount - paid_amount`) -- لا يحتاج تعديل.
-الحماية الاضافية على مستوى الباك اند (RLS/triggers) غير مطلوبة حاليا لان:
-- `paid_amount` يتحدث فقط عبر `payments` في صفحة Finance (اللي عندها RLS صحيح)
-- reception مش هيقدر يبعث update للحقول المالية لان الفرونت هيمنعه، وRLS على `subscriptions` بالفعل يسمح لـ admin فقط بالـ update
+نفس المنطق اللي موجود بالفعل في `CreateSubscriptionDialog.tsx` سطر 76.
 
 ## الملفات المتأثرة
 
 | الملف | التعديل |
 |-------|---------|
-| `src/components/student/CreateSubscriptionDialog.tsx` | حساب `totalAmount` حسب `paymentType` + تحديث الملخص |
-| `src/components/student/EditSubscriptionDialog.tsx` | صلاحيات حسب الدور + حساب ديناميكي + حقول read-only |
+| `src/pages/Students.tsx` | سطر 374 + سطر 1012: ربط `baseTotal`/`originalTotal` بنوع الدفع |
+
