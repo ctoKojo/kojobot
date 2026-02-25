@@ -1211,7 +1211,7 @@ export default function StudentsPage() {
                   </TableRow>
                 ) : (
                   filteredStudents.map((student) => (
-                    <TableRow key={student.id}>
+                    <TableRow key={student.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/student/${student.user_id}`)}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
@@ -1253,7 +1253,7 @@ export default function StudentsPage() {
                           {getAttendanceModeName(student.attendance_mode)}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
