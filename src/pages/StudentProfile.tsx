@@ -494,67 +494,21 @@ export default function StudentProfile() {
         </div>
 
         {/* Group Info */}
-        {data.group && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <GraduationCap className="h-5 w-5" />
-                {isRTL ? 'المجموعة' : 'Group'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-6">
-                <div>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'اسم المجموعة' : 'Group Name'}</p>
-                  <p className="font-medium">{language === 'ar' ? data.group.name_ar : data.group.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'الموعد' : 'Schedule'}</p>
-                  <p className="font-medium">{data.group.schedule_day} - {data.group.schedule_time}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'المدة' : 'Duration'}</p>
-                  <p className="font-medium">{data.group.duration_minutes} {isRTL ? 'دقيقة' : 'min'}</p>
-                </div>
-                {data.group.profiles && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">{isRTL ? 'المدرب' : 'Instructor'}</p>
-                    <p className="font-medium">
-                      {language === 'ar' ? data.group.profiles.full_name_ar || data.group.profiles.full_name : data.group.profiles.full_name}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Level History */}
-        <LevelHistorySection studentId={studentId!} />
-
-        {/* Evaluation Summary */}
-        <EvaluationSummary studentId={studentId!} />
-
-        {/* Performance Charts */}
-        <StudentPerformanceCharts
-          attendance={data.attendance}
-          quizSubmissions={data.quizSubmissions}
-          assignmentSubmissions={data.assignmentSubmissions}
-          instructor={data.group?.profiles}
-          groupName={data.group?.name}
-          groupNameAr={data.group?.name_ar}
-        />
-
-        {/* Detailed Tabs */}
-        <Tabs defaultValue="attendance" className="w-full">
+        {/* Detailed Tabs - Action First */}
+        <Tabs defaultValue="payments" className="w-full">
           <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="attendance">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
             <TabsTrigger value="payments">{isRTL ? 'الدفعات' : 'Payments'}</TabsTrigger>
+            <TabsTrigger value="attendance">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
+            <TabsTrigger value="warnings">{isRTL ? 'الإنذارات' : 'Warnings'}</TabsTrigger>
             <TabsTrigger value="quizzes">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
             <TabsTrigger value="assignments">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
             <TabsTrigger value="makeup">{isRTL ? 'التعويضات' : 'Makeup'}</TabsTrigger>
-            <TabsTrigger value="warnings">{isRTL ? 'الإنذارات' : 'Warnings'}</TabsTrigger>
           </TabsList>
+
+          {/* Payments Tab */}
+          <TabsContent value="payments">
+            <PaymentsHistory studentId={studentId!} />
+          </TabsContent>
 
           {/* Attendance Tab */}
           <TabsContent value="attendance">
@@ -602,9 +556,50 @@ export default function StudentProfile() {
             </Card>
           </TabsContent>
 
-          {/* Payments Tab */}
-          <TabsContent value="payments">
-            <PaymentsHistory studentId={studentId!} />
+          {/* Warnings Tab */}
+          <TabsContent value="warnings">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  {isRTL ? 'الإنذارات' : 'Warnings'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {data.warnings.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-2" />
+                    {isRTL ? 'لا توجد إنذارات' : 'No warnings'}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {data.warnings.map((warning: any) => (
+                      <div key={warning.id} className="p-4 rounded-lg border border-destructive/20 bg-destructive/5">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <Badge variant="destructive" className="mb-2">
+                              {warning.warning_type === 'attendance' ? (isRTL ? 'غياب' : 'Attendance') : 
+                               warning.warning_type === 'behavior' ? (isRTL ? 'سلوك' : 'Behavior') :
+                               (isRTL ? 'عام' : 'General')}
+                            </Badge>
+                            <p className="font-medium">
+                              {language === 'ar' ? warning.reason_ar || warning.reason : warning.reason}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {isRTL ? 'بواسطة: ' : 'By: '}
+                              {warning.profiles?.full_name || '-'}
+                            </p>
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {formatDate(warning.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Quizzes Tab */}
@@ -768,7 +763,6 @@ export default function StudentProfile() {
                           <div className="mt-3 flex gap-2 border-t pt-3">
                             <Button size="sm" className="flex-1" onClick={async () => {
                               await supabase.from('makeup_sessions').update({ student_confirmed: true }).eq('id', ms.id);
-                              // Notify admins
                               const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
                               if (adminRoles) {
                                 for (const admin of adminRoles) {
@@ -792,7 +786,6 @@ export default function StudentProfile() {
                             </Button>
                             <Button size="sm" variant="destructive" className="flex-1" onClick={async () => {
                               await supabase.from('makeup_sessions').update({ student_confirmed: false }).eq('id', ms.id);
-                              // Notify admins
                               const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
                               if (adminRoles) {
                                 for (const admin of adminRoles) {
@@ -833,53 +826,59 @@ export default function StudentProfile() {
               </CardContent>
             </Card>
           </TabsContent>
+        </Tabs>
 
-          {/* Warnings Tab */}
-          <TabsContent value="warnings">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-destructive">
-                  <AlertTriangle className="h-5 w-5" />
-                  {isRTL ? 'الإنذارات' : 'Warnings'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {data.warnings.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-2" />
-                    {isRTL ? 'لا توجد إنذارات' : 'No warnings'}
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {data.warnings.map((warning: any) => (
-                      <div key={warning.id} className="p-4 rounded-lg border border-destructive/20 bg-destructive/5">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <Badge variant="destructive" className="mb-2">
-                              {warning.warning_type === 'attendance' ? (isRTL ? 'غياب' : 'Attendance') : 
-                               warning.warning_type === 'behavior' ? (isRTL ? 'سلوك' : 'Behavior') :
-                               (isRTL ? 'عام' : 'General')}
-                            </Badge>
-                            <p className="font-medium">
-                              {language === 'ar' ? warning.reason_ar || warning.reason : warning.reason}
-                            </p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {isRTL ? 'بواسطة: ' : 'By: '}
-                              {warning.profiles?.full_name || '-'}
-                            </p>
-                          </div>
-                          <span className="text-sm text-muted-foreground">
-                            {formatDate(warning.created_at)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+        {/* Reference Sections - Below Tabs */}
+        {data.group && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5" />
+                {isRTL ? 'المجموعة' : 'Group'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-6">
+                <div>
+                  <p className="text-sm text-muted-foreground">{isRTL ? 'اسم المجموعة' : 'Group Name'}</p>
+                  <p className="font-medium">{language === 'ar' ? data.group.name_ar : data.group.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{isRTL ? 'الموعد' : 'Schedule'}</p>
+                  <p className="font-medium">{data.group.schedule_day} - {data.group.schedule_time}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{isRTL ? 'المدة' : 'Duration'}</p>
+                  <p className="font-medium">{data.group.duration_minutes} {isRTL ? 'دقيقة' : 'min'}</p>
+                </div>
+                {data.group.profiles && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">{isRTL ? 'المدرب' : 'Instructor'}</p>
+                    <p className="font-medium">
+                      {language === 'ar' ? data.group.profiles.full_name_ar || data.group.profiles.full_name : data.group.profiles.full_name}
+                    </p>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Level History */}
+        <LevelHistorySection studentId={studentId!} />
+
+        {/* Evaluation Summary */}
+        <EvaluationSummary studentId={studentId!} />
+
+        {/* Performance Charts - Heaviest, last */}
+        <StudentPerformanceCharts
+          attendance={data.attendance}
+          quizSubmissions={data.quizSubmissions}
+          assignmentSubmissions={data.assignmentSubmissions}
+          instructor={data.group?.profiles}
+          groupName={data.group?.name}
+          groupNameAr={data.group?.name_ar}
+        />
       </div>
 
       {/* Issue Warning Dialog */}
