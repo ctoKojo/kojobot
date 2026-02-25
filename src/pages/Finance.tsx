@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDate } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
 import { DollarSign, Users, AlertTriangle, TrendingUp, CreditCard, Ban, Search } from 'lucide-react';
@@ -31,10 +32,7 @@ export default function Finance() {
   const { user, role } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [subscriptions, setSubscriptions] = useState<any[]>([]);
-  const [payments, setPayments] = useState<any[]>([]);
-  const [stats, setStats] = useState({ totalRevenue: 0, totalOutstanding: 0, activeCount: 0, suspendedCount: 0, overdueCount: 0 });
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [paymentDialog, setPaymentDialog] = useState(false);
@@ -51,20 +49,15 @@ export default function Finance() {
   const [payPage, setPayPage] = useState(1);
   const [payPageSize, setPayPageSize] = useState(10);
 
-  useEffect(() => { fetchData(); }, []);
-
-  const fetchData = async () => {
-    // Fetch pricing plans for filter
+  const fetchFinanceData = async () => {
     const { data: plans } = await supabase.from('pricing_plans').select('id, name, name_ar').eq('is_active', true);
     setPricingPlans(plans || []);
 
-    // Fetch subscriptions with profile info
     const { data: subs } = await supabase
       .from('subscriptions')
       .select('*, pricing_plans(name, name_ar, attendance_mode, group_type)')
       .order('created_at', { ascending: false });
 
-    // Get student profiles for each subscription
     const studentIds = [...new Set((subs || []).map((s: any) => s.student_id))];
     const { data: profiles } = await supabase
       .from('profiles')
@@ -73,23 +66,18 @@ export default function Finance() {
 
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
     const enriched = (subs || []).map((s: any) => ({ ...s, profile: profileMap.get(s.student_id) }));
-    setSubscriptions(enriched);
 
-    // Fetch recent payments
     const { data: payData } = await supabase
       .from('payments')
       .select('*, subscriptions(student_id)')
       .order('created_at', { ascending: false })
       .limit(50);
-    setPayments(payData || []);
 
-    // Calc stats - exclude students overdue by 2+ months from revenue
     const active = enriched.filter((s: any) => s.status === 'active');
     const now = new Date();
     const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, now.getDate());
     
     const totalRevenue = active.reduce((sum: number, s: any) => {
-      // If overdue by 2+ months, don't count in revenue
       if (s.next_payment_date && new Date(s.next_payment_date) < twoMonthsAgo && Number(s.remaining_amount) > 0) {
         return sum;
       }
@@ -99,13 +87,23 @@ export default function Finance() {
     const suspendedCount = active.filter((s: any) => s.is_suspended).length;
     const overdueCount = active.filter((s: any) => s.next_payment_date && new Date(s.next_payment_date) < new Date() && Number(s.remaining_amount) > 0).length;
 
-    setStats({ totalRevenue, totalOutstanding, activeCount: active.length, suspendedCount, overdueCount });
-
-    // Store raw data for filtered reports
-    setPayments(payData || []);
-    setSubscriptions(enriched);
-    setLoading(false);
+    return {
+      subscriptions: enriched,
+      payments: payData || [],
+      stats: { totalRevenue, totalOutstanding, activeCount: active.length, suspendedCount, overdueCount },
+    };
   };
+
+  const { data: financeData, isLoading: loading } = useQuery({
+    queryKey: ['finance-data'],
+    queryFn: fetchFinanceData,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  const subscriptions = financeData?.subscriptions || [];
+  const payments = financeData?.payments || [];
+  const stats = financeData?.stats || { totalRevenue: 0, totalOutstanding: 0, activeCount: 0, suspendedCount: 0, overdueCount: 0 };
 
   // Build filtered monthly data based on reportPeriod and reportPlan
   const filteredMonthlyData = useMemo(() => {
@@ -202,7 +200,8 @@ export default function Finance() {
 
     toast({ title: isRTL ? 'تم تسجيل الدفعة بنجاح' : 'Payment recorded successfully' });
     setPaymentDialog(false);
-    fetchData();
+    queryClient.invalidateQueries({ queryKey: ['finance-data'] });
+    queryClient.invalidateQueries({ queryKey: ['payment-tracker'] });
   };
 
   const filtered = subscriptions.filter(s => {

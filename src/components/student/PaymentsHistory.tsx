@@ -73,6 +73,7 @@ export function PaymentsHistory({ studentId }: Props) {
       setEditDialog(false);
       fetchPayments();
       queryClient.invalidateQueries({ queryKey: ['payment-tracker'] });
+      queryClient.invalidateQueries({ queryKey: ['finance-data'] });
     } catch (e: any) {
       toast({ title: isRTL ? 'خطأ' : 'Error', description: e.message, variant: 'destructive' });
     } finally {
