@@ -1,47 +1,92 @@
 
+# إخفاء الموظفين المنتهي تعاقدهم من الواجهات التشغيلية
 
-# اعادة ترتيب صفحة بروفايل الطالب - Action-First Layout
+## المبدأ
+- الدروب داونز واختيار مدرب جديد: فلتر `terminated` دائما
+- عرض بيانات مرتبطة بسجل قديم (اسم مدرب جروب مثلا): بدون فلتر - يتجاب بالـ ID
+- العدادات: تعد الـ active فقط
 
-## الهدف
-رفع التابات (الدفعات/الحضور/الانذارات...) لتكون مباشرة بعد الاحصائيات السريعة، ونقل الكروت المرجعية (المجموعة/المستويات/الرسوم) للاسفل.
+---
 
-## ملف واحد: `src/pages/StudentProfile.tsx`
+## التعديلات (8 ملفات)
 
-### التعديلات بالترتيب:
+### 1. `src/pages/Groups.tsx` (سطر 286-289)
+اضافة `.neq('employment_status', 'terminated')` عند جلب بروفايلات المدربين للدروب داون:
+```typescript
+.from('profiles')
+.select('user_id, full_name, full_name_ar')
+.in('user_id', instructorIds)
+.neq('employment_status', 'terminated')
+```
+ملاحظة: الجروبات اللي عندها `instructor_id` لمدرب terminated هتفضل تعرض اسمه عادي لان بيانات الجروب بتتجاب من `groups` مباشرة وبعدين بتعمل lookup بالـ ID - لو المدرب مش في القائمة الجديدة هيظهر كـ "—" وده سلوك صحيح لان الجروب المفروض يتعين له مدرب جديد.
 
-**1. نقل بلوك التابات (سطر 548-882) ليكون مباشرة بعد بطاقات الاحصائيات السريعة (بعد سطر 494)**
-
-الترتيب الجديد للصفحة:
-```text
-1. Header + ازرار الاكشن        (بدون تغيير)
-2. بطاقة البروفايل              (بدون تغيير)
-3. بطاقات الاحصائيات السريعة     (بدون تغيير)
-4. التابات                      (تتنقل لفوق)
-5. بطاقة المجموعة               (تنزل تحت)
-6. LevelHistorySection           (تنزل تحت)
-7. EvaluationSummary             (تنزل تحت)
-8. StudentPerformanceCharts      (اخر حاجة - الاثقل)
+### 2. `src/pages/MakeupSessions.tsx` (سطر 90-93)
+نفس الفلتر عند جلب المدربين لدروب داون الجدولة:
+```typescript
+.from('profiles')
+.select('user_id, full_name, full_name_ar')
+.in('user_id', ids)
+.neq('employment_status', 'terminated')
 ```
 
-**2. تغيير `defaultValue` من `"attendance"` الى `"payments"`**
-- تم التحقق: الصفحة متاحة لـ admin, instructor, reception - وكلهم يشوفوا تاب الدفعات بدون قيود
-
-**3. اعادة ترتيب TabsTrigger داخل TabsList:**
-```text
-الترتيب القديم: Attendance, Payments, Quizzes, Assignments, Makeup, Warnings
-الترتيب الجديد: Payments, Attendance, Warnings, Quizzes, Assignments, Makeup
+### 3. `src/pages/MonthlyReports.tsx` (سطر 81-84)
+فلترة المدربين من دروب داون فلتر التقارير (تقارير تشغيلية حالية):
+```typescript
+.from('profiles')
+.select('user_id, full_name, full_name_ar')
+.in('user_id', instructorIds)
+.neq('employment_status', 'terminated')
 ```
 
-**4. اعادة ترتيب TabsContent blocks لتطابق الترتيب الجديد:**
-- Payments اولا
-- Attendance
-- Warnings
-- Quizzes
-- Assignments
-- Makeup
+### 4. `src/components/finance/SalariesTab.tsx` (سطر 103)
+فلترة الموظفين المنتهي تعاقدهم من قائمة المحافظ:
+```typescript
+.from('profiles').select('*')
+.in('user_id', userIds.length > 0 ? userIds : ['none'])
+.neq('employment_status', 'terminated')
+```
+سجلات المدفوعات التاريخية في `salary_payments` مش هتتأثر لانها بتتجاب بشكل منفصل.
 
-## ملاحظات فنية
-- لا تغيير في grid او spacing - نفس الـ classes محفوظة
-- لا sticky headers في الصفحة الحالية فلا مشاكل
-- TabsContent ترتيبها مش مطلوب تقنيا من Radix لكن بنعمله للوضوح في الكود
-- StudentPerformanceCharts اخر عنصر = تحسين اداء لان المستخدم نادرا يوصل له
+### 5. `src/components/GlobalSearch.tsx` (سطر 89-93)
+اضافة فلتر عند البحث عن المدربين:
+```typescript
+.from('profiles')
+.select('user_id, full_name, full_name_ar, email')
+.or(`full_name.ilike.${searchTerm},full_name_ar.ilike.${searchTerm},email.ilike.${searchTerm}`)
+.neq('employment_status', 'terminated')
+.limit(5)
+```
+
+### 6. `src/components/dashboard/AdminDashboard.tsx` (سطر 47)
+تعديل عداد المدربين ليعد الـ active فقط:
+- جلب `user_id` من `user_roles` بـ `role = instructor`
+- ثم عمل count على `profiles` بـ `.in('user_id', ids).neq('employment_status', 'terminated')`
+- او الاسهل: ابقاء الكويري الحالي وتعديله لخطوتين (جلب IDs ثم count مع فلتر)
+
+### 7. `src/components/messages/NewConversationDialog.tsx` (سطر 48-53)
+اضافة فلتر عند البحث عن مستخدمين لبدء محادثة جديدة:
+```typescript
+.from('profiles')
+.select('user_id, full_name, full_name_ar, avatar_url')
+.or(`full_name.ilike.%${userSearch}%,full_name_ar.ilike.%${userSearch}%`)
+.neq('user_id', userId || '')
+.neq('employment_status', 'terminated')
+.limit(10)
+```
+
+### 8. `src/pages/InstructorPerformanceDashboard.tsx` (سطر 88-89)
+فلترة المدربين المنتهي تعاقدهم من داشبورد الاداء:
+```typescript
+supabase.from('profiles')
+  .select('user_id, full_name, full_name_ar, avatar_url, email')
+  .in('user_id', ids)
+  .neq('employment_status', 'terminated')
+```
+
+---
+
+## ما لن يتأثر (بيانات تاريخية سليمة)
+- صفحة الموظفين `/instructors` - بالفعل فيها تاب منفصل للـ terminated
+- بروفايل الموظف `/instructor/:id` - بيعرض badge الحالة
+- سجلات المدفوعات والجلسات المكتملة القديمة
+- اسم المدرب المعروض في تفاصيل الجروب (بيتجاب بالـ ID مباشرة)
