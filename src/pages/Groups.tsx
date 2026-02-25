@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye, TrendingUp, CalendarIcon, Snowflake, Play, Rocket, Clock } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinus, Eye, TrendingUp, CalendarIcon, Snowflake, Play, Rocket, Clock, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -30,6 +30,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -119,6 +129,18 @@ interface GroupStudentCount {
   [groupId: string]: number;
 }
 
+interface TransferWarning {
+  studentId: string;
+  studentName: string;
+  gap: number;
+  studentLast: number;
+  groupLast: number;
+  groupId: string;
+  fromGroupId: string | null;
+  // Track remaining students to process after this warning
+  remainingStudents: string[];
+}
+
 export default function GroupsPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
@@ -164,6 +186,10 @@ export default function GroupsPage() {
     session_link: '',
   });
   const [groupStudentCounts, setGroupStudentCounts] = useState<GroupStudentCount>({});
+  
+  // Transfer warning state
+  const [transferWarning, setTransferWarning] = useState<TransferWarning | null>(null);
+  const [transferLoading, setTransferLoading] = useState(false);
   
   // Start Group Dialog state
   const [isStartGroupDialogOpen, setIsStartGroupDialogOpen] = useState(false);
@@ -321,6 +347,109 @@ export default function GroupsPage() {
     );
   };
 
+  // Transfer a single student using the RPC
+  const transferStudent = useCallback(async (
+    studentId: string, 
+    toGroupId: string, 
+    fromGroupId: string | null, 
+    force: boolean
+  ): Promise<{ status: string; gap?: number; studentLast?: number; groupLast?: number; makeupCount?: number; missedSessions?: number[] }> => {
+    const { data, error } = await supabase.rpc('transfer_student_to_group', {
+      p_student_id: studentId,
+      p_to_group_id: toGroupId,
+      p_from_group_id: fromGroupId,
+      p_force: force,
+    } as any);
+
+    if (error) throw error;
+    
+    const result = data as any;
+    return {
+      status: result.status,
+      gap: result.gap,
+      studentLast: result.student_canonical_last,
+      groupLast: result.group_canonical_last,
+      makeupCount: result.makeup_sessions_created,
+      missedSessions: result.missed_session_numbers,
+    };
+  }, []);
+
+  // Process adding students (handles both started and non-started groups)
+  const processAddStudents = useCallback(async (
+    studentIds: string[],
+    group: Group,
+    fromGroupId: string | null
+  ) => {
+    for (let i = 0; i < studentIds.length; i++) {
+      const studentId = studentIds[i];
+
+      if (group.has_started) {
+        // Use smart transfer RPC
+        const result = await transferStudent(studentId, group.id, fromGroupId, false);
+
+        if (result.status === 'student_ahead') {
+          // Show warning dialog - pause processing
+          setTransferWarning({
+            studentId,
+            studentName: getStudentName(studentId),
+            gap: result.gap || 0,
+            studentLast: result.studentLast || 0,
+            groupLast: result.groupLast || 0,
+            groupId: group.id,
+            fromGroupId,
+            remainingStudents: studentIds.slice(i + 1),
+          });
+          return; // Stop here, dialog will handle continuation
+        }
+
+        if (result.status === 'level_mismatch') {
+          toast({
+            variant: 'destructive',
+            title: t.common.error,
+            description: isRTL 
+              ? `الطالب ${getStudentName(studentId)} في مستوى مختلف عن المجموعة`
+              : `Student ${getStudentName(studentId)} is at a different level than the group`,
+          });
+          continue;
+        }
+
+        if (result.status === 'student_behind' && result.makeupCount && result.makeupCount > 0) {
+          const sessionsList = result.missedSessions?.join(', ') || '';
+          toast({
+            title: isRTL ? 'تم النقل مع تعويضات' : 'Transferred with makeups',
+            description: isRTL
+              ? `تم إنشاء ${result.makeupCount} حصة تعويضية للطالب ${getStudentName(studentId)} (الحصص: ${sessionsList})`
+              : `Created ${result.makeupCount} makeup sessions for ${getStudentName(studentId)} (sessions: ${sessionsList})`,
+          });
+        }
+
+        if (result.status === 'no_progress_created') {
+          toast({
+            title: isRTL ? 'تم الإضافة' : 'Added',
+            description: isRTL
+              ? `تم إضافة ${getStudentName(studentId)} كطالب جديد بدون سجل سابق`
+              : `${getStudentName(studentId)} added as a new student with no prior progress`,
+          });
+        }
+
+        // equal, no_op: silent success
+      } else {
+        // Non-started group: simple insert/update
+        const existing = groupStudents.find(gs => gs.student_id === studentId);
+        if (existing) {
+          await supabase
+            .from('group_students')
+            .update({ is_active: true })
+            .eq('id', existing.id);
+        } else {
+          await supabase
+            .from('group_students')
+            .insert({ group_id: group.id, student_id: studentId });
+        }
+      }
+    }
+  }, [groupStudents, transferStudent, toast, t, isRTL]);
+
   const handleSaveStudents = async () => {
     if (!selectedGroup) return;
     
@@ -334,30 +463,11 @@ export default function GroupsPage() {
       // Students to remove (in currentActiveIds but not in selectedStudentIds)
       const toRemove = currentActiveIds.filter(id => !selectedStudentIds.includes(id));
 
-      // Add new students
-      for (const studentId of toAdd) {
-        const existing = groupStudents.find(gs => gs.student_id === studentId);
-        if (existing) {
-          // Reactivate existing record
-          await supabase
-            .from('group_students')
-            .update({ is_active: true })
-            .eq('id', existing.id);
-        } else {
-          // Create new record
-          await supabase
-            .from('group_students')
-            .insert({ group_id: selectedGroup.id, student_id: studentId });
-        }
+      // Find from_group_id for transfer (student's current active group in same level)
+      const fromGroupId: string | null = null; // New students being added don't have a from_group in this context
 
-        // If group has started, auto-assign subscription dates via RPC
-        if (selectedGroup.has_started) {
-          await supabase.rpc('assign_subscription_dates', {
-            p_student_id: studentId,
-            p_group_id: selectedGroup.id,
-          } as any);
-        }
-      }
+      // Add new students (uses smart transfer for started groups)
+      await processAddStudents(toAdd, selectedGroup, fromGroupId);
 
       // Deactivate removed students
       for (const studentId of toRemove) {
@@ -370,13 +480,17 @@ export default function GroupsPage() {
         }
       }
 
-      toast({
-        title: t.common.success,
-        description: isRTL ? 'تم تحديث طلاب المجموعة' : 'Group students updated successfully',
-      });
-      
-      setIsStudentsDialogOpen(false);
-      setSelectedGroup(null);
+      // Only close dialog if no transfer warning is pending
+      if (!transferWarning) {
+        toast({
+          title: t.common.success,
+          description: isRTL ? 'تم تحديث طلاب المجموعة' : 'Group students updated successfully',
+        });
+        
+        setIsStudentsDialogOpen(false);
+        setSelectedGroup(null);
+        fetchData();
+      }
     } catch (error) {
       console.error('Error saving group students:', error);
       toast({
@@ -384,6 +498,75 @@ export default function GroupsPage() {
         title: t.common.error,
         description: isRTL ? 'فشل في حفظ طلاب المجموعة' : 'Failed to save group students',
       });
+    }
+  };
+
+  // Handle transfer warning confirmation (force transfer)
+  const handleForceTransfer = async () => {
+    if (!transferWarning || !selectedGroup) return;
+    setTransferLoading(true);
+    
+    try {
+      await transferStudent(
+        transferWarning.studentId,
+        transferWarning.groupId,
+        transferWarning.fromGroupId,
+        true
+      );
+
+      toast({
+        title: t.common.success,
+        description: isRTL
+          ? `تم نقل ${transferWarning.studentName} بنجاح`
+          : `${transferWarning.studentName} transferred successfully`,
+      });
+
+      // Continue processing remaining students
+      const remaining = transferWarning.remainingStudents;
+      setTransferWarning(null);
+
+      if (remaining.length > 0) {
+        await processAddStudents(remaining, selectedGroup, transferWarning.fromGroupId);
+      }
+
+      // If no more warnings pending, close dialog
+      if (!transferWarning) {
+        setIsStudentsDialogOpen(false);
+        setSelectedGroup(null);
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error forcing transfer:', error);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: isRTL ? 'فشل في نقل الطالب' : 'Failed to transfer student',
+      });
+    } finally {
+      setTransferLoading(false);
+    }
+  };
+
+  // Handle transfer warning cancellation (skip student)
+  const handleSkipTransfer = async () => {
+    if (!transferWarning || !selectedGroup) return;
+    
+    const remaining = transferWarning.remainingStudents;
+    setTransferWarning(null);
+
+    if (remaining.length > 0) {
+      try {
+        await processAddStudents(remaining, selectedGroup, transferWarning.fromGroupId);
+      } catch (error) {
+        console.error('Error processing remaining students:', error);
+      }
+    }
+
+    // Close dialog after all done
+    if (!transferWarning) {
+      setIsStudentsDialogOpen(false);
+      setSelectedGroup(null);
+      fetchData();
     }
   };
 
@@ -1663,6 +1846,35 @@ export default function GroupsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Transfer Warning AlertDialog */}
+        <AlertDialog open={!!transferWarning} onOpenChange={(open) => !open && handleSkipTransfer()}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                {isRTL ? 'الطالب سابق المجموعة' : 'Student is ahead of group'}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-start">
+                {transferWarning && (
+                  isRTL
+                    ? `الطالب "${transferWarning.studentName}" وصل للحصة ${transferWarning.studentLast} بينما المجموعة في الحصة ${transferWarning.groupLast} (فرق ${transferWarning.gap} حصص). هل تريد المتابعة؟`
+                    : `Student "${transferWarning.studentName}" has reached session ${transferWarning.studentLast} while the group is at session ${transferWarning.groupLast} (${transferWarning.gap} session gap). Do you want to proceed?`
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={transferLoading}>
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleForceTransfer} disabled={transferLoading}>
+                {transferLoading 
+                  ? (isRTL ? 'جاري النقل...' : 'Transferring...') 
+                  : (isRTL ? 'متابعة' : 'Proceed')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
