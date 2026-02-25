@@ -31,6 +31,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
   const [notes, setNotes] = useState('');
   const [discountPercentage, setDiscountPercentage] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [loadingCheck, setLoadingCheck] = useState(true);
   const [studentGroupInfo, setStudentGroupInfo] = useState<{ groupId: string; hasStarted: boolean; firstSessionDate: string | null } | null>(null);
@@ -111,7 +112,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
           subscription_id: sub.id,
           student_id: studentId,
           amount: paidAmount,
-          payment_date: new Date().toISOString().split('T')[0],
+          payment_date: paymentDate,
           payment_method: 'cash',
           payment_type: 'prior_payment',
           notes: isRTL ? 'دفعة مسبقة عند إنشاء الاشتراك' : 'Prior payment on subscription creation',
@@ -228,6 +229,13 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
                 <Label>{isRTL ? 'المبلغ المدفوع فعلاً' : 'Amount Already Paid'}</Label>
                 <Input type="number" value={paidAmount} onChange={e => setPaidAmount(+e.target.value)} min={0} max={totalAmount} />
               </div>
+
+              {paidAmount > 0 && (
+                <div>
+                  <Label>{isRTL ? 'تاريخ الدفع الفعلي' : 'Actual Payment Date'}</Label>
+                  <Input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} />
+                </div>
+              )}
 
               <div>
                 <Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>
