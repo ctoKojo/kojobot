@@ -371,7 +371,7 @@ export default function StudentsPage() {
           const selectedPlan = pricingPlans.find(p => p.id === formData.pricing_plan_id);
           if (selectedPlan) {
             const discountPct = formData.discount_percentage || 0;
-            const baseTotal = selectedPlan.price_3_months;
+            const baseTotal = formData.payment_type === 'installment' ? selectedPlan.price_1_month * 3 : selectedPlan.price_3_months;
             const totalAmount = Math.round(baseTotal * (1 - discountPct / 100));
             const baseInstallment = selectedPlan.price_1_month;
             const installmentAmount = Math.round(baseInstallment * (1 - discountPct / 100));
@@ -1009,7 +1009,7 @@ export default function StudentsPage() {
                         const plan = pricingPlans.find(p => p.id === formData.pricing_plan_id);
                         if (!plan) return null;
                         const discountPct = formData.discount_percentage || 0;
-                        const originalTotal = plan.price_3_months;
+                        const originalTotal = formData.payment_type === 'installment' ? plan.price_1_month * 3 : plan.price_3_months;
                         const discountAmount = Math.round(originalTotal * discountPct / 100);
                         const total = originalTotal - discountAmount;
                         const monthlyOriginal = plan.price_1_month;
