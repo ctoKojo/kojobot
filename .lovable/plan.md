@@ -1,92 +1,102 @@
 
-# إخفاء الموظفين المنتهي تعاقدهم من الواجهات التشغيلية
 
-## المبدأ
-- الدروب داونز واختيار مدرب جديد: فلتر `terminated` دائما
-- عرض بيانات مرتبطة بسجل قديم (اسم مدرب جروب مثلا): بدون فلتر - يتجاب بالـ ID
-- العدادات: تعد الـ active فقط
+# تنفيذ نظام Leaderboard المتكامل
+
+## ترتيب التنفيذ
+
+### 1. Database Migration: RPC `get_leaderboard`
+
+انشاء function بـ `SECURITY DEFINER` تعمل كل الحسابات server-side:
+
+**Parameters:**
+- `p_scope text` -- 'session' | 'group' | 'level_age_group' | 'level' | 'age_group' | 'all'
+- `p_session_id uuid` (optional)
+- `p_group_id uuid` (optional)
+- `p_level_id uuid` (optional)
+- `p_age_group_id uuid` (optional)
+- `p_period text` -- 'all_time' | 'monthly' | 'weekly'
+- `p_limit int` (default 50)
+- `p_offset int` (default 0)
+
+**المنطق الداخلي:**
+
+1. **Parameter Validation**: يرفض ويرجع empty لو scope محتاج ID مش موجود (session بدون p_session_id، group بدون p_group_id، الخ)
+
+2. **Role-based Access**:
+   - Admin: كل النطاقات
+   - Instructor: group scope فقط لمجموعاته (groups.instructor_id = auth.uid())
+   - Student: group scope فقط لمجموعاته (group_students.student_id = auth.uid() AND is_active = true) - الطالب يختار من مجموعاته في الـ UI
+   - غير ذلك: يرجع empty
+
+3. **CTE**: join بين session_evaluations و sessions و groups
+
+4. **Scope Filtering**:
+   - `session`: WHERE se.session_id = p_session_id
+   - `group`: WHERE s.group_id = p_group_id
+   - `level_age_group`: WHERE g.level_id = p_level_id AND g.age_group_id = p_age_group_id
+   - `level`: WHERE g.level_id = p_level_id
+   - `age_group`: WHERE g.age_group_id = p_age_group_id
+   - `all`: بدون فلتر
+
+5. **Period Filter** (على sessions.session_date):
+   - `monthly`: session_date >= date_trunc('month', CURRENT_DATE)
+   - `weekly`: session_date >= date_trunc('week', CURRENT_DATE)
+   - `all_time`: بدون فلتر
+
+6. **Aggregation**: GROUP BY student_id مع SUM(total_score), SUM(max_total_score), COUNT(DISTINCT session_id)
+
+7. **Weighted Average**: ROUND(SUM(total_score) / NULLIF(SUM(max_total_score), 0) * 100, 1)
+
+8. **Ranking**: DENSE_RANK() OVER (ORDER BY percentage DESC, sessions_count DESC, sum_total_score DESC, student_name ASC)
+
+9. **Joins**: profiles (اسم + avatar مع COALESCE fallback)، groups/levels (اسم المجموعة والليفل)
+
+10. **total_count**: COUNT(*) OVER() محسوب بعد التجميع والفلترة وقبل LIMIT/OFFSET
 
 ---
 
-## التعديلات (8 ملفات)
+### 2. ملف جديد: `src/lib/leaderboardService.ts`
 
-### 1. `src/pages/Groups.tsx` (سطر 286-289)
-اضافة `.neq('employment_status', 'terminated')` عند جلب بروفايلات المدربين للدروب داون:
-```typescript
-.from('profiles')
-.select('user_id, full_name, full_name_ar')
-.in('user_id', instructorIds)
-.neq('employment_status', 'terminated')
-```
-ملاحظة: الجروبات اللي عندها `instructor_id` لمدرب terminated هتفضل تعرض اسمه عادي لان بيانات الجروب بتتجاب من `groups` مباشرة وبعدين بتعمل lookup بالـ ID - لو المدرب مش في القائمة الجديدة هيظهر كـ "—" وده سلوك صحيح لان الجروب المفروض يتعين له مدرب جديد.
+Thin wrapper حول الـ RPC:
+- Types: LeaderboardScope, LeaderboardPeriod, LeaderboardFilter, LeaderboardEntry
+- Function: `getLeaderboard(filter)` يستدعي `supabase.rpc('get_leaderboard', params)`
 
-### 2. `src/pages/MakeupSessions.tsx` (سطر 90-93)
-نفس الفلتر عند جلب المدربين لدروب داون الجدولة:
-```typescript
-.from('profiles')
-.select('user_id, full_name, full_name_ar')
-.in('user_id', ids)
-.neq('employment_status', 'terminated')
-```
+---
 
-### 3. `src/pages/MonthlyReports.tsx` (سطر 81-84)
-فلترة المدربين من دروب داون فلتر التقارير (تقارير تشغيلية حالية):
-```typescript
-.from('profiles')
-.select('user_id, full_name, full_name_ar')
-.in('user_id', instructorIds)
-.neq('employment_status', 'terminated')
-```
+### 3. تحديث: `src/lib/i18n.ts`
 
-### 4. `src/components/finance/SalariesTab.tsx` (سطر 103)
-فلترة الموظفين المنتهي تعاقدهم من قائمة المحافظ:
-```typescript
-.from('profiles').select('*')
-.in('user_id', userIds.length > 0 ? userIds : ['none'])
-.neq('employment_status', 'terminated')
-```
-سجلات المدفوعات التاريخية في `salary_payments` مش هتتأثر لانها بتتجاب بشكل منفصل.
+اضافة مفاتيح جديدة في interface `evaluation` وفي قيم `en` و `ar`:
 
-### 5. `src/components/GlobalSearch.tsx` (سطر 89-93)
-اضافة فلتر عند البحث عن المدربين:
-```typescript
-.from('profiles')
-.select('user_id, full_name, full_name_ar, email')
-.or(`full_name.ilike.${searchTerm},full_name_ar.ilike.${searchTerm},email.ilike.${searchTerm}`)
-.neq('employment_status', 'terminated')
-.limit(5)
-```
-
-### 6. `src/components/dashboard/AdminDashboard.tsx` (سطر 47)
-تعديل عداد المدربين ليعد الـ active فقط:
-- جلب `user_id` من `user_roles` بـ `role = instructor`
-- ثم عمل count على `profiles` بـ `.in('user_id', ids).neq('employment_status', 'terminated')`
-- او الاسهل: ابقاء الكويري الحالي وتعديله لخطوتين (جلب IDs ثم count مع فلتر)
-
-### 7. `src/components/messages/NewConversationDialog.tsx` (سطر 48-53)
-اضافة فلتر عند البحث عن مستخدمين لبدء محادثة جديدة:
-```typescript
-.from('profiles')
-.select('user_id, full_name, full_name_ar, avatar_url')
-.or(`full_name.ilike.%${userSearch}%,full_name_ar.ilike.%${userSearch}%`)
-.neq('user_id', userId || '')
-.neq('employment_status', 'terminated')
-.limit(10)
-```
-
-### 8. `src/pages/InstructorPerformanceDashboard.tsx` (سطر 88-89)
-فلترة المدربين المنتهي تعاقدهم من داشبورد الاداء:
-```typescript
-supabase.from('profiles')
-  .select('user_id, full_name, full_name_ar, avatar_url, email')
-  .in('user_id', ids)
-  .neq('employment_status', 'terminated')
+```text
+scope, session, group, levelInAgeGroup, levelGlobal, ageGroupGlobal, allStudents,
+period, allTime, thisMonth, thisWeek, selectSession, selectGroup,
+selectAgeGroup, selectLevel, sessionsCount, topPerformers, student
 ```
 
 ---
 
-## ما لن يتأثر (بيانات تاريخية سليمة)
-- صفحة الموظفين `/instructors` - بالفعل فيها تاب منفصل للـ terminated
-- بروفايل الموظف `/instructor/:id` - بيعرض badge الحالة
-- سجلات المدفوعات والجلسات المكتملة القديمة
-- اسم المدرب المعروض في تفاصيل الجروب (بيتجاب بالـ ID مباشرة)
+### 4. اعادة كتابة: `src/pages/Leaderboard.tsx`
+
+**الفلاتر:**
+- Select النطاق: Admin يشوف الـ 6 نطاقات، Instructor/Student يشوف group فقط (مجموعاته)
+- Selects فرعية ديناميكية حسب النطاق المختار
+- Select الفترة: كل الوقت / الشهر / الاسبوع
+
+**البوديوم (Top 3):**
+- يظهر فقط لما يكون فيه 3+ طلاب
+- كروت بصرية مع Trophy/Medal icons واسم الطالب والنسبة والـ avatar
+
+**الجدول:**
+- اعمدة: الرتبة، الطالب (مع avatar وfallback عربي/انجليزي)، النقاط، النسبة، عدد السيشنات، الفجوة، التقدير
+- اعمدة اضافية في النطاقات العامة: المجموعة، الليفل
+- تلوين الصفوف الثلاثة الاولى
+- Pagination باستخدام DataTablePagination
+
+**حالات فارغة:** Loading spinner، لا توجد تقييمات
+
+---
+
+## لا تعديل على ملفات اخرى
+- `App.tsx`: الراوت موجود
+- `AppSidebar.tsx`: الرابط موجود
+
