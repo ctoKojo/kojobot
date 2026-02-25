@@ -282,6 +282,24 @@ interface Translations {
     excellent: string;
     noEvaluations: string;
     attendanceNotComplete: string;
+    scope: string;
+    session: string;
+    group: string;
+    levelInAgeGroup: string;
+    levelGlobal: string;
+    ageGroupGlobal: string;
+    allStudents: string;
+    period: string;
+    allTime: string;
+    thisMonth: string;
+    thisWeek: string;
+    selectSession: string;
+    selectGroup: string;
+    selectAgeGroup: string;
+    selectLevel: string;
+    sessionsCount: string;
+    topPerformers: string;
+    student: string;
   };
 }
 
@@ -600,6 +618,24 @@ export const translations: Record<Language, Translations> = {
       excellent: 'Excellent',
       noEvaluations: 'No evaluations yet',
       attendanceNotComplete: 'Complete attendance for all students first',
+      scope: 'Scope',
+      session: 'Session',
+      group: 'Group',
+      levelInAgeGroup: 'Level in Age Group',
+      levelGlobal: 'Level (All)',
+      ageGroupGlobal: 'Age Group (All)',
+      allStudents: 'All Students',
+      period: 'Period',
+      allTime: 'All Time',
+      thisMonth: 'This Month',
+      thisWeek: 'This Week',
+      selectSession: 'Select Session',
+      selectGroup: 'Select Group',
+      selectAgeGroup: 'Select Age Group',
+      selectLevel: 'Select Level',
+      sessionsCount: 'Sessions',
+      topPerformers: 'Top Performers',
+      student: 'Student',
     },
   },
   
@@ -917,6 +953,24 @@ export const translations: Record<Language, Translations> = {
       excellent: 'ممتاز',
       noEvaluations: 'لا توجد تقييمات بعد',
       attendanceNotComplete: 'أكمل الحضور لكل الطلاب أولاً',
+      scope: 'النطاق',
+      session: 'السيشن',
+      group: 'المجموعة',
+      levelInAgeGroup: 'الليفل في الفئة',
+      levelGlobal: 'الليفل (عام)',
+      ageGroupGlobal: 'الفئة العمرية (عام)',
+      allStudents: 'كل الطلاب',
+      period: 'الفترة',
+      allTime: 'كل الوقت',
+      thisMonth: 'هذا الشهر',
+      thisWeek: 'هذا الاسبوع',
+      selectSession: 'اختر السيشن',
+      selectGroup: 'اختر المجموعة',
+      selectAgeGroup: 'اختر الفئة العمرية',
+      selectLevel: 'اختر الليفل',
+      sessionsCount: 'السيشنات',
+      topPerformers: 'المتميزون',
+      student: 'الطالب',
     },
   },
 };

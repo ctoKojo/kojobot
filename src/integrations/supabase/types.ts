@@ -3087,6 +3087,34 @@ export type Database = {
         Args: { _instructor_id: string }
         Returns: string[]
       }
+      get_leaderboard: {
+        Args: {
+          p_age_group_id?: string
+          p_group_id?: string
+          p_level_id?: string
+          p_limit?: number
+          p_offset?: number
+          p_period?: string
+          p_scope: string
+          p_session_id?: string
+        }
+        Returns: {
+          avatar_url: string
+          group_name: string
+          group_name_ar: string
+          level_name: string
+          level_name_ar: string
+          percentage: number
+          rank: number
+          sessions_count: number
+          student_id: string
+          student_name: string
+          student_name_ar: string
+          sum_max_total_score: number
+          sum_total_score: number
+          total_count: number
+        }[]
+      }
       get_student_group_ids: {
         Args: { _student_id: string }
         Returns: string[]
