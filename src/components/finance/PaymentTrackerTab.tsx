@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -42,8 +43,7 @@ export function PaymentTrackerTab() {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [subs, setSubs] = useState<EnrichedSub[]>([]);
+  const queryClient = useQueryClient();
   const [paymentDialog, setPaymentDialog] = useState(false);
   const [selectedSub, setSelectedSub] = useState<EnrichedSub | null>(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
@@ -58,85 +58,77 @@ export function PaymentTrackerTab() {
   const [expiringPage, setExpiringPage] = useState(1);
   const pageSize = 10;
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      // Get active subscriptions with remaining > 0 or installment type
-      const { data: subsData } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('status', 'active')
-        .not('next_payment_date', 'is', null);
+  const fetchData = async (): Promise<EnrichedSub[]> => {
+    // Get active subscriptions with remaining > 0 or installment type
+    const { data: subsData } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('status', 'active')
+      .not('next_payment_date', 'is', null);
 
-      if (!subsData || subsData.length === 0) {
-        setSubs([]);
-        setLoading(false);
-        return;
+    if (!subsData || subsData.length === 0) {
+      return [];
+    }
+
+    const studentIds = [...new Set(subsData.map((s: any) => s.student_id))];
+    const planIds = [...new Set(subsData.map((s: any) => s.pricing_plan_id))];
+    const subIds = subsData.map((s: any) => s.id);
+
+    const [profilesRes, plansRes, paymentsRes] = await Promise.all([
+      supabase.from('profiles').select('user_id, full_name, full_name_ar').in('user_id', studentIds),
+      supabase.from('pricing_plans').select('id, name, name_ar').in('id', planIds),
+      supabase.from('payments').select('subscription_id, payment_date').in('subscription_id', subIds).order('payment_date', { ascending: false }),
+    ]);
+
+    const profileMap = new Map((profilesRes.data || []).map((p: any) => [p.user_id, p]));
+    const planMap = new Map((plansRes.data || []).map((p: any) => [p.id, p]));
+
+    const latestPaymentMap = new Map<string, string>();
+    (paymentsRes.data || []).forEach((p: any) => {
+      if (!latestPaymentMap.has(p.subscription_id)) {
+        latestPaymentMap.set(p.subscription_id, p.payment_date);
+      }
+    });
+
+    const paymentsBySubInCycle = new Map<string, boolean>();
+    (paymentsRes.data || []).forEach((p: any) => {
+      const sub = subsData.find((s: any) => s.id === p.subscription_id);
+      if (sub?.next_payment_date) {
+        const npd = new Date(sub.next_payment_date);
+        const cycleStart = new Date(npd.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const pd = new Date(p.payment_date);
+        if (pd >= cycleStart && pd <= npd) {
+          paymentsBySubInCycle.set(p.subscription_id, true);
+        }
+      }
+    });
+
+    const today = new Date();
+    return subsData.map((s: any) => {
+      const hasPaidInCycle = paymentsBySubInCycle.get(s.id) || false;
+      let paymentStatus: 'paid' | 'overdue' | 'upcoming' = 'upcoming';
+      if (hasPaidInCycle) {
+        paymentStatus = 'paid';
+      } else if (s.next_payment_date && new Date(s.next_payment_date) < today) {
+        paymentStatus = 'overdue';
       }
 
-      const studentIds = [...new Set(subsData.map((s: any) => s.student_id))];
-      const planIds = [...new Set(subsData.map((s: any) => s.pricing_plan_id))];
-      const subIds = subsData.map((s: any) => s.id);
-
-      const [profilesRes, plansRes, paymentsRes] = await Promise.all([
-        supabase.from('profiles').select('user_id, full_name, full_name_ar').in('user_id', studentIds),
-        supabase.from('pricing_plans').select('id, name, name_ar').in('id', planIds),
-        supabase.from('payments').select('subscription_id, payment_date').in('subscription_id', subIds).order('payment_date', { ascending: false }),
-      ]);
-
-      const profileMap = new Map((profilesRes.data || []).map((p: any) => [p.user_id, p]));
-      const planMap = new Map((plansRes.data || []).map((p: any) => [p.id, p]));
-
-      // Group payments by subscription, get latest payment_date per sub
-      const latestPaymentMap = new Map<string, string>();
-      (paymentsRes.data || []).forEach((p: any) => {
-        if (!latestPaymentMap.has(p.subscription_id)) {
-          latestPaymentMap.set(p.subscription_id, p.payment_date);
-        }
-      });
-
-      // Build payments-in-cycle map for status determination
-      const paymentsBySubInCycle = new Map<string, boolean>();
-      (paymentsRes.data || []).forEach((p: any) => {
-        const sub = subsData.find((s: any) => s.id === p.subscription_id);
-        if (sub?.next_payment_date) {
-          const npd = new Date(sub.next_payment_date);
-          const cycleStart = new Date(npd.getTime() - 30 * 24 * 60 * 60 * 1000);
-          const pd = new Date(p.payment_date);
-          if (pd >= cycleStart && pd <= npd) {
-            paymentsBySubInCycle.set(p.subscription_id, true);
-          }
-        }
-      });
-
-      const today = new Date();
-      const enriched: EnrichedSub[] = subsData.map((s: any) => {
-        const hasPaidInCycle = paymentsBySubInCycle.get(s.id) || false;
-        let paymentStatus: 'paid' | 'overdue' | 'upcoming' = 'upcoming';
-        if (hasPaidInCycle) {
-          paymentStatus = 'paid';
-        } else if (s.next_payment_date && new Date(s.next_payment_date) < today) {
-          paymentStatus = 'overdue';
-        }
-
-        return {
-          ...s,
-          profile: profileMap.get(s.student_id),
-          plan: planMap.get(s.pricing_plan_id),
-          lastPaymentDate: latestPaymentMap.get(s.id) || null,
-          paymentStatus,
-        };
-      });
-
-      setSubs(enriched);
-    } catch (e) {
-      console.error('PaymentTracker fetch error:', e);
-    } finally {
-      setLoading(false);
-    }
+      return {
+        ...s,
+        profile: profileMap.get(s.student_id),
+        plan: planMap.get(s.pricing_plan_id),
+        lastPaymentDate: latestPaymentMap.get(s.id) || null,
+        paymentStatus,
+      };
+    });
   };
 
-  useEffect(() => { fetchData(); }, []);
+  const { data: subs = [], isLoading: loading } = useQuery({
+    queryKey: ['payment-tracker'],
+    queryFn: fetchData,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+  });
 
   const now = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -215,7 +207,7 @@ export function PaymentTrackerTab() {
 
       toast({ title: isRTL ? 'تم تسجيل الدفعة بنجاح' : 'Payment recorded successfully' });
       setPaymentDialog(false);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['payment-tracker'] });
     } catch (e: any) {
       toast({ title: isRTL ? 'خطأ' : 'Error', description: e.message, variant: 'destructive' });
     } finally {
