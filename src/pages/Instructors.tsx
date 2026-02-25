@@ -977,7 +977,7 @@ export default function InstructorsPage() {
                   </TableRow>
                 ) : (
                   filteredByCategory.map((instructor) => (
-                    <TableRow key={instructor.id}>
+                    <TableRow key={instructor.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/instructor/${instructor.user_id}`)}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
@@ -1039,7 +1039,7 @@ export default function InstructorsPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
