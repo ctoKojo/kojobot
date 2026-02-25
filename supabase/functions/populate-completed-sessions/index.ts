@@ -17,6 +17,18 @@ interface GroupStudent {
   student_id: string
 }
 
+interface EvaluationCriterion {
+  id: string
+  key: string
+  name: string
+  name_ar: string
+  max_score: number
+  rubric_levels: { label: string; label_ar: string; value: number }[]
+  description: string | null
+  description_ar: string | null
+  display_order: number
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -38,10 +50,10 @@ Deno.serve(async (req) => {
 
     console.log(`[Populate] Starting for group: ${group_id}`)
 
-    // Get group info
+    // Get group info (including age_group_id for evaluations)
     const { data: group, error: groupError } = await supabase
       .from('groups')
-      .select('id, name, name_ar, instructor_id')
+      .select('id, name, name_ar, instructor_id, age_group_id')
       .eq('id', group_id)
       .single()
 
@@ -94,28 +106,60 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Fetch evaluation criteria for this age group (for evaluations section)
+    let criteriaSnapshot: EvaluationCriterion[] = []
+    let scores: Record<string, number> = {}
+    let totalBehaviorScore = 0
+    let maxBehaviorScore = 0
+
+    if (group.age_group_id) {
+      const { data: criteria, error: criteriaError } = await supabase
+        .from('evaluation_criteria')
+        .select('id, key, name, name_ar, max_score, rubric_levels, description, description_ar, display_order')
+        .eq('age_group_id', group.age_group_id)
+        .eq('is_active', true)
+        .order('display_order')
+
+      if (criteriaError) {
+        console.warn('Error fetching evaluation criteria:', criteriaError)
+      } else if (criteria && criteria.length > 0) {
+        criteriaSnapshot = criteria as EvaluationCriterion[]
+        for (const c of criteriaSnapshot) {
+          scores[c.key] = c.max_score
+          maxBehaviorScore += c.max_score
+        }
+        totalBehaviorScore = maxBehaviorScore // full marks
+        console.log(`[Populate] Loaded ${criteriaSnapshot.length} evaluation criteria, max behavior score: ${maxBehaviorScore}`)
+      } else {
+        console.warn('[Populate] No evaluation criteria found for age group:', group.age_group_id)
+      }
+    } else {
+      console.warn('[Populate] Group has no age_group_id, skipping evaluations')
+    }
+
+    const canCreateEvaluations = criteriaSnapshot.length > 0
+
     const results = {
       attendance: 0,
       quizzes: 0,
       quizSubmissions: 0,
       assignments: 0,
       assignmentSubmissions: 0,
+      evaluations: 0,
       errors: [] as string[],
     }
 
     for (const session of completedSessions as CompletedSession[]) {
       console.log(`[Populate] Processing session #${session.session_number}`)
 
-      // Calculate dates based on session date
       const sessionDate = new Date(session.session_date)
       const dueDate = new Date(sessionDate)
-      dueDate.setDate(dueDate.getDate() + 3) // Due 3 days after session
+      dueDate.setDate(dueDate.getDate() + 3)
 
       // ========================================
       // 1. Create Attendance Records
       // ========================================
       for (const student of groupStudents as GroupStudent[]) {
-        // Check if attendance exists
         const { data: existingAttendance } = await supabase
           .from('attendance')
           .select('id')
@@ -146,7 +190,6 @@ Deno.serve(async (req) => {
       // ========================================
       // 2. Create Quiz for Session
       // ========================================
-      // Check if quiz assignment already exists for this session
       const { data: existingQuizAssignment } = await supabase
         .from('quiz_assignments')
         .select('id, quiz_id')
@@ -157,7 +200,6 @@ Deno.serve(async (req) => {
       let quizAssignmentId: string
 
       if (!existingQuizAssignment) {
-        // Create quiz
         const { data: newQuiz, error: quizError } = await supabase
           .from('quizzes')
           .insert({
@@ -182,7 +224,6 @@ Deno.serve(async (req) => {
         quizId = newQuiz.id
         results.quizzes++
 
-        // Create quiz question
         await supabase.from('quiz_questions').insert({
           quiz_id: quizId,
           question_text: 'What is 2 + 2?',
@@ -194,7 +235,6 @@ Deno.serve(async (req) => {
           order_index: 1,
         })
 
-        // Create quiz assignment
         const { data: newAssignment, error: assignmentError } = await supabase
           .from('quiz_assignments')
           .insert({
@@ -324,6 +364,59 @@ Deno.serve(async (req) => {
             console.error('Assignment submission error:', submissionError)
           } else {
             results.assignmentSubmissions++
+          }
+        }
+      }
+
+      // ========================================
+      // 4. Create Session Evaluations (Full Marks)
+      // ========================================
+      if (canCreateEvaluations) {
+        // Compute total scores for full marks
+        const quizScore = 10
+        const quizMaxScore = 10
+        const assignmentScore = 100
+        const assignmentMaxScore = 100
+        const totalScore = totalBehaviorScore + quizScore + assignmentScore
+        const maxTotalScore = maxBehaviorScore + quizMaxScore + assignmentMaxScore
+        const percentage = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 10000) / 100 : 100
+
+        for (const student of groupStudents as GroupStudent[]) {
+          const { data: existingEval } = await supabase
+            .from('session_evaluations')
+            .select('id')
+            .eq('session_id', session.id)
+            .eq('student_id', student.student_id)
+            .maybeSingle()
+
+          if (!existingEval) {
+            const { error: evalError } = await supabase
+              .from('session_evaluations')
+              .insert({
+                session_id: session.id,
+                student_id: student.student_id,
+                evaluated_by: group.instructor_id,
+                criteria_snapshot: criteriaSnapshot,
+                scores: scores,
+                total_behavior_score: totalBehaviorScore,
+                max_behavior_score: maxBehaviorScore,
+                quiz_score: quizScore,
+                quiz_max_score: quizMaxScore,
+                assignment_score: assignmentScore,
+                assignment_max_score: assignmentMaxScore,
+                total_score: totalScore,
+                max_total_score: maxTotalScore,
+                percentage: percentage,
+                student_feedback_tags: ['Excellent'],
+                notes: 'Auto-generated for existing group',
+              })
+
+            if (evalError) {
+              console.error('Evaluation insert error:', evalError)
+              results.errors.push(`Evaluation error for session ${session.session_number}, student ${student.student_id}`)
+            } else {
+              results.evaluations++
+            }
           }
         }
       }
