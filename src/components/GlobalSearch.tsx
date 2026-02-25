@@ -90,6 +90,7 @@ export function GlobalSearch() {
           .from('profiles')
           .select('user_id, full_name, full_name_ar, email')
           .or(`full_name.ilike.${searchTerm},full_name_ar.ilike.${searchTerm},email.ilike.${searchTerm}`)
+          .neq('employment_status', 'terminated')
           .limit(5);
 
         if (instructors) {

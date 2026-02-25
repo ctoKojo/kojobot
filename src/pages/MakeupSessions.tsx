@@ -90,7 +90,8 @@ export default function MakeupSessionsPage() {
         const { data: profiles } = await supabase
           .from('profiles')
           .select('user_id, full_name, full_name_ar')
-          .in('user_id', ids);
+          .in('user_id', ids)
+          .neq('employment_status', 'terminated');
         setInstructors(profiles || []);
       }
     } catch (error) {

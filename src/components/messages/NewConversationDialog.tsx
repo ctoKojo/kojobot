@@ -50,6 +50,7 @@ export function NewConversationDialog({ open, onOpenChange, onSelect, isRTL, use
         .select('user_id, full_name, full_name_ar, avatar_url')
         .or(`full_name.ilike.%${userSearch}%,full_name_ar.ilike.%${userSearch}%`)
         .neq('user_id', userId || '')
+        .neq('employment_status', 'terminated')
         .limit(10);
 
       if (!profiles?.length) return [];
