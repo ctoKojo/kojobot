@@ -74,6 +74,7 @@ export function PaymentsHistory({ studentId }: Props) {
       fetchPayments();
       queryClient.invalidateQueries({ queryKey: ['payment-tracker'] });
       queryClient.invalidateQueries({ queryKey: ['finance-data'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-flow'] });
     } catch (e: any) {
       toast({ title: isRTL ? 'خطأ' : 'Error', description: e.message, variant: 'destructive' });
     } finally {

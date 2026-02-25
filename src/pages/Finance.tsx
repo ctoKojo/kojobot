@@ -70,19 +70,22 @@ export default function Finance() {
     const { data: payData } = await supabase
       .from('payments')
       .select('*, subscriptions(student_id)')
-      .order('created_at', { ascending: false })
-      .limit(50);
+      .order('created_at', { ascending: false });
 
     const active = enriched.filter((s: any) => s.status === 'active');
     const now = new Date();
-    const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, now.getDate());
     
-    const totalRevenue = active.reduce((sum: number, s: any) => {
-      if (s.next_payment_date && new Date(s.next_payment_date) < twoMonthsAgo && Number(s.remaining_amount) > 0) {
-        return sum;
+    // Calculate current month's revenue from actual payments
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const totalRevenue = (payData || []).reduce((sum: number, p: any) => {
+      const pd = new Date(p.payment_date);
+      if (pd >= thisMonthStart && pd <= thisMonthEnd) {
+        return sum + Number(p.amount || 0);
       }
-      return sum + Number(s.paid_amount || 0);
+      return sum;
     }, 0);
+    
     const totalOutstanding = active.reduce((sum: number, s: any) => sum + Number(s.remaining_amount || 0), 0);
     const suspendedCount = active.filter((s: any) => s.is_suspended).length;
     const overdueCount = active.filter((s: any) => s.next_payment_date && new Date(s.next_payment_date) < new Date() && Number(s.remaining_amount) > 0).length;
@@ -236,7 +239,7 @@ export default function Finance() {
         {/* Stats */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
           {[
-            { label: isRTL ? 'إجمالي الإيرادات' : 'Total Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-100', adminOnly: true },
+            { label: isRTL ? 'إيرادات الشهر الحالي' : 'This Month Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-100', adminOnly: true },
             { label: isRTL ? 'المبالغ المستحقة' : 'Outstanding', value: `${stats.totalOutstanding} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, color: 'text-orange-600', bg: 'bg-orange-100', adminOnly: true },
             { label: isRTL ? 'اشتراكات نشطة' : 'Active', value: stats.activeCount, icon: Users, color: 'text-blue-600', bg: 'bg-blue-100', adminOnly: false },
             { label: isRTL ? 'متأخرين' : 'Overdue', value: stats.overdueCount, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100', adminOnly: false },
