@@ -23,7 +23,7 @@ import { ResetPasswordButton } from '@/components/ResetPasswordButton';
 
 // Capability-based section config
 const EMPLOYEE_SECTIONS = {
-  instructor: ['reports', 'finance', 'groups', 'sessions', 'quizzes', 'assignments'] as const,
+  instructor: ['finance', 'groups', 'sessions', 'quizzes', 'assignments', 'reports'] as const,
   reception: ['finance'] as const,
 } as const;
 
@@ -411,8 +411,8 @@ export default function InstructorProfile() {
     <DashboardLayout title={pageTitle}>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
+          <Button variant="ghost" onClick={() => navigate('/instructors')}>
+            <ArrowLeft className={`h-4 w-4 ${isRTL ? "ml-2 rotate-180" : "mr-2"}`} />
             {isRTL ? 'رجوع' : 'Back'}
           </Button>
           {role === 'admin' && (
@@ -511,7 +511,21 @@ export default function InstructorProfile() {
 
         {/* Quick Stats - only show teaching stats for instructors */}
         {!isReception ? (
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-5">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{data.totalStudents}</p>
+                    <p className="text-sm text-muted-foreground">{isRTL ? 'إجمالي الطلاب' : 'Total Students'}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
@@ -533,8 +547,8 @@ export default function InstructorProfile() {
                     <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{data.upcomingSessions.length}</p>
-                    <p className="text-sm text-muted-foreground">{isRTL ? 'جلسات قادمة' : 'Upcoming Sessions'}</p>
+                    <p className="text-2xl font-bold">{Math.round(data.attendanceStats.presentRate)}%</p>
+                    <p className="text-sm text-muted-foreground">{isRTL ? 'نسبة الحضور' : 'Attendance Rate'}</p>
                   </div>
                 </div>
               </CardContent>
@@ -621,15 +635,9 @@ export default function InstructorProfile() {
           </Card>
         )}
 
-        {/* Detailed Tabs - capability-based */}
+        {/* Detailed Tabs - capability-based, action-first order */}
         <Tabs defaultValue={defaultTab} className="w-full">
           <TabsList className={`grid w-full ${gridColsClass}`}>
-            {visibleSections.includes('reports') && (
-              <TabsTrigger value="reports" className="gap-2">
-                <BarChart3 className="h-4 w-4" />
-                {isRTL ? 'التقارير' : 'Reports'}
-              </TabsTrigger>
-            )}
             {visibleSections.includes('finance') && (
               <TabsTrigger value="finance" className="gap-2">
                 <DollarSign className="h-4 w-4" />
@@ -648,20 +656,13 @@ export default function InstructorProfile() {
             {visibleSections.includes('assignments') && (
               <TabsTrigger value="assignments">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
             )}
+            {visibleSections.includes('reports') && (
+              <TabsTrigger value="reports" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                {isRTL ? 'التقارير' : 'Reports'}
+              </TabsTrigger>
+            )}
           </TabsList>
-
-          {/* Reports Tab */}
-          {visibleSections.includes('reports') && (
-            <TabsContent value="reports">
-              <InstructorPerformanceCharts
-                totalStudents={data.totalStudents}
-                attendanceStats={data.attendanceStats}
-                quizStats={data.quizStats}
-                assignmentStats={data.assignmentStats}
-                attendanceTrend={data.attendanceTrend}
-              />
-            </TabsContent>
-          )}
 
           {/* Finance Tab */}
           {visibleSections.includes('finance') && (
@@ -979,6 +980,19 @@ export default function InstructorProfile() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+
+          {/* Reports Tab - Heavy charts, last */}
+          {visibleSections.includes('reports') && (
+            <TabsContent value="reports">
+              <InstructorPerformanceCharts
+                totalStudents={data.totalStudents}
+                attendanceStats={data.attendanceStats}
+                quizStats={data.quizStats}
+                assignmentStats={data.assignmentStats}
+                attendanceTrend={data.attendanceTrend}
+              />
             </TabsContent>
           )}
         </Tabs>
