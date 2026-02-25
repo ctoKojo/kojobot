@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pencil, DollarSign } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +22,7 @@ export function PaymentsHistory({ studentId }: Props) {
   const { isRTL, language } = useLanguage();
   const { role } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialog, setEditDialog] = useState(false);
@@ -70,6 +72,7 @@ export function PaymentsHistory({ studentId }: Props) {
       toast({ title: isRTL ? 'تم تعديل تاريخ الدفع بنجاح' : 'Payment date updated successfully' });
       setEditDialog(false);
       fetchPayments();
+      queryClient.invalidateQueries({ queryKey: ['payment-tracker'] });
     } catch (e: any) {
       toast({ title: isRTL ? 'خطأ' : 'Error', description: e.message, variant: 'destructive' });
     } finally {
