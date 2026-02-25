@@ -1,69 +1,118 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, DollarSign, CalendarClock } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, CalendarClock, RefreshCw, Receipt } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Line, ComposedChart } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Line, ComposedChart, Legend } from 'recharts';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 
 export function CashFlowTab() {
   const { isRTL, language } = useLanguage();
-  const [loading, setLoading] = useState(true);
-  const [payments, setPayments] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState<any[]>([]);
-  const [unpaidThisMonth, setUnpaidThisMonth] = useState(0);
-  const [dueNextMonth, setDueNextMonth] = useState(0);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { data: cashFlowData, isLoading: loading } = useQuery({
+    queryKey: ['cash-flow'],
+    queryFn: async () => {
+      const now = new Date();
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
 
-  const fetchData = async () => {
-    const now = new Date();
-    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-    const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
+      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
+      const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0];
 
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
-    const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0];
+      const [paymentsRes, expensesRes, subsThisMonthRes, subsNextMonthRes, allActiveSubsRes] = await Promise.all([
+        supabase.from('payments').select('amount, payment_date').gte('payment_date', sixMonthsAgoStr),
+        supabase.from('expenses').select('amount, expense_date').gte('expense_date', sixMonthsAgoStr),
+        supabase.from('subscriptions').select('id, installment_amount, next_payment_date, payment_type, remaining_amount, end_date').eq('status', 'active').gte('next_payment_date', thisMonthStart).lte('next_payment_date', thisMonthEnd),
+        supabase.from('subscriptions').select('id, installment_amount, next_payment_date, payment_type, remaining_amount, end_date').eq('status', 'active').gte('next_payment_date', nextMonthStart).lte('next_payment_date', nextMonthEnd),
+        // All active subs for projection
+        supabase.from('subscriptions').select('id, installment_amount, next_payment_date, payment_type, remaining_amount, end_date, total_amount, paid_amount').eq('status', 'active'),
+      ]);
 
-    const [paymentsRes, expensesRes, subsThisMonthRes, subsNextMonthRes] = await Promise.all([
-      supabase.from('payments').select('amount, payment_date').gte('payment_date', sixMonthsAgoStr),
-      supabase.from('expenses').select('amount, expense_date').gte('expense_date', sixMonthsAgoStr),
-      // Subs due this month
-      supabase.from('subscriptions').select('id, installment_amount, next_payment_date').eq('status', 'active').gte('next_payment_date', thisMonthStart).lte('next_payment_date', thisMonthEnd),
-      // Subs due next month
-      supabase.from('subscriptions').select('id, installment_amount, next_payment_date').eq('status', 'active').gte('next_payment_date', nextMonthStart).lte('next_payment_date', nextMonthEnd),
-    ]);
+      const payments = paymentsRes.data || [];
+      const expenses = expensesRes.data || [];
+      const thisMonthSubs = subsThisMonthRes.data || [];
+      const allActiveSubs = allActiveSubsRes.data || [];
 
-    setPayments(paymentsRes.data || []);
-    setExpenses(expensesRes.data || []);
+      // Calculate unpaid this month
+      let unpaidThisMonth = 0;
+      if (thisMonthSubs.length > 0) {
+        const subIds = thisMonthSubs.map((s: any) => s.id);
+        const { data: recentPayments } = await supabase.from('payments').select('subscription_id, payment_date').in('subscription_id', subIds);
 
-    // For this month's unpaid: check which subs don't have a payment in their cycle window
-    const thisMonthSubs = subsThisMonthRes.data || [];
-    if (thisMonthSubs.length > 0) {
-      const subIds = thisMonthSubs.map((s: any) => s.id);
-      const { data: recentPayments } = await supabase.from('payments').select('subscription_id, payment_date').in('subscription_id', subIds);
-
-      let unpaidTotal = 0;
-      thisMonthSubs.forEach((sub: any) => {
-        const npd = new Date(sub.next_payment_date);
-        const cycleStart = new Date(npd.getTime() - 30 * 24 * 60 * 60 * 1000);
-        const hasPaid = (recentPayments || []).some((p: any) => {
-          if (p.subscription_id !== sub.id) return false;
-          const pd = new Date(p.payment_date);
-          return pd >= cycleStart && pd <= npd;
+        thisMonthSubs.forEach((sub: any) => {
+          const npd = new Date(sub.next_payment_date);
+          const cycleStart = new Date(npd.getTime() - 30 * 24 * 60 * 60 * 1000);
+          const hasPaid = (recentPayments || []).some((p: any) => {
+            if (p.subscription_id !== sub.id) return false;
+            const pd = new Date(p.payment_date);
+            return pd >= cycleStart && pd <= npd;
+          });
+          if (!hasPaid) unpaidThisMonth += Number(sub.installment_amount || 0);
         });
-        if (!hasPaid) unpaidTotal += Number(sub.installment_amount || 0);
-      });
-      setUnpaidThisMonth(unpaidTotal);
-    }
+      }
 
-    setDueNextMonth((subsNextMonthRes.data || []).reduce((sum: number, s: any) => sum + Number(s.installment_amount || 0), 0));
-    setLoading(false);
-  };
+      const dueNextMonth = (subsNextMonthRes.data || []).reduce((sum: number, s: any) => sum + Number(s.installment_amount || 0), 0);
+
+      // Build projections for next 3 months
+      const projections: { month: string; renewals: number; installments: number; total: number }[] = [];
+      for (let i = 1; i <= 3; i++) {
+        const futureMonth = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const futureMonthEnd = new Date(futureMonth.getFullYear(), futureMonth.getMonth() + 1, 0);
+        const monthLabel = futureMonth.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', year: '2-digit' });
+
+        let renewals = 0;
+        let installments = 0;
+
+        allActiveSubs.forEach((sub: any) => {
+          const remaining = Number(sub.remaining_amount || 0);
+          if (remaining <= 0) return;
+
+          const npd = sub.next_payment_date ? new Date(sub.next_payment_date) : null;
+          if (!npd) return;
+
+          // Check if this sub's next_payment_date falls in this future month
+          // or project forward based on installment cycle
+          const installmentAmt = Number(sub.installment_amount || 0);
+          if (installmentAmt <= 0) return;
+
+          // Calculate which payment cycle falls in this month
+          const monthsDiff = (futureMonth.getFullYear() - npd.getFullYear()) * 12 + (futureMonth.getMonth() - npd.getMonth());
+          
+          if (monthsDiff >= 0 && remaining > monthsDiff * installmentAmt) {
+            if (sub.payment_type === 'installment') {
+              installments += installmentAmt;
+            } else {
+              // Full payment subs that still have remaining = renewals
+              renewals += Math.min(installmentAmt, remaining);
+            }
+          }
+
+          // Check for end_date (subscription expiry = renewal opportunity)
+          if (sub.end_date) {
+            const endDate = new Date(sub.end_date);
+            if (endDate >= futureMonth && endDate <= futureMonthEnd && remaining <= 0) {
+              renewals += Number(sub.total_amount || 0);
+            }
+          }
+        });
+
+        projections.push({ month: monthLabel, renewals, installments, total: renewals + installments });
+      }
+
+      return { payments, expenses, unpaidThisMonth, dueNextMonth, projections };
+    },
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+  });
+
+  const payments = cashFlowData?.payments || [];
+  const expenses = cashFlowData?.expenses || [];
+  const unpaidThisMonth = cashFlowData?.unpaidThisMonth || 0;
+  const dueNextMonth = cashFlowData?.dueNextMonth || 0;
+  const projections = cashFlowData?.projections || [];
 
   const now = new Date();
   const thisMonthStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -179,10 +228,64 @@ export function CashFlowTab() {
         </CardContent>
       </Card>
 
+      {/* Projected Cash Flow - Next 3 Months */}
+      {projections.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{isRTL ? 'التدفق النقدي المتوقع - الأشهر القادمة' : 'Projected Cash Flow - Upcoming Months'}</CardTitle>
+            <CardDescription>{isRTL ? 'تقدير الإيرادات المتوقعة من تجديد الاشتراكات والأقساط المستحقة' : 'Estimated revenue from subscription renewals and due installments'}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-3 mb-6">
+              {projections.map((p) => (
+                <div key={p.month} className="p-4 rounded-lg border bg-muted/30 space-y-3">
+                  <p className="text-sm font-semibold text-muted-foreground">{p.month}</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <RefreshCw className="h-3.5 w-3.5 text-blue-500" />
+                        <span className="text-xs text-muted-foreground">{isRTL ? 'تجديدات' : 'Renewals'}</span>
+                      </div>
+                      <span className="text-sm font-medium text-blue-600">{p.renewals} {isRTL ? 'ج.م' : 'EGP'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Receipt className="h-3.5 w-3.5 text-amber-500" />
+                        <span className="text-xs text-muted-foreground">{isRTL ? 'أقساط مستحقة' : 'Due Installments'}</span>
+                      </div>
+                      <span className="text-sm font-medium text-amber-600">{p.installments} {isRTL ? 'ج.م' : 'EGP'}</span>
+                    </div>
+                    <div className="border-t pt-2 flex items-center justify-between">
+                      <span className="text-xs font-medium">{isRTL ? 'الإجمالي المتوقع' : 'Total Expected'}</span>
+                      <span className="text-base font-bold text-primary">{p.total} {isRTL ? 'ج.م' : 'EGP'}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <ChartContainer config={{
+              renewals: { label: isRTL ? 'تجديدات' : 'Renewals', color: 'hsl(var(--chart-1))' },
+              installments: { label: isRTL ? 'أقساط' : 'Installments', color: 'hsl(var(--chart-3))' },
+            }} className="h-[250px] w-full">
+              <BarChart data={projections}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                <XAxis dataKey="month" className="text-xs" />
+                <YAxis className="text-xs" />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Legend />
+                <Bar dataKey="renewals" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} stackId="projected" />
+                <Bar dataKey="installments" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} stackId="projected" />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 6-Month Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{isRTL ? 'التدفق النقدي - آخر 6 أشهر' : 'Cash Flow - Last 6 Months'}</CardTitle>
+          <CardTitle className="text-base">{isRTL ? 'التدفق النقدي الفعلي - آخر 6 أشهر' : 'Actual Cash Flow - Last 6 Months'}</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={{
