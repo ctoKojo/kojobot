@@ -100,7 +100,7 @@ export function SalariesTab() {
     ]);
 
     const userIds = (rolesRes.data || []).map(r => r.user_id);
-    const { data: profiles } = await supabase.from('profiles').select('*').in('user_id', userIds.length > 0 ? userIds : ['none']);
+    const { data: profiles } = await supabase.from('profiles').select('*').in('user_id', userIds.length > 0 ? userIds : ['none']).neq('employment_status', 'terminated');
 
     const roleMap = new Map((rolesRes.data || []).map(r => [r.user_id, r.role]));
     setEmployees((profiles || []).map(p => ({ ...p, role: roleMap.get(p.user_id) })));

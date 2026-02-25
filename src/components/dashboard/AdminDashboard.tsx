@@ -44,7 +44,7 @@ export function AdminDashboard() {
     try {
       const [studentsRes, instructorsRes, groupsRes, subscriptionsRes, warningsRes, makeupRes] = await Promise.all([
         supabase.from('user_roles').select('id', { count: 'exact' }).eq('role', 'student'),
-        supabase.from('user_roles').select('id', { count: 'exact' }).eq('role', 'instructor'),
+        supabase.from('user_roles').select('user_id').eq('role', 'instructor'),
         supabase.from('groups').select('id', { count: 'exact' }).eq('is_active', true),
         supabase.from('subscriptions').select('id', { count: 'exact' }).eq('status', 'active'),
         supabase.from('instructor_warnings').select('id', { count: 'exact' }).eq('is_active', true),
@@ -75,9 +75,21 @@ export function AdminDashboard() {
         .lt('next_payment_date', today)
         .gt('remaining_amount', 0);
 
+      // Count active (non-terminated) instructors
+      const instructorIds = (instructorsRes.data || []).map(r => r.user_id);
+      let activeInstructorCount = 0;
+      if (instructorIds.length > 0) {
+        const { count } = await supabase
+          .from('profiles')
+          .select('user_id', { count: 'exact', head: true })
+          .in('user_id', instructorIds)
+          .neq('employment_status', 'terminated');
+        activeInstructorCount = count || 0;
+      }
+
       setStats({
         totalStudents: studentsRes.count || 0,
-        totalInstructors: instructorsRes.count || 0,
+        totalInstructors: activeInstructorCount,
         totalGroups: groupsRes.count || 0,
         activeSubscriptions: subscriptionsRes.count || 0,
         expiringSubscriptions: expiringCount || 0,

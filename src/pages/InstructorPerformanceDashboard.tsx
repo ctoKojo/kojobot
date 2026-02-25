@@ -86,7 +86,7 @@ export default function InstructorPerformanceDashboard() {
 
     const ids = currentMetrics.map(m => m.instructor_id);
     const [{ data: profiles }, { data: prevMetrics }, { data: warnings }] = await Promise.all([
-      supabase.from('profiles').select('user_id, full_name, full_name_ar, avatar_url, email').in('user_id', ids),
+      supabase.from('profiles').select('user_id, full_name, full_name_ar, avatar_url, email').in('user_id', ids).neq('employment_status', 'terminated'),
       supabase.from('instructor_performance_metrics').select('instructor_id, quality_score')
         .in('instructor_id', ids)
         .lt('month', currentMonth)

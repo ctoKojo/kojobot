@@ -286,7 +286,8 @@ export default function GroupsPage() {
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('user_id, full_name, full_name_ar')
-          .in('user_id', instructorIds);
+          .in('user_id', instructorIds)
+          .neq('employment_status', 'terminated');
         setInstructors(profilesData || []);
 
         // Fetch instructor schedules

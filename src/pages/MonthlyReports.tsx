@@ -81,7 +81,8 @@ export default function MonthlyReports() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('user_id, full_name, full_name_ar')
-        .in('user_id', instructorIds);
+        .in('user_id', instructorIds)
+        .neq('employment_status', 'terminated');
       setInstructors((profileData || []).map(p => ({
         user_id: p.user_id,
         profiles: { full_name: p.full_name, full_name_ar: p.full_name_ar }
