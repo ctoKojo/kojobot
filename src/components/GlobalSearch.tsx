@@ -178,14 +178,14 @@ export function GlobalSearch() {
     <>
       <Button
         variant="outline"
-        className="relative h-9 w-9 md:w-full md:justify-start md:px-3 md:py-2 kojo-gradient border-0 text-white hover:opacity-90 hover:text-white"
+        className="relative h-9 w-9 md:w-full md:justify-start md:px-3 md:py-2"
         onClick={() => setOpen(true)}
       >
-        <Search className="h-4 w-4 md:mr-2 text-white" />
-        <span className="hidden md:inline-flex text-white/80 text-sm">
+        <Search className="h-4 w-4 md:mr-2" />
+        <span className="hidden md:inline-flex text-muted-foreground text-sm">
           {isRTL ? 'بحث...' : 'Search...'}
         </span>
-        <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-6 select-none items-center gap-1 rounded border border-white/30 bg-white/20 px-1.5 font-mono text-[10px] font-medium text-white opacity-100 md:flex">
+        <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 md:flex">
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
