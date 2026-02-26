@@ -128,6 +128,7 @@ export default function StudentsPage() {
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
   const [subscriptions, setSubscriptions] = useState<StudentSubscription[]>([]);
+  const [activeGroupStudentIds, setActiveGroupStudentIds] = useState<Set<string>>(new Set());
   const [ageGroups, setAgeGroups] = useState<AgeGroup[]>([]);
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
@@ -234,11 +235,18 @@ export default function StudentsPage() {
           .eq('status', 'active')
           .in('student_id', studentUserIds);
         setSubscriptions((subsData || []) as StudentSubscription[]);
+        // Fetch active group memberships
+        const { data: gsData } = await supabase
+          .from('group_students')
+          .select('student_id')
+          .eq('is_active', true)
+          .in('student_id', studentUserIds);
+        setActiveGroupStudentIds(new Set((gsData || []).map(g => g.student_id)));
       } else {
         setStudents([]);
         setSubscriptions([]);
+        setActiveGroupStudentIds(new Set());
       }
-
       // Fetch age groups
       const { data: ageGroupsData } = await supabase
         .from('age_groups')
@@ -1101,7 +1109,10 @@ export default function StudentsPage() {
             filteredStudents.map((student) => (
               <Card 
                 key={student.id} 
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                className={cn(
+                  "cursor-pointer hover:bg-muted/50 transition-colors",
+                  !activeGroupStudentIds.has(student.user_id) && "border-destructive/40 bg-destructive/5"
+                )}
                 onClick={() => navigate(`/student/${student.user_id}`)}
               >
                 <CardContent className="p-4">
@@ -1173,6 +1184,11 @@ export default function StudentsPage() {
                         </Badge>
                       );
                     })()}
+                    {!activeGroupStudentIds.has(student.user_id) && (
+                      <Badge variant="destructive" className="text-xs">
+                        {isRTL ? 'غير مسكّن' : 'No Group'}
+                      </Badge>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1211,7 +1227,14 @@ export default function StudentsPage() {
                   </TableRow>
                 ) : (
                   filteredStudents.map((student) => (
-                    <TableRow key={student.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/student/${student.user_id}`)}>
+                    <TableRow 
+                      key={student.id} 
+                      className={cn(
+                        "cursor-pointer hover:bg-muted/50",
+                        !activeGroupStudentIds.has(student.user_id) && "bg-destructive/5"
+                      )}
+                      onClick={() => navigate(`/student/${student.user_id}`)}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">

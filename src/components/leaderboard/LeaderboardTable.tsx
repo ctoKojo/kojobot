@@ -58,11 +58,7 @@ export function LeaderboardTable({ entries, scope }: LeaderboardTableProps) {
           const levelLabel = language === 'ar' ? entry.level_name_ar : entry.level_name;
 
           return (
-            <TableRow
-              key={entry.student_id}
-              className={`${entry.rank <= 3 ? 'bg-muted/30' : ''} ${!entry.is_active_in_group ? 'bg-destructive/10 text-muted-foreground' : ''}`}
-              title={!entry.is_active_in_group ? (language === 'ar' ? 'هذا الطالب غير مسجل حالياً في المجموعة' : 'This student is not currently enrolled in a group') : undefined}
-            >
+            <TableRow key={entry.student_id} className={entry.rank <= 3 ? 'bg-muted/30' : ''}>
               <TableCell className="text-center">
                 <div className="flex justify-center">{getRankIcon(entry.rank)}</div>
               </TableCell>
