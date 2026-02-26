@@ -118,10 +118,14 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               <h1 className="text-lg md:text-xl font-semibold hidden md:block truncate">{title}</h1>
             )}
             
-            <div className="flex-1" />
+            <div className="hidden md:flex flex-1 mx-4">
+              <GlobalSearch />
+            </div>
             
             <div className="flex items-center gap-2 md:gap-3 shrink-0">
-              <GlobalSearch />
+              <div className="md:hidden">
+                <GlobalSearch />
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
