@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -19,6 +19,20 @@ export default function Leaderboard() {
   const [sessionId, setSessionId] = useState('');
   const [levelId, setLevelId] = useState('');
   const [ageGroupId, setAgeGroupId] = useState('');
+
+  const handleScopeChange = useCallback((newScope: LeaderboardScope) => {
+    setScope(newScope);
+    const needsGroup = newScope === 'group' || newScope === 'session';
+    const needsSession = newScope === 'session';
+    const needsLevel = newScope === 'level' || newScope === 'level_age_group';
+    const needsAgeGroup = newScope === 'age_group' || newScope === 'level_age_group';
+
+    if (!needsGroup) { setGroupId(''); setSessionId(''); }
+    else if (!needsSession) { setSessionId(''); }
+    if (!needsLevel) { setLevelId(''); }
+    if (!needsAgeGroup) { setAgeGroupId(''); }
+  }, []);
+
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -60,7 +74,7 @@ export default function Leaderboard() {
           scope={scope} period={period}
           groupId={groupId} sessionId={sessionId}
           levelId={levelId} ageGroupId={ageGroupId}
-          onScopeChange={setScope} onPeriodChange={setPeriod}
+          onScopeChange={handleScopeChange} onPeriodChange={setPeriod}
           onGroupChange={setGroupId} onSessionChange={setSessionId}
           onLevelChange={setLevelId} onAgeGroupChange={setAgeGroupId}
         />
