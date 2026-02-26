@@ -124,7 +124,7 @@ const App = () => (
                   <Route path="/curriculum" element={<ProtectedRoute allowedRoles={['admin']}><CurriculumManagement /></ProtectedRoute>} />
                   <Route path="/my-sessions" element={<ProtectedRoute allowedRoles={['student']}><MySessions /></ProtectedRoute>} />
                   <Route path="/ssot-health" element={<ProtectedRoute allowedRoles={['admin']}><SSOTHealth /></ProtectedRoute>} />
-                  <Route path="/leaderboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student']}><Leaderboard /></ProtectedRoute>} />
+                  <Route path="/leaderboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception']}><Leaderboard /></ProtectedRoute>} />
                   <Route path="/account-suspended" element={<AccountSuspended />} />
                   <Route path="/account-terminated" element={<AccountTerminated />} />
                   <Route path="*" element={<NotFound />} />

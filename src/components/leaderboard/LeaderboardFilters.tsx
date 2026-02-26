@@ -30,7 +30,7 @@ export function LeaderboardFilters({
 }: LeaderboardFiltersProps) {
   const { language, t } = useLanguage();
   const { role } = useAuth();
-  const isAdmin = role === 'admin';
+  const hasFullAccess = role === 'admin' || role === 'reception';
   const isAr = language === 'ar';
 
   const [groups, setGroups] = useState<FilterOption[]>([]);
@@ -91,7 +91,7 @@ export function LeaderboardFilters({
     if (s.length > 0) onSessionChange(s[0].id);
   };
 
-  const scopeOptions: { value: LeaderboardScope; label: string }[] = isAdmin
+  const scopeOptions: { value: LeaderboardScope; label: string }[] = hasFullAccess
     ? [
         { value: 'group', label: t.evaluation.group },
         { value: 'session', label: t.evaluation.session },
