@@ -29,6 +29,7 @@ export interface LeaderboardEntry {
   level_name: string | null;
   level_name_ar: string | null;
   total_count: number;
+  is_active_in_group: boolean;
 }
 
 export async function getLeaderboard(filter: LeaderboardFilter): Promise<LeaderboardEntry[]> {
