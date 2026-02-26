@@ -31,6 +31,7 @@ export function LeaderboardFilters({
   const { language, t } = useLanguage();
   const { role } = useAuth();
   const isAdmin = role === 'admin';
+  const isAr = language === 'ar';
 
   const [groups, setGroups] = useState<FilterOption[]>([]);
   const [levels, setLevels] = useState<FilterOption[]>([]);
@@ -44,6 +45,25 @@ export function LeaderboardFilters({
   useEffect(() => {
     if (scope === 'session' && groupId) loadSessions(groupId);
   }, [scope, groupId]);
+
+  // Auto-select first available value when scope changes and data is ready
+  useEffect(() => {
+    if (needsGroup && !groupId && groups.length > 0) {
+      onGroupChange(groups[0].id);
+    }
+  }, [scope, groups.length]);
+
+  useEffect(() => {
+    if (needsLevel && !levelId && levels.length > 0) {
+      onLevelChange(levels[0].id);
+    }
+  }, [scope, levels.length]);
+
+  useEffect(() => {
+    if (needsAgeGroup && !ageGroupId && ageGroups.length > 0) {
+      onAgeGroupChange(ageGroups[0].id);
+    }
+  }, [scope, ageGroups.length]);
 
   const loadDropdowns = async () => {
     const [gRes, lRes, agRes] = await Promise.all([
@@ -92,93 +112,126 @@ export function LeaderboardFilters({
   const needsSession = scope === 'session';
   const needsLevel = scope === 'level' || scope === 'level_age_group';
   const needsAgeGroup = scope === 'age_group' || scope === 'level_age_group';
+  const hasSubFilters = needsGroup || needsLevel || needsAgeGroup;
 
-  const label = (o: FilterOption) => language === 'ar' ? o.name_ar : o.name;
+  const label = (o: FilterOption) => isAr ? o.name_ar : o.name;
 
   return (
     <Card>
-      <CardContent className="flex flex-wrap items-center gap-3 pt-6">
-        {/* Scope */}
-        <Select value={scope} onValueChange={(v) => onScopeChange(v as LeaderboardScope)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {scopeOptions.map(o => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <CardContent className="space-y-4 pt-6">
+        {/* Row 1: Scope + Period — always visible */}
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              {isAr ? 'النطاق' : 'Scope'}
+            </label>
+            <Select value={scope} onValueChange={(v) => onScopeChange(v as LeaderboardScope)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {scopeOptions.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Group */}
-        {needsGroup && (
-          <Select value={groupId} onValueChange={onGroupChange}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder={t.evaluation.selectGroup} />
-            </SelectTrigger>
-            <SelectContent>
-              {groups.map(g => (
-                <SelectItem key={g.id} value={g.id}>{label(g)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              {isAr ? 'الفترة' : 'Period'}
+            </label>
+            <Select value={period} onValueChange={(v) => onPeriodChange(v as LeaderboardPeriod)}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {periodOptions.map(o => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Row 2: Sub-filters based on scope */}
+        {hasSubFilters && (
+          <div className="flex flex-wrap items-end gap-4">
+            {needsGroup && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {isAr ? 'المجموعة' : 'Group'}
+                </label>
+                <Select value={groupId} onValueChange={onGroupChange}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder={t.evaluation.selectGroup} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map(g => (
+                      <SelectItem key={g.id} value={g.id}>{label(g)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {needsSession && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {isAr ? 'السيشن' : 'Session'}
+                </label>
+                <Select value={sessionId} onValueChange={onSessionChange}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder={t.evaluation.selectSession} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sessions.map(s => (
+                      <SelectItem key={s.id} value={s.id}>
+                        #{s.session_number} — {s.session_date}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {needsLevel && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {isAr ? 'الليفل' : 'Level'}
+                </label>
+                <Select value={levelId} onValueChange={onLevelChange}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder={t.evaluation.selectLevel} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {levels.map(l => (
+                      <SelectItem key={l.id} value={l.id}>{label(l)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {needsAgeGroup && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {isAr ? 'الفئة العمرية' : 'Age Group'}
+                </label>
+                <Select value={ageGroupId} onValueChange={onAgeGroupChange}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder={t.evaluation.selectAgeGroup} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ageGroups.map(a => (
+                      <SelectItem key={a.id} value={a.id}>{label(a)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
         )}
-
-        {/* Session */}
-        {needsSession && (
-          <Select value={sessionId} onValueChange={onSessionChange}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder={t.evaluation.selectSession} />
-            </SelectTrigger>
-            <SelectContent>
-              {sessions.map(s => (
-                <SelectItem key={s.id} value={s.id}>
-                  #{s.session_number} — {s.session_date}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {/* Level */}
-        {needsLevel && (
-          <Select value={levelId} onValueChange={onLevelChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder={t.evaluation.selectLevel} />
-            </SelectTrigger>
-            <SelectContent>
-              {levels.map(l => (
-                <SelectItem key={l.id} value={l.id}>{label(l)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {/* Age Group */}
-        {needsAgeGroup && (
-          <Select value={ageGroupId} onValueChange={onAgeGroupChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder={t.evaluation.selectAgeGroup} />
-            </SelectTrigger>
-            <SelectContent>
-              {ageGroups.map(a => (
-                <SelectItem key={a.id} value={a.id}>{label(a)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-
-        {/* Period */}
-        <Select value={period} onValueChange={(v) => onPeriodChange(v as LeaderboardPeriod)}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {periodOptions.map(o => (
-              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </CardContent>
     </Card>
   );
