@@ -3102,6 +3102,7 @@ export type Database = {
           avatar_url: string
           group_name: string
           group_name_ar: string
+          is_active_in_group: boolean
           level_name: string
           level_name_ar: string
           percentage: number
