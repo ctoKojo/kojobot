@@ -1111,7 +1111,7 @@ export default function StudentsPage() {
                 key={student.id} 
                 className={cn(
                   "cursor-pointer hover:bg-muted/50 transition-colors",
-                  !activeGroupStudentIds.has(student.user_id) && "border-destructive/50 bg-destructive/15"
+                  !activeGroupStudentIds.has(student.user_id) && "border-destructive/50 bg-destructive/25"
                 )}
                 onClick={() => navigate(`/student/${student.user_id}`)}
               >
@@ -1231,7 +1231,7 @@ export default function StudentsPage() {
                       key={student.id} 
                       className={cn(
                         "cursor-pointer hover:bg-muted/50",
-                        !activeGroupStudentIds.has(student.user_id) && "bg-destructive/15"
+                        !activeGroupStudentIds.has(student.user_id) && "bg-destructive/25"
                       )}
                       onClick={() => navigate(`/student/${student.user_id}`)}
                     >
