@@ -1,102 +1,56 @@
 
 
-# تنفيذ نظام Leaderboard المتكامل
+# اصلاح فلاتر الـ Leaderboard - Labels + Reset ذكي + Layout منظم
 
-## ترتيب التنفيذ
+## التعديلات
 
-### 1. Database Migration: RPC `get_leaderboard`
+### 1. `src/pages/Leaderboard.tsx` - Reset ذكي عند تغيير Scope
 
-انشاء function بـ `SECURITY DEFINER` تعمل كل الحسابات server-side:
-
-**Parameters:**
-- `p_scope text` -- 'session' | 'group' | 'level_age_group' | 'level' | 'age_group' | 'all'
-- `p_session_id uuid` (optional)
-- `p_group_id uuid` (optional)
-- `p_level_id uuid` (optional)
-- `p_age_group_id uuid` (optional)
-- `p_period text` -- 'all_time' | 'monthly' | 'weekly'
-- `p_limit int` (default 50)
-- `p_offset int` (default 0)
-
-**المنطق الداخلي:**
-
-1. **Parameter Validation**: يرفض ويرجع empty لو scope محتاج ID مش موجود (session بدون p_session_id، group بدون p_group_id، الخ)
-
-2. **Role-based Access**:
-   - Admin: كل النطاقات
-   - Instructor: group scope فقط لمجموعاته (groups.instructor_id = auth.uid())
-   - Student: group scope فقط لمجموعاته (group_students.student_id = auth.uid() AND is_active = true) - الطالب يختار من مجموعاته في الـ UI
-   - غير ذلك: يرجع empty
-
-3. **CTE**: join بين session_evaluations و sessions و groups
-
-4. **Scope Filtering**:
-   - `session`: WHERE se.session_id = p_session_id
-   - `group`: WHERE s.group_id = p_group_id
-   - `level_age_group`: WHERE g.level_id = p_level_id AND g.age_group_id = p_age_group_id
-   - `level`: WHERE g.level_id = p_level_id
-   - `age_group`: WHERE g.age_group_id = p_age_group_id
-   - `all`: بدون فلتر
-
-5. **Period Filter** (على sessions.session_date):
-   - `monthly`: session_date >= date_trunc('month', CURRENT_DATE)
-   - `weekly`: session_date >= date_trunc('week', CURRENT_DATE)
-   - `all_time`: بدون فلتر
-
-6. **Aggregation**: GROUP BY student_id مع SUM(total_score), SUM(max_total_score), COUNT(DISTINCT session_id)
-
-7. **Weighted Average**: ROUND(SUM(total_score) / NULLIF(SUM(max_total_score), 0) * 100, 1)
-
-8. **Ranking**: DENSE_RANK() OVER (ORDER BY percentage DESC, sessions_count DESC, sum_total_score DESC, student_name ASC)
-
-9. **Joins**: profiles (اسم + avatar مع COALESCE fallback)، groups/levels (اسم المجموعة والليفل)
-
-10. **total_count**: COUNT(*) OVER() محسوب بعد التجميع والفلترة وقبل LIMIT/OFFSET
-
----
-
-### 2. ملف جديد: `src/lib/leaderboardService.ts`
-
-Thin wrapper حول الـ RPC:
-- Types: LeaderboardScope, LeaderboardPeriod, LeaderboardFilter, LeaderboardEntry
-- Function: `getLeaderboard(filter)` يستدعي `supabase.rpc('get_leaderboard', params)`
-
----
-
-### 3. تحديث: `src/lib/i18n.ts`
-
-اضافة مفاتيح جديدة في interface `evaluation` وفي قيم `en` و `ar`:
+تغيير `onScopeChange` من `setScope` مباشرة الى handler يعمل reset للقيم غير المطلوبة:
 
 ```text
-scope, session, group, levelInAgeGroup, levelGlobal, ageGroupGlobal, allStudents,
-period, allTime, thisMonth, thisWeek, selectSession, selectGroup,
-selectAgeGroup, selectLevel, sessionsCount, topPerformers, student
+handleScopeChange(newScope):
+  setScope(newScope)
+  
+  لو newScope مش محتاج group (يعني مش group ولا session):
+    setGroupId('') + setSessionId('')
+  لو newScope محتاج group بس مش session:
+    setSessionId('')  
+  لو newScope مش محتاج level:
+    setLevelId('')
+  لو newScope مش محتاج ageGroup:
+    setAgeGroupId('')
 ```
 
----
-
-### 4. اعادة كتابة: `src/pages/Leaderboard.tsx`
-
-**الفلاتر:**
-- Select النطاق: Admin يشوف الـ 6 نطاقات، Instructor/Student يشوف group فقط (مجموعاته)
-- Selects فرعية ديناميكية حسب النطاق المختار
-- Select الفترة: كل الوقت / الشهر / الاسبوع
-
-**البوديوم (Top 3):**
-- يظهر فقط لما يكون فيه 3+ طلاب
-- كروت بصرية مع Trophy/Medal icons واسم الطالب والنسبة والـ avatar
-
-**الجدول:**
-- اعمدة: الرتبة، الطالب (مع avatar وfallback عربي/انجليزي)، النقاط، النسبة، عدد السيشنات، الفجوة، التقدير
-- اعمدة اضافية في النطاقات العامة: المجموعة، الليفل
-- تلوين الصفوف الثلاثة الاولى
-- Pagination باستخدام DataTablePagination
-
-**حالات فارغة:** Loading spinner، لا توجد تقييمات
+تمرير الـ handler الجديد بدل `setScope` مباشرة.
 
 ---
 
-## لا تعديل على ملفات اخرى
-- `App.tsx`: الراوت موجود
-- `AppSidebar.tsx`: الرابط موجود
+### 2. `src/components/leaderboard/LeaderboardFilters.tsx` - 3 تحسينات
+
+#### أ. Labels فوق كل Select
+كل Select يتلف في `div` فيه label صغير (`text-xs font-medium text-muted-foreground`):
+- النطاق / Scope
+- المجموعة / Group  
+- السيشن / Session
+- الليفل / Level
+- الفئة العمرية / Age Group
+- الفترة / Period
+
+#### ب. Layout بصفين
+- **الصف الاول**: النطاق (Scope) + الفترة (Period) - دايما ظاهرين
+- **الصف الثاني**: الفلاتر الفرعية حسب الـ scope المختار - يختفي لو scope = "all"
+
+#### ج. Auto-select ذكي بعد تحميل البيانات
+اضافة `useEffect` يراقب تغييرات الـ scope والـ dropdown data:
+- لما `needsLevel` يبقى true و `levelId` فاضي و `levels.length > 0`: اختار اول level
+- لما `needsAgeGroup` يبقى true و `ageGroupId` فاضي و `ageGroups.length > 0`: اختار اول age_group
+- لما `needsGroup` يبقى true و `groupId` فاضي و `groups.length > 0`: اختار اول group
+- Session auto-select مرتبط بتغير groupId (موجود بالفعل في `loadSessions`)
+
+---
+
+## الملفات المتأثرة
+- `src/pages/Leaderboard.tsx` - handleScopeChange جديد
+- `src/components/leaderboard/LeaderboardFilters.tsx` - labels + layout + auto-select
 
