@@ -194,6 +194,7 @@ export function AppSidebar() {
           {
             label: 'Support', labelAr: 'الدعم',
             items: [
+              { title: isRTL ? 'حسابي المالي' : 'My Finances', url: '/my-finances', icon: DollarSign, roles: ['student'] },
               { title: isRTL ? 'سيشناتي التعويضية' : 'My Makeup Sessions', url: '/my-makeup-sessions', icon: RefreshCw, roles: ['student'] },
               { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['student'] },
               { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-warnings', icon: AlertTriangle, roles: ['student'] },
