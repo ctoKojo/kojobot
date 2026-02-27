@@ -936,15 +936,25 @@ export default function SessionDetails() {
   };
 
   // For makeup sessions, only show the assigned student
+  // For makeup sessions, only show the assigned student
   const attendanceStudents = session?.is_makeup && makeupStudentId
     ? students.filter(s => s.student_id === makeupStudentId)
     : students;
 
+  // Attendance state calculations
+  const studentsWithAttendance = attendanceStudents.filter(s => s.attendance_status !== null).length;
+  const totalSessionStudents = attendanceStudents.length;
+  const attendanceComplete = totalSessionStudents > 0 && studentsWithAttendance === totalSessionStudents;
+  const attendancePartial = studentsWithAttendance > 0 && studentsWithAttendance < totalSessionStudents;
+
+  // Filter to only students WITHOUT attendance records for the dialog
+  const unrecordedStudents = attendanceStudents.filter(s => s.attendance_status === null);
+
   const openAttendanceDialog = () => {
-    // Initialize attendance records from filtered students
+    // Initialize with empty values (no default) for unrecorded students only
     const records: Record<string, string> = {};
-    attendanceStudents.forEach(s => {
-      records[s.student_id] = s.attendance_status || 'absent';
+    unrecordedStudents.forEach(s => {
+      records[s.student_id] = '';
     });
     setAttendanceRecords(records);
     setAttendanceDialogOpen(true);
@@ -971,7 +981,7 @@ export default function SessionDetails() {
 
       const result = data as any;
       const parts: string[] = [];
-      if (result?.saved) parts.push(isRTL ? `${result.saved} سجل` : `${result.saved} records`);
+      if (result?.inserted_count) parts.push(isRTL ? `${result.inserted_count} سجل جديد` : `${result.inserted_count} records inserted`);
       if (result?.makeups_created > 0) parts.push(isRTL ? `${result.makeups_created} تعويضية جديدة` : `${result.makeups_created} makeups created`);
       if (result?.makeups_cancelled > 0) parts.push(isRTL ? `${result.makeups_cancelled} تعويضية ملغية` : `${result.makeups_cancelled} makeups cancelled`);
       if (result?.instructor_confirmed) parts.push(isRTL ? 'تم تأكيد حضور المدرب' : 'Instructor confirmed');
@@ -981,6 +991,17 @@ export default function SessionDetails() {
         title: isRTL ? 'تم الحفظ' : 'Attendance Saved',
         description: parts.join(' • ') || (isRTL ? 'تم حفظ سجل الحضور بنجاح' : 'Attendance records saved successfully'),
       });
+
+      // Show warning if some students were rejected (duplicates)
+      if (result?.rejected_count > 0) {
+        toast({
+          title: isRTL ? 'تنبيه' : 'Warning',
+          description: isRTL 
+            ? `${result.rejected_count} طالب تم تخطيهم لأن حضورهم مسجل بالفعل`
+            : `${result.rejected_count} student(s) skipped - attendance already recorded`,
+          variant: 'destructive',
+        });
+      }
       
       setAttendanceDialogOpen(false);
       fetchSessionData();
@@ -997,11 +1018,14 @@ export default function SessionDetails() {
 
   const markAllAs = (status: string) => {
     const newRecords: Record<string, string> = {};
-    attendanceStudents.forEach(s => {
+    unrecordedStudents.forEach(s => {
       newRecords[s.student_id] = status;
     });
     setAttendanceRecords(newRecords);
   };
+
+  // Check if all displayed students have a selection
+  const allStudentsSelected = unrecordedStudents.length > 0 && unrecordedStudents.every(s => attendanceRecords[s.student_id] && attendanceRecords[s.student_id] !== '');
 
   const handleSaveStaffAttendance = async () => {
     if (!session || !group?.instructor_id || !user) return;
@@ -1236,14 +1260,31 @@ export default function SessionDetails() {
               <CardTitle className="text-lg">{isRTL ? 'إجراءات سريعة' : 'Quick Actions'}</CardTitle>
             </CardHeader>
             <CardContent className="flex gap-4 flex-wrap">
-              <Button
-                variant="outline"
-                onClick={openAttendanceDialog}
-                className="flex items-center gap-2"
-              >
-                <UserCheck className="h-4 w-4" />
-                {isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
-              </Button>
+              {attendanceComplete ? (
+                <Badge className="bg-green-500 text-white flex items-center gap-2 py-2 px-4">
+                  <CheckCircle className="h-4 w-4" />
+                  {isRTL ? 'تم تسجيل الحضور' : 'Attendance Recorded'}
+                </Badge>
+              ) : attendancePartial ? (
+                <Button
+                  variant="outline"
+                  onClick={openAttendanceDialog}
+                  className="flex items-center gap-2 border-orange-300 text-orange-600 hover:bg-orange-50"
+                >
+                  <UserCheck className="h-4 w-4" />
+                  {isRTL ? 'إكمال تسجيل الحضور' : 'Complete Attendance'}
+                  <Badge variant="secondary" className="text-xs">{studentsWithAttendance}/{totalSessionStudents}</Badge>
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={openAttendanceDialog}
+                  className="flex items-center gap-2"
+                >
+                  <UserCheck className="h-4 w-4" />
+                  {isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
+                </Button>
+              )}
               {isOnline && group?.session_link && liveStatus === 'active' && (
                 <Button variant="outline" asChild>
                   <a href={group.session_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
@@ -1866,86 +1907,106 @@ export default function SessionDetails() {
         <Dialog open={attendanceDialogOpen} onOpenChange={setAttendanceDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{isRTL ? 'تسجيل الحضور' : 'Record Attendance'}</DialogTitle>
+              <DialogTitle>
+                {attendancePartial 
+                  ? (isRTL ? 'إكمال تسجيل الحضور' : 'Complete Attendance')
+                  : (isRTL ? 'تسجيل الحضور' : 'Record Attendance')
+                }
+              </DialogTitle>
               <DialogDescription>
                 {isRTL 
                   ? `سيشن ${session.session_number} - ${session.session_date}`
                   : `Session ${session.session_number} - ${session.session_date}`
                 }
+                {attendancePartial && (
+                  <span className="block mt-1 text-orange-600">
+                    {isRTL 
+                      ? `${studentsWithAttendance} من ${totalSessionStudents} مسجلين بالفعل - يظهر فقط الطلاب الغير مسجلين`
+                      : `${studentsWithAttendance} of ${totalSessionStudents} already recorded - showing only unrecorded students`
+                    }
+                  </span>
+                )}
               </DialogDescription>
             </DialogHeader>
             
-            {/* Quick Actions */}
-            <div className="flex gap-2 flex-wrap py-2 border-b">
-              <Button size="sm" variant="outline" onClick={() => markAllAs('present')} className="text-green-600 border-green-200 hover:bg-green-50">
-                {isRTL ? 'الكل حاضر' : 'Mark All Present'}
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => markAllAs('absent')} className="text-red-600 border-red-200 hover:bg-red-50">
-                {isRTL ? 'الكل غائب' : 'Mark All Absent'}
-              </Button>
-            </div>
-            
-            <div className="space-y-3 py-4">
-              {attendanceStudents.map((student) => (
-                <div key={student.student_id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">
-                      {language === 'ar' ? student.student_name_ar : student.student_name}
-                    </span>
-                    {student.compensation_status === 'pending_compensation' && (
-                      <Badge variant="outline" className="text-xs border-orange-300 text-orange-600 bg-orange-50">
-                        {isRTL ? 'في انتظار التعويض' : 'Pending Compensation'}
-                      </Badge>
-                    )}
-                    {student.compensation_status === 'compensated' && (
-                      <Badge variant="outline" className="text-xs border-green-300 text-green-600 bg-green-50">
-                        {isRTL ? 'تم التعويض' : 'Compensated'}
-                      </Badge>
-                    )}
-                  </div>
-                  <Select 
-                    value={attendanceRecords[student.student_id] || 'absent'} 
-                    onValueChange={(value) => setAttendanceRecords(prev => ({ ...prev, [student.student_id]: value }))}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="present">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-green-500" />
-                          {isRTL ? 'حاضر' : 'Present'}
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="absent">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-red-500" />
-                          {isRTL ? 'غائب' : 'Absent'}
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="late">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                          {isRTL ? 'متأخر' : 'Late'}
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="excused">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-blue-500" />
-                          {isRTL ? 'معتذر' : 'Excused'}
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+            {unrecordedStudents.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-2" />
+                <p>{isRTL ? 'تم تسجيل حضور جميع الطلاب' : 'All students have been recorded'}</p>
+              </div>
+            ) : (
+              <>
+                {/* Quick Actions */}
+                <div className="flex gap-2 flex-wrap py-2 border-b">
+                  <Button size="sm" variant="outline" onClick={() => markAllAs('present')} className="text-green-600 border-green-200 hover:bg-green-50">
+                    {isRTL ? 'الكل حاضر' : 'Mark All Present'}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => markAllAs('absent')} className="text-red-600 border-red-200 hover:bg-red-50">
+                    {isRTL ? 'الكل غائب' : 'Mark All Absent'}
+                  </Button>
                 </div>
-              ))}
-            </div>
+                
+                <div className="space-y-3 py-4">
+                  {unrecordedStudents.map((student) => (
+                    <div key={student.student_id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                      <span className="font-medium">
+                        {language === 'ar' ? student.student_name_ar : student.student_name}
+                      </span>
+                      <Select 
+                        value={attendanceRecords[student.student_id] || ''} 
+                        onValueChange={(value) => setAttendanceRecords(prev => ({ ...prev, [student.student_id]: value }))}
+                      >
+                        <SelectTrigger className={`w-36 ${!attendanceRecords[student.student_id] ? 'border-orange-300' : ''}`}>
+                          <SelectValue placeholder={isRTL ? 'اختر الحالة' : 'Select status'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="present">
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-green-500" />
+                              {isRTL ? 'حاضر' : 'Present'}
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="absent">
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-red-500" />
+                              {isRTL ? 'غائب' : 'Absent'}
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="late">
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                              {isRTL ? 'متأخر' : 'Late'}
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="excused">
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-blue-500" />
+                              {isRTL ? 'معتذر' : 'Excused'}
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+
+                {!allStudentsSelected && (
+                  <p className="text-sm text-orange-600 flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" />
+                    {isRTL ? 'لازم تحدد حضور أو غياب لكل الطلاب' : 'You must select attendance status for all students'}
+                  </p>
+                )}
+              </>
+            )}
             
             <DialogFooter>
               <Button variant="outline" onClick={() => setAttendanceDialogOpen(false)}>
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </Button>
-              <Button onClick={handleSaveAttendance} disabled={savingAttendance}>
+              <Button 
+                onClick={handleSaveAttendance} 
+                disabled={savingAttendance || !allStudentsSelected || unrecordedStudents.length === 0}
+              >
                 {savingAttendance ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ الحضور' : 'Save Attendance')}
               </Button>
             </DialogFooter>

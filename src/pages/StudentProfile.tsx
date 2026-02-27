@@ -507,7 +507,7 @@ export default function StudentProfile() {
 
           {/* Payments Tab */}
           <TabsContent value="payments">
-            <PaymentsHistory studentId={studentId!} />
+            <PaymentsHistory studentId={studentId!} subscription={data.subscription} attendance={data.attendance} />
           </TabsContent>
 
           {/* Attendance Tab */}
