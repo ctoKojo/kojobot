@@ -4,6 +4,7 @@ import { Plus, Search, MoreHorizontal, Pencil, Trash2, Users, UserPlus, UserMinu
 import { format } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -98,6 +99,7 @@ interface Instructor {
   user_id: string;
   full_name: string;
   full_name_ar: string | null;
+  avatar_url: string | null;
 }
 
 interface InstructorScheduleData {
@@ -285,7 +287,7 @@ export default function GroupsPage() {
       if (instructorIds.length > 0) {
         const { data: profilesData } = await supabase
           .from('profiles')
-          .select('user_id, full_name, full_name_ar')
+          .select('user_id, full_name, full_name_ar, avatar_url')
           .in('user_id', instructorIds)
           .neq('employment_status', 'terminated');
         setInstructors(profilesData || []);
@@ -1414,7 +1416,20 @@ export default function GroupsPage() {
                         </div>
                         
                         <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
-                          <span>{getInstructorName(group.instructor_id)}</span>
+                          {(() => {
+                            const instructor = instructors.find(i => i.user_id === group.instructor_id);
+                            return instructor ? (
+                              <div className="flex items-center gap-1.5">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={instructor.avatar_url || undefined} />
+                                  <AvatarFallback className="text-[10px]">{instructor.full_name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <span>{language === 'ar' && instructor.full_name_ar ? instructor.full_name_ar : instructor.full_name}</span>
+                              </div>
+                            ) : (
+                              <span>{isRTL ? 'لم يتم التعيين' : 'Not Assigned'}</span>
+                            );
+                          })()}
                           <span>•</span>
                           <span>{getDayName(group.schedule_day)} {formatTime12Hour(group.schedule_time, isRTL)}</span>
                         </div>
@@ -1607,7 +1622,24 @@ export default function GroupsPage() {
                             {currentCount}/{typeInfo.maxStudents}
                           </Badge>
                         </TableCell>
-                        <TableCell>{getInstructorName(group.instructor_id)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const instructor = instructors.find(i => i.user_id === group.instructor_id);
+                              return instructor ? (
+                                <>
+                                  <Avatar className="h-7 w-7">
+                                    <AvatarImage src={instructor.avatar_url || undefined} />
+                                    <AvatarFallback className="text-xs">{instructor.full_name.charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                  <span>{language === 'ar' && instructor.full_name_ar ? instructor.full_name_ar : instructor.full_name}</span>
+                                </>
+                              ) : (
+                                <span className="text-muted-foreground">{isRTL ? 'لم يتم التعيين' : 'Not Assigned'}</span>
+                              );
+                            })()}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline">
                             {getDayName(group.schedule_day)} - {formatTime12Hour(group.schedule_time, isRTL)}
