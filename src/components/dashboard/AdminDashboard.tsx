@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, GraduationCap, Calendar, TrendingUp, AlertTriangle, RefreshCw, DollarSign, Ban } from 'lucide-react';
+import { Users, GraduationCap, Calendar, TrendingUp, AlertTriangle, RefreshCw, DollarSign, Ban, Snowflake } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -17,6 +17,7 @@ interface AdminStats {
   pendingMakeupSessions: number;
   overduePayments: number;
   suspendedStudents: number;
+  frozenGroups: number;
 }
 
 export function AdminDashboard() {
@@ -33,6 +34,7 @@ export function AdminDashboard() {
     pendingMakeupSessions: 0,
     overduePayments: 0,
     suspendedStudents: 0,
+    frozenGroups: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -42,13 +44,14 @@ export function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const [studentsRes, instructorsRes, groupsRes, subscriptionsRes, warningsRes, makeupRes] = await Promise.all([
+      const [studentsRes, instructorsRes, groupsRes, subscriptionsRes, warningsRes, makeupRes, frozenRes] = await Promise.all([
         supabase.from('user_roles').select('id', { count: 'exact' }).eq('role', 'student'),
         supabase.from('user_roles').select('user_id').eq('role', 'instructor'),
         supabase.from('groups').select('id', { count: 'exact' }).eq('is_active', true),
         supabase.from('subscriptions').select('id', { count: 'exact' }).eq('status', 'active'),
         supabase.from('instructor_warnings').select('id', { count: 'exact' }).eq('is_active', true),
         supabase.from('makeup_sessions').select('id', { count: 'exact' }).eq('status', 'pending'),
+        supabase.from('groups').select('id', { count: 'exact' }).eq('is_active', true).eq('status', 'frozen'),
       ]);
 
       // Check for expiring subscriptions (within 7 days)
@@ -97,6 +100,7 @@ export function AdminDashboard() {
         pendingMakeupSessions: makeupRes.count || 0,
         overduePayments: overdueCount || 0,
         suspendedStudents: suspendedCount || 0,
+        frozenGroups: frozenRes.count || 0,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -241,6 +245,27 @@ export function AdminDashboard() {
               {isRTL 
                 ? `يوجد ${stats.overduePayments} طالب متأخر في الدفع${stats.suspendedStudents > 0 ? ` (${stats.suspendedStudents} موقوف)` : ''}`
                 : `${stats.overduePayments} students with overdue payments${stats.suspendedStudents > 0 ? ` (${stats.suspendedStudents} suspended)` : ''}`
+              }
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+      {/* Frozen Groups Alert */}
+      {stats.frozenGroups > 0 && (
+        <Card 
+          className="border-sky-300 bg-sky-50 dark:bg-sky-950/20 dark:border-sky-800 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/groups')}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sky-700 dark:text-sky-400">
+              <Snowflake className="h-5 w-5" />
+              {isRTL ? 'مجموعات مجمدة' : 'Frozen Groups'}
+            </CardTitle>
+            <CardDescription className="text-sky-600 dark:text-sky-400">
+              {isRTL 
+                ? `يوجد ${stats.frozenGroups} مجموعة مجمدة حالياً`
+                : `${stats.frozenGroups} groups are currently frozen`
               }
             </CardDescription>
           </CardHeader>
