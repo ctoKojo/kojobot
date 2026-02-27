@@ -406,6 +406,11 @@ export type Database = {
           quiz_id: string | null
           session_number: number
           slides_url: string | null
+          student_pdf_filename: string | null
+          student_pdf_path: string | null
+          student_pdf_size: number | null
+          student_pdf_text: string | null
+          student_pdf_text_updated_at: string | null
           summary_video_url: string | null
           title: string
           title_ar: string
@@ -433,6 +438,11 @@ export type Database = {
           quiz_id?: string | null
           session_number: number
           slides_url?: string | null
+          student_pdf_filename?: string | null
+          student_pdf_path?: string | null
+          student_pdf_size?: number | null
+          student_pdf_text?: string | null
+          student_pdf_text_updated_at?: string | null
           summary_video_url?: string | null
           title?: string
           title_ar?: string
@@ -460,6 +470,11 @@ export type Database = {
           quiz_id?: string | null
           session_number?: number
           slides_url?: string | null
+          student_pdf_filename?: string | null
+          student_pdf_path?: string | null
+          student_pdf_size?: number | null
+          student_pdf_text?: string | null
+          student_pdf_text_updated_at?: string | null
           summary_video_url?: string | null
           title?: string
           title_ar?: string
@@ -3071,6 +3086,10 @@ export type Database = {
           quiz_id: string
           session_number: number
           slides_url: string
+          student_pdf_available: boolean
+          student_pdf_filename: string
+          student_pdf_path: string
+          student_pdf_size: number
           summary_video_url: string
           title: string
           title_ar: string

@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.process-deductions]
 verify_jwt = false
+
+[functions.extract-pdf-text]
+verify_jwt = false
+
+[functions.generate-quiz-questions]
+verify_jwt = false
+
+[functions.get-session-pdf-url]
+verify_jwt = false
