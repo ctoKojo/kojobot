@@ -62,6 +62,16 @@ export function PaymentsHistory({ studentId, subscription, attendance }: Props) 
   }, [attendance]);
   const remainingSessions = Math.max(0, 12 - completedSessions);
 
+  // First session date (earliest session the student was part of, regardless of status)
+  const firstSessionDate = useMemo(() => {
+    if (!attendance || attendance.length === 0) return null;
+    const dates = attendance
+      .filter(a => a.sessions?.session_date)
+      .map(a => a.sessions.session_date)
+      .sort();
+    return dates.length > 0 ? dates[0] : null;
+  }, [attendance]);
+
   // Receivables table
   const receivables = useMemo(() => {
     if (!totalAmount) return [];
@@ -187,7 +197,7 @@ export function PaymentsHistory({ studentId, subscription, attendance }: Props) 
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">{isRTL ? 'بداية الاشتراك' : 'Start Date'}</span>
               </div>
-              <p className="text-sm font-medium">{subscription.start_date ? formatDate(subscription.start_date) : '-'}</p>
+              <p className="text-sm font-medium">{firstSessionDate ? formatDate(firstSessionDate) : '-'}</p>
             </CardContent>
           </Card>
 
