@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, Undo2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { SimplifiedQuestionEditor } from '@/components/quiz/SimplifiedQuestionEd
 import { ExcelImporter } from '@/components/quiz/ExcelImporter';
 import { StudentPreviewDialog } from '@/components/quiz/StudentPreviewDialog';
 import { ImportFromQuizzesDialog } from '@/components/quiz/ImportFromQuizzesDialog';
+import { AIGenerateDialog } from '@/components/quiz/AIGenerateDialog';
 import { logUpdate } from '@/lib/activityLogger';
 
 interface SimplifiedQuestion {
@@ -48,14 +49,29 @@ export default function QuizEditor() {
     return '/quizzes';
   };
 
+  const sessionId = searchParams.get('sessionId') || '';
+
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<SimplifiedQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [undoSnapshot, setUndoSnapshot] = useState<SimplifiedQuestion[] | null>(null);
+
+  // Session context for AI generation
+  const [sessionHasDescription, setSessionHasDescription] = useState(false);
+  const [sessionHasPdfText, setSessionHasPdfText] = useState(false);
 
   useEffect(() => {
     if (quizId) fetchData();
   }, [quizId]);
+
+  // Auto-open AI dialog if openAi=true in URL
+  useEffect(() => {
+    if (searchParams.get('openAi') === 'true' && !loading && sessionId) {
+      setAiDialogOpen(true);
+    }
+  }, [loading, searchParams, sessionId]);
 
   const fetchData = async () => {
     try {
@@ -76,14 +92,10 @@ export default function QuizEditor() {
 
       if (questionsError) throw questionsError;
       
-      // Convert old format to simplified format
       const formattedQuestions: SimplifiedQuestion[] = (questionsData || []).map(q => {
         const oldOptions = typeof q.options === 'object' ? q.options as { en?: string[]; ar?: string[] } : null;
-        
-        // Merge old format options or use empty array
         let options: string[] = ['', '', '', ''];
         if (oldOptions) {
-          // Prefer English options, fallback to Arabic
           options = oldOptions.en?.length ? oldOptions.en : (oldOptions.ar || options);
         }
         
@@ -100,6 +112,19 @@ export default function QuizEditor() {
       });
       
       setQuestions(formattedQuestions);
+
+      // Fetch session info for AI context
+      if (sessionId) {
+        const { data: sessionData } = await supabase
+          .from('curriculum_sessions')
+          .select('description_ar, student_pdf_text')
+          .eq('id', sessionId)
+          .single();
+        if (sessionData) {
+          setSessionHasDescription(!!sessionData.description_ar);
+          setSessionHasPdfText(!!sessionData.student_pdf_text);
+        }
+      }
     } catch (error) {
       console.error('Error fetching quiz:', error);
       toast({
@@ -116,24 +141,53 @@ export default function QuizEditor() {
     setQuestions([...questions, ...importedQuestions]);
   };
 
+  const handleAiQuestionsGenerated = (aiQuestions: any[]) => {
+    // Save undo snapshot
+    setUndoSnapshot([...questions]);
+    
+    // Convert AI format to SimplifiedQuestion format
+    const converted: SimplifiedQuestion[] = aiQuestions.map((q, idx) => ({
+      question_text: q.question_text_ar,
+      question_text_ar: q.question_text_ar,
+      options: q.options_ar,
+      correct_answer: q.correct_index.toString(),
+      points: q.points,
+      order_index: questions.length + idx,
+    }));
+
+    setQuestions(prev => [...prev, ...converted]);
+    toast({
+      title: isRTL ? 'تمت الإضافة' : 'Added',
+      description: isRTL ? `تم إضافة ${converted.length} سؤال` : `${converted.length} questions added`,
+    });
+  };
+
+  const handleUndo = () => {
+    if (undoSnapshot) {
+      setQuestions(undoSnapshot);
+      setUndoSnapshot(null);
+      toast({
+        title: isRTL ? 'تم التراجع' : 'Undone',
+        description: isRTL ? 'تم التراجع عن آخر إضافة' : 'Last AI addition undone',
+      });
+    }
+  };
+
   const handleSave = async () => {
     if (!quizId || saving) return;
     setSaving(true);
 
     try {
-      // Delete existing questions
       await supabase.from('quiz_questions').delete().eq('quiz_id', quizId);
 
-      // Insert new questions
       if (questions.length > 0) {
         const questionsToInsert = questions.map((q, idx) => ({
           quiz_id: quizId,
           question_text: q.question_text,
           question_text_ar: q.question_text_ar || q.question_text,
-          // Store in new simplified format but maintain backward compatibility
           options: { 
             en: q.options, 
-            ar: q.options // Same for both since we're using simplified single-field
+            ar: q.options
           },
           correct_answer: q.correct_answer,
           points: q.points,
@@ -151,7 +205,7 @@ export default function QuizEditor() {
         description: isRTL ? 'تم حفظ الأسئلة بنجاح' : 'Questions saved successfully',
       });
 
-      // Activity logging
+      setUndoSnapshot(null);
       logUpdate('quiz', quizId, { questions_count: questions.length });
     } catch (error) {
       console.error('Error saving questions:', error);
@@ -198,6 +252,18 @@ export default function QuizEditor() {
               existingQuestionsCount={questions.length}
               isRTL={isRTL}
             />
+            {sessionId && (
+              <Button variant="outline" onClick={() => setAiDialogOpen(true)} className="gap-2">
+                <Sparkles className="w-4 h-4" />
+                {isRTL ? 'توليد بالذكاء الاصطناعي' : 'AI Generate'}
+              </Button>
+            )}
+            {undoSnapshot && (
+              <Button variant="outline" onClick={handleUndo} className="gap-2 text-amber-600 border-amber-300 hover:bg-amber-50">
+                <Undo2 className="w-4 h-4" />
+                {isRTL ? 'تراجع' : 'Undo'}
+              </Button>
+            )}
             <Button className="kojo-gradient" onClick={handleSave} disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
               {saving ? t.common.loading : t.common.save}
@@ -226,6 +292,18 @@ export default function QuizEditor() {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Generate Dialog */}
+      {sessionId && (
+        <AIGenerateDialog
+          open={aiDialogOpen}
+          onClose={() => setAiDialogOpen(false)}
+          sessionId={sessionId}
+          hasDescription={sessionHasDescription}
+          hasPdfText={sessionHasPdfText}
+          onQuestionsGenerated={handleAiQuestionsGenerated}
+        />
+      )}
     </DashboardLayout>
   );
 }

@@ -102,6 +102,8 @@ interface CurriculumContent {
   can_view_full_video: boolean;
   can_view_assignment: boolean;
   can_view_quiz: boolean;
+  student_pdf_available?: boolean;
+  student_pdf_filename?: string;
 }
 
 interface StaffAttendance {
@@ -1345,9 +1347,28 @@ export default function SessionDetails() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Content Links */}
+              {/* Content Links - Role-based display */}
               <div className="flex flex-wrap gap-3">
-                {curriculumContent.can_view_slides && curriculumContent.slides_url && (
+                {/* Students: Show PDF download button instead of slides */}
+                {role === 'student' && curriculumContent.student_pdf_available && (
+                  <Button variant="outline" size="sm" onClick={async () => {
+                    try {
+                      const { data, error } = await supabase.functions.invoke('get-session-pdf-url', {
+                        body: { sessionId: session?.id },
+                      });
+                      if (error || data?.error) throw new Error(data?.error || error?.message);
+                      window.open(data.url, '_blank');
+                    } catch (err: any) {
+                      toast({ title: isRTL ? 'خطأ' : 'Error', description: err.message, variant: 'destructive' });
+                    }
+                  }} className="flex items-center gap-2">
+                    <FileIcon className="h-4 w-4" />
+                    {isRTL ? 'تحميل PDF' : 'Download PDF'}
+                  </Button>
+                )}
+
+                {/* Admin & Instructor: Show slides link */}
+                {role !== 'student' && curriculumContent.can_view_slides && curriculumContent.slides_url && (
                   <Button variant="outline" size="sm" asChild>
                     <a href={curriculumContent.slides_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                       <Presentation className="h-4 w-4" />
@@ -1356,6 +1377,7 @@ export default function SessionDetails() {
                     </a>
                   </Button>
                 )}
+
                 {curriculumContent.can_view_summary_video && curriculumContent.summary_video_url && (
                   <Button variant="outline" size="sm" asChild>
                     <a href={curriculumContent.summary_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
