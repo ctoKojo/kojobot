@@ -16,6 +16,7 @@ import { toast } from '@/hooks/use-toast';
 import { User, Mail, Phone, Calendar, Save, ArrowLeft, Camera, Loader2 } from 'lucide-react';
 import { ImageCropDialog } from '@/components/ImageCropDialog';
 import { EmployeeFinanceSection } from '@/components/profile/EmployeeFinanceSection';
+import { PaymentsHistory } from '@/components/student/PaymentsHistory';
 
 export default function Profile() {
   const { isRTL, language } = useLanguage();
@@ -31,7 +32,30 @@ export default function Profile() {
     full_name_ar: '',
     phone: '',
   });
+  const [studentSubscription, setStudentSubscription] = useState<any>(null);
+  const [studentAttendance, setStudentAttendance] = useState<any[]>([]);
 
+  // Fetch student financial data
+  useEffect(() => {
+    if (role === 'student' && user?.id) {
+      supabase
+        .from('subscriptions')
+        .select('*, pricing_plans(name, name_ar, attendance_mode)')
+        .eq('student_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => setStudentSubscription(data));
+
+      supabase
+        .from('attendance')
+        .select('*, sessions(session_date, session_time, session_number)')
+        .eq('student_id', user.id)
+        .order('recorded_at', { ascending: false })
+        .limit(50)
+        .then(({ data }) => setStudentAttendance(data || []));
+    }
+  }, [role, user?.id]);
 
 
   const handleAvatarClick = () => {
@@ -365,6 +389,15 @@ export default function Profile() {
         {/* Finance Section for Instructor/Reception */}
         {(role === 'instructor' || role === 'reception') && profile && (
           <EmployeeFinanceSection profile={profile} />
+        )}
+
+        {/* Financial Summary for Students */}
+        {role === 'student' && user?.id && (
+          <PaymentsHistory
+            studentId={user.id}
+            subscription={studentSubscription}
+            attendance={studentAttendance}
+          />
         )}
       </div>
 
