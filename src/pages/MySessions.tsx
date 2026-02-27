@@ -19,6 +19,7 @@ import {
   Loader2,
   RefreshCw,
   Users,
+  FileText,
 } from 'lucide-react';
 
 interface AttendedSession {
@@ -43,6 +44,7 @@ interface AttendedSession {
     can_view_slides: boolean;
     can_view_summary_video: boolean;
     can_view_full_video: boolean;
+    student_pdf_available?: boolean;
   } | null;
 }
 
@@ -198,6 +200,7 @@ export default function MySessions() {
             can_view_slides: curr.can_view_slides,
             can_view_summary_video: curr.can_view_summary_video,
             can_view_full_video: curr.can_view_full_video,
+            student_pdf_available: curr.student_pdf_available ?? false,
           } : null,
         };
       });
@@ -222,7 +225,7 @@ export default function MySessions() {
   const hasContent = (s: AttendedSession) => {
     if (!s.curriculum) return false;
     return (
-      (s.curriculum.can_view_slides && s.curriculum.slides_url) ||
+      s.curriculum.student_pdf_available ||
       (s.curriculum.can_view_summary_video && s.curriculum.summary_video_url) ||
       (s.curriculum.can_view_full_video && s.curriculum.full_video_url)
     );
@@ -333,13 +336,21 @@ export default function MySessions() {
                   {/* Content buttons */}
                   {hasContent(s) && (
                     <div className="flex flex-wrap gap-2" onClick={e => e.stopPropagation()}>
-                      {s.curriculum?.can_view_slides && s.curriculum?.slides_url && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={s.curriculum.slides_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs">
-                            <Presentation className="h-3.5 w-3.5" />
-                            {isRTL ? 'سلايدات' : 'Slides'}
-                            <ExternalLink className="h-2.5 w-2.5" />
-                          </a>
+                      {/* Student PDF download instead of slides */}
+                      {s.curriculum?.student_pdf_available && (
+                        <Button variant="outline" size="sm" onClick={async () => {
+                          try {
+                            const { data, error } = await supabase.functions.invoke('get-session-pdf-url', {
+                              body: { sessionId: s.id },
+                            });
+                            if (error || data?.error) throw new Error(data?.error || error?.message);
+                            window.open(data.url, '_blank');
+                          } catch (err: any) {
+                            toast({ title: isRTL ? 'خطأ' : 'Error', description: err.message, variant: 'destructive' });
+                          }
+                        }} className="flex items-center gap-1.5 text-xs">
+                          <FileText className="h-3.5 w-3.5" />
+                          {isRTL ? 'تحميل PDF' : 'PDF'}
                         </Button>
                       )}
                       {s.curriculum?.can_view_summary_video && s.curriculum?.summary_video_url && (

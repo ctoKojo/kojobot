@@ -44,6 +44,11 @@ interface CurriculumSession {
   published_at: string | null;
   is_active: boolean;
   updated_at: string;
+  student_pdf_path: string | null;
+  student_pdf_filename: string | null;
+  student_pdf_size: number | null;
+  student_pdf_text: string | null;
+  student_pdf_text_updated_at: string | null;
 }
 
 export default function CurriculumManagement() {
