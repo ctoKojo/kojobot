@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw } from 'lucide-react';
+import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw, DollarSign } from 'lucide-react';
 import { LevelPassedBanner } from '@/components/student/LevelPassedBanner';
+import { PaymentsHistory } from '@/components/student/PaymentsHistory';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -28,6 +29,7 @@ interface StudentStats {
   groupInfo: GroupInfo | null;
   subscription: any;
   attendanceStats: { present: number; absent: number; total: number };
+  attendanceData: any[];
   warnings: number;
   pendingQuizzes: any[];
   pendingAssignments: any[];
@@ -46,6 +48,7 @@ export function StudentDashboard() {
     groupInfo: null,
     subscription: null,
     attendanceStats: { present: 0, absent: 0, total: 0 },
+    attendanceData: [],
     warnings: 0,
     pendingQuizzes: [],
     pendingAssignments: [],
@@ -217,6 +220,7 @@ export function StudentDashboard() {
         groupInfo: groupStudent?.groups,
         subscription,
         attendanceStats: { present, absent, total: present + absent },
+        attendanceData: attendanceData || [],
         warnings: warningsCount || 0,
         pendingQuizzes,
         pendingAssignments,
@@ -613,6 +617,15 @@ export function StudentDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Financial Summary */}
+      {user?.id && (
+        <PaymentsHistory
+          studentId={user.id}
+          subscription={stats.subscription}
+          attendance={stats.attendanceData}
+        />
+      )}
 
       {/* Quick Actions */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
