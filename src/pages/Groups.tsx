@@ -1386,7 +1386,7 @@ export default function GroupsPage() {
               return (
                 <Card 
                   key={group.id} 
-                  className={`cursor-pointer hover:bg-muted/50 transition-colors ${group.status === 'frozen' ? 'bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-800' : ''}`}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => navigate(`/group/${group.id}`)}
                 >
                   <CardContent className="p-4">
@@ -1557,7 +1557,7 @@ export default function GroupsPage() {
                     return (
                       <TableRow 
                         key={group.id} 
-                        className={`cursor-pointer hover:bg-muted/50 ${group.status === 'frozen' ? 'bg-sky-50 dark:bg-sky-950/20' : ''}`}
+                        className="cursor-pointer hover:bg-muted/50"
                         onClick={() => navigate(`/group/${group.id}`)}
                       >
                         <TableCell className="font-medium">
