@@ -41,6 +41,7 @@ interface StudentRow {
   feedback_tags: string[];
   saved: boolean;
   saving: boolean;
+  saveError: boolean;
   existing_id?: string;
   quiz_score?: number | null;
   quiz_max_score?: number | null;
@@ -389,6 +390,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
           feedback_tags: (existing?.student_feedback_tags as string[]) || [],
           saved: !!existing,
           saving: false,
+          saveError: false,
           existing_id: existing?.id,
           quiz_score: s.quiz_score,
           quiz_max_score: s.quiz_max_score,
@@ -413,6 +415,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
         ...updated[rowIndex],
         scores: { ...updated[rowIndex].scores, [key]: value },
         saved: false,
+        saveError: false,
       };
       return updated;
     });
@@ -500,7 +503,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
       toast({ title: t.common.error, description: err.message, variant: 'destructive' });
       setRows(prev => {
         const updated = [...prev];
-        updated[rowIndex] = { ...updated[rowIndex], saving: false };
+        updated[rowIndex] = { ...updated[rowIndex], saving: false, saveError: true };
         return updated;
       });
     }
@@ -510,7 +513,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
   useEffect(() => {
     rows.forEach((row, idx) => {
       const allFilled = criteria.every(c => row.scores[c.key] !== undefined);
-      if (allFilled && !row.saved && !row.saving) {
+      if (allFilled && !row.saved && !row.saving && !row.saveError) {
         saveRow(idx);
       }
     });
