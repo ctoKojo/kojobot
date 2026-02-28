@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Send, Plus, Flag, MessageCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
+import { CodeBlock } from '@/components/quiz/CodeBlock';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -264,6 +265,8 @@ export function KojoChatWidget() {
                 className={`mb-3 flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
+                  dir="rtl"
+                  style={{ unicodeBidi: 'plaintext' }}
                   className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${
                     msg.role === 'user'
                       ? 'bg-primary text-primary-foreground'
@@ -285,6 +288,23 @@ export function KojoChatWidget() {
                               {children}
                             </a>
                           ),
+                          pre: ({ children }) => (
+                            <div className="not-prose">{children}</div>
+                          ),
+                          code: ({ className, children }) => {
+                            const codeString = String(children).replace(/\n$/, '');
+                            const isInline = !codeString.includes('\n');
+
+                            if (isInline) {
+                              return (
+                                <code dir="ltr" className="bg-zinc-800 text-zinc-100 px-1.5 py-0.5 rounded text-xs font-mono">
+                                  {codeString}
+                                </code>
+                              );
+                            }
+
+                            return <CodeBlock code={codeString} className="my-2 text-xs" />;
+                          },
                         }}
                       >
                         {msg.content}
@@ -330,8 +350,9 @@ export function KojoChatWidget() {
                 onKeyDown={handleKeyDown}
                 placeholder={isRTL ? 'اكتب سؤالك...' : 'Type your question...'}
                 className="min-h-[40px] max-h-[80px] resize-none text-sm"
+                style={{ unicodeBidi: 'plaintext' }}
                 rows={1}
-                dir={isRTL ? 'rtl' : 'ltr'}
+                dir="rtl"
               />
               <Button
                 size="icon"
