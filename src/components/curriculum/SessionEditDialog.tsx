@@ -86,12 +86,44 @@ export function SessionEditDialog({ session, onClose }: Props) {
   const [uploadingPdf, setUploadingPdf] = useState(false);
   const [extractingText, setExtractingText] = useState(false);
   const [creatingAiQuiz, setCreatingAiQuiz] = useState(false);
-  // Reset form when session changes
+  const [fetchingFresh, setFetchingFresh] = useState(false);
+
+  // Unified sync function for updated_at
+  const syncUpdatedAt = (newUpdatedAt: string) => {
+    setForm(f => ({ ...f, updated_at: newUpdatedAt }));
+  };
+
+  // Reset form when session changes + fetch fresh updated_at
   if (session && form.id !== session.id) {
     setForm({ ...session });
     setAssignmentFile(null);
     setQuizData(null);
   }
+
+  // Fetch fresh updated_at when dialog opens
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    const fetchFresh = async () => {
+      setFetchingFresh(true);
+      try {
+        const { data, error } = await supabase
+          .from('curriculum_sessions')
+          .select('updated_at')
+          .eq('id', session.id)
+          .single();
+        if (!cancelled && data && !error) {
+          syncUpdatedAt(data.updated_at);
+        }
+      } catch (err) {
+        console.error('Failed to fetch fresh updated_at:', err);
+      } finally {
+        if (!cancelled) setFetchingFresh(false);
+      }
+    };
+    fetchFresh();
+    return () => { cancelled = true; };
+  }, [session?.id]);
 
   // Fetch quiz data when session has quiz_id
   useEffect(() => {
@@ -225,7 +257,7 @@ export function SessionEditDialog({ session, onClose }: Props) {
         }
         // Update local updated_at so subsequent saves don't conflict
         if (rpcData?.new_updated_at) {
-          setForm(f => ({ ...f, updated_at: rpcData.new_updated_at }));
+          syncUpdatedAt(rpcData.new_updated_at);
         }
         
         const { data: extractResult, error: extractError } = await supabase.functions.invoke('extract-pdf-text', {
@@ -357,6 +389,10 @@ export function SessionEditDialog({ session, onClose }: Props) {
           ? 'تم تعديل هذا السيشن من مستخدم آخر. أعد فتح الصفحة.'
           : 'This session was modified by another user. Please refresh.');
       } else {
+        // Sync updated_at BEFORE closing so parent gets fresh data
+        if (result?.new_updated_at) {
+          syncUpdatedAt(result.new_updated_at);
+        }
         toast.success(isRTL ? 'تم تحديث السيشن' : 'Session updated');
         queryClient.invalidateQueries({ queryKey: ['curriculum-sessions'] });
         queryClient.invalidateQueries({ queryKey: ['curriculum-overview'] });
@@ -639,9 +675,9 @@ export function SessionEditDialog({ session, onClose }: Props) {
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-          <Button onClick={handleSave} disabled={saving || uploadingFile}>
-            {(saving || uploadingFile) && <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />}
-            {uploadingFile ? (isRTL ? 'جاري الرفع...' : 'Uploading...') : (isRTL ? 'حفظ' : 'Save')}
+          <Button onClick={handleSave} disabled={saving || uploadingFile || fetchingFresh}>
+            {(saving || uploadingFile || fetchingFresh) && <Loader2 className="h-4 w-4 animate-spin ltr:mr-2 rtl:ml-2" />}
+            {fetchingFresh ? (isRTL ? 'جاري التحميل...' : 'Loading...') : uploadingFile ? (isRTL ? 'جاري الرفع...' : 'Uploading...') : (isRTL ? 'حفظ' : 'Save')}
           </Button>
         </DialogFooter>
       </DialogContent>

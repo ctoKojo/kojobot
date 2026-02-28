@@ -348,6 +348,12 @@ export default function CurriculumManagement() {
             </>
           )}
 
+          {sessions.length > 0 && !isViewingOldVersion && (
+            <Button variant="outline" size="sm" onClick={() => setCloneOpen(true)}>
+              <Copy className="h-4 w-4 ltr:mr-1 rtl:ml-1" />{isRTL ? 'نسخ من آخر' : 'Clone From...'}
+            </Button>
+          )}
+
           {sessions.length === 0 && (
             <div className="flex gap-2">
               <Button onClick={() => createCurriculumMutation.mutate({ agId: selectedAgeGroup, lvId: selectedLevel, count: expectedCount })} disabled={createCurriculumMutation.isPending} size="sm">
@@ -477,8 +483,8 @@ export default function CurriculumManagement() {
           onOpenChange={setCloneOpen}
           ageGroups={ageGroups}
           levels={levels}
-          targetAgeGroupId={selectedAgeGroup}
-          targetLevelId={selectedLevel}
+          defaultTargetAgeGroupId={selectedAgeGroup}
+          defaultTargetLevelId={selectedLevel}
         />
 
         {/* Edit Dialog */}
