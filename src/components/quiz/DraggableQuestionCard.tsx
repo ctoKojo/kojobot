@@ -136,6 +136,8 @@ export function DraggableQuestionCard({
                 : 'Enter your question here... (Arabic, English, or both)'
             }
             className="min-h-[80px]"
+            dir="rtl"
+            style={{ unicodeBidi: 'plaintext' }}
           />
         </div>
 
@@ -171,6 +173,8 @@ export function DraggableQuestionCard({
                     onClick={(e) => e.stopPropagation()}
                     placeholder={isRTL ? `الخيار ${optIndex + 1}` : `Option ${optIndex + 1}`}
                     className="flex-1"
+                    dir="rtl"
+                    style={{ unicodeBidi: 'plaintext' }}
                   />
                   {isSelected && (
                     <span className="text-xs text-primary font-medium whitespace-nowrap">
