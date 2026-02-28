@@ -11,76 +11,6 @@ const FIXED_POINTS = 1;
 const MAX_QUESTIONS = 20;
 const GENERATE_RATE_LIMIT = 5;
 
-// Technical terms whitelist (allowed in Arabic text)
-const TECH_TERMS_WHITELIST = new Set([
-  // Programming keywords & concepts
-  "variable", "variables", "loop", "loops", "for", "while", "if", "else", "elif",
-  "function", "functions", "def", "return", "class", "object", "objects",
-  "array", "arrays", "list", "lists", "string", "strings", "integer", "int", "float", "boolean", "bool",
-  "python", "java", "javascript", "html", "css", "scratch", "arduino",
-  "sensor", "sensors", "servo", "pwm", "led", "leds", "resistor", "breadboard",
-  "voltage", "current", "input", "output", "print", "import", "module",
-  "true", "false", "none", "null", "undefined", "type", "error",
-  "pixel", "pixels", "rgb", "url", "api", "ide", "ui", "ux",
-  "bug", "bugs", "debug", "code", "coding", "program", "programming",
-  "wifi", "bluetooth", "usb", "cpu", "ram", "rom", "gpu",
-  "bit", "byte", "binary", "hex", "algorithm", "data", "database",
-  "web", "app", "software", "hardware", "robot", "robotics",
-  "sprite", "block", "blocks", "event", "events", "operator", "operators",
-  "condition", "conditions", "iteration", "recursion", "parameter", "parameters",
-  "syntax", "compile", "compiler", "interpreter", "runtime", "library",
-  "framework", "method", "methods", "property", "properties", "attribute",
-  "index", "dictionary", "tuple", "set", "stack", "queue",
-  "tinkercad", "microbit", "micro:bit", "raspberry", "pi",
-  // Common code example words (variable names, sample data in code snippets)
-  "x", "y", "z", "a", "b", "c", "d", "i", "j", "n", "my", "new", "name", "age", "num",
-  "items", "fruits", "colors", "numbers", "friends", "subjects", "animals", "cities",
-  "add", "remove", "insert", "append", "delete", "update", "get", "len", "length", "size", "count",
-  "red", "green", "blue", "yellow", "white", "black",
-  "math", "science", "arabic",
-  "ahmed", "sara", "ali", "omar", "mona", "hassan", "leila", "youssef", "kareem", "faris", "mazen", "mohamed",
-  "br", "hr", "div", "span", "p", "img", "src", "href",
-  "hello", "world", "hi", "ok", "yes", "no",
-  // Common nouns often used as sample data in lists/arrays
-  "car", "cars", "bike", "bikes", "plane", "planes", "bus", "train",
-  "dog", "dogs", "cat", "cats", "mouse", "bird", "fish", "rabbit", "animal",
-  "cup", "plate", "spoon", "fork", "knife", "table", "chair",
-  "apple", "banana", "orange", "grape", "lemon", "mango", "fruit",
-  "book", "books", "pen", "pencil", "paper", "eraser", "ruler",
-  "game", "games", "movie", "movies", "song", "player", "players", "team",
-  "pizza", "cake", "milk", "water", "juice", "food", "drink",
-  "shirt", "shoe", "shoes", "hat", "bag", "box",
-  "house", "school", "park", "door", "window", "room",
-  "mother", "father", "brother", "sister", "friend", "teacher", "student",
-  "day", "week", "month", "year", "time", "date",
-  "big", "small", "fast", "slow", "hot", "cold", "old", "tall", "short",
-  "bmw", "mercedes", "audi", "kia", "toyota",
-  "history", "english", "art", "music", "sport", "sports",
-  "total", "result", "answer", "score", "point", "points", "level",
-  "message", "info", "warning", "success", "fail", "pass", "test",
-  // Common English words that appear in print statements / output
-  "the", "is", "are", "was", "were", "am", "be", "been", "being",
-  "have", "has", "had", "do", "does", "did", "will", "would", "could", "should", "can", "may", "might",
-  "to", "of", "in", "on", "at", "by", "an", "or", "and", "not", "it", "its", "this", "that", "with", "from",
-  "first", "second", "third", "last", "final", "after", "before",
-  "subject", "subjects", "your", "our", "their", "his", "her",
-  "enter", "select", "choose", "press", "click", "type", "show", "display", "check",
-  "equal", "equals", "same", "different", "than", "more", "less",
-  "all", "each", "every", "any", "some", "many", "much", "few", "only", "also", "just", "then",
-  "what", "which", "how", "when", "where", "who", "why",
-  "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-  "welcome", "goodbye", "thanks", "please",
-  "correct", "wrong", "right", "left", "up", "down",
-  "line", "lines", "step", "steps", "part", "parts", "example", "examples",
-  "use", "using", "used", "make", "makes", "made", "give", "gives", "take", "takes",
-  "let", "var", "const", "try", "catch", "throw", "switch", "case", "break", "continue", "default",
-  "max", "min", "sum", "sort", "range", "map", "filter",
-  "file", "open", "close", "read", "write", "save",
-  "start", "stop", "run", "end", "next", "back",
-  "key", "value", "item", "element", "node", "link",
-  "color", "number", "text", "font", "image", "button", "page",
-]);
-
 interface GeneratedQuestion {
   question_text_ar: string;
   options_ar: string[];
@@ -88,64 +18,190 @@ interface GeneratedQuestion {
   rationale?: string;
   tags?: string[];
   code_snippet?: string;
+  _qid?: string; // internal tracking id
 }
 
-function validateQuestions(questions: GeneratedQuestion[]): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
+interface ValidationResult {
+  passed: GeneratedQuestion[]; // questions that passed (may have warnings)
+  rejected: { question: GeneratedQuestion; reasons: string[] }[];
+  warnings: Record<string, string[]>; // keyed by _qid
+}
+
+// ── Banned option phrases ──
+const BANNED_PHRASES = ["كل ما سبق", "جميع ما سبق", "لا شيء مما سبق", "ليس أي مما سبق", "كل الإجابات", "لا شيء"];
+
+// ── Eliminable short answers ──
+const ELIMINABLE_WORDS = new Set(["فقط", "نعم", "لا", "صح", "غلط", "أبداً", "دائماً", "أكيد"]);
+
+// ── Non-Latin character regex (Arabic, CJK, Cyrillic, etc.) ──
+const NON_LATIN_RE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0400-\u04FF\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]/;
+
+// ── Detect non-Latin inside code identifiers (outside strings/comments) ──
+function hasNonLatinInCodeIdentifiers(code: string): boolean {
+  const lines = code.split("\n");
+  for (const line of lines) {
+    // Skip full-line comments
+    const trimmed = line.trim();
+    if (trimmed.startsWith("#") || trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("*")) continue;
+
+    // Remove string literals (single, double, triple quotes, backtick templates)
+    const withoutStrings = trimmed
+      .replace(/"""[\s\S]*?"""/g, "")
+      .replace(/'''[\s\S]*?'''/g, "")
+      .replace(/`[^`]*`/g, "")
+      .replace(/"(?:[^"\\]|\\.)*"/g, "")
+      .replace(/'(?:[^'\\]|\\.)*'/g, "")
+      // Remove inline comments
+      .replace(/#.*$/, "")
+      .replace(/\/\/.*$/, "");
+
+    if (NON_LATIN_RE.test(withoutStrings)) return true;
+  }
+  return false;
+}
+
+// ── Check if code has non-Latin inside strings/comments (warning level) ──
+function hasNonLatinInCodeStringsOrComments(code: string): boolean {
+  // Check strings
+  const stringMatches = code.match(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`[^`]*`/g) || [];
+  for (const s of stringMatches) {
+    if (NON_LATIN_RE.test(s)) return true;
+  }
+  // Check comments
+  const commentMatches = code.match(/#.*$|\/\/.*$/gm) || [];
+  for (const c of commentMatches) {
+    if (NON_LATIN_RE.test(c)) return true;
+  }
+  return false;
+}
+
+// ── English ratio in text ──
+function englishRatio(text: string): number {
+  const cleaned = text.replace(/\s+/g, "");
+  if (cleaned.length === 0) return 0;
+  const englishChars = (cleaned.match(/[a-zA-Z]/g) || []).length;
+  return englishChars / cleaned.length;
+}
+
+function validateQuestions(questions: GeneratedQuestion[]): ValidationResult {
+  const passed: GeneratedQuestion[] = [];
+  const rejected: { question: GeneratedQuestion; reasons: string[] }[] = [];
+  const warnings: Record<string, string[]> = {};
 
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
-    const qNum = i + 1;
+    // Assign internal tracking ID
+    q._qid = `q_${i}_${Date.now()}`;
+    const hardErrors: string[] = [];
+    const qWarnings: string[] = [];
 
-    // Must have exactly 4 options
+    // ── HARD ERRORS ──
+
+    // 1. Must have exactly 4 options
     if (!q.options_ar || q.options_ar.length !== 4) {
-      errors.push(`Q${qNum}: Must have exactly 4 options`);
+      hardErrors.push("يجب أن يحتوي على 4 اختيارات بالضبط");
+      rejected.push({ question: q, reasons: hardErrors });
       continue;
     }
 
-    // correct_index must be 0-3
+    // 2. correct_index must be 0-3
     if (typeof q.correct_index !== "number" || q.correct_index < 0 || q.correct_index > 3) {
-      errors.push(`Q${qNum}: correct_index must be 0-3`);
+      hardErrors.push("correct_index يجب أن يكون بين 0 و 3");
     }
 
-    // No duplicate options
+    // 3. No duplicate options
     const uniqueOptions = new Set(q.options_ar.map((o: string) => o.trim()));
     if (uniqueOptions.size !== 4) {
-      errors.push(`Q${qNum}: Duplicate options found`);
+      hardErrors.push("يوجد اختيارات مكررة");
     }
 
-    // Filter "all of the above" type answers
-    const banned = ["كل ما سبق", "جميع ما سبق", "لا شيء مما سبق", "ليس أي مما سبق", "كل الإجابات", "لا شيء"];
+    // 4. Banned phrases
     for (const opt of q.options_ar) {
-      if (banned.some(b => opt.includes(b))) {
-        errors.push(`Q${qNum}: Contains banned option "${opt}"`);
+      if (BANNED_PHRASES.some(b => opt.includes(b))) {
+        hardErrors.push(`اختيار ممنوع: "${opt}"`);
       }
     }
 
-    // Language check: ensure primarily Arabic with only whitelisted English terms
-    const questionAndOptionsText = q.question_text_ar + " " + q.options_ar.join(" ");
-    const englishWords = questionAndOptionsText.match(/[a-zA-Z]{2,}/g) || [];
-    const nonWhitelisted = englishWords.filter(w => !TECH_TERMS_WHITELIST.has(w.toLowerCase()));
-    if (nonWhitelisted.length > 10) {
-      errors.push(`Q${qNum}: Too many non-technical English words: ${nonWhitelisted.slice(0, 5).join(", ")}`);
+    // 5. Non-Latin in code identifiers (not in strings/comments)
+    if (q.code_snippet && hasNonLatinInCodeIdentifiers(q.code_snippet)) {
+      hardErrors.push("حروف غير لاتينية في أكواد البرمجة (خارج النصوص والتعليقات)");
     }
 
-    // Auto-fix: strip Arabic text from code_snippet instead of failing
+    // 6. Code snippet has markdown backticks as block markers → auto-fix (safe)
     if (q.code_snippet) {
-      q.code_snippet = q.code_snippet.replace(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u200F\u200E]+/g, '').replace(/""/g, '"placeholder"');
+      // Only strip leading/trailing ``` block markers, not backticks inside code
+      q.code_snippet = q.code_snippet.replace(/^```[\w]*\n?/, "").replace(/\n?```$/, "").trim();
     }
 
-    // Validate: no easily eliminable options (check for very short options vs others)
+    // 7. Code snippet too long → hard error at 4000
+    if (q.code_snippet && q.code_snippet.length > 4000) {
+      hardErrors.push("الكود طويل جداً (أكثر من 4000 حرف)");
+    }
+
+    // If any hard errors, reject
+    if (hardErrors.length > 0) {
+      rejected.push({ question: q, reasons: hardErrors });
+      continue;
+    }
+
+    // ── WARNINGS ──
+
+    // W1. Non-Latin in code strings/comments
+    if (q.code_snippet && hasNonLatinInCodeStringsOrComments(q.code_snippet)) {
+      qWarnings.push("نص غير إنجليزي داخل strings أو comments في الكود");
+    }
+
+    // W2. English ratio check (dynamic threshold)
+    const questionAndOptionsText = q.question_text_ar + " " + q.options_ar.join(" ");
+    const ratio = englishRatio(questionAndOptionsText);
+    const threshold = q.code_snippet ? 0.40 : 0.25; // Higher tolerance when code exists
+    if (ratio > threshold) {
+      qWarnings.push(`نسبة الإنجليزي عالية (${Math.round(ratio * 100)}%) — المسموح ${Math.round(threshold * 100)}%`);
+    }
+
+    // W3. Option length disparity
     const optLengths = q.options_ar.map((o: string) => o.trim().length);
     const avgLen = optLengths.reduce((a: number, b: number) => a + b, 0) / 4;
-    // Only flag if 3+ options are very short compared to average (very extreme cases)
-    const tooShort = optLengths.filter((l: number) => l < avgLen * 0.2);
-    if (tooShort.length >= 3) {
-      errors.push(`Q${qNum}: Options have very uneven lengths, suggesting easily eliminable answers`);
+    if (avgLen > 0) {
+      const shortest = Math.min(...optLengths);
+      // Very short option compared to average
+      if (shortest < avgLen * 0.15 && avgLen > 5) {
+        // Check if it's an eliminable word
+        const shortOpts = q.options_ar.filter((o: string) => o.trim().length === shortest);
+        const isEliminable = shortOpts.some(o => ELIMINABLE_WORDS.has(o.trim()));
+        if (isEliminable) {
+          qWarnings.push("اختيار قصير جداً وعام (مثل 'نعم'/'لا') وسط اختيارات طويلة — سهل الحذف");
+        } else if (shortest < avgLen * 0.1) {
+          qWarnings.push("تفاوت كبير في طول الاختيارات");
+        }
+      }
+    }
+
+    // W4. Code snippet length warning (1200-4000)
+    if (q.code_snippet && q.code_snippet.length > 1200) {
+      qWarnings.push(`الكود طويل نسبياً (${q.code_snippet.length} حرف)`);
+    }
+
+    // Safe auto-fix: truncate code > 2000
+    if (q.code_snippet && q.code_snippet.length > 2000) {
+      q.code_snippet = q.code_snippet.slice(0, 2000);
+    }
+
+    // Add fixed points
+    q.points = FIXED_POINTS as any;
+
+    // Clean empty code_snippet
+    if (q.code_snippet !== undefined && q.code_snippet !== null) {
+      q.code_snippet = q.code_snippet.trim() || undefined;
+    }
+
+    passed.push(q);
+    if (qWarnings.length > 0) {
+      warnings[q._qid] = qWarnings;
     }
   }
 
-  return { valid: errors.length === 0, errors };
+  return { passed, rejected, warnings };
 }
 
 serve(async (req) => {
@@ -223,7 +279,6 @@ serve(async (req) => {
       });
     }
 
-    // Check content availability
     if (!session.description_ar && !session.student_pdf_text) {
       return new Response(JSON.stringify({ error: "الوصف ونص PDF كلاهما فارغ. لا يمكن توليد أسئلة بدون محتوى." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -256,26 +311,40 @@ const systemPrompt = `أنت مدرس متخصص في تعليم الأطفال 
 
 قواعد صارمة:
 1. اكتب كل الأسئلة والاختيارات بالعامية المصرية (مش فصحى). مثلاً: "إيه اللي هيحصل"، "الكود ده بيعمل إيه"، "أنهي إجابة صح"
-2. المصطلحات التقنية الإنجليزية مسموحة فقط داخل النص مثل: variable, loop, function, array, class, object, python, javascript, html, css, scratch, arduino, sensor, servo, LED, if, else, print, input, output, sprite, block
-3. ممنوع أي جملة كاملة بالإنجليزية
-4. ممنوع شرح أو تعليق بالإنجليزية
-5. لكل سؤال 4 اختيارات بالضبط
-6. اختيار صحيح واحد فقط (correct_index من 0 إلى 3)
-7. ممنوع "كل ما سبق" أو "لا شيء مما سبق" أو "جميع ما سبق"
-8. ممنوع تلميحات واضحة في السؤال توصل للإجابة
-9. أطوال الاختيارات تكون متقاربة
-10. نوّع الأسئلة بين الأنواع دي:
-    - أسئلة مفاهيم نظرية (بدون كود): "إيه هي الـ List في Python؟"، "إيه الفرق بين...؟"
-    - أسئلة تطبيقية بكود: "الكود ده هيطبع إيه؟"
-    - أسئلة تحليلية: "إيه الغلط في الكود ده؟"
-    - أسئلة سيناريو: "لو عايز تعمل كذا، هتستخدم إيه؟"
-    مهم جداً: مش كل الأسئلة تكون فيها كود! على الأقل 40% من الأسئلة تكون نظرية بدون code_snippet. خلي code_snippet فاضي (مش موجود) في الأسئلة النظرية.
-11. ممنوع أسئلة الحفظ الأعمى فقط
-12. إذا كان السؤال يتعلق بكود برمجي أو يحتاج عرض كود، ضع الكود في حقل code_snippet المنفصل. ممنوع وضع الكود داخل نص السؤال question_text_ar. الكود يكون raw بدون markdown أو backticks.
-13. حتى لو الكود سطر واحد فقط، يجب وضعه في code_snippet وليس في نص السؤال.
-14. ممنوع تماماً وضع أي نص عربي داخل الكود في code_snippet. الكود لازم يكون إنجليزي بالكامل. مثلاً ممنوع: fruits = ["تفاح", "موز"] — الصح: fruits = ["apple", "banana"]
-15. الاختيارات الغلط لازم تكون منطقية ومعقولة ومش سهلة الحذف. ممنوع اختيارات سخيفة أو واضح إنها غلط. الطالب لازم يفكر عشان يختار الإجابة الصح.
-16. كل الاختيارات لازم تكون من نفس النوع والسياق. مثلاً لو السؤال عن نتيجة كود، كل الاختيارات تكون نتائج محتملة ومعقولة.
+2. المصطلحات التقنية الإنجليزية مسموحة داخل النص العربي مثل: variable, loop, function, array, list, print, input, if, else
+3. ممنوع أي جملة كاملة بالإنجليزية في نص السؤال أو الاختيارات
+4. لكل سؤال 4 اختيارات بالضبط
+5. اختيار صحيح واحد فقط (correct_index من 0 إلى 3)
+6. ممنوع "كل ما سبق" أو "لا شيء مما سبق" أو "جميع ما سبق"
+7. ممنوع تلميحات واضحة في السؤال توصل للإجابة
+8. أطوال الاختيارات تكون متقاربة — ممنوع اختيار كلمة واحدة وباقي الاختيارات جمل
+9. نوّع الأسئلة:
+   - نظرية (بدون كود): "إيه هي الـ List في Python؟"
+   - تطبيقية بكود: "الكود ده هيطبع إيه؟"
+   - تحليلية: "إيه الغلط في الكود ده؟"
+   - سيناريو: "لو عايز تعمل كذا، هتستخدم إيه؟"
+   مهم: على الأقل 40% أسئلة نظرية بدون code_snippet.
+10. الكود يتحط في code_snippet فقط — raw بدون markdown أو backticks
+11. ممنوع عربي داخل code_snippet نهائياً — حتى داخل strings أو comments. استخدم إنجليزي بسيط.
+    مثلاً ممنوع: fruits = ["تفاح"] — الصح: fruits = ["apple"]
+    ممنوع: # ده بيطبع — الصح: # prints the result
+12. الاختيارات الغلط لازم تكون منطقية ومعقولة.
+
+مثال صح ✅:
+{
+  "question_text_ar": "إيه اللي هيطبعه الكود ده؟",
+  "code_snippet": "x = [1, 2, 3]\\nprint(len(x))",
+  "options_ar": ["3", "2", "1", "خطأ في الكود"],
+  "correct_index": 0
+}
+
+مثال غلط ❌ (عربي في الكود + backticks):
+{
+  "question_text_ar": "إيه نتيجة الكود ده؟",
+  "code_snippet": "\`\`\`python\\nfruits = [\\"تفاح\\", \\"موز\\"]\\n# ده بيطبع الفواكه\\nprint(fruits)\`\`\`",
+  "options_ar": ["['تفاح', 'موز']", "خطأ", "كل ما سبق", "2"],
+  "correct_index": 0
+}
 
 الفئة العمرية: ${ageGroupMap[ageGroup] || ageGroupMap["10-13"]}
 مستوى الصعوبة: ${difficultyMap[difficulty] || difficultyMap["medium"]}
@@ -288,7 +357,7 @@ const systemPrompt = `أنت مدرس متخصص في تعليم الأطفال 
       });
     }
 
-    const generateWithRetry = async (retryMessage?: string): Promise<GeneratedQuestion[]> => {
+    const generateWithAI = async (retryMessage?: string): Promise<GeneratedQuestion[]> => {
       const messages: any[] = [
         { role: "system", content: systemPrompt },
         { role: "user", content: contextParts.join("\n\n") },
@@ -332,7 +401,7 @@ const systemPrompt = `أنت مدرس متخصص في تعليم الأطفال 
                           correct_index: { type: "number", description: "Index of correct answer (0-3)" },
                           rationale: { type: "string", description: "Brief explanation for the correct answer" },
                           tags: { type: "array", items: { type: "string" }, description: "Topic tags" },
-                          code_snippet: { type: "string", description: "Raw code snippet if the question involves code. No markdown, no backticks. Leave empty if no code needed." },
+                          code_snippet: { type: "string", description: "Raw code snippet if the question involves code. No markdown, no backticks, no Arabic. Leave empty/omit if no code needed." },
                         },
                         required: ["question_text_ar", "options_ar", "correct_index"],
                         additionalProperties: false,
@@ -350,12 +419,8 @@ const systemPrompt = `أنت مدرس متخصص في تعليم الأطفال 
       });
 
       if (!aiResponse.ok) {
-        if (aiResponse.status === 429) {
-          throw new Error("Rate limit exceeded on AI service. Please try again later.");
-        }
-        if (aiResponse.status === 402) {
-          throw new Error("AI credits depleted. Please add credits to continue.");
-        }
+        if (aiResponse.status === 429) throw new Error("Rate limit exceeded on AI service. Please try again later.");
+        if (aiResponse.status === 402) throw new Error("AI credits depleted. Please add credits to continue.");
         const errText = await aiResponse.text();
         console.error("AI error:", aiResponse.status, errText);
         throw new Error("Failed to generate questions");
@@ -364,56 +429,82 @@ const systemPrompt = `أنت مدرس متخصص في تعليم الأطفال 
       const aiData = await aiResponse.json();
       const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
 
-      if (!toolCall?.function?.arguments) {
-        throw new Error("No tool call response from AI");
-      }
+      if (!toolCall?.function?.arguments) throw new Error("No tool call response from AI");
 
       const parsed = JSON.parse(toolCall.function.arguments);
       return parsed.questions || [];
     };
 
-    // First attempt
-    let questions = await generateWithRetry();
+    // ── Attempt 1 ──
+    let questions = await generateWithAI();
     let validation = validateQuestions(questions);
 
-    // Retry once if validation fails
-    if (!validation.valid) {
-      console.log(`Validation failed (attempt 1), errors: ${validation.errors.join("; ")}`);
-      const retryMsg = `الأسئلة السابقة فيها أخطاء:\n${validation.errors.join("\n")}\n\nأعد توليد الأسئلة مع تصحيح هذه الأخطاء. تذكر: عربي فقط، 4 اختيارات بالضبط، ممنوع "كل ما سبق".`;
-      questions = await generateWithRetry(retryMsg);
+    // ── Retry if too many rejected (less than half passed) ──
+    const minAcceptable = Math.ceil(count * 0.5);
+    if (validation.passed.length < minAcceptable) {
+      // Build retry message with specific rejection reasons
+      const rejectionSummary = validation.rejected
+        .map(r => r.reasons.join("، "))
+        .filter((v, i, a) => a.indexOf(v) === i) // deduplicate
+        .slice(0, 5)
+        .join("\n- ");
+
+      console.log(`Attempt 1: ${validation.passed.length}/${questions.length} passed. Retrying with reasons.`);
+
+      const retryMsg = `الأسئلة السابقة تم رفض ${validation.rejected.length} منها للأسباب التالية:
+- ${rejectionSummary}
+
+أعد توليد ${count} سؤال مع تجنب هذه الأخطاء تماماً.
+تذكر: عربي فقط، 4 اختيارات بالضبط، ممنوع "كل ما سبق"، الكود بدون backticks أو عربي.`;
+
+      questions = await generateWithAI(retryMsg);
       validation = validateQuestions(questions);
 
-      if (!validation.valid) {
-        console.error(`Validation failed after retry: ${validation.errors.join("; ")}`);
+      // If still not enough, return error
+      if (validation.passed.length === 0) {
         return new Response(JSON.stringify({
           error: "فشل في توليد أسئلة صالحة بعد محاولتين",
-          details: validation.errors,
+          rejected_count: validation.rejected.length,
+          rejection_reasons: validation.rejected.map(r => r.reasons).flat(),
         }), {
           status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
 
-    // Add fixed points and clean code_snippet
-    const finalQuestions = questions.map(q => {
-      let snippet = q.code_snippet?.trim() || null;
-      // Remove markdown backticks if AI added them
-      if (snippet) {
-        snippet = snippet.replace(/^```[\w]*\n?/gm, '').replace(/```$/gm, '').trim();
-        if (snippet.length > 2000) snippet = snippet.slice(0, 2000);
-        if (!snippet) snippet = null;
+    // Build response: questions with their warnings, plus rejected report
+    const finalQuestions = validation.passed.map(q => ({
+      question_text_ar: q.question_text_ar,
+      options_ar: q.options_ar,
+      correct_index: q.correct_index,
+      points: FIXED_POINTS,
+      rationale: q.rationale,
+      tags: q.tags,
+      code_snippet: q.code_snippet || undefined,
+      _qid: q._qid,
+    }));
+
+    // Map warnings to match final question order (keyed by _qid)
+    const finalWarnings: Record<string, string[]> = {};
+    for (const q of finalQuestions) {
+      if (q._qid && validation.warnings[q._qid]) {
+        finalWarnings[q._qid] = validation.warnings[q._qid];
       }
-      return {
-        ...q,
-        points: FIXED_POINTS,
-        code_snippet: snippet,
-      };
-    });
+    }
+
+    const rejectedReport = validation.rejected.map(r => ({
+      question_preview: r.question.question_text_ar?.slice(0, 60) + "...",
+      reasons: r.reasons,
+    }));
 
     const duration = Date.now() - startTime;
-    console.log(`generate-quiz: user=${user.id}, session=${sessionId}, questions=${finalQuestions.length}, textSize=${(session.student_pdf_text || "").length}, duration=${duration}ms`);
+    console.log(`generate-quiz: user=${user.id}, session=${sessionId}, passed=${finalQuestions.length}, rejected=${validation.rejected.length}, warnings=${Object.keys(finalWarnings).length}, duration=${duration}ms`);
 
-    return new Response(JSON.stringify({ questions: finalQuestions }), {
+    return new Response(JSON.stringify({
+      questions: finalQuestions,
+      warnings: finalWarnings,
+      rejected: rejectedReport,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

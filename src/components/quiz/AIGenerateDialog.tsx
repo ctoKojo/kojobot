@@ -6,10 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Sparkles, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Sparkles, AlertTriangle, CheckCircle2, Filter, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
-
 import { CodeBlock } from './CodeBlock';
 
 interface GeneratedQuestion {
@@ -20,6 +19,12 @@ interface GeneratedQuestion {
   rationale?: string;
   tags?: string[];
   code_snippet?: string;
+  _qid?: string;
+}
+
+interface RejectedItem {
+  question_preview: string;
+  reasons: string[];
 }
 
 interface Props {
@@ -39,14 +44,21 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
   const [additionalContext, setAdditionalContext] = useState('');
   const [loading, setLoading] = useState(false);
   const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[] | null>(null);
+  const [warnings, setWarnings] = useState<Record<string, string[]>>({});
+  const [rejectedItems, setRejectedItems] = useState<RejectedItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showWarningsOnly, setShowWarningsOnly] = useState(false);
 
   const canGenerate = hasDescription || hasPdfText;
+  const warningCount = Object.keys(warnings).length;
 
   const handleGenerate = async () => {
     setLoading(true);
     setError(null);
     setGeneratedQuestions(null);
+    setWarnings({});
+    setRejectedItems([]);
+    setShowWarningsOnly(false);
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('generate-quiz-questions', {
@@ -58,6 +70,8 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
       if (!data?.questions?.length) throw new Error(isRTL ? 'لم يتم توليد أسئلة' : 'No questions generated');
 
       setGeneratedQuestions(data.questions);
+      setWarnings(data.warnings || {});
+      setRejectedItems(data.rejected || []);
     } catch (err: any) {
       setError(err.message || (isRTL ? 'فشل في توليد الأسئلة' : 'Failed to generate questions'));
     } finally {
@@ -75,8 +89,21 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
 
   const handleReset = () => {
     setGeneratedQuestions(null);
+    setWarnings({});
+    setRejectedItems([]);
     setError(null);
+    setShowWarningsOnly(false);
   };
+
+  const getQuestionWarnings = (q: GeneratedQuestion): string[] => {
+    return (q._qid && warnings[q._qid]) ? warnings[q._qid] : [];
+  };
+
+  const displayedQuestions = generatedQuestions
+    ? showWarningsOnly
+      ? generatedQuestions.filter(q => getQuestionWarnings(q).length > 0)
+      : generatedQuestions
+    : [];
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) { handleReset(); onClose(); } }}>
@@ -100,7 +127,7 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
             {canGenerate && !hasPdfText && (
               <div className="flex items-start gap-2 p-3 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-sm">
                 <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                {isRTL ? 'لا يوجد نص PDF مستخرج. الأسئلة ستُبنى على الوصف فقط. ارفع PDF لجودة أعلى.' : 'No PDF text extracted. Questions will be based on description only. Upload a PDF for better quality.'}
+                {isRTL ? 'لا يوجد نص PDF مستخرج. الأسئلة ستُبنى على الوصف فقط.' : 'No PDF text. Questions based on description only.'}
               </div>
             )}
 
@@ -147,7 +174,7 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
                 onChange={e => setAdditionalContext(e.target.value)}
                 maxLength={500}
                 rows={2}
-                placeholder={isRTL ? 'ملاحظات إضافية للمساعدة في توليد أسئلة أدق...' : 'Additional notes to help generate better questions...'}
+                placeholder={isRTL ? 'ملاحظات إضافية...' : 'Additional notes...'}
                 dir="rtl"
               />
               <p className="text-xs text-muted-foreground mt-1 text-end">{additionalContext.length}/500</p>
@@ -167,31 +194,89 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-primary">
-              <CheckCircle2 className="h-4 w-4" />
-              {isRTL ? `تم توليد ${generatedQuestions.length} سؤال` : `${generatedQuestions.length} questions generated`}
+            {/* Summary bar */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 text-sm text-primary">
+                <CheckCircle2 className="h-4 w-4" />
+                {isRTL ? `${generatedQuestions.length} سؤال` : `${generatedQuestions.length} questions`}
+              </div>
+              {warningCount > 0 && (
+                <Badge variant="outline" className="text-amber-600 border-amber-300 gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  {isRTL ? `${warningCount} تحذير` : `${warningCount} warnings`}
+                </Badge>
+              )}
+              {rejectedItems.length > 0 && (
+                <Badge variant="outline" className="text-destructive border-destructive/30 gap-1">
+                  <XCircle className="h-3 w-3" />
+                  {isRTL ? `${rejectedItems.length} مستبعد` : `${rejectedItems.length} rejected`}
+                </Badge>
+              )}
             </div>
 
-            {/* Preview */}
-            <div className="max-h-[400px] overflow-y-auto space-y-3">
-              {generatedQuestions.map((q, i) => (
-                <div key={i} className="border rounded-lg p-3 text-sm space-y-2">
-                  <p className="font-medium" dir="rtl">
-                    <span className="text-muted-foreground ml-1">{i + 1}.</span> {q.question_text_ar}
+            {/* Rejected report */}
+            {rejectedItems.length > 0 && (
+              <div className="p-3 rounded-md bg-destructive/5 border border-destructive/20 text-sm space-y-1">
+                <p className="font-medium text-destructive text-xs">
+                  {isRTL ? `تم استبعاد ${rejectedItems.length} سؤال:` : `${rejectedItems.length} questions rejected:`}
+                </p>
+                {rejectedItems.map((r, i) => (
+                  <p key={i} className="text-xs text-muted-foreground" dir="rtl">
+                    • {r.question_preview} — {r.reasons.join('، ')}
                   </p>
-                  {q.code_snippet && <CodeBlock code={q.code_snippet} className="my-2 text-xs" />}
-                  <div className="grid grid-cols-2 gap-1.5" dir="rtl">
-                    {q.options_ar.map((opt, j) => (
-                      <div key={j} className={`px-2 py-1 rounded text-xs ${j === q.correct_index ? 'bg-primary/10 text-primary font-medium border border-primary/30' : 'bg-muted/50'}`}>
-                        {opt}
+                ))}
+              </div>
+            )}
+
+            {/* Filter toggle */}
+            {warningCount > 0 && (
+              <Button
+                variant={showWarningsOnly ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setShowWarningsOnly(!showWarningsOnly)}
+                className="gap-1.5 text-xs"
+              >
+                <Filter className="h-3 w-3" />
+                {isRTL
+                  ? showWarningsOnly ? 'عرض الكل' : 'عرض التحذيرات فقط'
+                  : showWarningsOnly ? 'Show all' : 'Show warnings only'}
+              </Button>
+            )}
+
+            {/* Questions preview */}
+            <div className="max-h-[400px] overflow-y-auto space-y-3">
+              {displayedQuestions.map((q, i) => {
+                const qWarnings = getQuestionWarnings(q);
+                const originalIndex = generatedQuestions!.indexOf(q);
+                return (
+                  <div key={q._qid || i} className={`border rounded-lg p-3 text-sm space-y-2 ${qWarnings.length > 0 ? 'border-amber-300 bg-amber-50/50 dark:bg-amber-950/20' : ''}`}>
+                    <p className="font-medium" dir="rtl">
+                      <span className="text-muted-foreground ml-1">{originalIndex + 1}.</span> {q.question_text_ar}
+                    </p>
+                    {q.code_snippet && <CodeBlock code={q.code_snippet} className="my-2 text-xs" />}
+                    <div className="grid grid-cols-2 gap-1.5" dir="rtl">
+                      {q.options_ar.map((opt, j) => (
+                        <div key={j} className={`px-2 py-1 rounded text-xs ${j === q.correct_index ? 'bg-primary/10 text-primary font-medium border border-primary/30' : 'bg-muted/50'}`}>
+                          {opt}
+                        </div>
+                      ))}
+                    </div>
+                    {q.rationale && (
+                      <p className="text-xs text-muted-foreground" dir="rtl">💡 {q.rationale}</p>
+                    )}
+                    {qWarnings.length > 0 && (
+                      <div className="flex flex-col gap-1 mt-1">
+                        {qWarnings.map((w, wi) => (
+                          <div key={wi} className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                            <span dir="rtl">{w}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                  {q.rationale && (
-                    <p className="text-xs text-muted-foreground" dir="rtl">💡 {q.rationale}</p>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <DialogFooter className="gap-2">
