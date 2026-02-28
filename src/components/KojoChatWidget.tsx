@@ -254,9 +254,9 @@ export function KojoChatWidget() {
           {/* Messages */}
           <ScrollArea className="flex-1 px-3 py-2" ref={scrollRef as any}>
             {messages.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground py-12">
+              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground py-12" dir="rtl">
                 <MessageCircle className="h-10 w-10 mb-3 opacity-40" />
-                <p className="text-sm">
+                <p className="text-sm whitespace-pre-line">
                   {isRTL ? 'أهلاً! أنا Kojo، مساعدك التعليمي 🤖\nاسألني أي سؤال عن المنهج!' : 'Hi! I\'m Kojo, your learning assistant 🤖\nAsk me anything about the curriculum!'}
                 </p>
               </div>
