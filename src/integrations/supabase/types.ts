@@ -390,6 +390,75 @@ export type Database = {
           },
         ]
       }
+      chatbot_rate_limits: {
+        Row: {
+          daily_count: number
+          daily_reset_at: string
+          id: string
+          minute_count: number
+          minute_reset_at: string
+          student_id: string
+        }
+        Insert: {
+          daily_count?: number
+          daily_reset_at?: string
+          id?: string
+          minute_count?: number
+          minute_reset_at?: string
+          student_id: string
+        }
+        Update: {
+          daily_count?: number
+          daily_reset_at?: string
+          id?: string
+          minute_count?: number
+          minute_reset_at?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
+      chatbot_reports: {
+        Row: {
+          context_messages: Json | null
+          conversation_id: string
+          created_at: string
+          id: string
+          reported_message_id: string
+          student_id: string
+        }
+        Insert: {
+          context_messages?: Json | null
+          conversation_id: string
+          created_at?: string
+          id?: string
+          reported_message_id: string
+          student_id: string
+        }
+        Update: {
+          context_messages?: Json | null
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          reported_message_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_reports_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chatbot_reports_reported_message_id_fkey"
+            columns: ["reported_message_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_access_rules: {
         Row: {
           attendance_mode: string
@@ -3106,6 +3175,10 @@ export type Database = {
       }
       assign_subscription_dates_bulk: {
         Args: { p_group_id: string }
+        Returns: Json
+      }
+      check_and_increment_chatbot_rate: {
+        Args: { p_student_id: string }
         Returns: Json
       }
       clone_curriculum: {

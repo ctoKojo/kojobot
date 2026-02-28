@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare } from 'lucide-react';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
@@ -24,6 +24,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+const KojoChatWidget = lazy(() => import('@/components/KojoChatWidget').then(m => ({ default: m.KojoChatWidget })));
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -190,6 +192,11 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             </div>
           </main>
         </SidebarInset>
+        {role === 'student' && (
+          <Suspense fallback={null}>
+            <KojoChatWidget />
+          </Suspense>
+        )}
       </div>
     </SidebarProvider>
   );

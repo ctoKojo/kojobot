@@ -24,6 +24,9 @@ verify_jwt = false
 [functions.extract-pdf-text]
 verify_jwt = false
 
+[functions.chat-with-kojo]
+verify_jwt = false
+
 [functions.generate-quiz-questions]
 verify_jwt = false
 
