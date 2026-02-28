@@ -38,9 +38,26 @@ const TECH_TERMS_WHITELIST = new Set([
   "add", "remove", "insert", "append", "delete", "update", "get", "len", "length", "size", "count",
   "red", "green", "blue", "yellow", "white", "black",
   "math", "science", "arabic",
-  "ahmed", "sara", "ali", "omar", "mona",
+  "ahmed", "sara", "ali", "omar", "mona", "hassan", "leila", "youssef", "kareem", "faris", "mazen", "mohamed",
   "br", "hr", "div", "span", "p", "img", "src", "href",
   "hello", "world", "hi", "ok", "yes", "no",
+  // Common nouns often used as sample data in lists/arrays
+  "car", "cars", "bike", "bikes", "plane", "planes", "bus", "train",
+  "dog", "dogs", "cat", "cats", "mouse", "bird", "fish", "rabbit", "animal",
+  "cup", "plate", "spoon", "fork", "knife", "table", "chair",
+  "apple", "banana", "orange", "grape", "lemon", "mango", "fruit",
+  "book", "books", "pen", "pencil", "paper", "eraser", "ruler",
+  "game", "games", "movie", "movies", "song", "player", "players", "team",
+  "pizza", "cake", "milk", "water", "juice", "food", "drink",
+  "shirt", "shoe", "shoes", "hat", "bag", "box",
+  "house", "school", "park", "door", "window", "room",
+  "mother", "father", "brother", "sister", "friend", "teacher", "student",
+  "day", "week", "month", "year", "time", "date",
+  "big", "small", "fast", "slow", "hot", "cold", "old", "tall", "short",
+  "bmw", "mercedes", "audi", "kia", "toyota",
+  "history", "english", "art", "music", "sport", "sports",
+  "total", "result", "answer", "score", "point", "points", "level",
+  "message", "info", "warning", "success", "fail", "pass", "test",
   "max", "min", "sum", "sort", "range", "map", "filter",
   "file", "open", "close", "read", "write", "save",
   "start", "stop", "run", "end", "next", "back",
@@ -90,10 +107,10 @@ function validateQuestions(questions: GeneratedQuestion[]): { valid: boolean; er
     }
 
     // Language check: ensure primarily Arabic with only whitelisted English terms
-    const allText = q.question_text_ar + " " + q.options_ar.join(" ");
-    const englishWords = allText.match(/[a-zA-Z]{2,}/g) || []; // ignore single letters
+    const questionAndOptionsText = q.question_text_ar + " " + q.options_ar.join(" ");
+    const englishWords = questionAndOptionsText.match(/[a-zA-Z]{2,}/g) || [];
     const nonWhitelisted = englishWords.filter(w => !TECH_TERMS_WHITELIST.has(w.toLowerCase()));
-    if (nonWhitelisted.length > 6) {
+    if (nonWhitelisted.length > 10) {
       errors.push(`Q${qNum}: Too many non-technical English words: ${nonWhitelisted.slice(0, 5).join(", ")}`);
     }
 
@@ -108,8 +125,9 @@ function validateQuestions(questions: GeneratedQuestion[]): { valid: boolean; er
     // Validate: no easily eliminable options (check for very short options vs others)
     const optLengths = q.options_ar.map((o: string) => o.trim().length);
     const avgLen = optLengths.reduce((a: number, b: number) => a + b, 0) / 4;
-    const tooShort = optLengths.filter((l: number) => l < avgLen * 0.3);
-    if (tooShort.length >= 2) {
+    // Only flag if 3+ options are very short compared to average (very extreme cases)
+    const tooShort = optLengths.filter((l: number) => l < avgLen * 0.2);
+    if (tooShort.length >= 3) {
       errors.push(`Q${qNum}: Options have very uneven lengths, suggesting easily eliminable answers`);
     }
   }
