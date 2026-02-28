@@ -439,21 +439,20 @@ serve(async (req) => {
     });
 
     if (!aiResponse.ok) {
-      const errStatus = aiResponse.status;
-      if (errStatus === 429) {
+      const errText = await aiResponse.text();
+      console.error("AI gateway error:", aiResponse.status, errText);
+      if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ error: "AI rate limited, try again later" }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (errStatus === 402) {
+      if (aiResponse.status === 402) {
         return new Response(JSON.stringify({ error: "AI credits exhausted" }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errText = await aiResponse.text();
-      console.error("AI gateway error:", errStatus, errText);
       return new Response(JSON.stringify({ error: "AI service error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -461,7 +460,13 @@ serve(async (req) => {
     }
 
     const aiData = await aiResponse.json();
-    let assistantContent = aiData.choices?.[0]?.message?.content || "عذراً، مقدرتش أساعدك دلوقتي. حاول تاني.";
+    console.log("AI response keys:", Object.keys(aiData), "choices:", aiData.choices?.length);
+    
+    const rawContent = aiData.choices?.[0]?.message?.content;
+    if (!rawContent) {
+      console.error("AI returned empty content. Full response:", JSON.stringify(aiData).slice(0, 1000));
+    }
+    let assistantContent = rawContent || "عذراً، مقدرتش أساعدك دلوقتي. حاول تاني.";
 
     // ---- Enforcement layer ----
     const { content: enforcedContent, safetyFlags } = enforceResponse(assistantContent);
