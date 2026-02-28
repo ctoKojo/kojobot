@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { logStart, logSubmit, logComplete } from '@/lib/activityLogger';
+import { CodeBlock } from '@/components/quiz/CodeBlock';
 
 interface Question {
   id: string;
@@ -24,6 +25,7 @@ interface Question {
   points: number;
   order_index: number;
   image_url?: string | null;
+  code_snippet?: string | null;
 }
 
 interface QuizAssignment {
@@ -457,6 +459,12 @@ export default function TakeQuiz() {
                     alt={`Question ${currentIndex + 1}`}
                     className="w-full max-h-80 object-contain bg-muted"
                   />
+                </div>
+              )}
+              {/* Code Snippet */}
+              {currentQuestion.code_snippet && (
+                <div className="mt-4">
+                  <CodeBlock code={currentQuestion.code_snippet} />
                 </div>
               )}
             </CardHeader>

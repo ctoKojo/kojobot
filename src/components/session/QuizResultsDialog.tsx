@@ -10,6 +10,7 @@ import { Eye, CheckCircle2, XCircle, Clock, CircleDashed, ArrowLeft, ArrowRight 
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from '@/hooks/use-toast';
+import { CodeBlock } from '@/components/quiz/CodeBlock';
 
 interface StudentQuizResult {
   student_id: string;
@@ -34,6 +35,7 @@ interface QuestionDetail {
   is_correct: boolean;
   points: number;
   image_url: string | null;
+  code_snippet: string | null;
 }
 
 interface QuizResultsDialogProps {
@@ -141,7 +143,7 @@ export function QuizResultsDialog({
       // Fetch quiz questions
       const { data: questions } = await supabase
         .from('quiz_questions')
-        .select('id, question_text, question_text_ar, options, correct_answer, points, image_url')
+        .select('id, question_text, question_text_ar, options, correct_answer, points, image_url, code_snippet')
         .eq('quiz_id', quizId)
         .order('order_index', { ascending: true });
 
@@ -160,6 +162,7 @@ export function QuizResultsDialog({
             is_correct: studentAnswer === q.correct_answer,
             points: q.points,
             image_url: q.image_url,
+            code_snippet: (q as any).code_snippet || null,
           };
         });
 
@@ -369,6 +372,10 @@ export function QuizResultsDialog({
                       alt="Question"
                       className="max-h-32 rounded-lg mb-3"
                     />
+                  )}
+
+                  {question.code_snippet && (
+                    <CodeBlock code={question.code_snippet} className="mb-3" />
                   )}
 
                   <div className="space-y-2">

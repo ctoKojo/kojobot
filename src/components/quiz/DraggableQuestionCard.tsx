@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { QuestionImageUpload } from './QuestionImageUpload';
+import { EditableCodeBlock } from './EditableCodeBlock';
 
 interface SimplifiedQuestion {
   id?: string;
@@ -18,6 +19,7 @@ interface SimplifiedQuestion {
   points: number;
   order_index: number;
   image_url?: string;
+  code_snippet?: string;
 }
 
 interface DraggableQuestionCardProps {
@@ -107,6 +109,15 @@ export function DraggableQuestionCard({
           onImageChange={(url) => onUpdate({ image_url: url || undefined })}
           isRTL={isRTL}
         />
+
+        {/* Code Snippet */}
+        {question.code_snippet !== undefined && (
+          <EditableCodeBlock
+            code={question.code_snippet || ''}
+            onChange={(val) => onUpdate({ code_snippet: val })}
+            isRTL={isRTL}
+          />
+        )}
 
         {/* Question Text - Single Field */}
         <div className="space-y-2">
