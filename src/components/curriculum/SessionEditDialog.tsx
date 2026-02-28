@@ -206,7 +206,7 @@ export function SessionEditDialog({ session, onClose }: Props) {
       setExtractingText(true);
       try {
         // Save the path first via RPC
-        await supabase.rpc('update_curriculum_session', {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('update_curriculum_session', {
           p_id: session.id,
           p_expected_updated_at: session.updated_at,
           p_data: {
@@ -215,6 +215,15 @@ export function SessionEditDialog({ session, onClose }: Props) {
             student_pdf_size: file.size,
           },
         });
+        
+        if (rpcError) throw rpcError;
+        const rpcData = rpcResult as any;
+        if (rpcData && !rpcData.updated) {
+          // Conflict: refresh session data so next save uses fresh updated_at
+          toast.error(isRTL ? 'تعارض في البيانات. أعد فتح السيشن وحاول مرة أخرى.' : 'Data conflict. Please reopen session and try again.');
+          setExtractingText(false);
+          return;
+        }
         
         const { data: extractResult, error: extractError } = await supabase.functions.invoke('extract-pdf-text', {
           body: { sessionId: session.id },
