@@ -441,9 +441,17 @@ serve(async (req) => {
         messages: aiMessages,
       },
       {
-        model: "openai/gpt-5-mini",
+        model: "google/gemini-2.5-flash-lite",
         tag: "fallback_compact",
         messages: compactMessages,
+      },
+      {
+        model: "google/gemini-2.5-flash",
+        tag: "history_reset",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userMessage },
+        ],
       },
     ];
 
