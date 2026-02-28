@@ -172,11 +172,20 @@ export function KojoChatWidget() {
     }
   };
 
-  const handleNewConversation = () => {
+  const handleNewConversation = async () => {
+    const oldConvId = conversationId;
     setConversationId(null);
     setIsNewChat(true);
     setMessages([]);
     setInput('');
+
+    // Delete old conversation from database
+    if (oldConvId) {
+      // Delete messages first (FK dependency), then conversation
+      await supabase.from('chatbot_messages').delete().eq('conversation_id', oldConvId);
+      await supabase.from('chatbot_reports').delete().eq('conversation_id', oldConvId);
+      await supabase.from('chatbot_conversations').delete().eq('id', oldConvId);
+    }
   };
 
   const handleReport = async (msg: ChatMessage, idx: number) => {
