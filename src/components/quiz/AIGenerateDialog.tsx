@@ -256,7 +256,7 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
                     {q.code_snippet && <CodeBlock code={q.code_snippet} className="my-2 text-xs" />}
                     <div className="grid grid-cols-2 gap-1.5" dir="rtl">
                       {q.options_ar.map((opt, j) => (
-                        <div key={j} className={`px-2 py-1 rounded text-xs ${j === q.correct_index ? 'bg-primary/10 text-primary font-medium border border-primary/30' : 'bg-muted/50'}`}>
+                        <div key={j} dir="rtl" style={{ unicodeBidi: 'plaintext' }} className={`px-2 py-1 rounded text-xs text-right ${j === q.correct_index ? 'bg-primary/10 text-primary font-medium border border-primary/30' : 'bg-muted/50'}`}>
                           {opt}
                         </div>
                       ))}
