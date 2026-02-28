@@ -170,6 +170,7 @@ export default function StudentProfile() {
         .from('quiz_submissions')
         .select('*, quiz_assignments(quizzes(title, title_ar))')
         .eq('student_id', studentId)
+        .eq('is_auto_generated', false)
         .order('submitted_at', { ascending: false });
 
       // Fetch assignment submissions
@@ -177,6 +178,7 @@ export default function StudentProfile() {
         .from('assignment_submissions')
         .select('*, assignments(title, title_ar, max_score)')
         .eq('student_id', studentId)
+        .eq('is_auto_generated', false)
         .order('submitted_at', { ascending: false });
 
       // Fetch warnings

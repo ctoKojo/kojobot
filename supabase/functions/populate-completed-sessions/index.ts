@@ -211,6 +211,7 @@ Deno.serve(async (req) => {
             passing_score: 60,
             created_by: group.instructor_id,
             is_active: true,
+            is_auto_generated: true,
           })
           .select('id')
           .single()
@@ -243,6 +244,7 @@ Deno.serve(async (req) => {
             session_id: session.id,
             assigned_by: group.instructor_id,
             is_active: true,
+            is_auto_generated: true,
             start_time: sessionDate.toISOString(),
             due_date: dueDate.toISOString(),
           })
@@ -280,6 +282,7 @@ Deno.serve(async (req) => {
               score: 10,
               max_score: 10,
               percentage: 100,
+              is_auto_generated: true,
               started_at: sessionDate.toISOString(),
               submitted_at: sessionDate.toISOString(),
               graded_at: sessionDate.toISOString(),
@@ -319,6 +322,7 @@ Deno.serve(async (req) => {
             due_date: dueDate.toISOString(),
             max_score: 100,
             is_active: true,
+            is_auto_generated: true,
           })
           .select('id')
           .single()
@@ -353,6 +357,7 @@ Deno.serve(async (req) => {
               content: 'Completed all exercises',
               status: 'graded',
               score: 100,
+              is_auto_generated: true,
               submitted_at: sessionDate.toISOString(),
               graded_at: dueDate.toISOString(),
               graded_by: group.instructor_id,

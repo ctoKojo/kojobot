@@ -155,6 +155,7 @@ export default function GroupDetails() {
         .from('assignments')
         .select('*')
         .eq('group_id', groupId)
+        .eq('is_auto_generated', false)
         .order('due_date', { ascending: false });
 
       // Fetch quiz assignments for this group
@@ -162,6 +163,7 @@ export default function GroupDetails() {
         .from('quiz_assignments')
         .select('*, quizzes(title, title_ar, duration_minutes)')
         .eq('group_id', groupId)
+        .eq('is_auto_generated', false)
         .order('created_at', { ascending: false });
 
       setData({

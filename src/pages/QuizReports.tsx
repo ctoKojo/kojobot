@@ -80,7 +80,8 @@ export default function QuizReportsPage() {
       const { data: quizzesData } = await supabase
         .from('quizzes')
         .select('id, title, title_ar')
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .eq('is_auto_generated', false);
 
       setQuizzes(quizzesData || []);
 
@@ -97,6 +98,7 @@ export default function QuizReportsPage() {
           student_id,
           quiz_assignment_id
         `)
+        .eq('is_auto_generated', false)
         .order('submitted_at', { ascending: false });
 
       if (submissionsData && submissionsData.length > 0) {

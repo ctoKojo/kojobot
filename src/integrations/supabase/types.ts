@@ -94,6 +94,7 @@ export type Database = {
           graded_at: string | null
           graded_by: string | null
           id: string
+          is_auto_generated: boolean
           score: number | null
           status: string
           student_id: string
@@ -109,6 +110,7 @@ export type Database = {
           graded_at?: string | null
           graded_by?: string | null
           id?: string
+          is_auto_generated?: boolean
           score?: number | null
           status?: string
           student_id: string
@@ -124,6 +126,7 @@ export type Database = {
           graded_at?: string | null
           graded_by?: string | null
           id?: string
+          is_auto_generated?: boolean
           score?: number | null
           status?: string
           student_id?: string
@@ -159,6 +162,7 @@ export type Database = {
           group_id: string | null
           id: string
           is_active: boolean | null
+          is_auto_generated: boolean
           max_score: number | null
           session_id: string | null
           student_id: string | null
@@ -178,6 +182,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           is_active?: boolean | null
+          is_auto_generated?: boolean
           max_score?: number | null
           session_id?: string | null
           student_id?: string | null
@@ -197,6 +202,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           is_active?: boolean | null
+          is_auto_generated?: boolean
           max_score?: number | null
           session_id?: string | null
           student_id?: string | null
@@ -1744,6 +1750,7 @@ export type Database = {
           group_id: string | null
           id: string
           is_active: boolean | null
+          is_auto_generated: boolean
           quiz_id: string
           session_id: string | null
           start_time: string | null
@@ -1757,6 +1764,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           is_active?: boolean | null
+          is_auto_generated?: boolean
           quiz_id: string
           session_id?: string | null
           start_time?: string | null
@@ -1770,6 +1778,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           is_active?: boolean | null
+          is_auto_generated?: boolean
           quiz_id?: string
           session_id?: string | null
           start_time?: string | null
@@ -1865,6 +1874,7 @@ export type Database = {
           graded_at: string | null
           graded_by: string | null
           id: string
+          is_auto_generated: boolean
           max_score: number | null
           percentage: number | null
           quiz_assignment_id: string
@@ -1879,6 +1889,7 @@ export type Database = {
           graded_at?: string | null
           graded_by?: string | null
           id?: string
+          is_auto_generated?: boolean
           max_score?: number | null
           percentage?: number | null
           quiz_assignment_id: string
@@ -1893,6 +1904,7 @@ export type Database = {
           graded_at?: string | null
           graded_by?: string | null
           id?: string
+          is_auto_generated?: boolean
           max_score?: number | null
           percentage?: number | null
           quiz_assignment_id?: string
@@ -1929,6 +1941,7 @@ export type Database = {
           duration_minutes: number
           id: string
           is_active: boolean | null
+          is_auto_generated: boolean
           level_id: string | null
           passing_score: number
           title: string
@@ -1944,6 +1957,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           is_active?: boolean | null
+          is_auto_generated?: boolean
           level_id?: string | null
           passing_score?: number
           title: string
@@ -1959,6 +1973,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           is_active?: boolean | null
+          is_auto_generated?: boolean
           level_id?: string | null
           passing_score?: number
           title?: string

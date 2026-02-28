@@ -241,7 +241,7 @@ export default function InstructorProfile() {
           .slice(-30);
 
         // Fetch quizzes
-        const { data: quizzes } = await supabase.from('quizzes').select('*').eq('created_by', instructorId).order('created_at', { ascending: false }).limit(10);
+        const { data: quizzes } = await supabase.from('quizzes').select('*').eq('created_by', instructorId).eq('is_auto_generated', false).order('created_at', { ascending: false }).limit(10);
         const quizIds = (quizzes || []).map(q => q.id);
 
         const { data: quizAssignments } = await supabase
@@ -290,7 +290,7 @@ export default function InstructorProfile() {
         };
 
         // Fetch assignments
-        const { data: assignments } = await supabase.from('assignments').select('*').eq('assigned_by', instructorId).order('created_at', { ascending: false }).limit(10);
+        const { data: assignments } = await supabase.from('assignments').select('*').eq('assigned_by', instructorId).eq('is_auto_generated', false).order('created_at', { ascending: false }).limit(10);
         const instructorAssignmentIds = (assignments || []).map(a => a.id);
 
         const { data: assignmentSubmissions } = await supabase

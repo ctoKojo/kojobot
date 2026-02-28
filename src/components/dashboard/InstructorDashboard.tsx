@@ -103,7 +103,8 @@ export function InstructorDashboard() {
       const { data: instructorAssignments } = await supabase
         .from('assignments')
         .select('id')
-        .eq('assigned_by', user?.id);
+        .eq('assigned_by', user?.id)
+        .eq('is_auto_generated', false);
       
       let pendingSubmissionsCount = 0;
       if (instructorAssignments && instructorAssignments.length > 0) {
