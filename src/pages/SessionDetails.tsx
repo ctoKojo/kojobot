@@ -368,6 +368,7 @@ export default function SessionDetails() {
         `)
         .eq('session_id', sessionId)
         .eq('is_active', true)
+        .eq('is_auto_generated', false)
         .maybeSingle();
       
       setQuizAssignment(quizAssignmentData);
@@ -388,6 +389,7 @@ export default function SessionDetails() {
         .select('id, title, title_ar, description, description_ar, max_score, due_date')
         .eq('session_id', sessionId)
         .eq('is_active', true)
+        .eq('is_auto_generated', false)
         .maybeSingle();
       
       setAssignment(assignmentData);

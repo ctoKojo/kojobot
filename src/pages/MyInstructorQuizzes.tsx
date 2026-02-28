@@ -113,6 +113,7 @@ export default function MyInstructorQuizzes() {
         `)
         .eq('assigned_by', user.id)
         .eq('is_active', true)
+        .eq('is_auto_generated', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

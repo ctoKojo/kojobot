@@ -115,6 +115,7 @@ export function StudentDashboard() {
         .from('quiz_assignments')
         .select('*, quizzes(title, title_ar, duration_minutes)')
         .eq('is_active', true)
+        .eq('is_auto_generated', false)
         .or(quizFilter)
         .limit(5);
 
@@ -132,6 +133,7 @@ export function StudentDashboard() {
         .from('assignments')
         .select('*')
         .eq('is_active', true)
+        .eq('is_auto_generated', false)
         .or(quizFilter)
         .gte('due_date', new Date().toISOString())
         .limit(5);

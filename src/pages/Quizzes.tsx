@@ -65,7 +65,7 @@ export default function QuizzesPage() {
   const fetchData = async () => {
     try {
       const [quizzesRes, levelsRes] = await Promise.all([
-        supabase.from('quizzes').select('*').order('created_at', { ascending: false }),
+        supabase.from('quizzes').select('*').eq('is_auto_generated', false).order('created_at', { ascending: false }),
         supabase.from('levels').select('id, name, name_ar').eq('is_active', true),
       ]);
 

@@ -193,6 +193,7 @@ export default function MonthlyReports() {
           .from('quiz_submissions')
           .select('*')
           .in('student_id', studentIds)
+          .eq('is_auto_generated', false)
           .gte('submitted_at', startDate.toISOString())
           .lte('submitted_at', endDate.toISOString())
           .eq('status', 'completed');
@@ -214,6 +215,7 @@ export default function MonthlyReports() {
           .from('assignment_submissions')
           .select('*')
           .in('student_id', studentIds)
+          .eq('is_auto_generated', false)
           .gte('submitted_at', startDate.toISOString())
           .lte('submitted_at', endDate.toISOString());
         assignmentData = data || [];
@@ -320,6 +322,7 @@ export default function MonthlyReports() {
           .from('quiz_submissions')
           .select('percentage')
           .in('student_id', studentIds)
+          .eq('is_auto_generated', false)
           .gte('submitted_at', startDate.toISOString())
           .lte('submitted_at', endDate.toISOString())
           .eq('status', 'completed');
@@ -368,6 +371,7 @@ export default function MonthlyReports() {
         .from('quiz_submissions')
         .select('percentage')
         .eq('student_id', profile.user_id)
+        .eq('is_auto_generated', false)
         .eq('status', 'completed');
       
       const quizAvg = quizzes && quizzes.length > 0
@@ -379,6 +383,7 @@ export default function MonthlyReports() {
         .from('assignment_submissions')
         .select('score')
         .eq('student_id', profile.user_id)
+        .eq('is_auto_generated', false)
         .not('score', 'is', null);
       
       const assignmentAvg = assignments && assignments.length > 0

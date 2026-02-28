@@ -71,6 +71,7 @@ export default function MyQuizzes() {
         .from('quiz_assignments')
         .select('*, quizzes(id, title, title_ar, description, description_ar, duration_minutes)')
         .eq('is_active', true)
+        .eq('is_auto_generated', false)
         .order('start_time', { ascending: true });
 
       if (groupIds.length > 0) {

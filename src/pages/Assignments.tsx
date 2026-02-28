@@ -65,7 +65,7 @@ export default function AssignmentsPage() {
   const fetchData = async () => {
     try {
       const [assignmentsRes, groupsRes] = await Promise.all([
-        supabase.from('assignments').select('*, sessions(session_number, group_id)').order('due_date', { ascending: false }),
+        supabase.from('assignments').select('*, sessions(session_number, group_id)').eq('is_auto_generated', false).order('due_date', { ascending: false }),
         supabase.from('groups').select('id, name, name_ar, status').eq('is_active', true).neq('status', 'frozen'),
       ]);
 

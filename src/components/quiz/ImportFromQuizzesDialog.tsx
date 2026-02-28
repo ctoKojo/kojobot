@@ -87,6 +87,7 @@ export function ImportFromQuizzesDialog({
         `)
         .neq('id', currentQuizId || '')
         .eq('is_active', true)
+        .eq('is_auto_generated', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
