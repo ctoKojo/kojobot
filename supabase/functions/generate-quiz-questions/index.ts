@@ -13,6 +13,7 @@ const GENERATE_RATE_LIMIT = 5;
 
 // Technical terms whitelist (allowed in Arabic text)
 const TECH_TERMS_WHITELIST = new Set([
+  // Programming keywords & concepts
   "variable", "variables", "loop", "loops", "for", "while", "if", "else", "elif",
   "function", "functions", "def", "return", "class", "object", "objects",
   "array", "arrays", "list", "lists", "string", "strings", "integer", "int", "float", "boolean", "bool",
@@ -31,6 +32,20 @@ const TECH_TERMS_WHITELIST = new Set([
   "framework", "method", "methods", "property", "properties", "attribute",
   "index", "dictionary", "tuple", "set", "stack", "queue",
   "tinkercad", "microbit", "micro:bit", "raspberry", "pi",
+  // Common code example words (variable names, sample data in code snippets)
+  "x", "y", "z", "a", "b", "c", "d", "i", "j", "n", "my", "new", "name", "age", "num",
+  "items", "fruits", "colors", "numbers", "friends", "subjects", "animals", "cities",
+  "add", "remove", "insert", "append", "delete", "update", "get", "len", "length", "size", "count",
+  "red", "green", "blue", "yellow", "white", "black",
+  "math", "science", "arabic",
+  "ahmed", "sara", "ali", "omar", "mona",
+  "br", "hr", "div", "span", "p", "img", "src", "href",
+  "hello", "world", "hi", "ok", "yes", "no",
+  "max", "min", "sum", "sort", "range", "map", "filter",
+  "file", "open", "close", "read", "write", "save",
+  "start", "stop", "run", "end", "next", "back",
+  "key", "value", "item", "element", "node", "link",
+  "color", "number", "text", "font", "image", "button", "page",
 ]);
 
 interface GeneratedQuestion {
@@ -75,9 +90,9 @@ function validateQuestions(questions: GeneratedQuestion[]): { valid: boolean; er
 
     // Language check: ensure primarily Arabic with only whitelisted English terms
     const allText = q.question_text_ar + " " + q.options_ar.join(" ");
-    const englishWords = allText.match(/[a-zA-Z]+/g) || [];
+    const englishWords = allText.match(/[a-zA-Z]{2,}/g) || []; // ignore single letters
     const nonWhitelisted = englishWords.filter(w => !TECH_TERMS_WHITELIST.has(w.toLowerCase()));
-    if (nonWhitelisted.length > 3) {
+    if (nonWhitelisted.length > 6) {
       errors.push(`Q${qNum}: Too many non-technical English words: ${nonWhitelisted.slice(0, 5).join(", ")}`);
     }
   }
