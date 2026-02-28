@@ -24,6 +24,7 @@ export function KojoChatWidget() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isNewChat, setIsNewChat] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -57,7 +58,7 @@ export function KojoChatWidget() {
 
   // Load last active conversation on first open
   useEffect(() => {
-    if (!isOpen || conversationId || !session?.user?.id) return;
+    if (!isOpen || conversationId || isNewChat || !session?.user?.id) return;
 
     const loadLast = async () => {
       const { data } = await supabase
@@ -75,7 +76,7 @@ export function KojoChatWidget() {
       }
     };
     loadLast();
-  }, [isOpen, conversationId, session?.user?.id, loadConversation]);
+  }, [isOpen, conversationId, isNewChat, session?.user?.id, loadConversation]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading || !session?.access_token) return;
@@ -141,6 +142,7 @@ export function KojoChatWidget() {
 
       if (!conversationId && data.conversationId) {
         setConversationId(data.conversationId);
+        setIsNewChat(false);
       }
 
       setMessages((prev) => [
@@ -167,6 +169,7 @@ export function KojoChatWidget() {
 
   const handleNewConversation = () => {
     setConversationId(null);
+    setIsNewChat(true);
     setMessages([]);
     setInput('');
   };
