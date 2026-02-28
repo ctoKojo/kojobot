@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -34,12 +34,22 @@ interface Props {
   hasDescription: boolean;
   hasPdfText: boolean;
   onQuestionsGenerated: (questions: GeneratedQuestion[]) => void;
+  ageGroupId?: string;
 }
 
-export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, hasPdfText, onQuestionsGenerated }: Props) {
+// Tolerant mapping: min_age range -> age group key
+const mapMinAgeToGroup = (minAge: number): string | null => {
+  if (minAge >= 6 && minAge <= 9) return '6-9';
+  if (minAge >= 10 && minAge <= 13) return '10-13';
+  if (minAge >= 14 && minAge <= 18) return '14-18';
+  return null; // fallback to manual select
+};
+
+export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, hasPdfText, onQuestionsGenerated, ageGroupId }: Props) {
   const { isRTL } = useLanguage();
   const [questionsCount, setQuestionsCount] = useState(10);
   const [ageGroup, setAgeGroup] = useState('10-13');
+  const [ageGroupAutoDetected, setAgeGroupAutoDetected] = useState(false);
   const [difficulty, setDifficulty] = useState('medium');
   const [additionalContext, setAdditionalContext] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,6 +58,34 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
   const [rejectedItems, setRejectedItems] = useState<RejectedItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showWarningsOnly, setShowWarningsOnly] = useState(false);
+
+  // Auto-detect age group from ageGroupId
+  useEffect(() => {
+    if (!ageGroupId) {
+      setAgeGroupAutoDetected(false);
+      return;
+    }
+    const fetchAgeGroup = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('age_groups')
+          .select('min_age, name, name_ar')
+          .eq('id', ageGroupId)
+          .single();
+        if (error || !data) return;
+        const mapped = mapMinAgeToGroup(data.min_age);
+        if (mapped) {
+          setAgeGroup(mapped);
+          setAgeGroupAutoDetected(true);
+        } else {
+          setAgeGroupAutoDetected(false);
+        }
+      } catch {
+        setAgeGroupAutoDetected(false);
+      }
+    };
+    fetchAgeGroup();
+  }, [ageGroupId]);
 
   const canGenerate = hasDescription || hasPdfText;
   const warningCount = Object.keys(warnings).length;
@@ -142,8 +180,15 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
 
             {/* Age Group */}
             <div>
-              <Label className="mb-1.5 block">{isRTL ? 'الفئة العمرية' : 'Age Group'}</Label>
-              <Select value={ageGroup} onValueChange={setAgeGroup}>
+              <Label className="mb-1.5 block">
+                {isRTL ? 'الفئة العمرية' : 'Age Group'}
+                {ageGroupAutoDetected && (
+                  <span className="text-xs text-muted-foreground ms-2">
+                    ({isRTL ? 'محدد تلقائياً من السيشن' : 'Auto-detected from session'})
+                  </span>
+                )}
+              </Label>
+              <Select value={ageGroup} onValueChange={setAgeGroup} disabled={ageGroupAutoDetected}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="6-9">{isRTL ? '6-9 سنوات' : '6-9 years'}</SelectItem>

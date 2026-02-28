@@ -51,7 +51,7 @@ export default function QuizEditor() {
   };
 
   const sessionId = searchParams.get('sessionId') || '';
-
+  const ageGroupId = searchParams.get('ageGroupId') || '';
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<SimplifiedQuestion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -306,6 +306,7 @@ export default function QuizEditor() {
           hasDescription={sessionHasDescription}
           hasPdfText={sessionHasPdfText}
           onQuestionsGenerated={handleAiQuestionsGenerated}
+          ageGroupId={ageGroupId}
         />
       )}
     </DashboardLayout>
