@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw, Bot } from 'lucide-react';
+import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw } from 'lucide-react';
 import { LevelPassedBanner } from '@/components/student/LevelPassedBanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -412,28 +412,8 @@ export function StudentDashboard() {
         </Card>
       </div>
 
-      {/* Ask Kojo Card + Curriculum Progress & Makeup Credits */}
+      {/* Curriculum Progress & Makeup Credits */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
-        {/* Ask Kojo */}
-        <Card 
-          className="cursor-pointer hover:shadow-lg transition-shadow border-primary/20 bg-primary/5"
-          onClick={() => navigate('/kojo')}
-        >
-          <CardContent className="py-6 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Bot className="w-6 h-6 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-lg">
-                {isRTL ? 'اسأل Kojo' : 'Ask Kojo'}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {isRTL ? 'مساعدك التعليمي جاهز يساعدك تفهم الدرس' : 'Your learning assistant is ready to help'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Level Progress */}
         {stats.levelProgress && (
           <Card>

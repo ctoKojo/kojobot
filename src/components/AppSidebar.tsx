@@ -27,7 +27,6 @@ import {
   TrendingUp,
   Briefcase,
   GraduationCap as AcademicCap,
-  Bot,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -189,7 +188,6 @@ export function AppSidebar() {
               { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['student'] },
               { title: isRTL ? 'موادي التعليمية' : 'My Materials', url: '/my-materials', icon: BookMarked, roles: ['student'] },
               { title: isRTL ? 'سيشناتي' : 'My Sessions', url: '/my-sessions', icon: BookOpen, roles: ['student'] },
-              { title: 'Kojo', url: '/kojo', icon: Bot, roles: ['student'] },
               { title: isRTL ? 'الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3, roles: ['student'] },
             ],
           },
