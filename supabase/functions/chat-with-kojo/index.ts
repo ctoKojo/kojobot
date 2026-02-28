@@ -425,48 +425,95 @@ serve(async (req) => {
       });
     }
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: aiMessages,
-        stream: false,
-      }),
-    });
+    const compactMessages = [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...historyMessages.slice(-4),
+    ];
 
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error("AI gateway error:", aiResponse.status, errText);
-      if (aiResponse.status === 429) {
+    const attempts: Array<{
+      model: string;
+      tag: string;
+      messages: Array<{ role: string; content: string }>;
+    }> = [
+      {
+        model: "google/gemini-2.5-flash",
+        tag: "primary_with_rag",
+        messages: aiMessages,
+      },
+      {
+        model: "openai/gpt-5-mini",
+        tag: "fallback_compact",
+        messages: compactMessages,
+      },
+    ];
+
+    let assistantContent = "";
+    let lastErrorStatus: number | null = null;
+    let lastErrorText = "";
+
+    for (const attempt of attempts) {
+      const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: attempt.model,
+          messages: attempt.messages,
+          stream: false,
+          max_tokens: 500,
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        const errText = await aiResponse.text();
+        console.error(`AI gateway error [${attempt.tag}] (${attempt.model}):`, aiResponse.status, errText);
+        lastErrorStatus = aiResponse.status;
+        lastErrorText = errText;
+        continue;
+      }
+
+      const aiData = await aiResponse.json();
+      console.log(
+        `AI response [${attempt.tag}] (${attempt.model}) keys:`,
+        Object.keys(aiData),
+        "choices:",
+        aiData.choices?.length
+      );
+
+      const rawContent = aiData.choices?.[0]?.message?.content;
+      const normalizedContent = typeof rawContent === "string" ? rawContent.trim() : "";
+
+      if (normalizedContent.length > 0) {
+        assistantContent = normalizedContent;
+        break;
+      }
+
+      console.error(
+        `AI returned empty content [${attempt.tag}] (${attempt.model}). Full response:`,
+        JSON.stringify(aiData).slice(0, 1000)
+      );
+    }
+
+    if (!assistantContent) {
+      if (lastErrorStatus === 429) {
         return new Response(JSON.stringify({ error: "AI rate limited, try again later" }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (aiResponse.status === 402) {
+      if (lastErrorStatus === 402) {
         return new Response(JSON.stringify({ error: "AI credits exhausted" }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ error: "AI service error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      if (lastErrorStatus) {
+        console.error("All AI attempts failed. Last error:", lastErrorStatus, lastErrorText);
+      }
+      assistantContent = "عذراً، مقدرتش أساعدك دلوقتي. حاول تاني.";
     }
-
-    const aiData = await aiResponse.json();
-    console.log("AI response keys:", Object.keys(aiData), "choices:", aiData.choices?.length);
-    
-    const rawContent = aiData.choices?.[0]?.message?.content;
-    if (!rawContent) {
-      console.error("AI returned empty content. Full response:", JSON.stringify(aiData).slice(0, 1000));
-    }
-    let assistantContent = rawContent || "عذراً، مقدرتش أساعدك دلوقتي. حاول تاني.";
 
     // ---- Enforcement layer ----
     const { content: enforcedContent, safetyFlags } = enforceResponse(assistantContent);
