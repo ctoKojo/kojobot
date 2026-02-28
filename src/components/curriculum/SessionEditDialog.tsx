@@ -208,7 +208,7 @@ export function SessionEditDialog({ session, onClose }: Props) {
         // Save the path first via RPC
         const { data: rpcResult, error: rpcError } = await supabase.rpc('update_curriculum_session', {
           p_id: session.id,
-          p_expected_updated_at: session.updated_at,
+          p_expected_updated_at: form.updated_at || session.updated_at,
           p_data: {
             student_pdf_path: fileName,
             student_pdf_filename: file.name,
@@ -219,10 +219,13 @@ export function SessionEditDialog({ session, onClose }: Props) {
         if (rpcError) throw rpcError;
         const rpcData = rpcResult as any;
         if (rpcData && !rpcData.updated) {
-          // Conflict: refresh session data so next save uses fresh updated_at
           toast.error(isRTL ? 'تعارض في البيانات. أعد فتح السيشن وحاول مرة أخرى.' : 'Data conflict. Please reopen session and try again.');
           setExtractingText(false);
           return;
+        }
+        // Update local updated_at so subsequent saves don't conflict
+        if (rpcData?.new_updated_at) {
+          setForm(f => ({ ...f, updated_at: rpcData.new_updated_at }));
         }
         
         const { data: extractResult, error: extractError } = await supabase.functions.invoke('extract-pdf-text', {
@@ -328,7 +331,7 @@ export function SessionEditDialog({ session, onClose }: Props) {
 
       const { data, error } = await supabase.rpc('update_curriculum_session', {
         p_id: session.id,
-        p_expected_updated_at: session.updated_at,
+        p_expected_updated_at: form.updated_at || session.updated_at,
         p_data: {
           title: form.title || '',
           title_ar: form.title_ar || '',
