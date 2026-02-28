@@ -10,6 +10,8 @@ import { Loader2, Sparkles, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+import { CodeBlock } from './CodeBlock';
+
 interface GeneratedQuestion {
   question_text_ar: string;
   options_ar: string[];
@@ -17,6 +19,7 @@ interface GeneratedQuestion {
   points: number;
   rationale?: string;
   tags?: string[];
+  code_snippet?: string;
 }
 
 interface Props {
@@ -176,6 +179,7 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
                   <p className="font-medium" dir="rtl">
                     <span className="text-muted-foreground ml-1">{i + 1}.</span> {q.question_text_ar}
                   </p>
+                  {q.code_snippet && <CodeBlock code={q.code_snippet} className="my-2 text-xs" />}
                   <div className="grid grid-cols-2 gap-1.5" dir="rtl">
                     {q.options_ar.map((opt, j) => (
                       <div key={j} className={`px-2 py-1 rounded text-xs ${j === q.correct_index ? 'bg-primary/10 text-primary font-medium border border-primary/30' : 'bg-muted/50'}`}>

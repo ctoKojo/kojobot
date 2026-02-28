@@ -54,6 +54,7 @@ interface GeneratedQuestion {
   correct_index: number;
   rationale?: string;
   tags?: string[];
+  code_snippet?: string;
 }
 
 function validateQuestions(questions: GeneratedQuestion[]): { valid: boolean; errors: string[] } {
@@ -204,7 +205,7 @@ serve(async (req) => {
       "14-18": "مراهقين من 14 إلى 18 سنة - يمكن استخدام مصطلحات تقنية أكثر",
     };
 
-    const systemPrompt = `أنت مدرس متخصص في تعليم الأطفال البرمجة والتكنولوجيا.
+const systemPrompt = `أنت مدرس متخصص في تعليم الأطفال البرمجة والتكنولوجيا.
 
 قواعد صارمة:
 1. اكتب كل الأسئلة والاختيارات بالعربي فقط
@@ -218,6 +219,8 @@ serve(async (req) => {
 9. أطوال الاختيارات تكون متقاربة
 10. نوّع الأسئلة: فهم + تطبيق + تحليل
 11. ممنوع أسئلة الحفظ الأعمى فقط
+12. إذا كان السؤال يتعلق بكود برمجي أو يحتاج عرض كود، ضع الكود في حقل code_snippet المنفصل. ممنوع وضع الكود داخل نص السؤال question_text_ar. الكود يكون raw بدون markdown أو backticks.
+13. حتى لو الكود سطر واحد فقط، يجب وضعه في code_snippet وليس في نص السؤال.
 
 الفئة العمرية: ${ageGroupMap[ageGroup] || ageGroupMap["10-13"]}
 مستوى الصعوبة: ${difficultyMap[difficulty] || difficultyMap["medium"]}
@@ -274,6 +277,7 @@ serve(async (req) => {
                           correct_index: { type: "number", description: "Index of correct answer (0-3)" },
                           rationale: { type: "string", description: "Brief explanation for the correct answer" },
                           tags: { type: "array", items: { type: "string" }, description: "Topic tags" },
+                          code_snippet: { type: "string", description: "Raw code snippet if the question involves code. No markdown, no backticks. Leave empty if no code needed." },
                         },
                         required: ["question_text_ar", "options_ar", "correct_index"],
                         additionalProperties: false,
@@ -335,11 +339,21 @@ serve(async (req) => {
       }
     }
 
-    // Add fixed points
-    const finalQuestions = questions.map(q => ({
-      ...q,
-      points: FIXED_POINTS,
-    }));
+    // Add fixed points and clean code_snippet
+    const finalQuestions = questions.map(q => {
+      let snippet = q.code_snippet?.trim() || null;
+      // Remove markdown backticks if AI added them
+      if (snippet) {
+        snippet = snippet.replace(/^```[\w]*\n?/gm, '').replace(/```$/gm, '').trim();
+        if (snippet.length > 2000) snippet = snippet.slice(0, 2000);
+        if (!snippet) snippet = null;
+      }
+      return {
+        ...q,
+        points: FIXED_POINTS,
+        code_snippet: snippet,
+      };
+    });
 
     const duration = Date.now() - startTime;
     console.log(`generate-quiz: user=${user.id}, session=${sessionId}, questions=${finalQuestions.length}, textSize=${(session.student_pdf_text || "").length}, duration=${duration}ms`);

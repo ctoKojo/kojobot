@@ -10,6 +10,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { CodeBlock } from './CodeBlock';
 
 interface SimplifiedQuestion {
   id?: string;
@@ -20,6 +21,7 @@ interface SimplifiedQuestion {
   points: number;
   order_index: number;
   image_url?: string;
+  code_snippet?: string;
 }
 
 interface StudentPreviewDialogProps {
@@ -70,6 +72,11 @@ export function StudentPreviewDialog({ questions, isRTL }: StudentPreviewDialogP
                         className="w-full max-h-64 object-contain bg-muted"
                       />
                     </div>
+                  )}
+
+                  {/* Code Snippet */}
+                  {question.code_snippet && (
+                    <CodeBlock code={question.code_snippet} />
                   )}
 
                   {/* Question Text */}

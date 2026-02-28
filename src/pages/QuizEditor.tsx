@@ -23,6 +23,7 @@ interface SimplifiedQuestion {
   points: number;
   order_index: number;
   image_url?: string;
+  code_snippet?: string;
 }
 
 interface Quiz {
@@ -108,6 +109,7 @@ export default function QuizEditor() {
           points: q.points,
           order_index: q.order_index,
           image_url: (q as any).image_url,
+          code_snippet: (q as any).code_snippet || undefined,
         };
       });
       
@@ -153,6 +155,7 @@ export default function QuizEditor() {
       correct_answer: q.correct_index.toString(),
       points: q.points,
       order_index: questions.length + idx,
+      code_snippet: q.code_snippet || undefined,
     }));
 
     setQuestions(prev => [...prev, ...converted]);
@@ -194,6 +197,7 @@ export default function QuizEditor() {
           order_index: idx,
           question_type: 'multiple_choice',
           image_url: q.image_url || null,
+          code_snippet: q.code_snippet || null,
         }));
 
         const { error } = await supabase.from('quiz_questions').insert(questionsToInsert);

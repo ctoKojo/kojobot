@@ -1808,6 +1808,7 @@ export type Database = {
       }
       quiz_questions: {
         Row: {
+          code_snippet: string | null
           correct_answer: string
           created_at: string
           id: string
@@ -1821,6 +1822,7 @@ export type Database = {
           quiz_id: string
         }
         Insert: {
+          code_snippet?: string | null
           correct_answer: string
           created_at?: string
           id?: string
@@ -1834,6 +1836,7 @@ export type Database = {
           quiz_id: string
         }
         Update: {
+          code_snippet?: string | null
           correct_answer?: string
           created_at?: string
           id?: string
@@ -2820,6 +2823,7 @@ export type Database = {
       }
       quiz_questions_student_view: {
         Row: {
+          code_snippet: string | null
           created_at: string | null
           id: string | null
           image_url: string | null
@@ -2832,6 +2836,7 @@ export type Database = {
           quiz_id: string | null
         }
         Insert: {
+          code_snippet?: string | null
           created_at?: string | null
           id?: string | null
           image_url?: string | null
@@ -2844,6 +2849,7 @@ export type Database = {
           quiz_id?: string | null
         }
         Update: {
+          code_snippet?: string | null
           created_at?: string | null
           id?: string | null
           image_url?: string | null
