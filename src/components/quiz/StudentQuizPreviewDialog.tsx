@@ -187,7 +187,7 @@ export function StudentQuizPreviewDialog({
                     )}
                   >
                     <div className="flex items-start justify-between gap-4 mb-3">
-                      <h4 className="font-medium">
+                      <h4 className="font-medium" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>
                         <span className="text-muted-foreground">{index + 1}. </span>
                         {language === 'ar' ? question.question_text_ar : question.question_text}
                       </h4>
@@ -229,7 +229,7 @@ export function StudentQuizPreviewDialog({
                               )}
                             >
                               <span className="font-medium mr-2">{optionLetter}.</span>
-                              {option}
+                              <span dir="rtl" style={{ unicodeBidi: 'plaintext' }}>{option}</span>
                               {isCorrectAnswer && (
                                 <CheckCircle className="inline-block h-4 w-4 text-green-600 ml-2" />
                               )}

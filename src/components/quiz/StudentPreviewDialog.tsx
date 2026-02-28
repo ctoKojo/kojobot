@@ -80,7 +80,7 @@ export function StudentPreviewDialog({ questions, isRTL }: StudentPreviewDialogP
                   )}
 
                   {/* Question Text */}
-                  <p className="text-lg font-medium leading-relaxed">
+                  <p className="text-lg font-medium leading-relaxed" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>
                     {question.question_text || (isRTL ? 'نص السؤال...' : 'Question text...')}
                   </p>
 
@@ -98,6 +98,8 @@ export function StudentPreviewDialog({ questions, isRTL }: StudentPreviewDialogP
                         <Label
                           htmlFor={`preview-q${index}-opt${optIndex}`}
                           className="flex-1 cursor-pointer"
+                          dir="rtl"
+                          style={{ unicodeBidi: 'plaintext' }}
                         >
                           {option || (isRTL ? `الخيار ${optIndex + 1}` : `Option ${optIndex + 1}`)}
                         </Label>

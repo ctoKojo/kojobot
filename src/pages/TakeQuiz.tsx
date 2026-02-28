@@ -395,7 +395,7 @@ export default function TakeQuiz() {
                     <div className="flex items-start gap-2">
                       {isCorrect ? <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" /> : <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />}
                       <div className="flex-1">
-                        <p className="font-medium">{idx + 1}. {language === 'ar' ? q.question_text_ar : q.question_text}</p>
+                        <p className="font-medium" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>{idx + 1}. {language === 'ar' ? q.question_text_ar : q.question_text}</p>
                         <p className="text-sm mt-1">
                           <span className="text-muted-foreground">{isRTL ? 'إجابتك: ' : 'Your answer: '}</span>
                           <span className={isCorrect ? 'text-green-700' : 'text-red-700'}>
@@ -447,7 +447,7 @@ export default function TakeQuiz() {
         {currentQuestion && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">
+              <CardTitle className="text-xl" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>
                 {language === 'ar' ? currentQuestion.question_text_ar : currentQuestion.question_text}
               </CardTitle>
               <Badge variant="secondary">{currentQuestion.points} {isRTL ? 'درجة' : 'points'}</Badge>
@@ -496,7 +496,7 @@ export default function TakeQuiz() {
                       className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${answers[currentQuestion.id] === idx.toString() ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
                     >
                       <RadioGroupItem value={idx.toString()} id={`option-${idx}`} className="pointer-events-none" />
-                      <span className="flex-1">
+                      <span className="flex-1" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>
                         {optionText || `Option ${idx + 1}`}
                       </span>
                       {answers[currentQuestion.id] === idx.toString() && (
