@@ -97,9 +97,16 @@ serve(async (req) => {
       });
     }
 
-    // Convert to base64 for Gemini
+    // Convert to base64 for Gemini (chunked to avoid memory limit)
     const arrayBuffer = await fileData.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const bytes = new Uint8Array(arrayBuffer);
+    const CHUNK_SIZE = 8192;
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+      const chunk = bytes.subarray(i, i + CHUNK_SIZE);
+      binary += String.fromCharCode(...chunk);
+    }
+    const base64 = btoa(binary);
 
     // Use Gemini to extract text from PDF
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
