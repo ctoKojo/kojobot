@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.get-session-pdf-url]
 verify_jwt = false
+
+[functions.student-chatbot]
+verify_jwt = false
