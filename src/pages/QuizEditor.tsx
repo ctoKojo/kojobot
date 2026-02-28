@@ -211,6 +211,10 @@ export default function QuizEditor() {
 
       setUndoSnapshot(null);
       logUpdate('quiz', quizId, { questions_count: questions.length });
+
+      // Navigate back - if coming from curriculum, go back to curriculum
+      const backDest = getBackDestination();
+      navigate(backDest);
     } catch (error) {
       console.error('Error saving questions:', error);
       toast({

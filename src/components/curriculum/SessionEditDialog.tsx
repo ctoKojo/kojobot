@@ -77,7 +77,7 @@ export function SessionEditDialog({ session, onClose }: Props) {
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizTitle, setQuizTitle] = useState('');
   const [quizTitleAr, setQuizTitleAr] = useState('');
-  const [quizDuration, setQuizDuration] = useState(30);
+  const [quizDuration, setQuizDuration] = useState(15);
   const [quizPassingScore, setQuizPassingScore] = useState(60);
   const [unassigning, setUnassigning] = useState(false);
 
@@ -567,7 +567,7 @@ export function SessionEditDialog({ session, onClose }: Props) {
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <Label>{isRTL ? 'المدة (دقيقة)' : 'Duration (min)'}</Label>
-                    <Input type="number" value={quizDuration} onChange={e => setQuizDuration(Number(e.target.value) || 30)} className="mt-1" />
+                    <Input type="number" value={quizDuration} onChange={e => setQuizDuration(Number(e.target.value) || 15)} className="mt-1" />
                   </div>
                   <div>
                     <Label>{isRTL ? 'درجة النجاح %' : 'Pass Score %'}</Label>
