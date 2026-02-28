@@ -96,6 +96,22 @@ function validateQuestions(questions: GeneratedQuestion[]): { valid: boolean; er
     if (nonWhitelisted.length > 6) {
       errors.push(`Q${qNum}: Too many non-technical English words: ${nonWhitelisted.slice(0, 5).join(", ")}`);
     }
+
+    // Validate: no Arabic text inside code_snippet
+    if (q.code_snippet) {
+      const arabicInCode = q.code_snippet.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g);
+      if (arabicInCode && arabicInCode.length > 0) {
+        errors.push(`Q${qNum}: Arabic text found inside code_snippet. Code must be English only.`);
+      }
+    }
+
+    // Validate: no easily eliminable options (check for very short options vs others)
+    const optLengths = q.options_ar.map((o: string) => o.trim().length);
+    const avgLen = optLengths.reduce((a: number, b: number) => a + b, 0) / 4;
+    const tooShort = optLengths.filter((l: number) => l < avgLen * 0.3);
+    if (tooShort.length >= 2) {
+      errors.push(`Q${qNum}: Options have very uneven lengths, suggesting easily eliminable answers`);
+    }
   }
 
   return { valid: errors.length === 0, errors };
@@ -208,7 +224,7 @@ serve(async (req) => {
 const systemPrompt = `أنت مدرس متخصص في تعليم الأطفال البرمجة والتكنولوجيا.
 
 قواعد صارمة:
-1. اكتب كل الأسئلة والاختيارات بالعربي فقط
+1. اكتب كل الأسئلة والاختيارات بالعامية المصرية (مش فصحى). مثلاً: "إيه اللي هيحصل"، "الكود ده بيعمل إيه"، "أنهي إجابة صح"
 2. المصطلحات التقنية الإنجليزية مسموحة فقط داخل النص مثل: variable, loop, function, array, class, object, python, javascript, html, css, scratch, arduino, sensor, servo, LED, if, else, print, input, output, sprite, block
 3. ممنوع أي جملة كاملة بالإنجليزية
 4. ممنوع شرح أو تعليق بالإنجليزية
@@ -221,6 +237,9 @@ const systemPrompt = `أنت مدرس متخصص في تعليم الأطفال 
 11. ممنوع أسئلة الحفظ الأعمى فقط
 12. إذا كان السؤال يتعلق بكود برمجي أو يحتاج عرض كود، ضع الكود في حقل code_snippet المنفصل. ممنوع وضع الكود داخل نص السؤال question_text_ar. الكود يكون raw بدون markdown أو backticks.
 13. حتى لو الكود سطر واحد فقط، يجب وضعه في code_snippet وليس في نص السؤال.
+14. ممنوع تماماً وضع أي نص عربي داخل الكود في code_snippet. الكود لازم يكون إنجليزي بالكامل. مثلاً ممنوع: fruits = ["تفاح", "موز"] — الصح: fruits = ["apple", "banana"]
+15. الاختيارات الغلط لازم تكون منطقية ومعقولة ومش سهلة الحذف. ممنوع اختيارات سخيفة أو واضح إنها غلط. الطالب لازم يفكر عشان يختار الإجابة الصح.
+16. كل الاختيارات لازم تكون من نفس النوع والسياق. مثلاً لو السؤال عن نتيجة كود، كل الاختيارات تكون نتائج محتملة ومعقولة.
 
 الفئة العمرية: ${ageGroupMap[ageGroup] || ageGroupMap["10-13"]}
 مستوى الصعوبة: ${difficultyMap[difficulty] || difficultyMap["medium"]}
