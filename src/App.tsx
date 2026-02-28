@@ -60,6 +60,7 @@ import MySessions from "./pages/MySessions";
 import SSOTHealth from "./pages/SSOTHealth";
 import Leaderboard from "./pages/Leaderboard";
 import MyFinances from "./pages/MyFinances";
+import StudentChatbot from "./pages/StudentChatbot";
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
   useAdminSessionTimeout();
@@ -127,6 +128,7 @@ const App = () => (
                   <Route path="/ssot-health" element={<ProtectedRoute allowedRoles={['admin']}><SSOTHealth /></ProtectedRoute>} />
                   <Route path="/leaderboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception']}><Leaderboard /></ProtectedRoute>} />
                   <Route path="/my-finances" element={<ProtectedRoute allowedRoles={['student']}><MyFinances /></ProtectedRoute>} />
+                  <Route path="/kojo" element={<ProtectedRoute allowedRoles={['student']}><StudentChatbot /></ProtectedRoute>} />
                   <Route path="/account-suspended" element={<AccountSuspended />} />
                   <Route path="/account-terminated" element={<AccountTerminated />} />
                   <Route path="*" element={<NotFound />} />
