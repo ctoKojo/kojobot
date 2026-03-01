@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.get-session-pdf-url]
 verify_jwt = false
+
+[functions.extract-assignment-slide]
+verify_jwt = false
