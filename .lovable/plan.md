@@ -127,7 +127,7 @@ src/components/student/
 - [x] KojoSheet.tsx created
 - [x] chat-with-kojo backend updated with meta + age tuning
 - [x] KojoChatWidget removed for students
-- [ ] Phase 1: Game Hub UI + Level Map + Current Quest
-- [ ] Phase 2: XP & Streaks DB
-- [ ] Phase 3: Achievements DB + seed data
-- [ ] Phase 4: Connect triggers + real data
+- [x] Phase 1: Game Hub UI + Level Map + Current Quest
+- [x] Phase 2: XP & Streaks DB (student_xp_events, student_streaks tables + triggers)
+- [x] Phase 3: Achievements DB + seed data (achievements, student_achievements tables)
+- [x] Phase 4: Connect triggers + real data (attendance/quiz/assignment triggers → XP + achievements)

@@ -3345,6 +3345,18 @@ export type Database = {
         Args: { p_student_id: string }
         Returns: Json
       }
+      check_attendance_achievements: {
+        Args: { p_student_id: string }
+        Returns: undefined
+      }
+      check_quiz_achievements: {
+        Args: { p_percentage: number; p_student_id: string }
+        Returns: undefined
+      }
+      check_streak_achievements: {
+        Args: { p_student_id: string }
+        Returns: undefined
+      }
       clone_curriculum: {
         Args: {
           p_source_age_group_id: string
