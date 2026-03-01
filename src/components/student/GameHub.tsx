@@ -15,6 +15,16 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDate, formatTime12Hour } from '@/lib/timeUtils';
 
+interface AchievementData {
+  id: string;
+  key: string;
+  title: string;
+  title_ar: string;
+  icon_name: string;
+  xp_reward: number;
+  earned: boolean;
+}
+
 interface GameHubData {
   profile: any;
   groupInfo: any;
@@ -27,6 +37,9 @@ interface GameHubData {
   warnings: number;
   subscription: any;
   isFrozen: boolean;
+  totalXp: number;
+  streak: { current: number; longest: number };
+  achievements: AchievementData[];
 }
 
 export function GameHub() {
@@ -43,11 +56,15 @@ export function GameHub() {
   const fetchGameData = async () => {
     try {
       // Parallel fetches
-      const [profileRes, groupRes, warningsRes, subRes] = await Promise.all([
+      const [profileRes, groupRes, warningsRes, subRes, xpRes, streakRes, allAchievementsRes, earnedAchievementsRes] = await Promise.all([
         supabase.from('profiles').select('*, age_groups(name, name_ar), levels(name, name_ar)').eq('user_id', user!.id).single(),
         supabase.from('group_students').select('group_id, groups(id, name, name_ar, schedule_day, schedule_time, instructor_id, attendance_mode, session_link, status, level_id, age_group_id)').eq('student_id', user!.id).eq('is_active', true).maybeSingle(),
         supabase.from('warnings').select('id', { count: 'exact', head: true }).eq('student_id', user!.id).eq('is_active', true),
         supabase.from('subscriptions').select('*').eq('student_id', user!.id).eq('status', 'active').maybeSingle(),
+        supabase.from('student_xp_events').select('xp_amount').eq('student_id', user!.id),
+        supabase.from('student_streaks').select('*').eq('student_id', user!.id).maybeSingle(),
+        supabase.from('achievements').select('*').eq('is_active', true),
+        supabase.from('student_achievements').select('achievement_id').eq('student_id', user!.id),
       ]);
 
       const profile = profileRes.data;
@@ -182,6 +199,28 @@ export function GameHub() {
         }
       }
 
+      // Process XP
+      const totalXp = (xpRes.data || []).reduce((sum: number, e: any) => sum + (e.xp_amount || 0), 0);
+
+      // Process streak
+      const streakData = streakRes.data;
+      const streak = {
+        current: streakData?.current_streak || 0,
+        longest: streakData?.longest_streak || 0,
+      };
+
+      // Process achievements
+      const earnedIds = new Set((earnedAchievementsRes.data || []).map((ea: any) => ea.achievement_id));
+      const achievements: AchievementData[] = (allAchievementsRes.data || []).map((a: any) => ({
+        id: a.id,
+        key: a.key,
+        title: a.title,
+        title_ar: a.title_ar,
+        icon_name: a.icon_name,
+        xp_reward: a.xp_reward,
+        earned: earnedIds.has(a.id),
+      }));
+
       setData({
         profile,
         groupInfo: group,
@@ -194,6 +233,9 @@ export function GameHub() {
         warnings: warningsRes.count || 0,
         subscription: subRes.data,
         isFrozen,
+        totalXp,
+        streak,
+        achievements,
       });
     } catch (err) {
       console.error('GameHub fetch error:', err);
@@ -212,16 +254,12 @@ export function GameHub() {
 
   if (!data) return null;
 
-  // Derive XP from attended sessions (50 XP each) - placeholder until real XP table
-  const derivedXp = data.attendedSessionNumbers.size * 50;
-  const xpLevel = Math.floor(derivedXp / 300) + 1;
-  const xpInLevel = derivedXp % 300;
+  // Real XP from DB
+  const xpLevel = Math.floor(data.totalXp / 300) + 1;
+  const xpInLevel = data.totalXp % 300;
 
-  // Derive streak from attendance (placeholder)
-  const derivedStreak = data.attendedSessionNumbers.size > 0 ? Math.min(data.attendedSessionNumbers.size, 7) : 0;
-
-  // Derive shields count (placeholder)
-  const shieldsEarned = Math.floor(data.attendedSessionNumbers.size / 3);
+  // Real shields count
+  const shieldsEarned = data.achievements.filter(a => a.earned).length;
 
   return (
     <div className="space-y-6">
@@ -275,7 +313,7 @@ export function GameHub() {
             </div>
 
             {/* Streak */}
-            <StreakCounter currentStreak={derivedStreak} />
+            <StreakCounter currentStreak={data.streak.current} />
 
             {/* Shields count */}
             <div className="flex items-center gap-1.5">
@@ -368,29 +406,21 @@ export function GameHub() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Placeholder achievements grid */}
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                {[
-                  { icon: '🏁', label: isRTL ? 'أول سيشن' : 'First Steps', unlocked: data.attendedSessionNumbers.size >= 1 },
-                  { icon: '🔥', label: isRTL ? 'ستريك 3 أيام' : '3-Day Streak', unlocked: derivedStreak >= 3 },
-                  { icon: '📚', label: isRTL ? '5 سيشنات' : '5 Sessions', unlocked: data.attendedSessionNumbers.size >= 5 },
-                  { icon: '⚡', label: isRTL ? '10 سيشنات' : '10 Sessions', unlocked: data.attendedSessionNumbers.size >= 10 },
-                  { icon: '🏆', label: isRTL ? 'نص المنهج' : 'Halfway', unlocked: data.attendedSessionNumbers.size >= 6 },
-                  { icon: '🌟', label: isRTL ? 'المنهج كامل' : 'Complete', unlocked: data.attendedSessionNumbers.size >= 12 },
-                  { icon: '🎯', label: isRTL ? 'أول كويز' : 'First Quiz', unlocked: false },
-                  { icon: '💯', label: isRTL ? 'درجة كاملة' : 'Perfect Score', unlocked: false },
-                ].map((a, i) => (
+                {data.achievements.map((a) => (
                   <div
-                    key={i}
+                    key={a.id}
                     className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition-all ${
-                      a.unlocked
+                      a.earned
                         ? 'bg-secondary/5 border-secondary/20 shadow-sm'
                         : 'opacity-40 grayscale'
                     }`}
                   >
-                    <span className="text-2xl">{a.icon}</span>
-                    <span className="text-[10px] text-center font-medium leading-tight">{a.label}</span>
-                    {a.unlocked && <span className="text-[9px] text-secondary font-bold">✓</span>}
+                    <Shield className={`h-6 w-6 ${a.earned ? 'text-secondary' : 'text-muted-foreground'}`} />
+                    <span className="text-[10px] text-center font-medium leading-tight">
+                      {language === 'ar' ? a.title_ar : a.title}
+                    </span>
+                    {a.earned && <span className="text-[9px] text-secondary font-bold">✓</span>}
                   </div>
                 ))}
               </div>
