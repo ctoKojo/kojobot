@@ -301,7 +301,7 @@ export function AppSidebar() {
     <Sidebar
       side={isRTL ? 'right' : 'left'}
       collapsible="icon"
-      className={cn('font-sans', isStudent && 'game-sidebar [&_*]:!border-white/10')}>
+      className={cn('font-sans', isStudent && 'game-sidebar [&_*]:!border-white/10 [&_*]:!rounded-none !font-["Press_Start_2P"] !text-[9px]')}>
 
       {isRamadan && <RamadanSidebarDecor />}
       <SidebarHeader className={cn(
