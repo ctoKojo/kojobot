@@ -14,6 +14,7 @@ const SYSTEM_PROMPT = `انت Kojo، صاحب الطالب اللي بيساعد
 بتتكلم عامية مصرية بسيطة جداً.
 
 # قواعدك:
+- ردك لازم يكون قصير أوي (3-5 سطور بس)
 - كل إجابة لازم يكون فيها مثال واقعي من حياة الطالب (زي ألعاب، مدرسة، أكل)
 - المصطلحات التقنية سيبها إنجليزي (variable, loop, function, if)
 - لو الطالب سأل سؤال كبير، قسمه لأجزاء صغيرة وجاوب على الأول بس
@@ -25,43 +26,6 @@ const SYSTEM_PROMPT = `انت Kojo، صاحب الطالب اللي بيساعد
 إجابة: "الـ variable زي الدرج اللي بتحط فيه حاجة. بتديله اسم وبتحط جواه قيمة:
 \`x = 5\`
 كده x بقى فيه الرقم 5. تقدر تغيره بعدين عادي."`;
-
-// Age-based prompt rules
-function getAgePromptRules(minAge: number, maxAge: number): string {
-  if (maxAge <= 9) {
-    return `\n\n# الفئة العمرية: 6-9
-- الحد الأقصى لردك: 4 سطور
-- سؤال واحد سهل في نهاية الرد
-- أمثلة حياتية بسيطة (ألعاب، حيوانات، أكل)
-- خلي الكلام بسيط جداً`;
-  }
-  if (maxAge <= 13) {
-    return `\n\n# الفئة العمرية: 10-13
-- الحد الأقصى لردك: 6 سطور
-- اشرح خطوة بخطوة
-- مثال كود صغير لو مناسب
-- شجعه يجرب بنفسه`;
-  }
-  return `\n\n# الفئة العمرية: 14-18
-- الحد الأقصى لردك: 10 سطور
-- تشخيص خطأ واقتراح approach
-- بدون حلول جاهزة - خليه يفكر
-- ممكن تسأله أسئلة debugging`;
-}
-
-// Context prompt injection
-function getContextPrompt(meta?: { contextType?: string; contextTitle?: string }): string {
-  if (!meta) return "";
-  const { contextType, contextTitle } = meta;
-  if (contextType !== "map" && contextType !== "quest") return "";
-  const typeLabel = contextType === "map" ? "الخريطة (Map)" : "مهمة (Quest)";
-  let prompt = `\nالطالب حالياً في ${typeLabel}.`;
-  if (contextTitle) {
-    prompt += `\nالموضوع: ${contextTitle.slice(0, 80)}.`;
-  }
-  prompt += `\nركز إجابتك على الموضوع ده.\n`;
-  return prompt;
-}
 
 // ============================================================
 // Auth
@@ -185,26 +149,13 @@ serve(async (req) => {
     const studentName = profileData?.full_name_ar || profileData?.full_name || "";
 
     // Parse body
-    const { message, conversationId: inputConvId, meta: rawMeta } = await req.json();
+    const { message, conversationId: inputConvId } = await req.json();
     if (!message || typeof message !== "string" || message.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Message required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     const userMessage = message.trim().slice(0, 2000);
-
-    // Validate meta
-    let validMeta: { contextType: string; contextTitle?: string; contextId?: string } | undefined;
-    if (rawMeta && typeof rawMeta === "object") {
-      const ct = rawMeta.contextType;
-      if (ct === "map" || ct === "quest") {
-        validMeta = {
-          contextType: ct,
-          contextTitle: typeof rawMeta.contextTitle === "string" ? rawMeta.contextTitle.slice(0, 80) : undefined,
-          contextId: typeof rawMeta.contextId === "string" ? rawMeta.contextId.slice(0, 80) : undefined,
-        };
-      }
-    }
 
     // Rate limit
     const { data: rateResult, error: rateError } = await db.rpc("check_and_increment_chatbot_rate", { p_student_id: studentId });
@@ -237,19 +188,6 @@ serve(async (req) => {
       const pick = active || studentGroups[0];
       const g = (pick as any).groups as any;
       selectedGroup = { id: g.id, level_id: g.level_id, age_group_id: g.age_group_id };
-    }
-
-    // Fetch age group for prompt tuning
-    let agePromptRules = "";
-    if (selectedGroup?.age_group_id) {
-      const { data: ageGroup } = await db
-        .from("age_groups")
-        .select("min_age, max_age")
-        .eq("id", selectedGroup.age_group_id)
-        .single();
-      if (ageGroup) {
-        agePromptRules = getAgePromptRules(ageGroup.min_age, ageGroup.max_age);
-      }
     }
 
     // Conversation
@@ -326,26 +264,16 @@ serve(async (req) => {
       }
     }
 
-    // Build messages - inject context + age rules before main prompt
-    const contextPrompt = getContextPrompt(validMeta);
+    // Build messages
     const nameLine = studentName ? `\n\nاسم الطالب اللي بتكلمه: ${studentName}. نادِيه باسمه أحياناً عشان يحس إنك صاحبه.` : "";
-    const systemContent = [
-      contextPrompt,
-      SYSTEM_PROMPT,
-      agePromptRules,
-      nameLine,
-      ragContext ? `\n\nمحتوى المنهج:\n${ragContext}` : "",
-    ].filter(Boolean).join("");
+    const systemContent = ragContext
+      ? `${SYSTEM_PROMPT}${nameLine}\n\nمحتوى المنهج:\n${ragContext}`
+      : `${SYSTEM_PROMPT}${nameLine}`;
 
     const aiMessages = [
       { role: "system", content: systemContent },
       ...historyMessages,
     ];
-
-    // Determine max tokens based on age group
-    let maxTokens = 400;
-    if (agePromptRules.includes("6-9")) maxTokens = 250;
-    else if (agePromptRules.includes("10-13")) maxTokens = 350;
 
     // Call AI with streaming
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -356,14 +284,14 @@ serve(async (req) => {
     }
 
     const models = [
-      { model: "google/gemini-2.5-flash", maxTokens },
-      { model: "openai/gpt-5-mini", maxTokens },
+      { model: "google/gemini-2.5-flash", maxTokens: 400 },
+      { model: "openai/gpt-5-mini", maxTokens: 400 },
     ];
 
     let aiResponse: Response | null = null;
     let lastErrorStatus: number | null = null;
 
-    for (const { model, maxTokens: mt } of models) {
+    for (const { model, maxTokens } of models) {
       const isOpenAI = model.startsWith("openai/");
 
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -376,7 +304,7 @@ serve(async (req) => {
           model,
           messages: aiMessages,
           stream: true,
-          ...(isOpenAI ? { max_completion_tokens: mt } : { max_tokens: mt }),
+          ...(isOpenAI ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }),
         }),
       });
 

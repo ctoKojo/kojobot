@@ -14,51 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      achievements: {
-        Row: {
-          condition_type: string
-          condition_value: Json
-          created_at: string
-          description: string | null
-          description_ar: string | null
-          icon_name: string
-          id: string
-          is_active: boolean
-          key: string
-          title: string
-          title_ar: string
-          xp_reward: number
-        }
-        Insert: {
-          condition_type: string
-          condition_value?: Json
-          created_at?: string
-          description?: string | null
-          description_ar?: string | null
-          icon_name?: string
-          id?: string
-          is_active?: boolean
-          key: string
-          title: string
-          title_ar: string
-          xp_reward?: number
-        }
-        Update: {
-          condition_type?: string
-          condition_value?: Json
-          created_at?: string
-          description?: string | null
-          description_ar?: string | null
-          icon_name?: string
-          id?: string
-          is_active?: boolean
-          key?: string
-          title?: string
-          title_ar?: string
-          xp_reward?: number
-        }
-        Relationships: []
-      }
       activity_logs: {
         Row: {
           action: string
@@ -2619,35 +2574,6 @@ export type Database = {
           },
         ]
       }
-      student_achievements: {
-        Row: {
-          achievement_id: string
-          earned_at: string
-          id: string
-          student_id: string
-        }
-        Insert: {
-          achievement_id: string
-          earned_at?: string
-          id?: string
-          student_id: string
-        }
-        Update: {
-          achievement_id?: string
-          earned_at?: string
-          id?: string
-          student_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_achievements_achievement_id_fkey"
-            columns: ["achievement_id"]
-            isOneToOne: false
-            referencedRelation: "achievements"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       student_level_transitions: {
         Row: {
           created_at: string | null
@@ -2741,33 +2667,6 @@ export type Database = {
           },
         ]
       }
-      student_streaks: {
-        Row: {
-          current_streak: number
-          id: string
-          last_activity_date: string | null
-          longest_streak: number
-          student_id: string
-          updated_at: string
-        }
-        Insert: {
-          current_streak?: number
-          id?: string
-          last_activity_date?: string | null
-          longest_streak?: number
-          student_id: string
-          updated_at?: string
-        }
-        Update: {
-          current_streak?: number
-          id?: string
-          last_activity_date?: string | null
-          longest_streak?: number
-          student_id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       student_track_choices: {
         Row: {
           chosen_at: string | null
@@ -2822,33 +2721,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      student_xp_events: {
-        Row: {
-          created_at: string
-          event_type: string
-          id: string
-          reference_id: string | null
-          student_id: string
-          xp_amount: number
-        }
-        Insert: {
-          created_at?: string
-          event_type: string
-          id?: string
-          reference_id?: string | null
-          student_id: string
-          xp_amount: number
-        }
-        Update: {
-          created_at?: string
-          event_type?: string
-          id?: string
-          reference_id?: string | null
-          student_id?: string
-          xp_amount?: number
-        }
-        Relationships: []
       }
       subscriptions: {
         Row: {
@@ -3344,18 +3216,6 @@ export type Database = {
       check_and_increment_chatbot_rate: {
         Args: { p_student_id: string }
         Returns: Json
-      }
-      check_attendance_achievements: {
-        Args: { p_student_id: string }
-        Returns: undefined
-      }
-      check_quiz_achievements: {
-        Args: { p_percentage: number; p_student_id: string }
-        Returns: undefined
-      }
-      check_streak_achievements: {
-        Args: { p_student_id: string }
-        Returns: undefined
       }
       clone_curriculum: {
         Args: {

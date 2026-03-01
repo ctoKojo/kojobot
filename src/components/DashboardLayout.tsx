@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare } from 'lucide-react';
 import { useSeasonalTheme } from '@/hooks/useSeasonalTheme';
@@ -18,7 +18,6 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import kojobotLogoWhite from '@/assets/kojobot-logo-white.png';
-import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +26,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+const KojoChatWidget = lazy(() => import('@/components/KojoChatWidget').then(m => ({ default: m.KojoChatWidget })));
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -40,7 +41,6 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isRamadan = useSeasonalTheme('ramadan');
-  const isStudent = role === 'student';
 
   // Unread messages count (refreshed by realtime via useRealtimeMessages hook in Messages page)
   const { data: unreadMessages = 0 } = useQuery({
@@ -108,17 +108,12 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         <AppSidebar />
         
         <SidebarInset className="flex-1 flex flex-col min-w-0">
-          {/* Header */}
-          <header className={cn(
-            'sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b px-4 md:px-6 relative',
-            isStudent
-              ? 'game-header-light border-border/50 [&_*]:!rounded-none'
-              : 'border-border bg-background'
-          )}>
+          {/* Header - fixed height, doesn't scroll with content */}
+          <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:px-6 relative">
             {isRamadan && <RamadanHeaderDecor />}
             <SidebarTrigger className="-ml-2" />
             
-            {/* Mobile Logo */}
+            {/* Mobile Logo - shows only on small screens */}
             <div className="md:hidden flex items-center">
               <div className="h-8 w-8 rounded-lg kojo-gradient flex items-center justify-center p-1">
                 <img src={kojobotLogoWhite} alt="Kojobot" className="h-full object-contain" />
@@ -194,11 +189,8 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             </div>
           </header>
           
-          {/* Main Content */}
-          <main className={cn(
-            'flex-1 p-4 md:p-6 overflow-x-auto relative',
-            isStudent && 'game-theme'
-          )}>
+          {/* Main Content - scrollable area for tables */}
+          <main className="flex-1 p-4 md:p-6 overflow-x-auto relative">
             {isRamadan && <RamadanContentDecor />}
             {isRamadan && <RamadanBanner />}
             <div className="min-w-fit relative z-[1]">
@@ -206,6 +198,11 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             </div>
           </main>
         </SidebarInset>
+        {role === 'student' && (
+          <Suspense fallback={null}>
+            <KojoChatWidget />
+          </Suspense>
+        )}
       </div>
     </SidebarProvider>
   );
