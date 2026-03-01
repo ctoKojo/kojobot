@@ -2345,6 +2345,36 @@ export type Database = {
           },
         ]
       }
+      seasonal_themes: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          is_active: boolean
+          start_date: string
+          theme_key: string
+          timezone: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          is_active?: boolean
+          start_date: string
+          theme_key: string
+          timezone?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          start_date?: string
+          theme_key?: string
+          timezone?: string
+        }
+        Relationships: []
+      }
       session_evaluations: {
         Row: {
           assignment_max_score: number | null
