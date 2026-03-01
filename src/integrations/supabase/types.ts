@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          condition_type: string
+          condition_value: Json
+          created_at: string
+          description: string | null
+          description_ar: string | null
+          icon_name: string
+          id: string
+          is_active: boolean
+          key: string
+          title: string
+          title_ar: string
+          xp_reward: number
+        }
+        Insert: {
+          condition_type: string
+          condition_value?: Json
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          key: string
+          title: string
+          title_ar: string
+          xp_reward?: number
+        }
+        Update: {
+          condition_type?: string
+          condition_value?: Json
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          key?: string
+          title?: string
+          title_ar?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       activity_logs: {
         Row: {
           action: string
@@ -562,6 +607,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      curriculum_session_assets: {
+        Row: {
+          created_at: string
+          id: string
+          last_error_text: string | null
+          processing_status: string
+          session_id: string
+          student_pdf_filename: string | null
+          student_pdf_path: string | null
+          student_pdf_size: number | null
+          student_pdf_text: string | null
+          student_pdf_text_updated_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_error_text?: string | null
+          processing_status?: string
+          session_id: string
+          student_pdf_filename?: string | null
+          student_pdf_path?: string | null
+          student_pdf_size?: number | null
+          student_pdf_text?: string | null
+          student_pdf_text_updated_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_error_text?: string | null
+          processing_status?: string
+          session_id?: string
+          student_pdf_filename?: string | null
+          student_pdf_path?: string | null
+          student_pdf_size?: number | null
+          student_pdf_text?: string | null
+          student_pdf_text_updated_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_session_assets_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "curriculum_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       curriculum_sessions: {
         Row: {
@@ -2574,6 +2669,35 @@ export type Database = {
           },
         ]
       }
+      student_achievements: {
+        Row: {
+          achievement_id: string
+          earned_at: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          achievement_id: string
+          earned_at?: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          achievement_id?: string
+          earned_at?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_level_transitions: {
         Row: {
           created_at: string | null
@@ -2667,6 +2791,33 @@ export type Database = {
           },
         ]
       }
+      student_streaks: {
+        Row: {
+          current_streak: number
+          id: string
+          last_activity_date: string | null
+          longest_streak: number
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          current_streak?: number
+          id?: string
+          last_activity_date?: string | null
+          longest_streak?: number
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          current_streak?: number
+          id?: string
+          last_activity_date?: string | null
+          longest_streak?: number
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       student_track_choices: {
         Row: {
           chosen_at: string | null
@@ -2721,6 +2872,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      student_xp_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          reference_id: string | null
+          student_id: string
+          xp_amount: number
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          reference_id?: string | null
+          student_id: string
+          xp_amount: number
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          reference_id?: string | null
+          student_id?: string
+          xp_amount?: number
+        }
+        Relationships: []
       }
       subscriptions: {
         Row: {
@@ -3217,6 +3395,18 @@ export type Database = {
         Args: { p_student_id: string }
         Returns: Json
       }
+      check_attendance_achievements: {
+        Args: { p_student_id: string }
+        Returns: undefined
+      }
+      check_quiz_achievements: {
+        Args: { p_percentage: number; p_student_id: string }
+        Returns: undefined
+      }
+      check_streak_achievements: {
+        Args: { p_student_id: string }
+        Returns: undefined
+      }
       clone_curriculum: {
         Args: {
           p_source_age_group_id: string
@@ -3444,6 +3634,15 @@ export type Database = {
           p_chosen_track_id?: string
           p_group_id: string
           p_student_id: string
+        }
+        Returns: Json
+      }
+      upsert_session_asset: {
+        Args: {
+          p_session_id: string
+          p_student_pdf_filename: string
+          p_student_pdf_path: string
+          p_student_pdf_size: number
         }
         Returns: Json
       }

@@ -42,15 +42,28 @@ serve(async (req) => {
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get session data
+    // Get session data for authorization
     const { data: session, error: sessionError } = await serviceClient
       .from("curriculum_sessions")
-      .select("student_pdf_path, age_group_id, level_id")
+      .select("id, age_group_id, level_id")
       .eq("id", sessionId)
       .eq("is_active", true)
       .single();
 
-    if (sessionError || !session?.student_pdf_path) {
+    if (sessionError || !session) {
+      return new Response(JSON.stringify({ error: "Session not found" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get PDF path from assets table
+    const { data: asset } = await serviceClient
+      .from("curriculum_session_assets")
+      .select("student_pdf_path")
+      .eq("session_id", sessionId)
+      .single();
+
+    if (!asset?.student_pdf_path) {
       return new Response(JSON.stringify({ error: "No PDF found for this session" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -87,7 +100,7 @@ serve(async (req) => {
     // Generate signed URL
     const { data: signedUrl, error: signError } = await serviceClient.storage
       .from("session-slides-pdf")
-      .createSignedUrl(session.student_pdf_path, SIGNED_URL_EXPIRY);
+      .createSignedUrl(asset.student_pdf_path, SIGNED_URL_EXPIRY);
 
     if (signError || !signedUrl) {
       return new Response(JSON.stringify({ error: "Failed to generate download URL" }), {

@@ -117,15 +117,14 @@ export default function QuizEditor() {
 
       // Fetch session info for AI context
       if (sessionId) {
-        const { data: sessionData } = await supabase
-          .from('curriculum_sessions')
-          .select('description_ar, student_pdf_text')
-          .eq('id', sessionId)
-          .single();
-        if (sessionData) {
-          setSessionHasDescription(!!sessionData.description_ar);
-          setSessionHasPdfText(!!sessionData.student_pdf_text);
+        const [sessionRes, assetRes] = await Promise.all([
+          supabase.from('curriculum_sessions').select('description_ar').eq('id', sessionId).single(),
+          supabase.from('curriculum_session_assets').select('student_pdf_text').eq('session_id', sessionId).maybeSingle(),
+        ]);
+        if (sessionRes.data) {
+          setSessionHasDescription(!!sessionRes.data.description_ar);
         }
+        setSessionHasPdfText(!!assetRes.data?.student_pdf_text);
       }
     } catch (error) {
       console.error('Error fetching quiz:', error);

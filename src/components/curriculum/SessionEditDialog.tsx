@@ -234,32 +234,19 @@ export function SessionEditDialog({ session, onClose }: Props) {
       
       toast.success(isRTL ? 'تم رفع الملف بنجاح' : 'PDF uploaded successfully');
       
-      // Auto-extract text
+      // Save PDF metadata via upsert_session_asset RPC (does NOT touch curriculum_sessions.updated_at)
       setExtractingText(true);
       try {
-        // Save the path first via RPC
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('update_curriculum_session', {
-          p_id: session.id,
-          p_expected_updated_at: form.updated_at || session.updated_at,
-          p_data: {
-            student_pdf_path: fileName,
-            student_pdf_filename: file.name,
-            student_pdf_size: file.size,
-          },
+        const { data: assetResult, error: assetError } = await supabase.rpc('upsert_session_asset', {
+          p_session_id: session.id,
+          p_student_pdf_path: fileName,
+          p_student_pdf_filename: file.name,
+          p_student_pdf_size: file.size,
         });
         
-        if (rpcError) throw rpcError;
-        const rpcData = rpcResult as any;
-        if (rpcData && !rpcData.updated) {
-          toast.error(isRTL ? 'تعارض في البيانات. أعد فتح السيشن وحاول مرة أخرى.' : 'Data conflict. Please reopen session and try again.');
-          setExtractingText(false);
-          return;
-        }
-        // Update local updated_at so subsequent saves don't conflict
-        if (rpcData?.new_updated_at) {
-          syncUpdatedAt(rpcData.new_updated_at);
-        }
+        if (assetError) throw assetError;
         
+        // Trigger text extraction
         const { data: extractResult, error: extractError } = await supabase.functions.invoke('extract-pdf-text', {
           body: { sessionId: session.id },
         });
@@ -285,6 +272,8 @@ export function SessionEditDialog({ session, onClose }: Props) {
     if (!session || !form.student_pdf_path) return;
     try {
       await supabase.storage.from('session-slides-pdf').remove([form.student_pdf_path]);
+      // Clear asset row
+      await supabase.from('curriculum_session_assets').delete().eq('session_id', session.id);
       setForm(f => ({ ...f, student_pdf_path: null, student_pdf_filename: null, student_pdf_size: null, student_pdf_text: null, student_pdf_text_updated_at: null }));
       toast.success(isRTL ? 'تم حذف الملف' : 'PDF deleted');
     } catch (err: any) {

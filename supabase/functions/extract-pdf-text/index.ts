@@ -73,14 +73,14 @@ serve(async (req) => {
     const rl = checkRateLimit(`extract-pdf:${user.id}`, { maxRequests: EXTRACT_RATE_LIMIT, windowMs: 3600000 });
     if (!rl.allowed) return rateLimitResponse(rl, corsHeaders);
 
-    // Get session PDF path
-    const { data: session, error: sessionError } = await serviceClient
-      .from("curriculum_sessions")
-      .select("student_pdf_path")
-      .eq("id", sessionId)
+    // Get session PDF path from assets table
+    const { data: asset, error: assetError } = await serviceClient
+      .from("curriculum_session_assets")
+      .select("id, student_pdf_path")
+      .eq("session_id", sessionId)
       .single();
 
-    if (sessionError || !session?.student_pdf_path) {
+    if (assetError || !asset?.student_pdf_path) {
       return new Response(JSON.stringify({ error: "No PDF found for this session" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -89,7 +89,7 @@ serve(async (req) => {
     // Download PDF from storage
     const { data: fileData, error: downloadError } = await serviceClient.storage
       .from("session-slides-pdf")
-      .download(session.student_pdf_path);
+      .download(asset.student_pdf_path);
 
     if (downloadError || !fileData) {
       return new Response(JSON.stringify({ error: "Failed to download PDF" }), {
@@ -167,17 +167,24 @@ serve(async (req) => {
       extractedText = extractedText.substring(0, MAX_PDF_TEXT_LENGTH);
     }
 
-    // Store extracted text
+    // Store extracted text in assets table
     const { error: updateError } = await serviceClient
-      .from("curriculum_sessions")
+      .from("curriculum_session_assets")
       .update({
         student_pdf_text: extractedText,
         student_pdf_text_updated_at: new Date().toISOString(),
+        processing_status: "done",
+        last_error_text: null,
       })
-      .eq("id", sessionId);
+      .eq("id", asset.id);
 
     if (updateError) {
       console.error("Failed to store extracted text:", updateError);
+      // Try to set error status
+      await serviceClient.from("curriculum_session_assets").update({
+        processing_status: "error",
+        last_error_text: updateError.message,
+      }).eq("id", asset.id);
       return new Response(JSON.stringify({ error: "Failed to store extracted text" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -191,6 +198,19 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("extract-pdf-text error:", error);
+    // Try to mark asset as error if we have context
+    try {
+      const body = await req.clone().json().catch(() => null);
+      if (body?.sessionId) {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const sc = createClient(supabaseUrl, supabaseServiceKey);
+        await sc.from("curriculum_session_assets").update({
+          processing_status: "error",
+          last_error_text: error instanceof Error ? error.message : "Unknown error",
+        }).eq("session_id", body.sessionId);
+      }
+    } catch { /* ignore cleanup errors */ }
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

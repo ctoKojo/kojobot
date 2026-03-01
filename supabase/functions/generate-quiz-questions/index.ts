@@ -269,7 +269,7 @@ serve(async (req) => {
     // Fetch session data
     const { data: session, error: sessionError } = await serviceClient
       .from("curriculum_sessions")
-      .select("title_ar, description_ar, session_number, student_pdf_text")
+      .select("title_ar, description_ar, session_number")
       .eq("id", sessionId)
       .single();
 
@@ -279,7 +279,16 @@ serve(async (req) => {
       });
     }
 
-    if (!session.description_ar && !session.student_pdf_text) {
+    // Fetch PDF text from assets table
+    const { data: assetData } = await serviceClient
+      .from("curriculum_session_assets")
+      .select("student_pdf_text")
+      .eq("session_id", sessionId)
+      .maybeSingle();
+
+    const studentPdfText = assetData?.student_pdf_text || null;
+
+    if (!session.description_ar && !studentPdfText) {
       return new Response(JSON.stringify({ error: "الوصف ونص PDF كلاهما فارغ. لا يمكن توليد أسئلة بدون محتوى." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -290,7 +299,7 @@ serve(async (req) => {
     contextParts.push(`عنوان الدرس: ${session.title_ar}`);
     contextParts.push(`رقم الدرس: ${session.session_number}`);
     if (session.description_ar) contextParts.push(`وصف الدرس: ${session.description_ar}`);
-    if (session.student_pdf_text) contextParts.push(`محتوى الدرس:\n${session.student_pdf_text}`);
+    if (studentPdfText) contextParts.push(`محتوى الدرس:\n${studentPdfText}`);
     if (additionalContext && additionalContext.length <= 500) {
       contextParts.push(`سياق إضافي: ${additionalContext}`);
     }
