@@ -145,13 +145,6 @@ export function RamadanContentDecor() {
       <MosqueSilhouette className="absolute bottom-0 ltr:right-0 rtl:left-0 w-80 h-28 opacity-50" />
 
 
-      {/* Floating stars - golden and visible */}
-      <Star className="absolute top-8 ltr:right-12 rtl:left-12 w-5 h-5" delay="0.5s" />
-      <Star className="absolute top-28 ltr:left-8 rtl:right-8 w-4 h-4" delay="1.2s" />
-      <Star className="absolute bottom-36 ltr:right-20 rtl:left-20 w-4.5 h-4.5" delay="2s" />
-      <Star className="absolute top-1/2 ltr:right-6 rtl:left-6 w-3.5 h-3.5" delay="0.8s" />
-      <Star className="absolute top-16 ltr:left-1/3 rtl:right-1/3 w-4 h-4" delay="1.6s" />
-      <Star className="absolute bottom-48 ltr:left-16 rtl:right-16 w-3 h-3" delay="0.3s" />
       {/* Crescents */}
       <Crescent className="absolute top-4 ltr:left-6 rtl:right-6 w-14 h-14 opacity-[0.15]" />
       <Crescent className="absolute bottom-20 ltr:right-10 rtl:left-10 w-12 h-12 opacity-[0.12]" />
@@ -223,10 +216,6 @@ export function RamadanAuthDecor() {
       <Crescent className="absolute top-4 ltr:right-6 rtl:left-6 w-24 h-24 opacity-40" />
       <Lantern className="absolute top-0 ltr:left-4 rtl:right-4 w-12 h-24 opacity-45" />
       <Lantern className="absolute top-0 ltr:right-24 rtl:left-24 w-8 h-16 opacity-30" />
-      <Star className="absolute top-14 ltr:right-20 rtl:left-20 w-6 h-6" delay="0s" />
-      <Star className="absolute top-10 ltr:left-16 rtl:right-16 w-5 h-5" delay="0.5s" />
-      <Star className="absolute top-24 ltr:right-12 rtl:left-12 w-4 h-4" delay="1.2s" />
-      <Star className="absolute top-20 ltr:left-6 rtl:right-6 w-4.5 h-4.5" delay="0.8s" />
     </div>
   );
 }
@@ -246,15 +235,6 @@ export function RamadanAuthBrandDecor() {
       <Lantern className="absolute -top-1 ltr:left-24 rtl:right-24 w-10 h-20 opacity-55" />
       <Lantern className="absolute -top-1 ltr:right-8 rtl:left-8 w-11 h-22 opacity-60" />
       <Lantern className="absolute -top-1 ltr:right-32 rtl:left-32 w-8 h-16 opacity-40" />
-      {/* Stars - scattered generously with gold */}
-      <Star className="absolute top-4 ltr:left-1/2 rtl:right-1/2 w-6 h-6" delay="0s" />
-      <Star className="absolute top-16 ltr:right-16 rtl:left-16 w-5 h-5" delay="0.4s" />
-      <Star className="absolute top-32 ltr:left-12 rtl:right-12 w-5.5 h-5.5" delay="1s" />
-      <Star className="absolute top-1/2 ltr:right-6 rtl:left-6 w-4.5 h-4.5" delay="0.7s" />
-      <Star className="absolute bottom-36 ltr:left-10 rtl:right-10 w-4 h-4" delay="1.5s" />
-      <Star className="absolute bottom-24 ltr:right-12 rtl:left-12 w-5 h-5" delay="0.3s" />
-      <Star className="absolute bottom-12 ltr:left-1/3 rtl:right-1/3 w-4.5 h-4.5" delay="1.8s" />
-      <Star className="absolute top-1/3 ltr:left-4 rtl:right-4 w-3.5 h-3.5" delay="2.2s" />
 
 
       {/* Mosque silhouette at bottom */}
