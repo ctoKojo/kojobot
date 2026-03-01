@@ -136,13 +136,17 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const db = createClient(supabaseUrl, serviceKey);
 
-    // Student role check
-    const { data: roleData } = await db.from("user_roles").select("role").eq("user_id", studentId).single();
+    // Student role check + fetch name
+    const [{ data: roleData }, { data: profileData }] = await Promise.all([
+      db.from("user_roles").select("role").eq("user_id", studentId).single(),
+      db.from("profiles").select("full_name, full_name_ar").eq("user_id", studentId).single(),
+    ]);
     if (!roleData || roleData.role !== "student") {
       return new Response(JSON.stringify({ error: "Students only" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const studentName = profileData?.full_name_ar || profileData?.full_name || "";
 
     // Parse body
     const { message, conversationId: inputConvId } = await req.json();
@@ -261,9 +265,10 @@ serve(async (req) => {
     }
 
     // Build messages
+    const nameLine = studentName ? `\n\nاسم الطالب اللي بتكلمه: ${studentName}. نادِيه باسمه أحياناً عشان يحس إنك صاحبه.` : "";
     const systemContent = ragContext
-      ? `${SYSTEM_PROMPT}\n\nمحتوى المنهج:\n${ragContext}`
-      : SYSTEM_PROMPT;
+      ? `${SYSTEM_PROMPT}${nameLine}\n\nمحتوى المنهج:\n${ragContext}`
+      : `${SYSTEM_PROMPT}${nameLine}`;
 
     const aiMessages = [
       { role: "system", content: systemContent },
