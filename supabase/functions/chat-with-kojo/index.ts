@@ -14,8 +14,18 @@ const corsHeaders = {
 const MAX_HISTORY = 10;
 const MAX_CHUNKS = 8;
 const MAX_CONTEXT_CHARS = 4000;
-const CHUNK_SIZE = 650; // target mid-range of 500-800
+const CHUNK_SIZE = 650;
 const CHUNK_OVERLAP = 100;
+
+const VALID_STEPS = [
+  "intro",
+  "variable",
+  "condition",
+  "colon",
+  "indented_block",
+  "test",
+  "complete",
+] as const;
 
 const STOPWORDS = new Set([
   "في", "من", "على", "هو", "هي", "إلى", "الى", "عن", "مع",
@@ -23,6 +33,15 @@ const STOPWORDS = new Set([
 ]);
 
 const DIRECT_ANSWER_PATTERNS = /الإجابة هي|الاجابة هي|الخيار الصحيح|الحل هو|الجواب هو|الاجابة الصحيحة|الإجابة الصحيحة/g;
+
+const HARSH_PHRASES: Array<{ pattern: RegExp; replacement: string }> = [
+  { pattern: /مش إجابة|مش اجابة/g, replacement: "قصدي حاجة تانية، خليني أوضحلك" },
+  { pattern: /ده مش صح خالص/g, replacement: "مش بالظبط، بس قربت" },
+  { pattern: /غلط تماماً|غلط تماما/g, replacement: "مش بالظبط، خلينا نراجع سوا" },
+  { pattern: /ده مش رد/g, replacement: "خليني أسأل بطريقة تانية" },
+];
+
+const EXAMPLE_KEYWORDS = ["مثال", "كود", "example", "code", "نموذج", "عايز أشوف", "وريني"];
 
 const SYSTEM_PROMPT = `اسمك Kojo، مساعد تعليمي في Kojobot.
 شخصيتك هادية، مشجعة، وتوجيهية.
@@ -55,6 +74,31 @@ const SYSTEM_PROMPT = `اسمك Kojo، مساعد تعليمي في Kojobot.
 قاعدة سؤال واحد:
 - في كل رد اسأل سؤال واحد فقط في آخر الرد
 - ممنوع تكتب سؤالين في نفس الرد
+
+قاعدة أعطِ مثال مبكر:
+- لو الطالب طلب مثال كود، أعط مثال صغير فوراً (3 إلى 6 سطور) ثم اسأل سؤال واحد
+- متبنيش المثال سؤال بسؤال، أعطيه مباشر
+
+قاعدة إنهاء الخطوة:
+- لو الطالب وصل للشرط الصحيح (مثلاً temperature > 20) انتقل فوراً لكتابة سطر if كامل مع النقطتين
+- ثم نفذ سطر واحد فقط داخل البلوك
+- ولا تعيد طلب كتابة نفس السطر مرة أخرى
+
+قاعدة هيكل الرد:
+- كل رد لازم يبدأ بتقييم إجابة الطالب: صح، غلط، أو قريب
+- لو صح: اعترف وانقل للخطوة اللي بعدها
+- لو غلط: صحح بلطف واطلب محاولة تاني بسؤال واحد
+- لو قريب: قول "قريب جداً" ووضح الفرق البسيط
+
+قاعدة الإسعاف التعليمي:
+- بعد محاولتين فاشلتين من الطالب في نفس النقطة
+- قدم scaffold واضح جداً: سطر كود ناقص جزء واحد والطالب يكمله، أو اختيارين، أو hint قوي جداً
+- وجرب سؤال أسهل بنقطة واحدة
+- لكن ممنوع حل نهائي أبداً
+
+قاعدة اللهجة:
+- ممنوع ترد بخشونة أو تقول "ده مش إجابة" أو "ده مش رد"
+- لو الطالب كتب حاجة مش متوقعة، قوله "قصدي حاجة تانية، خليني أوضحلك"
 
 مثال بايثون صحيح:
 if temperature > 20:
@@ -145,17 +189,48 @@ function selectRelevantChunks(
 }
 
 // ============================================================
-// Enforcement layer
+// State helpers
 // ============================================================
-function enforceResponse(content: string): { content: string; safetyFlags: string[] } {
-  const flags: string[] = [];
+function extractLastQuestion(text: string): string | null {
+  const lines = text.split("\n").reverse();
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.endsWith("؟") && trimmed.length > 5) {
+      return trimmed;
+    }
+  }
+  return null;
+}
+
+function isSimilarQuestion(q1: string | null, q2: string | null): boolean {
+  if (!q1 || !q2) return false;
+  const t1 = new Set(tokenize(q1));
+  const t2 = new Set(tokenize(q2));
+  if (t1.size === 0 || t2.size === 0) return false;
+  let overlap = 0;
+  for (const t of t1) {
+    if (t2.has(t)) overlap++;
+  }
+  return overlap / Math.max(t1.size, t2.size) > 0.8;
+}
+
+// ============================================================
+// Enforcement layer (Layer 3: Post-processing)
+// ============================================================
+function enforceResponse(
+  content: string,
+  lastKojoQuestion: string | null,
+  userAskedForExample: boolean
+): { content: string; safetyFlags: string[]; qualityFlags: string[]; newQuestion: string | null } {
+  const safetyFlags: string[] = [];
+  const qualityFlags: string[] = [];
 
   // 1. Truncate code blocks > 8 lines
   const codeBlockRegex = /```[\s\S]*?```/g;
   let enforced = content.replace(codeBlockRegex, (match) => {
     const lines = match.split("\n");
-    if (lines.length > 10) { // 10 = 8 code lines + 2 fence lines
-      flags.push("code_truncated");
+    if (lines.length > 10) {
+      safetyFlags.push("code_truncated");
       const header = lines.slice(0, 5).join("\n");
       const footer = lines.slice(-2).join("\n");
       return `${header}\n// ... (الكود اتقطع عشان تفكر في الباقي بنفسك)\n${footer}`;
@@ -163,20 +238,48 @@ function enforceResponse(content: string): { content: string; safetyFlags: strin
     return match;
   });
 
-  // 2. Replace direct answer phrases (in Kojo's response only)
+  // 2. Replace direct answer phrases
   if (DIRECT_ANSWER_PATTERNS.test(enforced)) {
-    flags.push("direct_answer_replaced");
-    enforced = enforced.replace(
-      DIRECT_ANSWER_PATTERNS,
-      "خلينا نفكر سوا 🤔"
-    );
-    // Add guiding question at end if not already present
+    safetyFlags.push("direct_answer_replaced");
+    enforced = enforced.replace(DIRECT_ANSWER_PATTERNS, "خلينا نفكر سوا 🤔");
     if (!enforced.trim().endsWith("؟")) {
       enforced += "\n\nأنهي اختيار شايفه أقرب وليه؟";
     }
   }
 
-  return { content: enforced, safetyFlags: flags };
+  // 3. Harsh tone check — replace with gentle alternatives
+  for (const { pattern, replacement } of HARSH_PHRASES) {
+    if (pattern.test(enforced)) {
+      qualityFlags.push("tone_softened");
+      enforced = enforced.replace(pattern, replacement);
+    }
+  }
+
+  // 4. Multiple questions trimming — convert extras to statements, keep last one
+  const questionParts = enforced.split("؟");
+  if (questionParts.length > 2) {
+    // More than 1 question mark means 2+ questions
+    qualityFlags.push("questions_trimmed");
+    // Keep all content but replace intermediate ؟ with .
+    const lastQIndex = enforced.lastIndexOf("؟");
+    const beforeLast = enforced.slice(0, lastQIndex);
+    const afterLast = enforced.slice(lastQIndex);
+    enforced = beforeLast.replace(/؟/g, ".") + afterLast;
+  }
+
+  // 5. Missing example check — if user asked for example but no code in response
+  if (userAskedForExample) {
+    const hasCode = enforced.includes("```") || /\b(if|for|while|print|def|class)\b/.test(enforced);
+    if (!hasCode) {
+      qualityFlags.push("missing_example");
+      // Don't auto-insert (could be wrong context), just flag for potential regenerate
+    }
+  }
+
+  // Extract new question for state tracking
+  const newQuestion = extractLastQuestion(enforced);
+
+  return { content: enforced, safetyFlags, qualityFlags, newQuestion };
 }
 
 // ============================================================
@@ -213,7 +316,6 @@ serve(async (req) => {
       });
     }
 
-    // Check expiration
     const exp = claims.exp as number | undefined;
     if (!exp || exp < Math.floor(Date.now() / 1000)) {
       return new Response(JSON.stringify({ error: "Token expired" }), {
@@ -230,7 +332,6 @@ serve(async (req) => {
       });
     }
 
-    // Service client for privileged operations
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const serviceClient = createClient(supabaseUrl, serviceKey);
@@ -258,7 +359,7 @@ serve(async (req) => {
       });
     }
 
-    const userMessage = message.trim().slice(0, 2000); // cap length
+    const userMessage = message.trim().slice(0, 2000);
 
     // ---- Rate limit ----
     const { data: rateResult, error: rateError } = await serviceClient.rpc(
@@ -294,7 +395,6 @@ serve(async (req) => {
     const today = cairo.today;
     const nowTime = cairo.timeHHMMSS;
 
-    // Get student's groups
     const { data: studentGroups } = await serviceClient
       .from("group_students")
       .select("group_id, groups!inner(id, status, level_id, age_group_id)")
@@ -304,7 +404,6 @@ serve(async (req) => {
     let selectedGroup: { id: string; level_id: string; age_group_id: string } | null = null;
 
     if (studentGroups && studentGroups.length > 0) {
-      // Priority 1: Active group with upcoming session
       for (const sg of studentGroups) {
         const g = sg.groups as any;
         if (g.status !== "active") continue;
@@ -324,7 +423,6 @@ serve(async (req) => {
         }
       }
 
-      // Priority 2: Any active group
       if (!selectedGroup) {
         const activeGroup = studentGroups.find((sg: any) => (sg.groups as any).status === "active");
         if (activeGroup) {
@@ -333,7 +431,6 @@ serve(async (req) => {
         }
       }
 
-      // Priority 3: Any group
       if (!selectedGroup) {
         const g = (studentGroups[0] as any).groups as any;
         selectedGroup = { id: g.id, level_id: g.level_id, age_group_id: g.age_group_id };
@@ -342,9 +439,10 @@ serve(async (req) => {
 
     // ---- Conversation management ----
     let conversationId = inputConvId;
+    let currentStep: string | null = null;
+    let lastKojoQuestion: string | null = null;
 
     if (!conversationId) {
-      // Create new conversation
       const { data: newConv, error: convError } = await serviceClient
         .from("chatbot_conversations")
         .insert({
@@ -364,10 +462,10 @@ serve(async (req) => {
       }
       conversationId = newConv.id;
     } else {
-      // Verify conversation belongs to student
+      // Verify conversation belongs to student + read state
       const { data: existingConv } = await serviceClient
         .from("chatbot_conversations")
-        .select("id, student_id")
+        .select("id, student_id, current_step, last_kojo_question")
         .eq("id", conversationId)
         .single();
 
@@ -377,6 +475,8 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      currentStep = (existingConv as any).current_step || null;
+      lastKojoQuestion = (existingConv as any).last_kojo_question || null;
     }
 
     // ---- Save student message ----
@@ -386,13 +486,18 @@ serve(async (req) => {
       content: userMessage,
     });
 
+    // ---- Check if user asked for example ----
+    const userAskedForExample = EXAMPLE_KEYWORDS.some((kw) =>
+      userMessage.includes(kw)
+    );
+
     // ---- Fetch history ----
     const { data: history } = await serviceClient
       .from("chatbot_messages")
       .select("role, content")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
-      .limit(MAX_HISTORY + 1); // +1 for the just-saved message
+      .limit(MAX_HISTORY + 1);
 
     const historyMessages = (history || []).slice(-(MAX_HISTORY)).map((m: any) => ({
       role: m.role === "user" ? "user" : "assistant",
@@ -432,10 +537,23 @@ serve(async (req) => {
       }
     }
 
-    // ---- Build messages for AI ----
-    const systemContent = ragContext
+    // ---- Layer 2: Build state-aware system content ----
+    let systemContent = ragContext
       ? `${SYSTEM_PROMPT}\n\nمحتوى المنهج المتاح:\n${ragContext}`
       : SYSTEM_PROMPT;
+
+    // Inject conversation state
+    if (currentStep || lastKojoQuestion) {
+      let stateBlock = "\n\n[حالة المحادثة]";
+      if (currentStep) {
+        stateBlock += `\nالخطوة الحالية: ${currentStep}`;
+      }
+      if (lastKojoQuestion) {
+        stateBlock += `\nآخر سؤال سألته: ${lastKojoQuestion}`;
+        stateBlock += "\nتعليمات: لا تكرر هذا السؤال. انقل للخطوة التالية.";
+      }
+      systemContent += stateBlock;
+    }
 
     const aiMessages = [
       { role: "system", content: systemContent },
@@ -550,9 +668,63 @@ serve(async (req) => {
       assistantContent = "عذراً، مقدرتش أساعدك دلوقتي. حاول تاني.";
     }
 
-    // ---- Enforcement layer ----
-    const { content: enforcedContent, safetyFlags } = enforceResponse(assistantContent);
+    // ---- Layer 3: Enforcement + post-processing ----
+    const { content: enforcedContent, safetyFlags, qualityFlags, newQuestion } =
+      enforceResponse(assistantContent, lastKojoQuestion, userAskedForExample);
     assistantContent = enforcedContent;
+
+    // Check for duplicate question — regenerate once
+    let regenerated = false;
+    if (newQuestion && isSimilarQuestion(newQuestion, lastKojoQuestion)) {
+      qualityFlags.push("question_repeated");
+      console.log("Duplicate question detected, regenerating once...");
+
+      // Single regeneration attempt with explicit instruction
+      const regenMessages = [
+        { role: "system", content: systemContent + "\n\nتنبيه: آخر سؤال كان مكرر. اسأل سؤال مختلف تماماً وانقل للخطوة التالية." },
+        ...historyMessages,
+      ];
+
+      try {
+        const regenResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: regenMessages,
+            stream: false,
+            max_tokens: 500,
+          }),
+        });
+
+        if (regenResponse.ok) {
+          const regenData = await regenResponse.json();
+          const regenContent = regenData.choices?.[0]?.message?.content;
+          if (typeof regenContent === "string" && regenContent.trim().length > 0) {
+            // Re-enforce the regenerated response
+            const regenEnforced = enforceResponse(regenContent.trim(), lastKojoQuestion, userAskedForExample);
+            assistantContent = regenEnforced.content;
+            // Merge flags
+            safetyFlags.push(...regenEnforced.safetyFlags);
+            qualityFlags.push(...regenEnforced.qualityFlags);
+            regenerated = true;
+          }
+        }
+      } catch (regenErr) {
+        console.error("Regeneration failed:", regenErr);
+      }
+    }
+
+    // Extract final question for state update
+    const finalQuestion = extractLastQuestion(assistantContent);
+
+    // ---- Merge flags ----
+    const allFlags: Record<string, unknown> = {};
+    if (safetyFlags.length > 0) allFlags.safety = safetyFlags;
+    if (qualityFlags.length > 0) allFlags.quality = qualityFlags;
 
     // ---- Save assistant message ----
     const { data: savedMsg } = await serviceClient.from("chatbot_messages").insert({
@@ -560,13 +732,14 @@ serve(async (req) => {
       role: "assistant",
       content: assistantContent,
       sources_used: sourcesUsed.length > 0 ? sourcesUsed : null,
-      safety_flags: safetyFlags.length > 0 ? safetyFlags : null,
+      safety_flags: Object.keys(allFlags).length > 0 ? allFlags : null,
     }).select("id").single();
 
-    // ---- Update conversation metadata ----
+    // ---- Update conversation metadata + state ----
     const updateData: Record<string, unknown> = {
       last_message_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      last_kojo_question: finalQuestion ? finalQuestion.slice(0, 200) : null,
     };
 
     // Auto-title after 2nd message
@@ -576,7 +749,6 @@ serve(async (req) => {
       .eq("conversation_id", conversationId);
 
     if (msgCount && msgCount <= 3) {
-      // Get first user message for title
       const { data: firstMsg } = await serviceClient
         .from("chatbot_messages")
         .select("content")

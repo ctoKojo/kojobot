@@ -296,7 +296,9 @@ export type Database = {
         Row: {
           age_group_id: string | null
           created_at: string
+          current_step: string | null
           id: string
+          last_kojo_question: string | null
           last_message_at: string | null
           level_id: string | null
           persona: string
@@ -309,7 +311,9 @@ export type Database = {
         Insert: {
           age_group_id?: string | null
           created_at?: string
+          current_step?: string | null
           id?: string
+          last_kojo_question?: string | null
           last_message_at?: string | null
           level_id?: string | null
           persona?: string
@@ -322,7 +326,9 @@ export type Database = {
         Update: {
           age_group_id?: string | null
           created_at?: string
+          current_step?: string | null
           id?: string
+          last_kojo_question?: string | null
           last_message_at?: string | null
           level_id?: string | null
           persona?: string
