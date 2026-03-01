@@ -422,6 +422,11 @@ serve(async (req) => {
     let lastErrorText = "";
 
     for (const attempt of attempts) {
+      const isOpenAI = attempt.model.startsWith("openai/");
+      const tokenParam = isOpenAI
+        ? { max_completion_tokens: 300 }
+        : { max_tokens: 300 };
+
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -432,7 +437,7 @@ serve(async (req) => {
           model: attempt.model,
           messages: attempt.messages,
           stream: false,
-          max_tokens: 300,
+          ...tokenParam,
         }),
       });
 
