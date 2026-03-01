@@ -1,133 +1,89 @@
-# Gamification System — Student Game Hub
 
-## Overview
-Replace the current `StudentDashboard` with a fully gamified **Game Hub** featuring Level Map, Current Quest, Shields/Achievements, XP system, and Streaks. Kojo NPC is already built via `KojoSheet.tsx`.
 
----
+# Game UI Overhaul - Student Experience
 
-## Phase 1: Game Hub UI + Level Map + Current Quest (No new DB tables)
-Uses existing data: `curriculum_sessions`, `attendance`, `sessions`, `quiz_assignments`, `assignments`, `group_level_progress`, `group_student_progress`
-
-### 1.1 Game Hub Layout (`StudentDashboard.tsx` → rewrite)
-- **Top Bar**: XP bar (derived), streak counter (derived), shield count
-- **Main Area** (tabs or sections):
-  - 🗺️ Level Map (default view)
-  - ⚔️ Current Quest
-  - 🛡️ Shields Gallery
-  - 🏆 Leaderboard (link to existing page)
-
-### 1.2 Level Map Component (`src/components/student/LevelMap.tsx`)
-- Visual node-based map showing curriculum sessions as nodes
-- Data source: `curriculum_sessions` filtered by student's `level_id` + `age_group_id`
-- Node states: completed (attended) / current (first unattended) / locked (future)
-- Completion based on `attendance` records (present/late/compensated)
-- Kojo NPC on current node (opens `KojoSheet` with `contextType: 'map'`)
-- Click completed nodes → navigate to session content
-
-### 1.3 Current Quest Component (`src/components/student/CurrentQuest.tsx`)
-- Shows the **next actionable task** for the student:
-  1. Pending quiz (from `quiz_assignments` not in `quiz_submissions`)
-  2. Pending assignment (from `assignments` not in `assignment_submissions`)
-  3. Next upcoming session (from `sessions` where `status = 'scheduled'`)
-  4. If nothing: "All clear! 🎉" state
-- "Go" button → navigates to the relevant page
-- "Ask Kojo" button → opens `KojoSheet` with `contextType: 'quest'`
+Transform the entire student interface from a standard dashboard into an immersive game-like experience.
 
 ---
 
-## Phase 2: XP & Streaks Database
-New tables (no changes to existing tables):
+## Scope of Changes
 
-### 2.1 `student_xp_events` table
-```sql
-- id uuid PK
-- student_id uuid NOT NULL
-- event_type text NOT NULL (attendance, quiz_score, assignment_score, streak_bonus, achievement)
-- xp_amount integer NOT NULL
-- reference_id uuid (session_id, quiz_id, etc.)
-- created_at timestamptz DEFAULT now()
-```
+### 1. Game-Themed Sidebar (Student Only)
+Replace the standard sidebar navigation for students with a game-style menu:
+- Dark gradient background with a subtle animated pattern
+- Navigation items styled as "game menu buttons" with glowing hover effects
+- Icons replaced with game-themed equivalents (e.g., Quizzes = "Scroll", Sessions = "Dungeon", Materials = "Spellbook")
+- Section labels styled as chapter headers
+- XP level badge displayed at the top of the sidebar
+- Active item has a glowing border effect instead of plain highlight
 
-### 2.2 `student_streaks` table
-```sql
-- id uuid PK
-- student_id uuid UNIQUE NOT NULL
-- current_streak integer DEFAULT 0
-- longest_streak integer DEFAULT 0
-- last_activity_date date
-- updated_at timestamptz DEFAULT now()
-```
+### 2. Game Header Bar (Student Only)
+Replace the standard header for students:
+- Player HUD-style bar with avatar, level circle, XP bar, streak flame, and shield count all in one horizontal strip
+- Dark/gradient background for the header instead of plain white
+- Stats displayed as game-style counters with subtle glow effects
+- Warnings shown as a pulsing red indicator
 
-### 2.3 XP Calculation Rules
-- Attend session: +50 XP
-- Complete quiz: +20 XP base + (score% × 30) bonus
-- Submit assignment: +20 XP base + (score% × 30) bonus
-- Daily streak bonus: +10 XP per day
-- Achievement unlocked: +100 XP
+### 3. GameHub - Hero Section Redesign
+- Full-width gradient hero card with the player's avatar, name, level title, and XP bar
+- Animated level circle with a glow ring effect
+- Streak counter with animated flame icon when active
+- Shield count with a metallic shine effect
 
----
+### 4. Level Map Visual Upgrade
+- Replace plain circles with styled "dungeon nodes" - hexagonal or diamond shapes
+- Add a winding SVG path instead of a straight vertical line
+- Completed nodes get a green glow + checkmark animation
+- Current node pulses with a golden glow + particle-like shimmer
+- Locked nodes appear as dark silhouettes with a lock icon
+- Add subtle entrance animations (stagger fade-in from bottom)
 
-## Phase 3: Achievements/Shields
-New tables:
+### 5. Quest Card Redesign
+- Card styled as a "mission briefing" with a dark theme
+- Glowing border based on quest type (gold for quiz, blue for session, green for assignment)
+- "Go!" button styled as a prominent game CTA with gradient + hover scale
+- Timer/countdown visual for quiz quests
 
-### 3.1 `achievements` table (definitions)
-```sql
-- id uuid PK
-- key text UNIQUE NOT NULL
-- title text, title_ar text
-- description text, description_ar text
-- icon_name text (lucide icon name)
-- xp_reward integer DEFAULT 100
-- condition_type text (attendance_count, quiz_score, streak, level_complete)
-- condition_value jsonb
-- is_active boolean DEFAULT true
-```
+### 6. Shields Gallery Upgrade
+- Achievement cards styled as collectible badges/medals
+- Earned shields have a golden frame with a subtle shine animation
+- Unearned shields shown as dark silhouettes with a "?" overlay
+- Hover effect reveals the achievement description
+- XP reward shown as a small tag on each shield
 
-### 3.2 `student_achievements` table
-```sql
-- id uuid PK
-- student_id uuid NOT NULL
-- achievement_id uuid NOT NULL → achievements
-- earned_at timestamptz DEFAULT now()
-- UNIQUE(student_id, achievement_id)
-```
-
-### 3.3 Seed Achievements
-- 🛡️ First Steps: Attend 1 session
-- ⚡ Quick Learner: Score 90%+ on quiz
-- 🔥 On Fire: 7-day streak
-- 🏆 Level Complete: Finish all sessions in a level
-- 💯 Perfect Score: 100% on any quiz
-- 📚 Bookworm: Attend 10 sessions
-- 🌟 Rising Star: Top 3 in leaderboard
+### 7. CSS & Animations
+Add new game-specific CSS utilities to `index.css`:
+- `.game-glow` - subtle box-shadow glow effect
+- `.game-card` - dark semi-transparent card with border glow
+- `.animate-pulse-glow` - pulsing glow for active elements
+- `.animate-float` - gentle floating animation for icons
+- `.animate-stagger-in` - staggered entrance animation
+- Hexagonal clip-path utility for map nodes
 
 ---
 
-## Phase 4: Connect Everything
-- Trigger XP events from existing actions (attendance insert, quiz grade, assignment grade)
-- DB triggers or edge function to auto-calculate streaks
-- Check achievement conditions on XP events
-- Update Game Hub UI to show real XP/streaks/shields
+## Files to Create/Modify
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src/index.css` | Modify | Add game animation keyframes and utility classes |
+| `src/components/student/GameHub.tsx` | Modify | Redesign hero bar, tabs styling, and overall layout |
+| `src/components/student/LevelMap.tsx` | Modify | New node shapes, SVG path, glow effects, stagger animations |
+| `src/components/student/CurrentQuest.tsx` | Modify | Mission briefing style, glowing borders, enhanced CTA |
+| `src/components/student/XpBar.tsx` | Modify | Animated gradient progress bar with glow |
+| `src/components/student/StreakCounter.tsx` | Modify | Animated flame with glow when active |
+| `src/components/AppSidebar.tsx` | Modify | Game-themed sidebar for student role only (other roles unchanged) |
+| `src/components/DashboardLayout.tsx` | Modify | Game-themed header for student role only |
 
 ---
 
-## File Structure
-```
-src/components/student/
-  GameHub.tsx          — Main hub layout (replaces StudentDashboard content)
-  LevelMap.tsx         — Visual progression map
-  CurrentQuest.tsx     — Next task card
-  ShieldsGallery.tsx   — Achievement display
-  XpBar.tsx            — XP progress bar
-  StreakCounter.tsx     — Daily streak display
-  KojoSheet.tsx        — ✅ Already built
-```
+## Technical Notes
 
-## Current Status
-- [x] KojoSheet.tsx created
-- [x] chat-with-kojo backend updated with meta + age tuning
-- [x] KojoChatWidget removed for students
-- [x] Phase 1: Game Hub UI + Level Map + Current Quest
-- [x] Phase 2: XP & Streaks DB (student_xp_events, student_streaks tables + triggers)
-- [x] Phase 3: Achievements DB + seed data (achievements, student_achievements tables)
-- [x] Phase 4: Connect triggers + real data (attendance/quiz/assignment triggers → XP + achievements)
+- All changes are **student-role-only** - admin, instructor, and reception UIs remain unchanged
+- The sidebar and header will conditionally apply game styling using `role === 'student'` checks
+- Dark mode compatibility maintained throughout
+- RTL support preserved for Arabic
+- Mobile responsiveness maintained with the existing dual-view pattern
+- No database changes needed - purely frontend visual overhaul
+- Uses existing Tailwind + CSS custom properties pattern from the project
+
