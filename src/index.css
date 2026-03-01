@@ -368,15 +368,16 @@
   }
 
   /* ===== Game Theme – Cascading Inner Page Overrides ===== */
+  /* Forces a dark game aesthetic on ALL student pages regardless of light/dark mode */
 
-  /* Background & base text */
   .game-theme {
-    background: linear-gradient(170deg, hsl(222 47% 5%) 0%, hsl(249 35% 10%) 50%, hsl(222 47% 7%) 100%);
-    color: hsl(210 40% 92%);
+    background: linear-gradient(170deg, hsl(222 47% 5%) 0%, hsl(249 35% 10%) 50%, hsl(222 47% 7%) 100%) !important;
+    min-height: 100%;
   }
 
-  /* Light mode: keep the game dark regardless */
-  :root .game-theme {
+  /* Override CSS variables inside game-theme for BOTH light and dark modes */
+  .game-theme,
+  .dark .game-theme {
     --background: 222 47% 6%;
     --foreground: 210 40% 92%;
     --card: 222 47% 9%;
@@ -387,239 +388,165 @@
     --muted-foreground: 215 20% 65%;
     --accent: 249 30% 18%;
     --accent-foreground: 210 40% 95%;
-    --border: 249 25% 18%;
-    --input: 249 25% 16%;
+    --border: 249 20% 20%;
+    --input: 249 20% 16%;
     --ring: 249 86% 64%;
+    --primary: 197 70% 64%;
+    --primary-foreground: 222 47% 6%;
+    --destructive: 0 63% 40%;
+    --destructive-foreground: 210 40% 95%;
+    color: hsl(210 40% 92%);
   }
 
-  /* Cards → glass-morphism game cards */
-  .game-theme [data-slot="card"],
-  .game-theme .rounded-lg.border,
-  .game-theme .rounded-xl.border {
-    background: hsl(222 47% 9% / 0.8) !important;
+  /* Cards get a subtle purple border glow */
+  .game-theme .bg-card,
+  .game-theme .rounded-lg.border.bg-card {
     border-color: hsl(249 86% 64% / 0.15) !important;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 4px 20px hsl(249 86% 64% / 0.06);
+    box-shadow: 0 2px 15px hsl(249 86% 64% / 0.06);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
   }
 
-  .game-theme [data-slot="card"]:hover,
-  .game-theme .rounded-lg.border:hover {
-    border-color: hsl(249 86% 64% / 0.25) !important;
+  .game-theme .bg-card:hover {
+    border-color: hsl(249 86% 64% / 0.28) !important;
     box-shadow: 0 4px 25px hsl(249 86% 64% / 0.1);
   }
 
   /* Tables */
   .game-theme table {
-    border-color: hsl(249 25% 18%);
+    border-color: hsl(249 20% 20%);
   }
 
   .game-theme thead {
-    background: hsl(249 30% 12% / 0.9);
+    background: hsl(249 30% 12% / 0.9) !important;
   }
 
   .game-theme thead th {
-    color: hsl(197 70% 70%);
+    color: hsl(197 70% 70%) !important;
     font-weight: 600;
-    border-color: hsl(249 25% 20%);
+    border-color: hsl(249 20% 22%) !important;
   }
 
   .game-theme tbody tr {
-    border-color: hsl(249 25% 15%);
+    border-color: hsl(249 20% 16%) !important;
     transition: background 0.2s ease;
   }
 
   .game-theme tbody tr:hover {
-    background: hsl(249 30% 14% / 0.6);
+    background: hsl(249 30% 14% / 0.5) !important;
   }
 
   .game-theme td {
-    border-color: hsl(249 25% 15%);
-    color: hsl(210 30% 85%);
+    border-color: hsl(249 20% 16%) !important;
   }
 
-  /* Badges → glowing game badges */
-  .game-theme [data-slot="badge"],
-  .game-theme .inline-flex.items-center.rounded-full,
-  .game-theme .inline-flex.items-center.rounded-md {
-    border-color: hsl(249 86% 64% / 0.2);
-    text-shadow: 0 0 8px hsl(249 86% 64% / 0.2);
-  }
-
-  /* Buttons */
-  .game-theme button:not([data-sidebar]):not([data-slot="dialog-close"]) {
-    transition: all 0.2s ease;
-  }
-
-  .game-theme button[data-variant="outline"],
-  .game-theme .border.bg-background {
-    background: hsl(222 47% 10% / 0.8);
-    border-color: hsl(249 86% 64% / 0.2);
-    color: hsl(210 40% 90%);
-  }
-
-  .game-theme button[data-variant="outline"]:hover {
-    background: hsl(249 30% 18% / 0.6);
-    border-color: hsl(249 86% 64% / 0.35);
-  }
-
-  /* Inputs & Selects */
+  /* Inputs, textareas, selects */
   .game-theme input,
   .game-theme textarea,
-  .game-theme select,
-  .game-theme [role="combobox"],
-  .game-theme [data-slot="select-trigger"] {
-    background: hsl(222 47% 8% / 0.9) !important;
-    border-color: hsl(249 25% 20%) !important;
+  .game-theme select {
+    background-color: hsl(222 47% 8%) !important;
+    border-color: hsl(249 20% 22%) !important;
     color: hsl(210 40% 92%) !important;
   }
 
   .game-theme input:focus,
-  .game-theme textarea:focus,
-  .game-theme [role="combobox"]:focus {
+  .game-theme textarea:focus {
     border-color: hsl(249 86% 64% / 0.5) !important;
-    box-shadow: 0 0 0 2px hsl(249 86% 64% / 0.15) !important;
+    box-shadow: 0 0 0 3px hsl(249 86% 64% / 0.12) !important;
   }
 
   .game-theme input::placeholder,
   .game-theme textarea::placeholder {
-    color: hsl(215 20% 45%) !important;
+    color: hsl(215 20% 42%) !important;
+  }
+
+  /* Select triggers (shadcn) */
+  .game-theme button[role="combobox"] {
+    background-color: hsl(222 47% 8%) !important;
+    border-color: hsl(249 20% 22%) !important;
+    color: hsl(210 40% 92%) !important;
   }
 
   /* Tabs */
   .game-theme [role="tablist"] {
-    background: hsl(222 47% 8% / 0.6);
-    border-color: hsl(249 25% 18%);
+    background: hsl(222 47% 8% / 0.7) !important;
   }
 
   .game-theme [role="tab"] {
-    color: hsl(215 20% 55%);
+    color: hsl(215 20% 55%) !important;
     transition: all 0.2s ease;
   }
 
-  .game-theme [role="tab"][data-state="active"],
-  .game-theme [role="tab"][aria-selected="true"] {
-    background: hsl(249 30% 18% / 0.8);
-    color: hsl(197 70% 70%);
-    box-shadow: 0 0 10px hsl(249 86% 64% / 0.1);
+  .game-theme [role="tab"][data-state="active"] {
+    background: hsl(249 30% 18% / 0.8) !important;
+    color: hsl(197 70% 75%) !important;
+    box-shadow: 0 0 12px hsl(249 86% 64% / 0.12);
   }
 
-  /* Dialogs / Modals / Popovers */
-  .game-theme [role="dialog"],
-  .game-theme [data-slot="dialog-content"] {
-    background: hsl(222 47% 8%) !important;
-    border-color: hsl(249 86% 64% / 0.2) !important;
-    box-shadow: 0 0 40px hsl(249 86% 64% / 0.1);
-  }
-
-  /* Dropdown menus */
-  .game-theme [role="menu"],
-  .game-theme [data-slot="dropdown-menu-content"],
-  .game-theme [data-slot="popover-content"] {
-    background: hsl(222 47% 9%) !important;
-    border-color: hsl(249 86% 64% / 0.2) !important;
-  }
-
-  .game-theme [role="menuitem"]:hover,
-  .game-theme [role="option"]:hover {
-    background: hsl(249 30% 18% / 0.5) !important;
-  }
-
-  /* Separators */
-  .game-theme [data-slot="separator"],
-  .game-theme hr {
-    border-color: hsl(249 25% 18%);
-  }
-
-  /* Scroll area */
-  .game-theme [data-slot="scroll-area-scrollbar"] {
-    background: hsl(249 25% 15% / 0.5);
-  }
-
-  /* Progress bars */
-  .game-theme [role="progressbar"] {
-    background: hsl(222 30% 12%);
-  }
-
-  /* Skeleton loading */
-  .game-theme .animate-pulse {
-    background: hsl(222 30% 14%);
-  }
-
-  /* Headings inside game theme */
+  /* Headings */
   .game-theme h1,
   .game-theme h2,
   .game-theme h3,
   .game-theme h4 {
-    color: hsl(210 40% 95%);
+    color: hsl(210 40% 95%) !important;
   }
 
-  /* Text muted overrides */
+  /* Muted text */
   .game-theme .text-muted-foreground {
-    color: hsl(215 20% 55%);
+    color: hsl(215 20% 55%) !important;
   }
 
-  /* Links */
-  .game-theme a:not([class]) {
-    color: hsl(197 70% 70%);
+  /* Badges */
+  .game-theme .rounded-full.border {
+    border-color: hsl(249 86% 64% / 0.2);
   }
 
-  /* Tooltips */
-  .game-theme [role="tooltip"] {
-    background: hsl(222 47% 10%) !important;
-    border-color: hsl(249 86% 64% / 0.2) !important;
-    color: hsl(210 40% 90%) !important;
+  /* Separator / hr */
+  .game-theme hr,
+  .game-theme [data-orientation] {
+    border-color: hsl(249 20% 18%) !important;
   }
 
-  /* Switch / Toggle */
+  /* Progress bar track */
+  .game-theme [role="progressbar"] {
+    background: hsl(222 30% 12%) !important;
+  }
+
+  /* Skeleton */
+  .game-theme .animate-pulse {
+    background-color: hsl(222 30% 14%) !important;
+  }
+
+  /* Switch */
   .game-theme [role="switch"] {
-    background: hsl(222 30% 14%);
-    border-color: hsl(249 25% 20%);
+    background-color: hsl(222 30% 14%) !important;
   }
-
   .game-theme [role="switch"][data-state="checked"] {
-    background: hsl(249 86% 64%);
+    background-color: hsl(249 86% 64%) !important;
   }
 
   /* Checkbox & Radio */
   .game-theme [role="checkbox"],
   .game-theme [role="radio"] {
-    border-color: hsl(249 25% 25%);
-    background: hsl(222 47% 8%);
+    border-color: hsl(249 25% 28%) !important;
+    background-color: hsl(222 47% 8%) !important;
   }
 
-  /* Alert/Info boxes */
+  /* Alert boxes */
   .game-theme [role="alert"] {
-    background: hsl(222 47% 9% / 0.9);
-    border-color: hsl(249 86% 64% / 0.15);
+    background-color: hsl(222 47% 9% / 0.9) !important;
+    border-color: hsl(249 86% 64% / 0.15) !important;
   }
 
-  /* Empty state text */
-  .game-theme .text-center.text-muted-foreground {
-    color: hsl(215 20% 50%);
-  }
-
-  /* Pagination */
+  /* Pagination buttons */
   .game-theme nav[aria-label] button {
-    border-color: hsl(249 25% 18%);
-    color: hsl(210 40% 85%);
+    border-color: hsl(249 20% 20%) !important;
   }
-
   .game-theme nav[aria-label] button:hover {
-    background: hsl(249 30% 18% / 0.5);
+    background: hsl(249 30% 18% / 0.5) !important;
   }
-
   .game-theme nav[aria-label] button[aria-current="page"] {
-    background: hsl(249 86% 64% / 0.2);
-    border-color: hsl(249 86% 64% / 0.4);
-    color: hsl(197 70% 70%);
-  }
-
-  /* Accordion */
-  .game-theme [data-slot="accordion-trigger"] {
-    color: hsl(210 40% 92%);
-  }
-
-  .game-theme [data-slot="accordion-content"] {
-    color: hsl(210 30% 80%);
+    background: hsl(249 86% 64% / 0.2) !important;
+    border-color: hsl(249 86% 64% / 0.4) !important;
+    color: hsl(197 70% 70%) !important;
   }
 }
