@@ -284,7 +284,7 @@ export function KojoChatWidget() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg overflow-hidden hover:scale-105 transition-transform animate-pulse pb-safe"
+          className="fixed bottom-6 ltr:right-6 rtl:left-6 z-50 h-14 w-14 rounded-full shadow-lg overflow-hidden hover:scale-105 transition-transform animate-pulse pb-safe"
           aria-label="Open Kojo Chat"
         >
           <img src={kojobotIcon} alt="Kojo" className="h-full w-full object-cover" />
@@ -293,7 +293,7 @@ export function KojoChatWidget() {
 
       {/* Chat window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-80 h-[28rem] sm:w-96 flex flex-col rounded-2xl border border-border bg-background shadow-2xl overflow-hidden pb-safe">
+        <div className="fixed bottom-6 ltr:right-6 rtl:left-6 z-50 w-80 h-[28rem] sm:w-96 flex flex-col rounded-2xl border border-border bg-background shadow-2xl overflow-hidden pb-safe">
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-3 kojo-gradient text-white shrink-0">
             <img src={kojobotIcon} alt="Kojo" className="h-7 w-7 rounded-full" />
