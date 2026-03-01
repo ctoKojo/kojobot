@@ -10,13 +10,22 @@ const corsHeaders = {
 
 const MAX_HISTORY = 20;
 
-const SYSTEM_PROMPT = `انت Kojo، مساعد تعليمي بيساعد طلاب يتعلموا برمجة.
-بتتكلم عامية مصرية بسيطة.
-المصطلحات التقنية سيبها إنجليزي (if, print, variable, loop).
-بتشرح بأمثلة من الحياة اليومية زي ما بتشرح لطفل.
-ردودك مختصرة ومباشرة.
+const SYSTEM_PROMPT = `انت Kojo، صاحب الطالب اللي بيساعده يفهم البرمجة.
+بتتكلم عامية مصرية بسيطة جداً.
 
-لو في محتوى منهج متاح تحت، استخدمه في إجاباتك.`;
+# قواعدك:
+- ردك لازم يكون قصير أوي (3-5 سطور بس)
+- كل إجابة لازم يكون فيها مثال واقعي من حياة الطالب (زي ألعاب، مدرسة، أكل)
+- المصطلحات التقنية سيبها إنجليزي (variable, loop, function, if)
+- لو الطالب سأل سؤال كبير، قسمه لأجزاء صغيرة وجاوب على الأول بس
+- متكررش نفسك ومتقولش "يعني مثلاً" أو "تخيل معايا" كتير
+- لو مش فاهم السؤال، اسأله يوضح
+
+# مثال على أسلوبك:
+سؤال: "ايه الـ variable؟"
+إجابة: "الـ variable زي الدرج اللي بتحط فيه حاجة. بتديله اسم وبتحط جواه قيمة:
+\`x = 5\`
+كده x بقى فيه الرقم 5. تقدر تغيره بعدين عادي."`;
 
 // ============================================================
 // Auth
@@ -171,7 +180,6 @@ serve(async (req) => {
 
     let selectedGroup: { id: string; level_id: string; age_group_id: string } | null = null;
     if (studentGroups && studentGroups.length > 0) {
-      // Pick first active group
       const active = studentGroups.find((sg: any) => (sg.groups as any).status === "active");
       const pick = active || studentGroups[0];
       const g = (pick as any).groups as any;
@@ -262,7 +270,7 @@ serve(async (req) => {
       ...historyMessages,
     ];
 
-    // Call AI
+    // Call AI with streaming
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "AI not configured" }), {
@@ -270,16 +278,15 @@ serve(async (req) => {
       });
     }
 
-    let assistantContent = "";
-    let lastErrorStatus: number | null = null;
-
-    // Try primary model, then fallback
     const models = [
-      { model: "openai/gpt-5-mini", messages: aiMessages },
-      { model: "google/gemini-2.5-flash", messages: aiMessages },
+      { model: "google/gemini-2.5-flash", maxTokens: 400 },
+      { model: "openai/gpt-5-mini", maxTokens: 400 },
     ];
 
-    for (const { model, messages } of models) {
+    let aiResponse: Response | null = null;
+    let lastErrorStatus: number | null = null;
+
+    for (const { model, maxTokens } of models) {
       const isOpenAI = model.startsWith("openai/");
 
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -290,9 +297,9 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model,
-          messages,
-          stream: false,
-          ...(isOpenAI ? { max_completion_tokens: 500 } : { max_tokens: 500 }),
+          messages: aiMessages,
+          stream: true,
+          ...(isOpenAI ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }),
         }),
       });
 
@@ -303,15 +310,11 @@ serve(async (req) => {
         continue;
       }
 
-      const data = await res.json();
-      const content = data.choices?.[0]?.message?.content;
-      if (typeof content === "string" && content.trim().length > 0) {
-        assistantContent = content.trim();
-        break;
-      }
+      aiResponse = res;
+      break;
     }
 
-    if (!assistantContent) {
+    if (!aiResponse) {
       if (lastErrorStatus === 429) {
         return new Response(JSON.stringify({ error: "AI rate limited" }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -322,49 +325,102 @@ serve(async (req) => {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      assistantContent = "عذراً، مقدرتش أساعدك دلوقتي. حاول تاني.";
+      return new Response(JSON.stringify({ error: "AI unavailable" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Save assistant message
-    const { data: savedMsg } = await db.from("chatbot_messages").insert({
-      conversation_id: conversationId,
-      role: "assistant",
-      content: assistantContent,
-      sources_used: sourcesUsed.length > 0 ? sourcesUsed : null,
-    }).select("id").single();
+    // Stream the response through to client, collecting full text for DB save
+    const reader = aiResponse.body!.getReader();
+    const decoder = new TextDecoder();
+    let fullAssistantContent = "";
 
-    // Update conversation
-    const updateData: Record<string, unknown> = {
-      last_message_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    const stream = new ReadableStream({
+      async start(controller) {
+        // Send metadata as first SSE event
+        const meta = JSON.stringify({ conversationId, minute_remaining: rateResult.minute_remaining, daily_remaining: rateResult.daily_remaining });
+        controller.enqueue(new TextEncoder().encode(`data: ${meta}\n\n`));
 
-    const { count: msgCount } = await db
-      .from("chatbot_messages")
-      .select("*", { count: "exact", head: true })
-      .eq("conversation_id", conversationId);
+        let buffer = "";
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
 
-    if (msgCount && msgCount <= 3) {
-      const { data: firstMsg } = await db
-        .from("chatbot_messages")
-        .select("content")
-        .eq("conversation_id", conversationId)
-        .eq("role", "user")
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .single();
-      if (firstMsg) updateData.title = firstMsg.content.slice(0, 50);
-    }
+            let newlineIndex: number;
+            while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+              let line = buffer.slice(0, newlineIndex);
+              buffer = buffer.slice(newlineIndex + 1);
+              if (line.endsWith("\r")) line = line.slice(0, -1);
+              if (!line.startsWith("data: ") || line.trim() === "") continue;
 
-    await db.from("chatbot_conversations").update(updateData).eq("id", conversationId);
+              const jsonStr = line.slice(6).trim();
+              if (jsonStr === "[DONE]") continue;
 
-    return new Response(JSON.stringify({
-      message: assistantContent,
-      conversationId,
-      messageId: savedMsg?.id || null,
-      minute_remaining: rateResult.minute_remaining,
-      daily_remaining: rateResult.daily_remaining,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+              try {
+                const parsed = JSON.parse(jsonStr);
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (typeof content === "string" && content.length > 0) {
+                  fullAssistantContent += content;
+                  // Forward as SSE token event
+                  controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ token: content })}\n\n`));
+                }
+              } catch {
+                // partial JSON, skip
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Stream read error:", e);
+        }
+
+        // Save assistant message to DB
+        if (!fullAssistantContent) {
+          fullAssistantContent = "عذراً، مقدرتش أساعدك دلوقتي. حاول تاني.";
+        }
+
+        const { data: savedMsg } = await db.from("chatbot_messages").insert({
+          conversation_id: conversationId,
+          role: "assistant",
+          content: fullAssistantContent,
+          sources_used: sourcesUsed.length > 0 ? sourcesUsed : null,
+        }).select("id").single();
+
+        // Update conversation
+        const updateData: Record<string, unknown> = {
+          last_message_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        const { count: msgCount } = await db
+          .from("chatbot_messages")
+          .select("*", { count: "exact", head: true })
+          .eq("conversation_id", conversationId);
+
+        if (msgCount && msgCount <= 3) {
+          const { data: firstMsg } = await db
+            .from("chatbot_messages")
+            .select("content")
+            .eq("conversation_id", conversationId)
+            .eq("role", "user")
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .single();
+          if (firstMsg) updateData.title = firstMsg.content.slice(0, 50);
+        }
+
+        await db.from("chatbot_conversations").update(updateData).eq("id", conversationId);
+
+        // Send done event with message ID
+        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ done: true, messageId: savedMsg?.id || null })}\n\n`));
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: { ...corsHeaders, "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+    });
 
   } catch (err) {
     console.error("chat-with-kojo error:", err);
