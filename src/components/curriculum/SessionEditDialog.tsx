@@ -362,8 +362,8 @@ export function SessionEditDialog({ session, onClose }: Props) {
           summary_video_url: form.summary_video_url || null,
           full_video_url: form.full_video_url || null,
           quiz_id: form.quiz_id || null,
-          assignment_title: form.assignment_title || null,
-          assignment_title_ar: form.assignment_title_ar || null,
+          assignment_title: form.assignment_title || ((form.assignment_description || attachmentUrl) ? `Assignment ${session.session_number}` : null),
+          assignment_title_ar: form.assignment_title_ar || ((form.assignment_description || attachmentUrl) ? `واجب ${session.session_number}` : null),
           assignment_description: form.assignment_description || null,
           assignment_description_ar: form.assignment_description_ar || null,
           assignment_attachment_url: attachmentUrl,
@@ -616,11 +616,22 @@ export function SessionEditDialog({ session, onClose }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>{isRTL ? 'عنوان الواجب (إنجليزي)' : 'Assignment Title (EN)'}</Label>
-                <Input value={form.assignment_title || ''} onChange={e => setForm(f => ({ ...f, assignment_title: e.target.value }))} className="mt-1" />
+                <Input
+                  value={form.assignment_title || ''}
+                  onChange={e => setForm(f => ({ ...f, assignment_title: e.target.value }))}
+                  placeholder={`Assignment ${session?.session_number ?? ''}`}
+                  className="mt-1"
+                />
               </div>
               <div>
                 <Label>{isRTL ? 'عنوان الواجب (عربي)' : 'Assignment Title (AR)'}</Label>
-                <Input value={form.assignment_title_ar || ''} onChange={e => setForm(f => ({ ...f, assignment_title_ar: e.target.value }))} className="mt-1" dir="rtl" />
+                <Input
+                  value={form.assignment_title_ar || ''}
+                  onChange={e => setForm(f => ({ ...f, assignment_title_ar: e.target.value }))}
+                  placeholder={`واجب ${session?.session_number ?? ''}`}
+                  className="mt-1"
+                  dir="rtl"
+                />
               </div>
             </div>
             <div>
