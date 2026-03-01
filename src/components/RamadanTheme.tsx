@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { X } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -59,6 +59,20 @@ const Lantern = ({ className = '' }: { className?: string }) => (
   </svg>
 );
 
+/* ── Islamic geometric pattern (subtle) ── */
+const GeometricPattern = ({ className = '' }: { className?: string }) => (
+  <svg viewBox="0 0 100 100" className={className} fill="none" opacity="0.06">
+    <defs>
+      <linearGradient id="geo-grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stopColor="#61C9E0" />
+        <stop offset="100%" stopColor="#6455F0" />
+      </linearGradient>
+    </defs>
+    {/* 8-point star pattern */}
+    <polygon points="50,5 61,35 95,35 68,55 79,85 50,68 21,85 32,55 5,35 39,35" fill="url(#geo-grad)" />
+  </svg>
+);
+
 /* ── Header Decorations (crescent + stars in header bar) ── */
 export function RamadanHeaderDecor() {
   return (
@@ -71,12 +85,47 @@ export function RamadanHeaderDecor() {
   );
 }
 
+/* ── Sidebar Decorations ── */
+export function RamadanSidebarDecor() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* Top lantern */}
+      <Lantern className="absolute -top-1 ltr:left-3 rtl:right-3 w-5 h-10 opacity-30" />
+      {/* Stars scattered */}
+      <Star className="absolute top-20 ltr:right-3 rtl:left-3 w-2.5 h-2.5" delay="0.3s" />
+      <Star className="absolute top-44 ltr:left-4 rtl:right-4 w-2 h-2" delay="1s" />
+      <Star className="absolute top-72 ltr:right-5 rtl:left-5 w-1.5 h-1.5" delay="1.8s" />
+      {/* Geometric patterns */}
+      <GeometricPattern className="absolute bottom-24 ltr:left-2 rtl:right-2 w-10 h-10" />
+      {/* Bottom crescent */}
+      <Crescent className="absolute bottom-8 ltr:right-2 rtl:left-2 w-6 h-6 opacity-20" />
+    </div>
+  );
+}
+
+/* ── Main Content Background Decorations ── */
+export function RamadanContentDecor() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+      {/* Corner decorations */}
+      <GeometricPattern className="absolute top-4 ltr:right-4 rtl:left-4 w-16 h-16 opacity-[0.04]" />
+      <GeometricPattern className="absolute bottom-8 ltr:left-8 rtl:right-8 w-20 h-20 opacity-[0.03]" />
+      {/* Floating stars */}
+      <Star className="absolute top-16 ltr:right-20 rtl:left-20 w-3 h-3 opacity-40" delay="0.5s" />
+      <Star className="absolute top-40 ltr:left-16 rtl:right-16 w-2 h-2 opacity-30" delay="1.2s" />
+      <Star className="absolute bottom-32 ltr:right-32 rtl:left-32 w-2.5 h-2.5 opacity-30" delay="2s" />
+      {/* Crescent */}
+      <Crescent className="absolute top-8 ltr:left-12 rtl:right-12 w-8 h-8 opacity-[0.07]" />
+    </div>
+  );
+}
+
 /* ── Dismissible Dashboard Banner ── */
 const BANNER_KEY = 'ramadan-banner-dismissed-2026';
 
 export function RamadanBanner() {
   const { isRTL } = useLanguage();
-  const [dismissed, setDismissed] = useState(() => {
+  const [dismissed, setDismissed] = React.useState(() => {
     try { return localStorage.getItem(BANNER_KEY) === '1'; } catch { return false; }
   });
 
@@ -119,9 +168,8 @@ export function RamadanBanner() {
   );
 }
 
-/* ── Auth Page Decorations (light overlay) ── */
+/* ── Auth Page Decorations (enhanced for full Ramadan look) ── */
 export function RamadanAuthDecor() {
-  const { isRTL } = useLanguage();
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
       <Crescent className="absolute top-8 ltr:right-12 rtl:left-12 w-16 h-16 opacity-20" />
@@ -129,6 +177,29 @@ export function RamadanAuthDecor() {
       <Star className="absolute top-20 ltr:right-32 rtl:left-32 w-4 h-4" delay="0s" />
       <Star className="absolute top-16 ltr:left-24 rtl:right-24 w-3 h-3" delay="0.5s" />
       <Star className="absolute top-32 ltr:right-20 rtl:left-20 w-2.5 h-2.5" delay="1.2s" />
+    </div>
+  );
+}
+
+/* ── Auth Brand Panel Ramadan Overlay ── */
+export function RamadanAuthBrandDecor() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-[1]">
+      {/* Large crescent */}
+      <Crescent className="absolute top-12 ltr:right-8 rtl:left-8 w-24 h-24 opacity-15" />
+      {/* Lanterns hanging from top */}
+      <Lantern className="absolute -top-2 ltr:left-12 rtl:right-12 w-8 h-16 opacity-40" />
+      <Lantern className="absolute -top-2 ltr:left-32 rtl:right-32 w-6 h-12 opacity-25" />
+      <Lantern className="absolute -top-2 ltr:right-16 rtl:left-16 w-7 h-14 opacity-30" />
+      {/* Stars */}
+      <Star className="absolute top-8 ltr:left-1/2 rtl:right-1/2 w-4 h-4" delay="0s" />
+      <Star className="absolute top-24 ltr:right-24 rtl:left-24 w-3 h-3" delay="0.6s" />
+      <Star className="absolute top-40 ltr:left-20 rtl:right-20 w-3.5 h-3.5" delay="1.3s" />
+      <Star className="absolute bottom-32 ltr:right-12 rtl:left-12 w-2.5 h-2.5" delay="0.9s" />
+      <Star className="absolute bottom-20 ltr:left-16 rtl:right-16 w-2 h-2" delay="1.7s" />
+      {/* Geometric patterns in corners */}
+      <GeometricPattern className="absolute bottom-12 ltr:left-8 rtl:right-8 w-16 h-16 opacity-[0.08]" />
+      <GeometricPattern className="absolute top-1/3 ltr:right-4 rtl:left-4 w-12 h-12 opacity-[0.06]" />
     </div>
   );
 }

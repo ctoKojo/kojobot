@@ -2,7 +2,7 @@ import React, { useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare } from 'lucide-react';
 import { useSeasonalTheme } from '@/hooks/useSeasonalTheme';
-import { RamadanBanner, RamadanHeaderDecor } from '@/components/RamadanTheme';
+import { RamadanBanner, RamadanHeaderDecor, RamadanContentDecor } from '@/components/RamadanTheme';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -190,9 +190,10 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
           </header>
           
           {/* Main Content - scrollable area for tables */}
-          <main className="flex-1 p-4 md:p-6 overflow-x-auto">
+          <main className="flex-1 p-4 md:p-6 overflow-x-auto relative">
+            {isRamadan && <RamadanContentDecor />}
             {isRamadan && <RamadanBanner />}
-            <div className="min-w-fit">
+            <div className="min-w-fit relative z-[1]">
               {children}
             </div>
           </main>

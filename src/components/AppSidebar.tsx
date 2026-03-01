@@ -46,6 +46,8 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useSeasonalTheme } from '@/hooks/useSeasonalTheme';
+import { RamadanSidebarDecor } from '@/components/RamadanTheme';
 
 interface NavItem {
   title: string;
@@ -286,8 +288,11 @@ export function AppSidebar() {
     </SidebarMenu>
   );
 
+  const isRamadan = useSeasonalTheme('ramadan');
+
   return (
     <Sidebar side={isRTL ? 'right' : 'left'} collapsible="icon" className="font-sans">
+      {isRamadan && <RamadanSidebarDecor />}
       <SidebarHeader className="border-b border-sidebar-border h-16 flex items-center justify-center">
         <div className="flex items-center justify-center overflow-hidden">
           <KojobotLogo size={collapsed ? 'sm' : 'md'} showText={!collapsed} />

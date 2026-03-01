@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Mail, Lock, Sparkles, BookOpen, Award } from 'lucide-react';
 import { useSeasonalTheme } from '@/hooks/useSeasonalTheme';
-import { RamadanAuthDecor, RamadanGreeting } from '@/components/RamadanTheme';
+import { RamadanAuthDecor, RamadanAuthBrandDecor, RamadanGreeting } from '@/components/RamadanTheme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -99,6 +99,9 @@ export default function Auth() {
           animationDelay: '1s'
         }} />
         </div>
+
+        {/* Ramadan decorations on brand panel */}
+        {isRamadan && <RamadanAuthBrandDecor />}
 
         {/* Grid Pattern Overlay */}
         <div className="absolute inset-0 opacity-10" style={{
