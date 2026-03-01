@@ -249,18 +249,28 @@ serve(async (req) => {
     let sourcesUsed: Array<{ session_id: string; chunk_index: number }> = [];
 
     if (selectedGroup?.level_id && selectedGroup?.age_group_id) {
-      const { data: currSessions } = await db
+      // Get session IDs for this level/age_group
+      const { data: sessionIds } = await db
         .from("curriculum_sessions")
-        .select("id, student_pdf_text")
+        .select("id")
         .eq("level_id", selectedGroup.level_id)
         .eq("age_group_id", selectedGroup.age_group_id)
-        .eq("is_active", true)
-        .not("student_pdf_text", "is", null);
+        .eq("is_active", true);
 
-      if (currSessions && currSessions.length > 0) {
-        const result = getRelevantContent(userMessage, currSessions);
-        ragContext = result.context;
-        sourcesUsed = result.sources;
+      if (sessionIds && sessionIds.length > 0) {
+        const ids = sessionIds.map((s: any) => s.id);
+        const { data: assets } = await db
+          .from("curriculum_session_assets")
+          .select("session_id, student_pdf_text")
+          .in("session_id", ids)
+          .not("student_pdf_text", "is", null);
+
+        if (assets && assets.length > 0) {
+          const mapped = assets.map((a: any) => ({ id: a.session_id, student_pdf_text: a.student_pdf_text }));
+          const result = getRelevantContent(userMessage, mapped);
+          ragContext = result.context;
+          sourcesUsed = result.sources;
+        }
       }
     }
 

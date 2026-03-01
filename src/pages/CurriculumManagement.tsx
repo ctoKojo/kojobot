@@ -122,7 +122,37 @@ export default function CurriculumManagement() {
         .eq('is_active', true)
         .order('session_number');
       if (error) throw error;
-      return (data || []) as CurriculumSession[];
+      
+      // Fetch assets for these sessions to get PDF data
+      const sessionIds = (data || []).map(s => s.id);
+      let assetsMap: Record<string, any> = {};
+      if (sessionIds.length > 0) {
+        const { data: assets } = await supabase
+          .from('curriculum_session_assets')
+          .select('session_id, student_pdf_path, student_pdf_filename, student_pdf_size, student_pdf_text, student_pdf_text_updated_at')
+          .in('session_id', sessionIds);
+        if (assets) {
+          for (const a of assets) {
+            assetsMap[a.session_id] = a;
+          }
+        }
+      }
+      
+      // Merge asset data into sessions (assets take priority over old columns)
+      return (data || []).map(s => {
+        const asset = assetsMap[s.id];
+        if (asset) {
+          return {
+            ...s,
+            student_pdf_path: asset.student_pdf_path,
+            student_pdf_filename: asset.student_pdf_filename,
+            student_pdf_size: asset.student_pdf_size,
+            student_pdf_text: asset.student_pdf_text,
+            student_pdf_text_updated_at: asset.student_pdf_text_updated_at,
+          } as CurriculumSession;
+        }
+        return s as CurriculumSession;
+      });
     },
     enabled: !!selectedAgeGroup && !!selectedLevel,
   });
