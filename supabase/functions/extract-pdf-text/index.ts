@@ -80,8 +80,10 @@ serve(async (req) => {
       .eq("session_id", sessionId)
       .single();
 
+    console.log("asset lookup:", { sessionId, asset, assetError: assetError?.message });
+
     if (assetError || !asset?.student_pdf_path) {
-      return new Response(JSON.stringify({ error: "No PDF found for this session" }), {
+      return new Response(JSON.stringify({ error: "No PDF found for this session", detail: assetError?.message || "student_pdf_path is null" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
