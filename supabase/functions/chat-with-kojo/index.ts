@@ -43,6 +43,15 @@ const HARSH_PHRASES: Array<{ pattern: RegExp; replacement: string }> = [
 
 const EXAMPLE_KEYWORDS = ["مثال", "كود", "example", "code", "نموذج", "عايز أشوف", "وريني"];
 
+const FILLER_PHRASES: Array<{ pattern: RegExp; replacement: string }> = [
+  { pattern: /مفيش مشكلة خالص/g, replacement: "تمام" },
+  { pattern: /ده سؤال كويس/g, replacement: "" },
+  { pattern: /سؤال ممتاز/g, replacement: "" },
+  { pattern: /أحسنت على السؤال/g, replacement: "" },
+];
+
+const INTERROGATIVE_STARTS = /^(ايه|إيه|ازاي|إزاي|ليه|امتى|إمتى|فين|مين|هل|كام)/;
+
 const SYSTEM_PROMPT = `اسمك Kojo، مساعد تعليمي في Kojobot.
 شخصيتك هادية، مشجعة، وتوجيهية.
 بتتكلم عربي بسيط (عامية مصرية) مع مصطلحات برمجة إنجليزي.
@@ -100,6 +109,16 @@ const SYSTEM_PROMPT = `اسمك Kojo، مساعد تعليمي في Kojobot.
 - ممنوع ترد بخشونة أو تقول "ده مش إجابة" أو "ده مش رد"
 - لو الطالب كتب حاجة مش متوقعة، قوله "قصدي حاجة تانية، خليني أوضحلك"
 
+قاعدة التقدم الاجباري:
+- لو الطالب اجاب اجابتين صح متتاليتين على نفس الهدف الحالي انتقل فورا للتطبيق النهائي بمثال كود صغير 3 الى 6 سطور ولا تسال اسئله اضافيه عن نفس الهدف
+
+قاعدة منع الرجوع:
+- لو الطالب جاوب صح على سؤال ممنوع ترجع لنفس السؤال او نفس الهدف مرة اخرى في نفس المحادثة
+
+قاعدة تقليل الحشو:
+- ممنوع استخدام عبارات حشو مثل "مفيش مشكلة خالص" او "ده سؤال كويس"
+- ابدأ الرد بتقييم اجابة الطالب ثم ادخل في الخطوه التاليه مباشرة
+
 مثال بايثون صحيح:
 if temperature > 20:
     print("مرحبا")
@@ -107,7 +126,6 @@ if temperature > 20:
 مثال بايثون غلط:
 if temperature > 20
     print("مرحبا")`;
-
 // ============================================================
 // Auth helpers
 // ============================================================
@@ -193,11 +211,15 @@ function selectRelevantChunks(
 // ============================================================
 function extractLastQuestion(text: string): string | null {
   const lines = text.split("\n").reverse();
+  // First pass: explicit ؟
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed.endsWith("؟") && trimmed.length > 5) {
-      return trimmed;
-    }
+    if (trimmed.endsWith("؟") && trimmed.length > 5) return trimmed;
+  }
+  // Second pass: interrogative starts (Kojo sometimes asks without ؟)
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (INTERROGATIVE_STARTS.test(trimmed) && trimmed.length > 5) return trimmed;
   }
   return null;
 }
@@ -254,6 +276,16 @@ function enforceResponse(
       enforced = enforced.replace(pattern, replacement);
     }
   }
+
+  // 3b. Filler soft replacement
+  for (const { pattern, replacement } of FILLER_PHRASES) {
+    if (pattern.test(enforced)) {
+      qualityFlags.push("filler_removed");
+      enforced = enforced.replace(pattern, replacement);
+    }
+  }
+  // Clean up double spaces/newlines from removals
+  enforced = enforced.replace(/  +/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 
   // 4. Multiple questions trimming — convert extras to statements, keep last one
   const questionParts = enforced.split("؟");
@@ -673,9 +705,19 @@ serve(async (req) => {
       enforceResponse(assistantContent, lastKojoQuestion, userAskedForExample);
     assistantContent = enforcedContent;
 
-    // Check for duplicate question — regenerate once
+    // Check for duplicate question against last 3 Kojo questions — regenerate once
+    const recentKojoQuestions: string[] = [];
+    if (lastKojoQuestion) recentKojoQuestions.push(lastKojoQuestion);
+    for (const msg of [...historyMessages].reverse()) {
+      if (msg.role === "assistant" && recentKojoQuestions.length < 3) {
+        const q = extractLastQuestion(msg.content);
+        if (q && !recentKojoQuestions.includes(q)) recentKojoQuestions.push(q);
+      }
+    }
+
     let regenerated = false;
-    if (newQuestion && isSimilarQuestion(newQuestion, lastKojoQuestion)) {
+    const isDuplicate = newQuestion && recentKojoQuestions.some(q => isSimilarQuestion(newQuestion, q));
+    if (isDuplicate) {
       qualityFlags.push("question_repeated");
       console.log("Duplicate question detected, regenerating once...");
 
