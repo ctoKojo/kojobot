@@ -1,4 +1,4 @@
-import React, { useEffect, lazy, Suspense } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare } from 'lucide-react';
 import { useSeasonalTheme } from '@/hooks/useSeasonalTheme';
@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const KojoChatWidget = lazy(() => import('@/components/KojoChatWidget').then(m => ({ default: m.KojoChatWidget })));
+// KojoChatWidget removed for students - Kojo now integrated via KojoSheet in Map & Quests
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -198,11 +198,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             </div>
           </main>
         </SidebarInset>
-        {role === 'student' && (
-          <Suspense fallback={null}>
-            <KojoChatWidget />
-          </Suspense>
-        )}
+        {/* KojoChatWidget removed for students - Kojo now lives inside Map & Quests via KojoSheet */}
       </div>
     </SidebarProvider>
   );
