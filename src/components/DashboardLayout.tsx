@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import kojobotLogoWhite from '@/assets/kojobot-logo-white.png';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,8 +27,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-// KojoChatWidget removed for students - Kojo now integrated via KojoSheet in Map & Quests
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -41,6 +40,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isRamadan = useSeasonalTheme('ramadan');
+  const isStudent = role === 'student';
 
   // Unread messages count (refreshed by realtime via useRealtimeMessages hook in Messages page)
   const { data: unreadMessages = 0 } = useQuery({
@@ -108,12 +108,17 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         <AppSidebar />
         
         <SidebarInset className="flex-1 flex flex-col min-w-0">
-          {/* Header - fixed height, doesn't scroll with content */}
-          <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:px-6 relative">
+          {/* Header */}
+          <header className={cn(
+            'sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b px-4 md:px-6 relative',
+            isStudent
+              ? 'game-header-light border-border/50'
+              : 'border-border bg-background'
+          )}>
             {isRamadan && <RamadanHeaderDecor />}
             <SidebarTrigger className="-ml-2" />
             
-            {/* Mobile Logo - shows only on small screens */}
+            {/* Mobile Logo */}
             <div className="md:hidden flex items-center">
               <div className="h-8 w-8 rounded-lg kojo-gradient flex items-center justify-center p-1">
                 <img src={kojobotLogoWhite} alt="Kojobot" className="h-full object-contain" />
@@ -189,7 +194,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             </div>
           </header>
           
-          {/* Main Content - scrollable area for tables */}
+          {/* Main Content */}
           <main className="flex-1 p-4 md:p-6 overflow-x-auto relative">
             {isRamadan && <RamadanContentDecor />}
             {isRamadan && <RamadanBanner />}
@@ -198,7 +203,6 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             </div>
           </main>
         </SidebarInset>
-        {/* KojoChatWidget removed for students - Kojo now lives inside Map & Quests via KojoSheet */}
       </div>
     </SidebarProvider>
   );

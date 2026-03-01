@@ -8,7 +8,6 @@ import {
   BookOpen,
   BookMarked,
   ClipboardList,
-  UserCheck,
   Settings,
   Layers,
   Activity,
@@ -25,8 +24,12 @@ import {
   CreditCard,
   MessageSquare,
   TrendingUp,
-  Briefcase,
-  GraduationCap as AcademicCap,
+  Scroll,
+  Sword,
+  BookOpenCheck,
+  Sparkles,
+  Wallet,
+  ShieldAlert,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -70,6 +73,7 @@ export function AppSidebar() {
   const [, startTransition] = useTransition();
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
+  const isStudent = role === 'student';
 
   const getSections = (): NavSection[] => {
     switch (role) {
@@ -95,7 +99,6 @@ export function AppSidebar() {
             items: [
               { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['admin'] },
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin'] },
-              
               { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['admin'] },
             ],
           },
@@ -176,30 +179,30 @@ export function AppSidebar() {
       case 'student':
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية',
+            label: 'Quest Hub', labelAr: '⚔️ مركز المهام',
             items: [
-              { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['student'] },
-              { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare, roles: ['student'] },
-              { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['student'] },
+              { title: isRTL ? '🏠 القاعدة' : '🏠 Base', url: '/dashboard', icon: Sparkles, roles: ['student'] },
+              { title: isRTL ? '💬 الرسائل' : '💬 Messages', url: '/messages', icon: MessageSquare, roles: ['student'] },
+              { title: isRTL ? '🔔 التنبيهات' : '🔔 Alerts', url: '/notifications', icon: Bell, roles: ['student'] },
             ],
           },
           {
-            label: 'My Learning', labelAr: 'دراستي',
+            label: 'Adventures', labelAr: '🗺️ المغامرات',
             items: [
-              { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileCheck, roles: ['student'] },
-              { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['student'] },
-              { title: isRTL ? 'موادي التعليمية' : 'My Materials', url: '/my-materials', icon: BookMarked, roles: ['student'] },
-              { title: isRTL ? 'سيشناتي' : 'My Sessions', url: '/my-sessions', icon: BookOpen, roles: ['student'] },
-              { title: isRTL ? 'الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3, roles: ['student'] },
+              { title: isRTL ? '📜 الكويزات' : '📜 Quizzes', url: '/my-quizzes', icon: Scroll, roles: ['student'] },
+              { title: isRTL ? '⚔️ المهمات' : '⚔️ Missions', url: '/assignments', icon: Sword, roles: ['student'] },
+              { title: isRTL ? '📖 الكتب السحرية' : '📖 Spellbook', url: '/my-materials', icon: BookOpenCheck, roles: ['student'] },
+              { title: isRTL ? '🏰 الحصص' : '🏰 Dungeons', url: '/my-sessions', icon: BookOpen, roles: ['student'] },
+              { title: isRTL ? '🏆 الترتيب' : '🏆 Rankings', url: '/leaderboard', icon: BarChart3, roles: ['student'] },
             ],
           },
           {
-            label: 'Support', labelAr: 'الدعم',
+            label: 'Inventory', labelAr: '🎒 الحقيبة',
             items: [
-              { title: isRTL ? 'حسابي المالي' : 'My Finances', url: '/my-finances', icon: DollarSign, roles: ['student'] },
-              { title: isRTL ? 'سيشناتي التعويضية' : 'My Makeup Sessions', url: '/my-makeup-sessions', icon: RefreshCw, roles: ['student'] },
-              { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['student'] },
-              { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-warnings', icon: AlertTriangle, roles: ['student'] },
+              { title: isRTL ? '💰 الخزينة' : '💰 Treasury', url: '/my-finances', icon: Wallet, roles: ['student'] },
+              { title: isRTL ? '🔄 التعويضية' : '🔄 Side Quests', url: '/my-makeup-sessions', icon: RefreshCw, roles: ['student'] },
+              { title: isRTL ? '📊 التقارير' : '📊 Reports', url: '/monthly-reports', icon: BarChart3, roles: ['student'] },
+              { title: isRTL ? '⚠️ الإنذارات' : '⚠️ Warnings', url: '/my-warnings', icon: ShieldAlert, roles: ['student'] },
             ],
           },
         ];
@@ -220,7 +223,6 @@ export function AppSidebar() {
               { title: t.nav.students, url: '/students', icon: GraduationCap, roles: ['reception'] },
               { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['reception'] },
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['reception'] },
-              
               { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['reception'] },
               { title: isRTL ? 'جدول العمل' : 'Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['reception'] },
             ],
@@ -272,11 +274,16 @@ export function AppSidebar() {
                 });
               }}
               className={cn(
-                'flex items-center gap-3 rounded-lg transition-colors text-sm',
+                'flex items-center gap-3 rounded-lg transition-all text-sm',
                 collapsed ? 'justify-center px-2 py-2' : 'px-3 py-2',
+                isStudent && 'game-menu-item',
                 isActive(item.url)
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
-                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                  ? isStudent
+                    ? 'game-menu-item-active text-primary font-semibold'
+                    : 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                  : isStudent
+                    ? 'text-sidebar-foreground/80 hover:text-primary'
+                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
               )}
             >
               <item.icon className="h-5 w-5 shrink-0" />
@@ -291,9 +298,16 @@ export function AppSidebar() {
   const isRamadan = useSeasonalTheme('ramadan');
 
   return (
-    <Sidebar side={isRTL ? 'right' : 'left'} collapsible="icon" className="font-sans">
+    <Sidebar
+      side={isRTL ? 'right' : 'left'}
+      collapsible="icon"
+      className={cn('font-sans', isStudent && 'game-sidebar [&_*]:!border-white/10')}
+    >
       {isRamadan && <RamadanSidebarDecor />}
-      <SidebarHeader className="border-b border-sidebar-border h-16 flex items-center justify-center">
+      <SidebarHeader className={cn(
+        'border-b h-16 flex items-center justify-center',
+        isStudent ? 'border-white/10' : 'border-sidebar-border'
+      )}>
         <div className="flex items-center justify-center overflow-hidden">
           <KojobotLogo size={collapsed ? 'sm' : 'md'} showText={!collapsed} />
         </div>
@@ -303,7 +317,10 @@ export function AppSidebar() {
         {sections.map((section, idx) => (
           <SidebarGroup key={section.label} className={idx > 0 ? 'mt-4' : ''}>
             {!collapsed && (
-              <SidebarGroupLabel className="text-xs uppercase text-muted-foreground mb-2">
+              <SidebarGroupLabel className={cn(
+                'text-xs uppercase mb-2',
+                isStudent ? 'text-primary/70 font-bold tracking-wider' : 'text-muted-foreground'
+              )}>
                 {isRTL ? section.labelAr : section.label}
               </SidebarGroupLabel>
             )}
@@ -312,12 +329,18 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-4">
+      <SidebarFooter className={cn(
+        'border-t p-4',
+        isStudent ? 'border-white/10' : 'border-sidebar-border'
+      )}>
         <Button
           variant="ghost"
           className={cn(
-            'w-full gap-2 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-            collapsed ? 'justify-center px-2' : 'justify-start'
+            'w-full gap-2 text-sm',
+            collapsed ? 'justify-center px-2' : 'justify-start',
+            isStudent
+              ? 'text-red-400/70 hover:text-red-400 hover:bg-red-500/10'
+              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
           )}
           onClick={handleSignOut}
         >
