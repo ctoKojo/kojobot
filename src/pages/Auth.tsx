@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Mail, Lock, Sparkles, BookOpen, Award } from 'lucide-react';
+import { useSeasonalTheme } from '@/hooks/useSeasonalTheme';
+import { RamadanAuthDecor, RamadanGreeting } from '@/components/RamadanTheme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -35,6 +37,7 @@ export default function Auth() {
     t,
     isRTL
   } = useLanguage();
+  const isRamadan = useSeasonalTheme('ramadan');
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -110,12 +113,16 @@ export default function Auth() {
           <div className="text-center text-white space-y-4 max-w-md animate-fade-in" style={{
           animationDelay: '0.2s'
         }}>
-            <h2 className="text-3xl xl:text-4xl font-bold leading-tight">
-              {isRTL ? 'ابدأ رحلتك في البرمجة' : 'Start Your Coding Journey'}
-            </h2>
-            <p className="text-lg xl:text-xl text-white/80 leading-relaxed">
-              {isRTL ? 'منصة تعليمية متكاملة لتعليم البرمجة للأطفال والناشئين' : 'A complete platform for teaching programming to kids and teens'}
-            </p>
+             <h2 className="text-3xl xl:text-4xl font-bold leading-tight">
+               {isRTL ? 'ابدأ رحلتك في البرمجة' : 'Start Your Coding Journey'}
+             </h2>
+             {isRamadan ? (
+               <RamadanGreeting />
+             ) : (
+               <p className="text-lg xl:text-xl text-white/80 leading-relaxed">
+                 {isRTL ? 'منصة تعليمية متكاملة لتعليم البرمجة للأطفال والناشئين' : 'A complete platform for teaching programming to kids and teens'}
+               </p>
+             )}
           </div>
 
           <div className="mt-12 grid grid-cols-3 gap-6 text-white/90 animate-fade-in" style={{
@@ -148,6 +155,7 @@ export default function Auth() {
         
         {/* Mobile: Full gradient background with decorations */}
         <div className="lg:hidden absolute inset-0">
+          {isRamadan && <RamadanAuthDecor />}
           <div className="absolute inset-0" style={{
           background: 'linear-gradient(160deg, #4EDDEA 0%, #6878F0 30%, #6455F0 60%, #5B8DEE 100%)'
         }} />

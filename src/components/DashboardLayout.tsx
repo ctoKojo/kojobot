@@ -1,6 +1,8 @@
 import React, { useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare } from 'lucide-react';
+import { useSeasonalTheme } from '@/hooks/useSeasonalTheme';
+import { RamadanBanner, RamadanHeaderDecor } from '@/components/RamadanTheme';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { LanguageToggle } from '@/components/LanguageToggle';
@@ -38,6 +40,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const { profile } = useProfile();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isRamadan = useSeasonalTheme('ramadan');
 
   // Unread messages count (refreshed by realtime via useRealtimeMessages hook in Messages page)
   const { data: unreadMessages = 0 } = useQuery({
@@ -106,7 +109,8 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         
         <SidebarInset className="flex-1 flex flex-col min-w-0">
           {/* Header - fixed height, doesn't scroll with content */}
-          <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:px-6">
+          <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:px-6 relative">
+            {isRamadan && <RamadanHeaderDecor />}
             <SidebarTrigger className="-ml-2" />
             
             {/* Mobile Logo - shows only on small screens */}
@@ -187,6 +191,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
           
           {/* Main Content - scrollable area for tables */}
           <main className="flex-1 p-4 md:p-6 overflow-x-auto">
+            {isRamadan && <RamadanBanner />}
             <div className="min-w-fit">
               {children}
             </div>
