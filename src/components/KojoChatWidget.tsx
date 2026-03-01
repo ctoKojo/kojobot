@@ -143,21 +143,73 @@ export function KojoChatWidget() {
         throw new Error(errData.error || 'Request failed');
       }
 
-      const data = await response.json();
+      // Stream SSE response token by token
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let assistantContent = '';
+      let assistantMsgId: string | null = null;
+      let receivedMeta = false;
 
-      if (!conversationId && data.conversationId) {
-        setConversationId(data.conversationId);
-        setIsNewChat(false);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+          let line = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (!line.startsWith('data: ') || line.trim() === '') continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+
+            // First event: metadata (conversationId, rate limits)
+            if (!receivedMeta && parsed.conversationId) {
+              receivedMeta = true;
+              if (!conversationId && parsed.conversationId) {
+                setConversationId(parsed.conversationId);
+                setIsNewChat(false);
+              }
+              continue;
+            }
+
+            // Token event
+            if (parsed.token) {
+              assistantContent += parsed.token;
+              setMessages((prev) => {
+                const last = prev[prev.length - 1];
+                if (last?.role === 'assistant' && !last.id) {
+                  return prev.map((m, i) =>
+                    i === prev.length - 1 ? { ...m, content: assistantContent } : m
+                  );
+                }
+                return [...prev, { role: 'assistant', content: assistantContent }];
+              });
+            }
+
+            // Done event with messageId
+            if (parsed.done) {
+              assistantMsgId = parsed.messageId;
+              // Update last message with the real ID
+              setMessages((prev) =>
+                prev.map((m, i) =>
+                  i === prev.length - 1 && m.role === 'assistant'
+                    ? { ...m, id: assistantMsgId || undefined }
+                    : m
+                )
+              );
+            }
+          } catch {
+            // partial JSON, skip
+          }
+        }
       }
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: data.messageId,
-          role: 'assistant',
-          content: data.message,
-        },
-      ]);
     } catch (err: any) {
       if (err.name === 'AbortError') return;
       console.error('Chat error:', err);
