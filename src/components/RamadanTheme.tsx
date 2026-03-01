@@ -62,18 +62,8 @@ const Lantern = ({ className = '' }: { className?: string }) => (
   </svg>
 );
 
-/* ── Islamic geometric 8-point star (small decorative only) ── */
-const GeometricStar = ({ className = '' }: { className?: string }) => (
-  <svg viewBox="0 0 100 100" className={className} fill="none">
-    <defs>
-      <linearGradient id="geo-grad" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#D4A843" />
-        <stop offset="100%" stopColor="#B8860B" />
-      </linearGradient>
-    </defs>
-    <polygon points="50,5 61,35 95,35 68,55 79,85 50,68 21,85 32,55 5,35 39,35" fill="url(#geo-grad)" />
-  </svg>
-);
+
+
 
 /* ── Mosque silhouette (subtle) ── */
 const MosqueSilhouette = ({ className = '' }: { className?: string }) => (
@@ -133,9 +123,8 @@ export function RamadanSidebarDecor() {
       <Star className="absolute top-60 ltr:right-3 rtl:left-3 w-3 h-3" delay="1.8s" />
       <Star className="absolute top-80 ltr:left-2 rtl:right-2 w-4 h-4" delay="0.6s" />
       <Star className="absolute top-[400px] ltr:right-2 rtl:left-2 w-3.5 h-3.5" delay="1.3s" />
-      {/* Geometric stars */}
-      <GeometricStar className="absolute bottom-32 ltr:left-1 rtl:right-1 w-6 h-6 opacity-[0.10]" />
-      <GeometricStar className="absolute top-36 ltr:right-0 rtl:left-0 w-5 h-5 opacity-[0.08]" />
+
+
       {/* Bottom crescent */}
       <Crescent className="absolute bottom-12 ltr:right-1 rtl:left-1 w-10 h-10 opacity-40" />
       {/* Mosque at bottom */}
@@ -154,9 +143,8 @@ export function RamadanContentDecor() {
       }} />
       {/* Mosque silhouette at bottom */}
       <MosqueSilhouette className="absolute bottom-0 ltr:right-0 rtl:left-0 w-80 h-28 opacity-50" />
-      {/* Corner geometric patterns */}
-      <GeometricStar className="absolute top-2 ltr:right-4 rtl:left-4 w-10 h-10 opacity-[0.06]" />
-      <GeometricStar className="absolute bottom-16 ltr:left-4 rtl:right-4 w-12 h-12 opacity-[0.05]" />
+
+
       {/* Floating stars - golden and visible */}
       <Star className="absolute top-8 ltr:right-12 rtl:left-12 w-5 h-5" delay="0.5s" />
       <Star className="absolute top-28 ltr:left-8 rtl:right-8 w-4 h-4" delay="1.2s" />
@@ -201,7 +189,7 @@ export function RamadanBanner() {
         <Star className="absolute top-1 ltr:right-28 rtl:left-28 w-4 h-4" delay="0s" />
         <Star className="absolute top-3 ltr:right-40 rtl:left-40 w-3.5 h-3.5" delay="1s" />
         <Star className="absolute top-2 ltr:left-36 rtl:right-36 w-3 h-3" delay="0.5s" />
-        <GeometricStar className="absolute -bottom-3 ltr:right-2 rtl:left-2 w-14 h-14 opacity-15" />
+        
       </div>
 
       <div className="relative flex items-center justify-between px-5 py-4">
@@ -267,10 +255,8 @@ export function RamadanAuthBrandDecor() {
       <Star className="absolute bottom-24 ltr:right-12 rtl:left-12 w-5 h-5" delay="0.3s" />
       <Star className="absolute bottom-12 ltr:left-1/3 rtl:right-1/3 w-4.5 h-4.5" delay="1.8s" />
       <Star className="absolute top-1/3 ltr:left-4 rtl:right-4 w-3.5 h-3.5" delay="2.2s" />
-      {/* Geometric patterns - gold */}
-      <GeometricStar className="absolute bottom-6 ltr:left-4 rtl:right-4 w-10 h-10 opacity-[0.10]" />
-      <GeometricStar className="absolute top-1/3 ltr:right-0 rtl:left-0 w-8 h-8 opacity-[0.08]" />
-      <GeometricStar className="absolute top-2/3 ltr:left-0 rtl:right-0 w-7 h-7 opacity-[0.07]" />
+
+
       {/* Mosque silhouette at bottom */}
       <MosqueSilhouette className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-32 opacity-60" />
     </div>
