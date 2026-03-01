@@ -195,7 +195,10 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
           </header>
           
           {/* Main Content */}
-          <main className="flex-1 p-4 md:p-6 overflow-x-auto relative">
+          <main className={cn(
+            'flex-1 p-4 md:p-6 overflow-x-auto relative',
+            isStudent && 'game-theme'
+          )}>
             {isRamadan && <RamadanContentDecor />}
             {isRamadan && <RamadanBanner />}
             <div className="min-w-fit relative z-[1]">
