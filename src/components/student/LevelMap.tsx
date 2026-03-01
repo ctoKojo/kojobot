@@ -4,6 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { KojoSheet, type KojoContextMeta } from '@/components/student/KojoSheet';
+import { Lock, Check } from 'lucide-react';
 import kojobotIcon from '@/assets/kojobot-icon-optimized.webp';
 
 interface MapNode {
@@ -12,7 +13,7 @@ interface MapNode {
   titleAr: string;
   curriculumSessionId: string;
   state: 'completed' | 'current' | 'locked';
-  sessionId?: string; // actual session ID for navigation
+  sessionId?: string;
 }
 
 interface LevelMapProps {
@@ -46,7 +47,6 @@ export function LevelMap({ groupId, levelId, ageGroupId, attendedSessionNumbers 
       .order('session_number', { ascending: true });
 
     if (sessions) {
-      // Find first uncompleted session
       let foundCurrent = false;
       const mapped: MapNode[] = sessions.map((s) => {
         const completed = attendedSessionNumbers.has(s.session_number);
@@ -66,7 +66,6 @@ export function LevelMap({ groupId, levelId, ageGroupId, attendedSessionNumbers 
         };
       });
 
-      // If all completed, mark last as current for Kojo
       if (!foundCurrent && mapped.length > 0) {
         mapped[mapped.length - 1].state = 'current';
       }
@@ -107,63 +106,132 @@ export function LevelMap({ groupId, levelId, ageGroupId, attendedSessionNumbers 
     );
   }
 
+  // Generate a winding SVG path
+  const nodeSpacing = 100;
+  const svgHeight = nodes.length * nodeSpacing;
+  const svgWidth = 280;
+  const centerX = svgWidth / 2;
+
+  const getNodeX = (idx: number) => {
+    const offset = 60;
+    return centerX + (idx % 2 === 0 ? -offset : offset);
+  };
+
+  const getNodeY = (idx: number) => idx * nodeSpacing + 50;
+
+  const buildPath = () => {
+    if (nodes.length < 2) return '';
+    let d = `M ${getNodeX(0)} ${getNodeY(0)}`;
+    for (let i = 1; i < nodes.length; i++) {
+      const prevX = getNodeX(i - 1);
+      const prevY = getNodeY(i - 1);
+      const currX = getNodeX(i);
+      const currY = getNodeY(i);
+      const midY = (prevY + currY) / 2;
+      d += ` C ${prevX} ${midY}, ${currX} ${midY}, ${currX} ${currY}`;
+    }
+    return d;
+  };
+
   return (
     <>
-      <div className="relative px-4 py-6">
-        {/* Vertical path line */}
-        <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-1 bg-border rounded-full" />
+      <div className="relative flex justify-center py-4 overflow-hidden">
+        <svg
+          width={svgWidth}
+          height={svgHeight + 40}
+          className="absolute top-0"
+          style={{ zIndex: 0 }}
+        >
+          {/* Path trail */}
+          <path
+            d={buildPath()}
+            fill="none"
+            stroke="hsl(var(--border))"
+            strokeWidth="4"
+            strokeDasharray="8 6"
+            strokeLinecap="round"
+          />
+          {/* Completed trail overlay */}
+          <path
+            d={buildPath()}
+            fill="none"
+            stroke="hsl(142 76% 36%)"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={(() => {
+              const completedCount = nodes.filter(n => n.state === 'completed').length;
+              const totalLen = nodes.length > 1 ? (nodes.length - 1) * nodeSpacing * 1.2 : 0;
+              const completedLen = nodes.length > 1 ? (completedCount / (nodes.length - 1)) * totalLen : 0;
+              return `${completedLen} ${totalLen}`;
+            })()}
+            opacity={0.6}
+          />
+        </svg>
 
-        <div className="relative space-y-6">
+        <div className="relative" style={{ width: svgWidth, height: svgHeight + 40, zIndex: 1 }}>
           {nodes.map((node, idx) => {
-            const isEven = idx % 2 === 0;
+            const x = getNodeX(idx);
+            const y = getNodeY(idx);
             const nodeTitle = language === 'ar' ? node.titleAr : node.title;
+            const isEven = idx % 2 === 0;
 
             return (
-              <div key={node.sessionNumber} className="relative flex items-center">
-                {/* Connector line is behind via the absolute line above */}
-
-                {/* Node circle - centered */}
-                <div className="absolute left-1/2 -translate-x-1/2 z-10">
-                  <button
-                    onClick={() => {
-                      if (node.state === 'completed') {
-                        // Navigate to session content
-                        navigate('/my-sessions');
-                      }
-                    }}
-                    disabled={node.state === 'locked'}
-                    className={`
-                      relative w-12 h-12 rounded-full flex items-center justify-center font-bold text-sm transition-all
-                      ${node.state === 'completed'
-                        ? 'bg-green-500 text-white shadow-lg shadow-green-500/30 hover:scale-110 cursor-pointer'
-                        : node.state === 'current'
-                          ? 'kojo-gradient text-white shadow-lg shadow-primary/40 animate-pulse cursor-default ring-4 ring-primary/20'
-                          : 'bg-muted text-muted-foreground cursor-not-allowed opacity-50'
-                      }
-                    `}
-                  >
-                    {node.sessionNumber}
-                  </button>
-
-                  {/* Kojo NPC on current node */}
-                  {node.state === 'current' && (
-                    <button
-                      onClick={() => openKojo(node)}
-                      className="absolute -top-2 -right-2 h-7 w-7 rounded-full overflow-hidden shadow-md hover:scale-110 transition-transform ring-2 ring-background z-20"
-                      title={isRTL ? 'اسأل Kojo' : 'Ask Kojo'}
-                    >
-                      <img src={kojobotIcon} alt="Kojo" className="h-full w-full object-cover" />
-                    </button>
+              <div
+                key={node.sessionNumber}
+                className="absolute animate-stagger-in"
+                style={{
+                  left: x - 24,
+                  top: y - 24,
+                  animationDelay: `${idx * 80}ms`,
+                }}
+              >
+                {/* Hexagonal node */}
+                <button
+                  onClick={() => {
+                    if (node.state === 'completed') navigate('/my-sessions');
+                  }}
+                  disabled={node.state === 'locked'}
+                  className={`
+                    relative w-12 h-12 hexagon-clip flex items-center justify-center font-bold text-sm transition-all
+                    ${node.state === 'completed'
+                      ? 'bg-green-500 text-white game-glow-green hover:scale-110 cursor-pointer'
+                      : node.state === 'current'
+                        ? 'kojo-gradient text-white animate-pulse-glow cursor-default'
+                        : 'bg-muted text-muted-foreground cursor-not-allowed opacity-40'
+                    }
+                  `}
+                >
+                  {node.state === 'completed' ? (
+                    <Check className="h-5 w-5" />
+                  ) : node.state === 'locked' ? (
+                    <Lock className="h-4 w-4" />
+                  ) : (
+                    node.sessionNumber
                   )}
-                </div>
+                </button>
 
-                {/* Label - alternates left/right */}
-                <div className={`w-1/2 ${isEven ? 'pr-10 text-right' : 'pl-10 text-left ml-auto'}`}>
-                  <div className={`inline-block p-2 rounded-lg ${
+                {/* Kojo NPC on current node */}
+                {node.state === 'current' && (
+                  <button
+                    onClick={() => openKojo(node)}
+                    className="absolute -top-2 -right-2 h-7 w-7 rounded-full overflow-hidden shadow-md hover:scale-110 transition-transform ring-2 ring-background z-20 animate-float"
+                    title={isRTL ? 'اسأل Kojo' : 'Ask Kojo'}
+                  >
+                    <img src={kojobotIcon} alt="Kojo" className="h-full w-full object-cover" />
+                  </button>
+                )}
+
+                {/* Label */}
+                <div
+                  className={`absolute top-1/2 -translate-y-1/2 whitespace-nowrap ${
+                    isEven ? 'right-16 text-right' : 'left-16 text-left'
+                  }`}
+                >
+                  <div className={`inline-block px-2.5 py-1 rounded-lg ${
                     node.state === 'completed'
                       ? 'bg-green-50 dark:bg-green-950/30'
                       : node.state === 'current'
-                        ? 'bg-primary/5 dark:bg-primary/10'
+                        ? 'bg-primary/5 dark:bg-primary/10 game-glow-gold'
                         : 'bg-muted/50'
                   }`}>
                     <p className={`text-xs font-medium ${

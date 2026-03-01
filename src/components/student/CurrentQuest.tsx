@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play, ClipboardList, BookOpen, PartyPopper } from 'lucide-react';
 import { KojoSheet, type KojoContextMeta } from '@/components/student/KojoSheet';
-import { formatDate } from '@/lib/timeUtils';
 import kojobotIcon from '@/assets/kojobot-icon-optimized.webp';
 
 export interface QuestItem {
@@ -47,6 +45,15 @@ export function CurrentQuest({ quest }: CurrentQuestProps) {
     return isRTL ? '🎉 كل حاجة خلصت!' : '🎉 All clear!';
   };
 
+  const getQuestBorderClass = () => {
+    switch (quest.type) {
+      case 'quiz': return 'game-quest-gold';
+      case 'assignment': return 'game-quest-green';
+      case 'session': return 'game-quest-blue';
+      default: return '';
+    }
+  };
+
   const kojoMeta: KojoContextMeta | undefined = quest.type !== 'none'
     ? { contextType: 'quest', contextTitle: title, contextId: quest.id }
     : undefined;
@@ -57,45 +64,47 @@ export function CurrentQuest({ quest }: CurrentQuestProps) {
 
   return (
     <>
-      <Card className="overflow-hidden">
-        <CardContent className="p-0">
-          <div className="flex flex-col sm:flex-row items-stretch">
-            {/* Icon section */}
-            <div className="kojo-gradient p-6 flex items-center justify-center sm:w-24 shrink-0">
-              <div className="text-white">
-                {getIcon()}
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 p-4 space-y-3">
-              <div>
-                <Badge variant="secondary" className="text-xs mb-2">{getTypeLabel()}</Badge>
-                <h3 className="font-semibold text-base">{title}</h3>
-                {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {quest.type !== 'none' && (
-                  <Button size="sm" className="kojo-gradient" onClick={() => navigate(quest.navigateTo)}>
-                    <Play className="h-4 w-4 mr-1" />
-                    {isRTL ? 'يلا!' : 'Go!'}
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setKojoOpen(true)}
-                  className="gap-1.5"
-                >
-                  <img src={kojobotIcon} alt="Kojo" className="h-4 w-4 rounded-full" />
-                  {kojoLabel}
-                </Button>
-              </div>
+      <div className={`game-card-light rounded-xl border-2 overflow-hidden ${getQuestBorderClass()}`}>
+        <div className="flex flex-col sm:flex-row items-stretch">
+          {/* Icon section */}
+          <div className="kojo-gradient p-6 flex items-center justify-center sm:w-24 shrink-0">
+            <div className="text-white animate-float">
+              {getIcon()}
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Content */}
+          <div className="flex-1 p-4 space-y-3">
+            <div>
+              <Badge variant="secondary" className="text-xs mb-2">{getTypeLabel()}</Badge>
+              <h3 className="font-bold text-base">{title}</h3>
+              {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {quest.type !== 'none' && (
+                <Button
+                  size="sm"
+                  className="kojo-gradient font-bold hover:scale-105 transition-transform shadow-lg"
+                  onClick={() => navigate(quest.navigateTo)}
+                >
+                  <Play className="h-4 w-4 mr-1" />
+                  {isRTL ? 'يلا!' : 'Go!'}
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setKojoOpen(true)}
+                className="gap-1.5"
+              >
+                <img src={kojobotIcon} alt="Kojo" className="h-4 w-4 rounded-full" />
+                {kojoLabel}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <KojoSheet open={kojoOpen} onOpenChange={setKojoOpen} contextMeta={kojoMeta} />
     </>

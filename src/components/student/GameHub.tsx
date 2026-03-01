@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Map, Swords, Shield, Trophy, Calendar, GraduationCap, Snowflake } from 'lucide-react';
+import { Map, Swords, Shield, Trophy, GraduationCap, Snowflake, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDate, formatTime12Hour } from '@/lib/timeUtils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface AchievementData {
   id: string;
@@ -115,7 +116,6 @@ export function GameHub() {
       if (groupId) {
         const quizFilter = `student_id.eq.${user!.id},group_id.eq.${groupId}`;
 
-        // Pending quizzes
         const { data: quizAssignments } = await supabase
           .from('quiz_assignments')
           .select('*, quizzes(title, title_ar, duration_minutes)')
@@ -143,7 +143,6 @@ export function GameHub() {
             navigateTo: `/quiz/${pendingQuiz.id}`,
           };
         } else {
-          // Pending assignments
           const { data: assignments } = await supabase
             .from('assignments')
             .select('*')
@@ -172,7 +171,6 @@ export function GameHub() {
               navigateTo: `/assignment/${pendingAssignment.id}`,
             };
           } else {
-            // Next session
             const today = new Date().toISOString().split('T')[0];
             const { data: sessions } = await supabase
               .from('sessions')
@@ -199,17 +197,14 @@ export function GameHub() {
         }
       }
 
-      // Process XP
       const totalXp = (xpRes.data || []).reduce((sum: number, e: any) => sum + (e.xp_amount || 0), 0);
 
-      // Process streak
       const streakData = streakRes.data;
       const streak = {
         current: streakData?.current_streak || 0,
         longest: streakData?.longest_streak || 0,
       };
 
-      // Process achievements
       const earnedIds = new Set((earnedAchievementsRes.data || []).map((ea: any) => ea.achievement_id));
       const achievements: AchievementData[] = (allAchievementsRes.data || []).map((a: any) => ({
         id: a.id,
@@ -254,12 +249,11 @@ export function GameHub() {
 
   if (!data) return null;
 
-  // Real XP from DB
   const xpLevel = Math.floor(data.totalXp / 300) + 1;
   const xpInLevel = data.totalXp % 300;
-
-  // Real shields count
   const shieldsEarned = data.achievements.filter(a => a.earned).length;
+  const displayName = language === 'ar' ? data.profile?.full_name_ar : data.profile?.full_name;
+  const levelName = data.profile?.levels && (language === 'ar' ? data.profile.levels.name_ar : data.profile.levels.name);
 
   return (
     <div className="space-y-6">
@@ -282,76 +276,76 @@ export function GameHub() {
         </Card>
       )}
 
-      {/* Level Passed Banner */}
       {user && <LevelPassedBanner studentId={user.id} onUpgraded={fetchGameData} />}
 
-      {/* Hero Bar: XP + Streak + Shields */}
-      <Card>
-        <CardContent className="py-4 px-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            {/* Avatar + name */}
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="h-10 w-10 rounded-full kojo-gradient flex items-center justify-center shrink-0">
-                <GraduationCap className="h-5 w-5 text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold text-sm truncate">
-                  {language === 'ar' ? data.profile?.full_name_ar : data.profile?.full_name}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {data.profile?.levels && (language === 'ar' ? data.profile.levels.name_ar : data.profile.levels.name)}
-                </p>
-              </div>
+      {/* Hero Card - Game Style */}
+      <div className="game-card-light rounded-2xl p-5 border game-glow">
+        <div className="flex items-center gap-4">
+          {/* Avatar with glow ring */}
+          <div className="relative shrink-0">
+            <div className="absolute inset-0 rounded-full kojo-gradient opacity-30 blur-md scale-110" />
+            <Avatar className="h-16 w-16 ring-2 ring-primary/30 relative">
+              <AvatarImage src={data.profile?.avatar_url || ''} alt={displayName || ''} />
+              <AvatarFallback className="kojo-gradient text-white text-lg font-bold">
+                {displayName?.charAt(0) || 'S'}
+              </AvatarFallback>
+            </Avatar>
+            {/* Level circle overlay */}
+            <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full kojo-gradient flex items-center justify-center ring-2 ring-background text-[10px] font-bold text-white">
+              {xpLevel}
             </div>
+          </div>
 
-            {/* Spacer */}
-            <div className="flex-1" />
-
-            {/* XP Bar */}
-            <div className="w-40 hidden sm:block">
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-lg truncate">{displayName}</h2>
+            <p className="text-xs text-muted-foreground truncate">{levelName}</p>
+            {/* Mobile XP bar */}
+            <div className="mt-2">
               <XpBar currentXp={xpInLevel} nextLevelXp={300} level={xpLevel} />
             </div>
+          </div>
+        </div>
 
-            {/* Streak */}
-            <StreakCounter currentStreak={data.streak.current} />
-
-            {/* Shields count */}
-            <div className="flex items-center gap-1.5">
-              <Shield className="h-5 w-5 text-secondary" />
-              <span className="text-sm font-bold tabular-nums">{shieldsEarned}</span>
-            </div>
-
-            {/* Warnings */}
-            {data.warnings > 0 && (
-              <Badge variant="destructive" className="cursor-pointer" onClick={() => navigate('/my-warnings')}>
-                ⚠️ {data.warnings}
-              </Badge>
-            )}
+        {/* Stats row */}
+        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border/50">
+          <StreakCounter currentStreak={data.streak.current} />
+          
+          <div className="flex items-center gap-1.5">
+            <Shield className="h-5 w-5 text-secondary" />
+            <span className="text-sm font-bold tabular-nums">{shieldsEarned}</span>
           </div>
 
-          {/* Mobile XP bar */}
-          <div className="sm:hidden mt-3">
-            <XpBar currentXp={xpInLevel} nextLevelXp={300} level={xpLevel} />
+          <div className="flex items-center gap-1.5">
+            <Zap className="h-4 w-4 text-yellow-500" />
+            <span className="text-sm font-bold tabular-nums">{data.totalXp} XP</span>
           </div>
-        </CardContent>
-      </Card>
+
+          <div className="flex-1" />
+
+          {data.warnings > 0 && (
+            <Badge variant="destructive" className="cursor-pointer animate-pulse" onClick={() => navigate('/my-warnings')}>
+              ⚠️ {data.warnings}
+            </Badge>
+          )}
+        </div>
+      </div>
 
       {/* Main Tabs */}
       <Tabs defaultValue="map" className="w-full">
-        <TabsList className="w-full grid grid-cols-4">
-          <TabsTrigger value="map" className="gap-1 text-xs sm:text-sm">
+        <TabsList className="w-full grid grid-cols-4 game-card-light rounded-xl h-12">
+          <TabsTrigger value="map" className="gap-1 text-xs sm:text-sm data-[state=active]:kojo-gradient data-[state=active]:text-white rounded-lg">
             <Map className="h-4 w-4" />
             <span className="hidden sm:inline">{isRTL ? 'الخريطة' : 'Map'}</span>
           </TabsTrigger>
-          <TabsTrigger value="quest" className="gap-1 text-xs sm:text-sm">
+          <TabsTrigger value="quest" className="gap-1 text-xs sm:text-sm data-[state=active]:kojo-gradient data-[state=active]:text-white rounded-lg">
             <Swords className="h-4 w-4" />
             <span className="hidden sm:inline">{isRTL ? 'المهمة' : 'Quest'}</span>
           </TabsTrigger>
-          <TabsTrigger value="shields" className="gap-1 text-xs sm:text-sm">
+          <TabsTrigger value="shields" className="gap-1 text-xs sm:text-sm data-[state=active]:kojo-gradient data-[state=active]:text-white rounded-lg">
             <Shield className="h-4 w-4" />
             <span className="hidden sm:inline">{isRTL ? 'الدروع' : 'Shields'}</span>
           </TabsTrigger>
-          <TabsTrigger value="leaderboard" className="gap-1 text-xs sm:text-sm">
+          <TabsTrigger value="leaderboard" className="gap-1 text-xs sm:text-sm data-[state=active]:kojo-gradient data-[state=active]:text-white rounded-lg">
             <Trophy className="h-4 w-4" />
             <span className="hidden sm:inline">{isRTL ? 'الترتيب' : 'Rank'}</span>
           </TabsTrigger>
@@ -379,70 +373,61 @@ export function GameHub() {
         <TabsContent value="quest">
           <CurrentQuest quest={data.quest} />
 
-          {/* Quick stats below quest */}
           <div className="grid grid-cols-2 gap-3 mt-4">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/my-sessions')}>
-              <CardContent className="py-4 text-center">
-                <p className="text-2xl font-bold">{data.attendedSessionNumbers.size}/{data.totalSessions}</p>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'سيشنات مكتملة' : 'Sessions done'}</p>
-              </CardContent>
-            </Card>
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/leaderboard')}>
-              <CardContent className="py-4 text-center">
-                <Trophy className="h-6 w-6 mx-auto text-yellow-500 mb-1" />
-                <p className="text-xs text-muted-foreground">{isRTL ? 'شوف ترتيبك' : 'See your rank'}</p>
-              </CardContent>
-            </Card>
+            <div className="game-card-light rounded-xl border p-4 cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => navigate('/my-sessions')}>
+              <p className="text-2xl font-bold text-center">{data.attendedSessionNumbers.size}/{data.totalSessions}</p>
+              <p className="text-xs text-muted-foreground text-center">{isRTL ? 'سيشنات مكتملة' : 'Sessions done'}</p>
+            </div>
+            <div className="game-card-light rounded-xl border p-4 cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => navigate('/leaderboard')}>
+              <Trophy className="h-6 w-6 mx-auto text-yellow-500 mb-1" />
+              <p className="text-xs text-muted-foreground text-center">{isRTL ? 'شوف ترتيبك' : 'See your rank'}</p>
+            </div>
           </div>
         </TabsContent>
 
         {/* Shields Tab */}
         <TabsContent value="shields">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Shield className="h-5 w-5 text-secondary" />
-                {isRTL ? 'الدروع والإنجازات' : 'Shields & Achievements'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                {data.achievements.map((a) => (
-                  <div
-                    key={a.id}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-xl border transition-all ${
-                      a.earned
-                        ? 'bg-secondary/5 border-secondary/20 shadow-sm'
-                        : 'opacity-40 grayscale'
-                    }`}
-                  >
-                    <Shield className={`h-6 w-6 ${a.earned ? 'text-secondary' : 'text-muted-foreground'}`} />
-                    <span className="text-[10px] text-center font-medium leading-tight">
-                      {language === 'ar' ? a.title_ar : a.title}
-                    </span>
-                    {a.earned && <span className="text-[9px] text-secondary font-bold">✓</span>}
-                  </div>
-                ))}
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+            {data.achievements.map((a) => (
+              <div
+                key={a.id}
+                className={`relative flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${
+                  a.earned
+                    ? 'border-yellow-400/40 game-card-light animate-shine'
+                    : 'border-border/30 opacity-40 grayscale'
+                }`}
+              >
+                <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                  a.earned ? 'kojo-gradient game-glow' : 'bg-muted'
+                }`}>
+                  <Shield className={`h-5 w-5 ${a.earned ? 'text-white' : 'text-muted-foreground'}`} />
+                </div>
+                <span className="text-[10px] text-center font-medium leading-tight">
+                  {language === 'ar' ? a.title_ar : a.title}
+                </span>
+                {a.earned ? (
+                  <span className="text-[9px] font-bold text-yellow-600 dark:text-yellow-400">+{a.xp_reward} XP</span>
+                ) : (
+                  <span className="text-[9px] text-muted-foreground">?</span>
+                )}
               </div>
-            </CardContent>
-          </Card>
+            ))}
+          </div>
         </TabsContent>
 
         {/* Leaderboard Tab */}
         <TabsContent value="leaderboard">
-          <Card>
-            <CardContent className="py-8 text-center">
-              <Trophy className="h-12 w-12 mx-auto text-yellow-500 mb-3" />
-              <p className="font-semibold mb-2">{isRTL ? 'لوحة الترتيب' : 'Leaderboard'}</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                {isRTL ? 'شوف ترتيبك بين زملائك' : 'See how you rank among peers'}
-              </p>
-              <Button onClick={() => navigate('/leaderboard')} className="kojo-gradient">
-                <Trophy className="h-4 w-4 mr-2" />
-                {isRTL ? 'افتح لوحة الترتيب' : 'Open Leaderboard'}
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="game-card-light rounded-xl border p-8 text-center">
+            <Trophy className="h-12 w-12 mx-auto text-yellow-500 mb-3 animate-float" />
+            <p className="font-semibold mb-2">{isRTL ? 'لوحة الترتيب' : 'Leaderboard'}</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              {isRTL ? 'شوف ترتيبك بين زملائك' : 'See how you rank among peers'}
+            </p>
+            <Button onClick={() => navigate('/leaderboard')} className="kojo-gradient hover:scale-105 transition-transform">
+              <Trophy className="h-4 w-4 mr-2" />
+              {isRTL ? 'افتح لوحة الترتيب' : 'Open Leaderboard'}
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
