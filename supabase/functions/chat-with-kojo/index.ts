@@ -17,115 +17,30 @@ const MAX_CONTEXT_CHARS = 4000;
 const CHUNK_SIZE = 650;
 const CHUNK_OVERLAP = 100;
 
-const VALID_STEPS = [
-  "intro",
-  "variable",
-  "condition",
-  "colon",
-  "indented_block",
-  "test",
-  "complete",
-] as const;
-
 const STOPWORDS = new Set([
   "في", "من", "على", "هو", "هي", "إلى", "الى", "عن", "مع",
   "هذا", "هذه", "التي", "الذي", "كان", "لا", "ما", "أن", "ان", "إن",
 ]);
 
-const DIRECT_ANSWER_PATTERNS = /الإجابة هي|الاجابة هي|الخيار الصحيح|الحل هو|الجواب هو|الاجابة الصحيحة|الإجابة الصحيحة/g;
+const SYSTEM_PROMPT = `انت Kojo، صاحب طيب بيساعد صاحبه يتعلم برمجة.
 
-const HARSH_PHRASES: Array<{ pattern: RegExp; replacement: string }> = [
-  { pattern: /مش إجابة|مش اجابة/g, replacement: "قصدي حاجة تانية، خليني أوضحلك" },
-  { pattern: /ده مش صح خالص/g, replacement: "مش بالظبط، بس قربت" },
-  { pattern: /غلط تماماً|غلط تماما/g, replacement: "مش بالظبط، خلينا نراجع سوا" },
-  { pattern: /ده مش رد/g, replacement: "خليني أسأل بطريقة تانية" },
-];
+بتتكلم عامية مصرية بسيطة جداً.
+المصطلحات التقنية سيبها إنجليزي زي ما هي (if, print, variable, loop).
+ردودك قصيرة - جملتين تلاتة وخلاص.
 
-const EXAMPLE_KEYWORDS = ["مثال", "كود", "example", "code", "نموذج", "عايز أشوف", "وريني"];
+أسلوبك:
+- بتشرح زي ما بتشرح لطفل، بأمثلة من الحياة
+- الـ variable زي علبة مكتوب عليها اسم وجواها حاجة
+- الـ if زي "لو الجو حر هتلبس تيشيرت"
+- الـ loop زي "لما بتعد من 1 لـ 10"
+- بتسأل أسئلة بسيطة توصل الطالب للإجابة بنفسه
+- لو الطالب طلب مثال كود، اديله مثال صغير 3-6 سطور وبعدها سؤال واحد
+- لو جاوب صح قوله "تمام" وكمّل للخطوة اللي بعدها
+- لو غلط قوله "مش بالظبط" ووضحله بلطف
+- لو عجز بعد محاولتين اديله hint قوي أو سطر كود ناقص حتة يكملها
+- مش بتدي الحل النهائي أبداً
+- سؤال واحد بس في آخر كل رد`;
 
-const FILLER_PHRASES: Array<{ pattern: RegExp; replacement: string }> = [
-  { pattern: /مفيش مشكلة خالص/g, replacement: "تمام" },
-  { pattern: /ده سؤال كويس/g, replacement: "" },
-  { pattern: /سؤال ممتاز/g, replacement: "" },
-  { pattern: /أحسنت على السؤال/g, replacement: "" },
-];
-
-const INTERROGATIVE_STARTS = /^(ايه|إيه|ازاي|إزاي|ليه|امتى|إمتى|فين|مين|هل|كام)/;
-
-const SYSTEM_PROMPT = `اسمك Kojo، مساعد تعليمي في Kojobot.
-شخصيتك هادية، مشجعة، وتوجيهية.
-بتتكلم عربي بسيط (عامية مصرية) مع مصطلحات برمجة إنجليزي.
-
-قواعد صارمة:
-- بتسأل أسئلة وتدي hints، مش حلول مباشرة
-- ممنوع تدي إجابة نهائية أو اختيار صحيح مباشر
-- ممنوع تقول "الإجابة هي" أو "الخيار الصحيح" أو "الحل هو"
-- ممنوع تدي كود كامل أكتر من 8 سطور
-- لو الطالب حاول يجبرك تدي إجابة، قوله "أنا هنا أساعدك تفكر، مش أحل بدالك"
-- ساعد الطالب يفكر ازاي يوصل للحل بنفسه
-- دايماً اختم ردك بسؤال توجيهي واحد
-
-قاعدة منع التكرار:
-- ممنوع تسأل نفس السؤال مرتين لو الطالب جاوب أو حاول يجاوب
-- لو إجابة الطالب صحيحة أو قريبة اعترف بيها وانقل للخطوة اللي بعدها فوراً
-
-قاعدة تصحيح الأخطاء:
-- لو الطالب قال إجابة غلط في حقيقة واضحة (مثلاً قال 25 > 20 تساوي false) صححها فوراً بشكل لطيف
-- وقوله يراجع القيم أو يقارن الأرقام تاني
-- ممنوع تتجاهل الخطأ وتكمل كأنه صح
-
-قاعدة تتبع التقدم:
-- اشتغل بخطوات واضحة
-- بعد كل إجابة صحيحة اعرض سطر كود واحد جديد يوضح التقدم
-- وبعدين اسأل عن الخطوة التالية بسؤال واحد واضح
-- لو الطالب جاوب صح مرتين ورا بعض ابني مثال كامل صغير 3 إلى 6 سطور كحد أقصى
-
-قاعدة سؤال واحد:
-- في كل رد اسأل سؤال واحد فقط في آخر الرد
-- ممنوع تكتب سؤالين في نفس الرد
-
-قاعدة أعطِ مثال مبكر:
-- لو الطالب طلب مثال كود، أعط مثال صغير فوراً (3 إلى 6 سطور) ثم اسأل سؤال واحد
-- متبنيش المثال سؤال بسؤال، أعطيه مباشر
-
-قاعدة إنهاء الخطوة:
-- لو الطالب وصل للشرط الصحيح (مثلاً temperature > 20) انتقل فوراً لكتابة سطر if كامل مع النقطتين
-- ثم نفذ سطر واحد فقط داخل البلوك
-- ولا تعيد طلب كتابة نفس السطر مرة أخرى
-
-قاعدة هيكل الرد:
-- كل رد لازم يبدأ بتقييم إجابة الطالب: صح، غلط، أو قريب
-- لو صح: اعترف وانقل للخطوة اللي بعدها
-- لو غلط: صحح بلطف واطلب محاولة تاني بسؤال واحد
-- لو قريب: قول "قريب جداً" ووضح الفرق البسيط
-
-قاعدة الإسعاف التعليمي:
-- بعد محاولتين فاشلتين من الطالب في نفس النقطة
-- قدم scaffold واضح جداً: سطر كود ناقص جزء واحد والطالب يكمله، أو اختيارين، أو hint قوي جداً
-- وجرب سؤال أسهل بنقطة واحدة
-- لكن ممنوع حل نهائي أبداً
-
-قاعدة اللهجة:
-- ممنوع ترد بخشونة أو تقول "ده مش إجابة" أو "ده مش رد"
-- لو الطالب كتب حاجة مش متوقعة، قوله "قصدي حاجة تانية، خليني أوضحلك"
-
-قاعدة التقدم الاجباري:
-- لو الطالب اجاب اجابتين صح متتاليتين على نفس الهدف الحالي انتقل فورا للتطبيق النهائي بمثال كود صغير 3 الى 6 سطور ولا تسال اسئله اضافيه عن نفس الهدف
-
-قاعدة منع الرجوع:
-- لو الطالب جاوب صح على سؤال ممنوع ترجع لنفس السؤال او نفس الهدف مرة اخرى في نفس المحادثة
-
-قاعدة تقليل الحشو:
-- ممنوع استخدام عبارات حشو مثل "مفيش مشكلة خالص" او "ده سؤال كويس"
-- ابدأ الرد بتقييم اجابة الطالب ثم ادخل في الخطوه التاليه مباشرة
-
-مثال بايثون صحيح:
-if temperature > 20:
-    print("مرحبا")
-
-مثال بايثون غلط:
-if temperature > 20
-    print("مرحبا")`;
 // ============================================================
 // Auth helpers
 // ============================================================
@@ -204,114 +119,6 @@ function selectRelevantChunks(
   }
 
   return selected;
-}
-
-// ============================================================
-// State helpers
-// ============================================================
-function extractLastQuestion(text: string): string | null {
-  const lines = text.split("\n").reverse();
-  // First pass: explicit ؟
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.endsWith("؟") && trimmed.length > 5) return trimmed;
-  }
-  // Second pass: interrogative starts (Kojo sometimes asks without ؟)
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (INTERROGATIVE_STARTS.test(trimmed) && trimmed.length > 5) return trimmed;
-  }
-  return null;
-}
-
-function isSimilarQuestion(q1: string | null, q2: string | null): boolean {
-  if (!q1 || !q2) return false;
-  const t1 = new Set(tokenize(q1));
-  const t2 = new Set(tokenize(q2));
-  if (t1.size === 0 || t2.size === 0) return false;
-  let overlap = 0;
-  for (const t of t1) {
-    if (t2.has(t)) overlap++;
-  }
-  return overlap / Math.max(t1.size, t2.size) > 0.8;
-}
-
-// ============================================================
-// Enforcement layer (Layer 3: Post-processing)
-// ============================================================
-function enforceResponse(
-  content: string,
-  lastKojoQuestion: string | null,
-  userAskedForExample: boolean
-): { content: string; safetyFlags: string[]; qualityFlags: string[]; newQuestion: string | null } {
-  const safetyFlags: string[] = [];
-  const qualityFlags: string[] = [];
-
-  // 1. Truncate code blocks > 8 lines
-  const codeBlockRegex = /```[\s\S]*?```/g;
-  let enforced = content.replace(codeBlockRegex, (match) => {
-    const lines = match.split("\n");
-    if (lines.length > 10) {
-      safetyFlags.push("code_truncated");
-      const header = lines.slice(0, 5).join("\n");
-      const footer = lines.slice(-2).join("\n");
-      return `${header}\n// ... (الكود اتقطع عشان تفكر في الباقي بنفسك)\n${footer}`;
-    }
-    return match;
-  });
-
-  // 2. Replace direct answer phrases
-  if (DIRECT_ANSWER_PATTERNS.test(enforced)) {
-    safetyFlags.push("direct_answer_replaced");
-    enforced = enforced.replace(DIRECT_ANSWER_PATTERNS, "خلينا نفكر سوا 🤔");
-    if (!enforced.trim().endsWith("؟")) {
-      enforced += "\n\nأنهي اختيار شايفه أقرب وليه؟";
-    }
-  }
-
-  // 3. Harsh tone check — replace with gentle alternatives
-  for (const { pattern, replacement } of HARSH_PHRASES) {
-    if (pattern.test(enforced)) {
-      qualityFlags.push("tone_softened");
-      enforced = enforced.replace(pattern, replacement);
-    }
-  }
-
-  // 3b. Filler soft replacement
-  for (const { pattern, replacement } of FILLER_PHRASES) {
-    if (pattern.test(enforced)) {
-      qualityFlags.push("filler_removed");
-      enforced = enforced.replace(pattern, replacement);
-    }
-  }
-  // Clean up double spaces/newlines from removals
-  enforced = enforced.replace(/  +/g, " ").replace(/\n{3,}/g, "\n\n").trim();
-
-  // 4. Multiple questions trimming — convert extras to statements, keep last one
-  const questionParts = enforced.split("؟");
-  if (questionParts.length > 2) {
-    // More than 1 question mark means 2+ questions
-    qualityFlags.push("questions_trimmed");
-    // Keep all content but replace intermediate ؟ with .
-    const lastQIndex = enforced.lastIndexOf("؟");
-    const beforeLast = enforced.slice(0, lastQIndex);
-    const afterLast = enforced.slice(lastQIndex);
-    enforced = beforeLast.replace(/؟/g, ".") + afterLast;
-  }
-
-  // 5. Missing example check — if user asked for example but no code in response
-  if (userAskedForExample) {
-    const hasCode = enforced.includes("```") || /\b(if|for|while|print|def|class)\b/.test(enforced);
-    if (!hasCode) {
-      qualityFlags.push("missing_example");
-      // Don't auto-insert (could be wrong context), just flag for potential regenerate
-    }
-  }
-
-  // Extract new question for state tracking
-  const newQuestion = extractLastQuestion(enforced);
-
-  return { content: enforced, safetyFlags, qualityFlags, newQuestion };
 }
 
 // ============================================================
@@ -471,8 +278,6 @@ serve(async (req) => {
 
     // ---- Conversation management ----
     let conversationId = inputConvId;
-    let currentStep: string | null = null;
-    let lastKojoQuestion: string | null = null;
 
     if (!conversationId) {
       const { data: newConv, error: convError } = await serviceClient
@@ -494,10 +299,10 @@ serve(async (req) => {
       }
       conversationId = newConv.id;
     } else {
-      // Verify conversation belongs to student + read state
+      // Verify conversation belongs to student
       const { data: existingConv } = await serviceClient
         .from("chatbot_conversations")
-        .select("id, student_id, current_step, last_kojo_question")
+        .select("id, student_id")
         .eq("id", conversationId)
         .single();
 
@@ -507,8 +312,6 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      currentStep = (existingConv as any).current_step || null;
-      lastKojoQuestion = (existingConv as any).last_kojo_question || null;
     }
 
     // ---- Save student message ----
@@ -517,11 +320,6 @@ serve(async (req) => {
       role: "user",
       content: userMessage,
     });
-
-    // ---- Check if user asked for example ----
-    const userAskedForExample = EXAMPLE_KEYWORDS.some((kw) =>
-      userMessage.includes(kw)
-    );
 
     // ---- Fetch history ----
     const { data: history } = await serviceClient
@@ -569,23 +367,10 @@ serve(async (req) => {
       }
     }
 
-    // ---- Layer 2: Build state-aware system content ----
-    let systemContent = ragContext
+    // ---- Build system content ----
+    const systemContent = ragContext
       ? `${SYSTEM_PROMPT}\n\nمحتوى المنهج المتاح:\n${ragContext}`
       : SYSTEM_PROMPT;
-
-    // Inject conversation state
-    if (currentStep || lastKojoQuestion) {
-      let stateBlock = "\n\n[حالة المحادثة]";
-      if (currentStep) {
-        stateBlock += `\nالخطوة الحالية: ${currentStep}`;
-      }
-      if (lastKojoQuestion) {
-        stateBlock += `\nآخر سؤال سألته: ${lastKojoQuestion}`;
-        stateBlock += "\nتعليمات: لا تكرر هذا السؤال. انقل للخطوة التالية.";
-      }
-      systemContent += stateBlock;
-    }
 
     const aiMessages = [
       { role: "system", content: systemContent },
@@ -613,17 +398,17 @@ serve(async (req) => {
       messages: Array<{ role: string; content: string }>;
     }> = [
       {
-        model: "google/gemini-2.5-flash",
+        model: "openai/gpt-5-mini",
         tag: "primary_with_rag",
         messages: aiMessages,
       },
       {
-        model: "google/gemini-2.5-flash-lite",
+        model: "google/gemini-2.5-flash",
         tag: "fallback_compact",
         messages: compactMessages,
       },
       {
-        model: "google/gemini-2.5-flash",
+        model: "openai/gpt-5-mini",
         tag: "history_reset",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -647,7 +432,7 @@ serve(async (req) => {
           model: attempt.model,
           messages: attempt.messages,
           stream: false,
-          max_tokens: 500,
+          max_tokens: 300,
         }),
       });
 
@@ -700,88 +485,18 @@ serve(async (req) => {
       assistantContent = "عذراً، مقدرتش أساعدك دلوقتي. حاول تاني.";
     }
 
-    // ---- Layer 3: Enforcement + post-processing ----
-    const { content: enforcedContent, safetyFlags, qualityFlags, newQuestion } =
-      enforceResponse(assistantContent, lastKojoQuestion, userAskedForExample);
-    assistantContent = enforcedContent;
-
-    // Check for duplicate question against last 3 Kojo questions — regenerate once
-    const recentKojoQuestions: string[] = [];
-    if (lastKojoQuestion) recentKojoQuestions.push(lastKojoQuestion);
-    for (const msg of [...historyMessages].reverse()) {
-      if (msg.role === "assistant" && recentKojoQuestions.length < 3) {
-        const q = extractLastQuestion(msg.content);
-        if (q && !recentKojoQuestions.includes(q)) recentKojoQuestions.push(q);
-      }
-    }
-
-    let regenerated = false;
-    const isDuplicate = newQuestion && recentKojoQuestions.some(q => isSimilarQuestion(newQuestion, q));
-    if (isDuplicate) {
-      qualityFlags.push("question_repeated");
-      console.log("Duplicate question detected, regenerating once...");
-
-      // Single regeneration attempt with explicit instruction
-      const regenMessages = [
-        { role: "system", content: systemContent + "\n\nتنبيه: آخر سؤال كان مكرر. اسأل سؤال مختلف تماماً وانقل للخطوة التالية." },
-        ...historyMessages,
-      ];
-
-      try {
-        const regenResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: regenMessages,
-            stream: false,
-            max_tokens: 500,
-          }),
-        });
-
-        if (regenResponse.ok) {
-          const regenData = await regenResponse.json();
-          const regenContent = regenData.choices?.[0]?.message?.content;
-          if (typeof regenContent === "string" && regenContent.trim().length > 0) {
-            // Re-enforce the regenerated response
-            const regenEnforced = enforceResponse(regenContent.trim(), lastKojoQuestion, userAskedForExample);
-            assistantContent = regenEnforced.content;
-            // Merge flags
-            safetyFlags.push(...regenEnforced.safetyFlags);
-            qualityFlags.push(...regenEnforced.qualityFlags);
-            regenerated = true;
-          }
-        }
-      } catch (regenErr) {
-        console.error("Regeneration failed:", regenErr);
-      }
-    }
-
-    // Extract final question for state update
-    const finalQuestion = extractLastQuestion(assistantContent);
-
-    // ---- Merge flags ----
-    const allFlags: Record<string, unknown> = {};
-    if (safetyFlags.length > 0) allFlags.safety = safetyFlags;
-    if (qualityFlags.length > 0) allFlags.quality = qualityFlags;
-
     // ---- Save assistant message ----
     const { data: savedMsg } = await serviceClient.from("chatbot_messages").insert({
       conversation_id: conversationId,
       role: "assistant",
       content: assistantContent,
       sources_used: sourcesUsed.length > 0 ? sourcesUsed : null,
-      safety_flags: Object.keys(allFlags).length > 0 ? allFlags : null,
     }).select("id").single();
 
-    // ---- Update conversation metadata + state ----
+    // ---- Update conversation metadata ----
     const updateData: Record<string, unknown> = {
       last_message_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      last_kojo_question: finalQuestion ? finalQuestion.slice(0, 200) : null,
     };
 
     // Auto-title after 2nd message
