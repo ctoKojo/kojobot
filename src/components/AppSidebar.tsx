@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Briefcase,
   GraduationCap as AcademicCap,
+  PanelTop,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -131,6 +132,7 @@ export function AppSidebar() {
           {
             label: 'Settings', labelAr: 'الإعدادات',
             items: [
+              { title: isRTL ? 'صفحة الهبوط' : 'Landing CMS', url: '/landing-cms', icon: PanelTop, roles: ['admin'] },
               { title: t.nav.ageGroups, url: '/age-groups', icon: Layers, roles: ['admin'] },
               { title: t.nav.levels, url: '/levels', icon: BookOpen, roles: ['admin'] },
               { title: t.nav.settings, url: '/settings', icon: Settings, roles: ['admin'] },
