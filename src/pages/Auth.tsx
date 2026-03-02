@@ -15,7 +15,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
 // Use public path for LCP image (discoverable from initial HTML)
 const kojobotLogoWhite = '/kojobot-logo-white.png';
-import kojobotIcon from '@/assets/kojobot-icon-96.webp';
+import kojobotIcon from '@/assets/kojobot-icon-128.webp';
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6)
