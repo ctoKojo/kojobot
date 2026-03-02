@@ -1,5 +1,5 @@
 import { useLanguage } from '@/contexts/LanguageContext';
-import kojobotIcon from '@/assets/kojobot-icon-64.webp';
+import kojobotIcon from '@/assets/kojobot-icon-96.webp';
 
 interface LoadingScreenProps {
   message?: string;
@@ -29,6 +29,10 @@ export function LoadingScreen({ message }: LoadingScreenProps) {
             <img 
               src={kojobotIcon} 
               alt="Kojobot" 
+              width={96}
+              height={96}
+              loading="eager"
+              decoding="async"
               className="w-24 h-24 mx-auto rounded-2xl shadow-2xl shadow-primary/20"
             />
           </div>
