@@ -1385,6 +1385,7 @@ export type Database = {
           name_en: string
           price_currency: string
           price_number: number
+          price_online: number
           session_duration_minutes: number | null
           sessions_per_month: number | null
           sort_order: number
@@ -1404,6 +1405,7 @@ export type Database = {
           name_en?: string
           price_currency?: string
           price_number?: number
+          price_online?: number
           session_duration_minutes?: number | null
           sessions_per_month?: number | null
           sort_order?: number
@@ -1423,6 +1425,7 @@ export type Database = {
           name_en?: string
           price_currency?: string
           price_number?: number
+          price_online?: number
           session_duration_minutes?: number | null
           sessions_per_month?: number | null
           sort_order?: number
