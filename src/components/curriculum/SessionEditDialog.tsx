@@ -101,12 +101,19 @@ export function SessionEditDialog({ session, onClose }: Props) {
     setForm(f => ({ ...f, updated_at: newUpdatedAt }));
   };
 
-  // Reset form when session changes + fetch fresh updated_at
-  if (session && form.id !== session.id) {
-    setForm({ ...session });
-    setAssignmentFile(null);
-    setQuizData(null);
-  }
+  // Reset form when session changes or dialog reopens with same session
+  const [lastOpenedId, setLastOpenedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (session && session.id !== lastOpenedId) {
+      setForm({ ...session });
+      setAssignmentFile(null);
+      setQuizData(null);
+      setLastOpenedId(session.id);
+    }
+    if (!session) {
+      setLastOpenedId(null);
+    }
+  }, [session]);
 
   // Fetch fresh updated_at when dialog opens
   useEffect(() => {
