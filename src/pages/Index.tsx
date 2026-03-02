@@ -192,7 +192,7 @@ const Index = () => {
     <div className={`min-h-screen bg-background text-foreground ${isRTL ? 'font-cairo' : 'font-poppins'}`} dir={isRTL ? 'rtl' : 'ltr'}>
       {/* ======== Navbar ======== */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5">
             
             <span className="font-bold kojo-gradient-text text-3xl">Kojobot</span>
