@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      injectRegister: 'script-defer',
+      injectRegister: null,
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "kojobot-logo-white.png"],
       manifest: {
