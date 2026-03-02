@@ -860,7 +860,7 @@ const Index = () => {
                           <div className="card" key={label} style={{ padding: "20px 18px", textAlign: isRTL ? "right" : "left" }}>
                                     <h5 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>{label}</h5>
                                     {bs.map((step) =>
-                            <div key={step.id} style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+                            <div key={step.id} style={{ display: "flex", flexDirection: isRTL ? "row-reverse" : "row", gap: 10, marginBottom: 12 }}>
                                         <div
                                 style={{
                                   width: 22,
@@ -893,7 +893,7 @@ const Index = () => {
                                             {l(step.desc_en, step.desc_ar)}
                                           </p>
                                           {step.specializations?.length! > 0 &&
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6, justifyContent: isRTL ? "flex-end" : "flex-start" }}>
                                               {step.specializations!.map((sp) =>
                                   <span
                                     key={sp}
