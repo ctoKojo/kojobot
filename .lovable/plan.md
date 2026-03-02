@@ -1,33 +1,38 @@
 
 
-# Fix: update_curriculum_session RPC Overwrites Missing Fields with NULL
+# Fix: Students Can't Download Curriculum PDF
 
-## Problem
-The `update_curriculum_session` database function sets every field from `p_data`, even when the key is absent. For example, saving URLs from the Materials card sends only `slides_url`, `summary_video_url`, `full_video_url` -- but the function also sets `description = p_data->>'description'` (which is NULL since it wasn't sent), wiping out existing data.
+## Root Cause
 
-Lines 137-153 of the current RPC show the issue clearly: only `title` and `title_ar` use `COALESCE`, everything else is a direct assignment.
+The `get-session-pdf-url` edge function receives a **sessions** table ID (the actual class session), but queries the **curriculum_sessions** table with that ID. These are completely different tables with different IDs, so the query always returns "Session not found" (404).
 
-## Solution
-Update the RPC to use `COALESCE(p_data->>'field', existing_column)` for ALL fields, so only the fields actually present in the JSON payload get updated.
+The callers:
+- `MySessions.tsx` passes `s.id` (from the `sessions` table)
+- `SessionDetails.tsx` passes `session?.id` (also from the `sessions` table)
 
-## Changes
+## Fix
 
-### 1. Database Migration -- Fix `update_curriculum_session` RPC
-Update the function so every field uses the pattern:
-```sql
-column_name = COALESCE(p_data->>'column_name', column_name)
+Rewrite the edge function to:
+1. Look up the **session** from the `sessions` table to get `group_id` and `session_number`
+2. Look up the **group** to get `age_group_id` and `level_id`
+3. Find the matching **curriculum_session** using `age_group_id + level_id + session_number` (where `is_published = true` and `is_active = true`)
+4. Get the PDF path from `curriculum_session_assets` using the curriculum session ID
+5. Generate the signed URL
+
+## Technical Changes
+
+### 1. Update Edge Function: `supabase/functions/get-session-pdf-url/index.ts`
+
+Replace the current logic with the correct lookup chain:
+
+```text
+sessions (by sessionId)
+  -> groups (by group_id)       -> get age_group_id, level_id
+  -> curriculum_sessions        -> match by age_group_id + level_id + session_number + is_published + is_active
+  -> curriculum_session_assets  -> get student_pdf_path
+  -> storage signed URL
 ```
 
-For nullable fields where explicitly sending `null` should clear the value, use a check on whether the key exists in `p_data`:
-```sql
-column_name = CASE WHEN p_data ? 'column_name' THEN p_data->>'column_name' ELSE column_name END
-```
+Authorization check stays the same (admin bypasses, students must be enrolled in a group with matching age_group + level).
 
-This ensures:
-- Fields NOT in the JSON payload keep their current value
-- Fields explicitly set to `null` in the payload get cleared
-- Fields with a new value get updated
-
-### Technical Detail
-The `?` operator in PostgreSQL checks if a key exists in a JSONB object, which distinguishes between "key not sent" (keep existing) vs "key sent as null" (clear it).
-
+No UI changes needed -- the callers already pass the correct session ID format.
