@@ -616,28 +616,28 @@ const Index = () => {
 
         {/* Mobile menu overlay */}
         {mobileMenuOpen &&
-          <div className="mobile-menu-overlay">
+        <div className="mobile-menu-overlay">
             <button
-              onClick={() => setMobileMenuOpen(false)}
-              style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "var(--kojo-text)", cursor: "pointer" }}>
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "var(--kojo-text)", cursor: "pointer" }}>
               <X size={28} />
             </button>
             {navSections.map((sec) =>
-              <button
-                key={sec.id}
-                onClick={() => { scrollTo(sec.id); setMobileMenuOpen(false); }}
-                style={{
-                  background: "none", border: "none", cursor: "pointer",
-                  color: "var(--kojo-text)", fontSize: 20, fontWeight: 600,
-                  fontFamily: isRTL ? "Cairo" : "Poppins", padding: "8px 0"
-                }}>
+          <button
+            key={sec.id}
+            onClick={() => {scrollTo(sec.id);setMobileMenuOpen(false);}}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              color: "var(--kojo-text)", fontSize: 20, fontWeight: 600,
+              fontFamily: isRTL ? "Cairo" : "Poppins", padding: "8px 0"
+            }}>
                 {language === "ar" ? sec.ar : sec.en}
               </button>
-            )}
+          )}
             <Button
-              asChild
-              className="grad-btn"
-              style={{ borderRadius: 14, padding: "0 32px", height: 48, fontSize: 16, marginTop: 16 }}>
+            asChild
+            className="grad-btn"
+            style={{ borderRadius: 14, padding: "0 32px", height: 48, fontSize: 16, marginTop: 16 }}>
               <Link to={s?.cta_url || "/auth"} onClick={() => setMobileMenuOpen(false)}>
                 {l(s?.cta_text_en, s?.cta_text_ar)}
               </Link>
@@ -676,19 +676,19 @@ const Index = () => {
               {language === "ar" ? "منصة البرمجة للأجيال القادمة" : "Coding Platform for the Next Generation"}
             </div>
 
-            <div className="float" style={{ marginBottom: 28 }}>
-              <img
-                src={kojobotLogo}
-                alt="Kojobot"
-                className="hero-logo"
-                style={{
-                  width: 120,
-                  margin: "0 auto",
-                  display: "block",
-                  filter: "drop-shadow(0 0 30px rgba(100,85,240,.5))"
-                }} />
-              
-            </div>
+            
+
+
+
+
+
+
+
+
+
+
+
+            
 
             <h1
               className="font-display"
