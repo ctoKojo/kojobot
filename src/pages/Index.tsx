@@ -12,6 +12,7 @@ import {
   Award,
   ArrowRight,
   ArrowLeft,
+  Menu,
   Check,
   Cpu,
   Code,
@@ -254,7 +255,7 @@ const Index = () => {
   const [content, setContent] = useState<LandingContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
-
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useEffect(() => {
     supabase.rpc("get_landing_content").then(({ data }) => {
       if (data) setContent(data as unknown as LandingContent);
@@ -511,6 +512,41 @@ const Index = () => {
 
         @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         .float { animation: float 4s ease-in-out infinite; }
+
+        /* ── Mobile menu ── */
+        .mobile-menu-overlay {
+          position: fixed; inset: 0; z-index: 200;
+          background: rgba(7,7,20,0.92); backdrop-filter: blur(20px);
+          display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+        }
+        .mobile-menu-btn {
+          background: none; border: none; cursor: pointer; color: var(--kojo-text);
+          display: none; padding: 8px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+          .mobile-menu-btn { display: flex; }
+          .kojo-nav { padding: 0 16px; height: 56px; }
+          .stat-bar { gap: 16px; padding: 16px 20px; }
+          .stat-num { font-size: 22px !important; }
+          .stat-label { font-size: 11px; }
+          .section-pad { padding: 60px 16px !important; }
+          .branch-grid { grid-template-columns: 1fr !important; }
+          .contact-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .hero-section { padding-top: 110px !important; padding-bottom: 60px !important; }
+          .hero-logo { width: 80px !important; }
+          .badge-pill { font-size: 11px; padding: 4px 12px; }
+        }
+        @media (max-width: 480px) {
+          .stat-bar { gap: 12px; padding: 14px 16px; flex-wrap: wrap; }
+          .stat-item { min-width: 70px; }
+          .contact-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) {
+          .section-pad { padding: 80px 20px !important; }
+          .stat-bar { gap: 28px; }
+        }
       `}</style>
 
       <div className="kojo-root" dir={isRTL ? "rtl" : "ltr"}>
@@ -526,7 +562,7 @@ const Index = () => {
           </Link>
 
           <div
-            style={{ display: "flex", gap: 4, flex: 1, justifyContent: "center", flexWrap: "nowrap" }}
+            style={{ gap: 4, flex: 1, justifyContent: "center", flexWrap: "nowrap" }}
             className="hidden md:flex">
             
             {navSections.map((sec) =>
@@ -561,10 +597,16 @@ const Index = () => {
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <LanguageToggle />
             <ThemeToggle />
+            <button
+              className="mobile-menu-btn md:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu">
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
             <Button
               asChild
               size="sm"
-              className="grad-btn"
+              className="grad-btn hidden sm:inline-flex"
               style={{ borderRadius: 10, padding: "0 18px", height: 36, fontSize: 14 }}>
               
               <Link to={s?.cta_url || "/auth"}>{l(s?.cta_text_en, s?.cta_text_ar)}</Link>
@@ -572,8 +614,39 @@ const Index = () => {
           </div>
         </nav>
 
+        {/* Mobile menu overlay */}
+        {mobileMenuOpen &&
+          <div className="mobile-menu-overlay">
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", color: "var(--kojo-text)", cursor: "pointer" }}>
+              <X size={28} />
+            </button>
+            {navSections.map((sec) =>
+              <button
+                key={sec.id}
+                onClick={() => { scrollTo(sec.id); setMobileMenuOpen(false); }}
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  color: "var(--kojo-text)", fontSize: 20, fontWeight: 600,
+                  fontFamily: isRTL ? "Cairo" : "Poppins", padding: "8px 0"
+                }}>
+                {language === "ar" ? sec.ar : sec.en}
+              </button>
+            )}
+            <Button
+              asChild
+              className="grad-btn"
+              style={{ borderRadius: 14, padding: "0 32px", height: 48, fontSize: 16, marginTop: 16 }}>
+              <Link to={s?.cta_url || "/auth"} onClick={() => setMobileMenuOpen(false)}>
+                {l(s?.cta_text_en, s?.cta_text_ar)}
+              </Link>
+            </Button>
+          </div>
+        }
+
         {/* ══════════ HERO ══════════ */}
-        <section style={{ position: "relative", paddingTop: 160, paddingBottom: 100, overflow: "hidden", zIndex: 1 }}>
+        <section className="hero-section" style={{ position: "relative", paddingTop: 160, paddingBottom: 100, overflow: "hidden", zIndex: 1 }}>
           {/* Glows */}
           <div
             className="hero-glow"
@@ -607,6 +680,7 @@ const Index = () => {
               <img
                 src={kojobotLogo}
                 alt="Kojobot"
+                className="hero-logo"
                 style={{
                   width: 120,
                   margin: "0 auto",
@@ -692,7 +766,7 @@ const Index = () => {
 
         {/* ══════════ FEATURES ══════════ */}
         {features.length > 0 &&
-        <section id="features" style={{ padding: "100px 24px", position: "relative", zIndex: 1 }}>
+        <section id="features" className="section-pad" style={{ padding: "100px 24px", position: "relative", zIndex: 1 }}>
             <div style={{ maxWidth: 1100, margin: "0 auto" }}>
               <div style={{ textAlign: "center", marginBottom: 60 }}>
                 <span className="section-label">{language === "ar" ? "لماذا كوجوبوت" : "Why Kojobot"}</span>
@@ -740,7 +814,7 @@ const Index = () => {
 
         {/* ══════════ TRACKS ══════════ */}
         {tracks.length > 0 &&
-        <section id="tracks" style={{ padding: "100px 24px", position: "relative", zIndex: 1 }}>
+        <section id="tracks" className="section-pad" style={{ padding: "100px 24px", position: "relative", zIndex: 1 }}>
             {/* bg accent */}
             <div
             style={{
@@ -844,7 +918,7 @@ const Index = () => {
                         
                             {language === "ar" ? "اختر مسارك" : "Choose Your Path"}
                           </h4>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                          <div className="branch-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                             {[
                         {
                           label: language === "ar" ? "💻 مسار Software" : "💻 Software Path",
@@ -930,7 +1004,7 @@ const Index = () => {
 
         {/* ══════════ PLANS ══════════ */}
         {plans.length > 0 &&
-        <section id="plans" style={{ padding: "100px 24px", position: "relative", zIndex: 1 }}>
+        <section id="plans" className="section-pad" style={{ padding: "100px 24px", position: "relative", zIndex: 1 }}>
             <div style={{ maxWidth: 1100, margin: "0 auto" }}>
               <div style={{ textAlign: "center", marginBottom: 60 }}>
                 <span className="section-label">{language === "ar" ? "الباقات" : "Pricing"}</span>
@@ -1110,7 +1184,7 @@ const Index = () => {
         }
 
         {/* ══════════ FAQ ══════════ */}
-        <section id="faq" style={{ padding: "100px 24px", position: "relative", zIndex: 1 }}>
+        <section id="faq" className="section-pad" style={{ padding: "100px 24px", position: "relative", zIndex: 1 }}>
           <div
             style={{
               position: "absolute",
@@ -1158,7 +1232,7 @@ const Index = () => {
         </section>
 
         {/* ══════════ CONTACT ══════════ */}
-        <section id="contact" style={{ padding: "100px 24px", position: "relative", zIndex: 1 }}>
+        <section id="contact" className="section-pad" style={{ padding: "100px 24px", position: "relative", zIndex: 1 }}>
           <div style={{ maxWidth: 900, margin: "0 auto" }}>
             <div style={{ textAlign: "center", marginBottom: 56 }}>
               <span className="section-label">{language === "ar" ? "تواصل معنا" : "Contact"}</span>
@@ -1170,7 +1244,7 @@ const Index = () => {
               </p>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 16 }}>
+            <div className="contact-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 16 }}>
               {socialLinks.map((link) => {
                 const Icon = socialIconMap[link.platform] || MessageCircle;
                 const label = socialLabelMap[link.platform] || { en: link.platform, ar: link.platform };
