@@ -19,8 +19,8 @@ import {
   Loader2,
   RefreshCw,
   Users,
-  FileText,
 } from 'lucide-react';
+import { PdfDownloadButton } from '@/components/PdfDownloadButton';
 
 interface AttendedSession {
   id: string;
@@ -338,25 +338,7 @@ export default function MySessions() {
                     <div className="flex flex-wrap gap-2" onClick={e => e.stopPropagation()}>
                       {/* Student PDF download instead of slides */}
                       {s.curriculum?.student_pdf_available && (
-                        <Button variant="outline" size="sm" onClick={async () => {
-                          try {
-                            const { data, error } = await supabase.functions.invoke('get-session-pdf-url', {
-                              body: { sessionId: s.id },
-                            });
-                            if (error || data?.error) throw new Error(data?.error || error?.message);
-                            const link = document.createElement('a');
-                            link.href = data.url;
-                            link.download = `session-${s.session_number}.pdf`;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
-                          } catch (err: any) {
-                            toast({ title: isRTL ? 'خطأ' : 'Error', description: err.message, variant: 'destructive' });
-                          }
-                        }} className="flex items-center gap-1.5 text-xs">
-                          <FileText className="h-3.5 w-3.5" />
-                          {isRTL ? 'تحميل PDF' : 'PDF'}
-                        </Button>
+                        <PdfDownloadButton sessionId={s.id} sessionNumber={s.session_number} isRTL={isRTL} />
                       )}
                       {s.curriculum?.can_view_summary_video && s.curriculum?.summary_video_url && (
                         <Button variant="outline" size="sm" asChild>
