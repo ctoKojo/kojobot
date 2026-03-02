@@ -1,5 +1,5 @@
 import { useLanguage } from '@/contexts/LanguageContext';
-import kojobotIcon from '@/assets/kojobot-icon.png';
+import kojobotIcon from '@/assets/kojobot-icon-optimized.webp';
 
 interface LoadingScreenProps {
   message?: string;
