@@ -1383,9 +1383,11 @@ export type Database = {
           mode: string
           name_ar: string
           name_en: string
+          price_before_discount: number
           price_currency: string
           price_number: number
           price_online: number
+          price_online_before_discount: number
           session_duration_minutes: number | null
           sessions_per_month: number | null
           sort_order: number
@@ -1403,9 +1405,11 @@ export type Database = {
           mode?: string
           name_ar?: string
           name_en?: string
+          price_before_discount?: number
           price_currency?: string
           price_number?: number
           price_online?: number
+          price_online_before_discount?: number
           session_duration_minutes?: number | null
           sessions_per_month?: number | null
           sort_order?: number
@@ -1423,9 +1427,11 @@ export type Database = {
           mode?: string
           name_ar?: string
           name_en?: string
+          price_before_discount?: number
           price_currency?: string
           price_number?: number
           price_online?: number
+          price_online_before_discount?: number
           session_duration_minutes?: number | null
           sessions_per_month?: number | null
           sort_order?: number
