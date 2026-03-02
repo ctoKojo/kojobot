@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import kojobotIcon from '@/assets/kojobot-icon-optimized.webp';
+import kojobotIcon from '@/assets/kojobot-icon-64.webp';
 
 interface ChatMessage {
   id?: string;
