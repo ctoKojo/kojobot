@@ -41,10 +41,10 @@ serve(async (req) => {
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 1. Look up the class session to get group_id and session_number
+    // 1. Session + Group in one query (JOIN via foreign key)
     const { data: session, error: sessionError } = await serviceClient
       .from("sessions")
-      .select("id, group_id, session_number")
+      .select("id, group_id, session_number, groups!inner(id, age_group_id, level_id)")
       .eq("id", sessionId)
       .single();
 
@@ -60,37 +60,40 @@ serve(async (req) => {
       });
     }
 
-    // 2. Look up the group to get age_group_id and level_id
-    const { data: group, error: groupError } = await serviceClient
-      .from("groups")
-      .select("id, age_group_id, level_id")
-      .eq("id", session.group_id)
-      .single();
-
-    if (groupError || !group || !group.age_group_id || !group.level_id) {
-      return new Response(JSON.stringify({ error: "Group not found or missing curriculum info" }), {
+    const group = session.groups as any;
+    if (!group?.age_group_id || !group?.level_id) {
+      return new Response(JSON.stringify({ error: "Group missing curriculum info" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 3. Find the matching curriculum session
-    const { data: currSession, error: currError } = await serviceClient
-      .from("curriculum_sessions")
-      .select("id, age_group_id, level_id")
-      .eq("age_group_id", group.age_group_id)
-      .eq("level_id", group.level_id)
-      .eq("session_number", session.session_number)
-      .eq("is_published", true)
-      .eq("is_active", true)
-      .single();
+    // 2. Parallel: curriculum session lookup + admin role check
+    const [currResult, adminResult] = await Promise.all([
+      serviceClient
+        .from("curriculum_sessions")
+        .select("id, age_group_id, level_id")
+        .eq("age_group_id", group.age_group_id)
+        .eq("level_id", group.level_id)
+        .eq("session_number", session.session_number)
+        .eq("is_published", true)
+        .eq("is_active", true)
+        .single(),
+      serviceClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle(),
+    ]);
 
-    if (currError || !currSession) {
+    const currSession = currResult.data;
+    if (currResult.error || !currSession) {
       return new Response(JSON.stringify({ error: "No published curriculum session found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 4. Get PDF path from assets table
+    // 3. Get PDF path from assets table
     const { data: asset } = await serviceClient
       .from("curriculum_session_assets")
       .select("student_pdf_path")
@@ -103,16 +106,8 @@ serve(async (req) => {
       });
     }
 
-    // 5. Authorization: check if user is admin
-    const { data: adminRole } = await serviceClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (!adminRole) {
-      // Not admin - verify student is enrolled in a group with matching curriculum
+    // 4. Authorization (admin result already fetched)
+    if (!adminResult.data) {
       const { data: enrollment } = await serviceClient
         .from("group_students")
         .select("group_id, groups!inner(age_group_id, level_id)")
@@ -131,7 +126,7 @@ serve(async (req) => {
       }
     }
 
-    // 6. Generate signed URL
+    // 5. Generate signed URL
     const { data: signedUrl, error: signError } = await serviceClient.storage
       .from("session-slides-pdf")
       .createSignedUrl(asset.student_pdf_path, SIGNED_URL_EXPIRY);

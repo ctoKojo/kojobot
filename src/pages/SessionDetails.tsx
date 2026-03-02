@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { isSessionEndedCairo, isSessionActiveCairo } from '@/lib/sessionTimeGuard';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { PdfDownloadButton } from '@/components/PdfDownloadButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1352,21 +1353,8 @@ export default function SessionDetails() {
               {/* Content Links - Role-based display */}
               <div className="flex flex-wrap gap-3">
                 {/* Students: Show PDF download button instead of slides */}
-                {role === 'student' && curriculumContent.student_pdf_available && (
-                  <Button variant="outline" size="sm" onClick={async () => {
-                    try {
-                      const { data, error } = await supabase.functions.invoke('get-session-pdf-url', {
-                        body: { sessionId: session?.id },
-                      });
-                      if (error || data?.error) throw new Error(data?.error || error?.message);
-                      window.open(data.url, '_blank');
-                    } catch (err: any) {
-                      toast({ title: isRTL ? 'خطأ' : 'Error', description: err.message, variant: 'destructive' });
-                    }
-                  }} className="flex items-center gap-2">
-                    <FileIcon className="h-4 w-4" />
-                    {isRTL ? 'تحميل PDF' : 'Download PDF'}
-                  </Button>
+                {role === 'student' && curriculumContent.student_pdf_available && session && (
+                  <PdfDownloadButton sessionId={session.id} sessionNumber={session.session_number} isRTL={isRTL} size="sm" />
                 )}
 
                 {/* Admin & Instructor: Show slides link */}
