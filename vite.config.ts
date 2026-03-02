@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
+      injectRegister: 'script-defer',
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "kojobot-logo-white.png"],
       manifest: {
@@ -62,6 +63,7 @@ export default defineConfig(({ mode }) => ({
           'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-popover', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-tooltip', '@radix-ui/react-dropdown-menu'],
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-utils': ['date-fns', 'zod', 'react-hook-form', '@hookform/resolvers'],
+          'vendor-charts': ['recharts'],
         },
       },
     },
