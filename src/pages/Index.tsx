@@ -578,7 +578,7 @@ const Index = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
-              <img src={kojobotLogo} alt="Kojobot" className="w-8 h-8 rounded-lg" />
+              
               <span className="font-bold kojo-gradient-text">Kojobot</span>
             </div>
             {/* Social links in footer */}
