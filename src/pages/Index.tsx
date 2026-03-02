@@ -1245,9 +1245,9 @@ const Index = () => {
             
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <img src={kojobotLogo} alt="Kojobot" style={{ height: 28 }} />
-              <span className="font-display grad-text" style={{ fontSize: 18 }}>
-                Kojobot
-              </span>
+              
+
+              
             </div>
             {socialLinks.length > 0 &&
             <div style={{ display: "flex", gap: 8 }}>
