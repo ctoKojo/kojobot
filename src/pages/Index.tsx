@@ -290,7 +290,7 @@ const Index = () => {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=Cairo:wght@400;600;700;800&display=swap');
+        /* Fonts loaded in index.html */
 
         :root {
           --kojo-bg: #070714;
@@ -309,13 +309,13 @@ const Index = () => {
         .kojo-root {
           background: var(--kojo-bg);
           color: var(--kojo-text);
-          font-family: ${isRTL ? "'Cairo'" : "'DM Sans'"}, sans-serif;
+          font-family: ${isRTL ? "'Cairo'" : "'Poppins'"}, sans-serif;
           min-height: 100vh;
           overflow-x: hidden;
         }
 
         .font-display {
-          font-family: ${isRTL ? "'Cairo'" : "'Syne'"}, sans-serif;
+          font-family: ${isRTL ? "'Cairo'" : "'Poppins'"}, sans-serif;
           font-weight: 800;
         }
 
@@ -542,7 +542,7 @@ const Index = () => {
                   fontSize: 14,
                   borderRadius: 8,
                   transition: "color .2s, background .2s",
-                  fontFamily: isRTL ? "Cairo" : "DM Sans",
+                  fontFamily: isRTL ? "Cairo" : "Poppins",
                 }}
                 onMouseEnter={(e) => {
                   (e.target as HTMLElement).style.color = "#f0f0ff";
@@ -658,7 +658,7 @@ const Index = () => {
                   fontSize: 15,
                   cursor: "pointer",
                   transition: "background .2s, border-color .2s",
-                  fontFamily: isRTL ? "Cairo" : "DM Sans",
+                  fontFamily: isRTL ? "Cairo" : "Poppins",
                 }}
                 onMouseEnter={(e) => {
                   (e.target as HTMLElement).style.background = "rgba(255,255,255,.08)";
