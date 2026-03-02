@@ -259,7 +259,7 @@ export default function LevelsPage() {
             <DialogTrigger asChild>
               <Button className="kojo-gradient" onClick={() => {
                 setEditingLevel(null);
-                setFormData({ name: '', name_ar: '', level_order: levels.length, track_id: '', parent_level_id: '', expected_sessions_count: 12, pass_threshold: 50 });
+                setFormData({ name: '', name_ar: '', level_order: levels.length > 0 ? Math.max(...levels.map(l => l.level_order)) + 1 : 0, track_id: '', parent_level_id: '', expected_sessions_count: 12, pass_threshold: 50 });
               }}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t.levels.addLevel}
