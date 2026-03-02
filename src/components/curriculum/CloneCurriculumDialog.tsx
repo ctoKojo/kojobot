@@ -188,11 +188,11 @@ export function CloneCurriculumDialog({ open, onOpenChange, ageGroups, levels, d
             </div>
 
             {targetHasCurriculum && (
-              <div className="flex items-start gap-2 p-2.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs">
+              <div className="flex items-start gap-2 p-2.5 rounded-md bg-destructive/10 text-destructive text-xs">
                 <span>⚠️</span>
                 <span>{isRTL 
-                  ? 'الهدف يحتوي على منهج بالفعل. النسخ سينشئ نسخة جديدة (version) بدون حذف الموجود.' 
-                  : 'Target already has curriculum. Cloning will create a new version without deleting existing data.'}</span>
+                  ? 'الهدف يحتوي على منهج بالفعل. النسخ سيستبدل المحتوى الحالي بالكامل.' 
+                  : 'Target already has curriculum. Cloning will replace all existing content.'}</span>
               </div>
             )}
           </div>
