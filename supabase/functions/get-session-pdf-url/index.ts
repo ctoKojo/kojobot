@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SIGNED_URL_EXPIRY = 3600; // 60 minutes
+const SIGNED_URL_EXPIRY = 3600;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -19,7 +19,6 @@ serve(async (req) => {
       });
     }
 
-    // Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -42,12 +41,11 @@ serve(async (req) => {
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get session data for authorization
+    // 1. Look up the class session to get group_id and session_number
     const { data: session, error: sessionError } = await serviceClient
-      .from("curriculum_sessions")
-      .select("id, age_group_id, level_id")
+      .from("sessions")
+      .select("id, group_id, session_number")
       .eq("id", sessionId)
-      .eq("is_active", true)
       .single();
 
     if (sessionError || !session) {
@@ -56,11 +54,47 @@ serve(async (req) => {
       });
     }
 
-    // Get PDF path from assets table
+    if (!session.session_number) {
+      return new Response(JSON.stringify({ error: "Session has no session number" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 2. Look up the group to get age_group_id and level_id
+    const { data: group, error: groupError } = await serviceClient
+      .from("groups")
+      .select("id, age_group_id, level_id")
+      .eq("id", session.group_id)
+      .single();
+
+    if (groupError || !group || !group.age_group_id || !group.level_id) {
+      return new Response(JSON.stringify({ error: "Group not found or missing curriculum info" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 3. Find the matching curriculum session
+    const { data: currSession, error: currError } = await serviceClient
+      .from("curriculum_sessions")
+      .select("id, age_group_id, level_id")
+      .eq("age_group_id", group.age_group_id)
+      .eq("level_id", group.level_id)
+      .eq("session_number", session.session_number)
+      .eq("is_published", true)
+      .eq("is_active", true)
+      .single();
+
+    if (currError || !currSession) {
+      return new Response(JSON.stringify({ error: "No published curriculum session found" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 4. Get PDF path from assets table
     const { data: asset } = await serviceClient
       .from("curriculum_session_assets")
       .select("student_pdf_path")
-      .eq("session_id", sessionId)
+      .eq("session_id", currSession.id)
       .single();
 
     if (!asset?.student_pdf_path) {
@@ -69,7 +103,7 @@ serve(async (req) => {
       });
     }
 
-    // Check if user is admin (admins can always access)
+    // 5. Authorization: check if user is admin
     const { data: adminRole } = await serviceClient
       .from("user_roles")
       .select("role")
@@ -87,7 +121,7 @@ serve(async (req) => {
 
       const hasAccess = enrollment?.some((e: any) => {
         const g = e.groups;
-        return g?.age_group_id === session.age_group_id && g?.level_id === session.level_id;
+        return g?.age_group_id === currSession.age_group_id && g?.level_id === currSession.level_id;
       });
 
       if (!hasAccess) {
@@ -97,7 +131,7 @@ serve(async (req) => {
       }
     }
 
-    // Generate signed URL
+    // 6. Generate signed URL
     const { data: signedUrl, error: signError } = await serviceClient.storage
       .from("session-slides-pdf")
       .createSignedUrl(asset.student_pdf_path, SIGNED_URL_EXPIRY);
