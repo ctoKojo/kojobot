@@ -43,7 +43,16 @@
 </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Inline critical loading indicator for fast FCP -->
+      <div id="initial-loader" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#1a1a2e;">
+        <div style="text-align:center;">
+          <img src="/kojobot-logo-white.png" alt="Kojobot" width="200" height="69" style="object-fit:contain;" fetchpriority="high">
+          <div style="margin-top:1.5rem;width:48px;height:48px;border:4px solid rgba(255,107,44,0.2);border-top-color:#FF6B2C;border-radius:50%;animation:kspin 0.8s linear infinite;margin-left:auto;margin-right:auto;"></div>
+        </div>
+      </div>
+      <style>#initial-loader{transition:opacity .3s}@keyframes kspin{to{transform:rotate(360deg)}}</style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
