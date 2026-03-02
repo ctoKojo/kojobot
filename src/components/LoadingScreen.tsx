@@ -1,5 +1,4 @@
 import { useLanguage } from '@/contexts/LanguageContext';
-import kojobotIcon from '@/assets/kojobot-icon-optimized.webp';
 interface LoadingScreenProps {
   message?: string;
 }
@@ -26,7 +25,7 @@ export function LoadingScreen({ message }: LoadingScreenProps) {
           {/* Logo with bounce animation */}
           <div className="relative z-10 animate-bounce" style={{ animationDuration: '2s' }}>
             <img 
-              src={kojobotIcon} 
+              src="/favicon.ico" 
               alt="Kojobot" 
               width={96}
               height={96}
