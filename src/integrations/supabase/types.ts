@@ -1301,6 +1301,271 @@ export type Database = {
           },
         ]
       }
+      landing_features: {
+        Row: {
+          created_at: string
+          desc_ar: string
+          desc_en: string
+          icon_name: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          title_ar: string
+          title_en: string
+        }
+        Insert: {
+          created_at?: string
+          desc_ar?: string
+          desc_en?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          title_ar?: string
+          title_en?: string
+        }
+        Update: {
+          created_at?: string
+          desc_ar?: string
+          desc_en?: string
+          icon_name?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          title_ar?: string
+          title_en?: string
+        }
+        Relationships: []
+      }
+      landing_plan_benefits: {
+        Row: {
+          id: string
+          plan_id: string
+          sort_order: number
+          text_ar: string
+          text_en: string
+        }
+        Insert: {
+          id?: string
+          plan_id: string
+          sort_order?: number
+          text_ar?: string
+          text_en?: string
+        }
+        Update: {
+          id?: string
+          plan_id?: string
+          sort_order?: number
+          text_ar?: string
+          text_en?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_plan_benefits_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "landing_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_plans: {
+        Row: {
+          billing_period_ar: string
+          billing_period_en: string
+          created_at: string
+          description_ar: string | null
+          description_en: string | null
+          id: string
+          is_active: boolean
+          is_featured: boolean
+          max_students: number | null
+          mode: string
+          name_ar: string
+          name_en: string
+          price_currency: string
+          price_number: number
+          session_duration_minutes: number | null
+          sessions_per_month: number | null
+          sort_order: number
+        }
+        Insert: {
+          billing_period_ar?: string
+          billing_period_en?: string
+          created_at?: string
+          description_ar?: string | null
+          description_en?: string | null
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          max_students?: number | null
+          mode?: string
+          name_ar?: string
+          name_en?: string
+          price_currency?: string
+          price_number?: number
+          session_duration_minutes?: number | null
+          sessions_per_month?: number | null
+          sort_order?: number
+        }
+        Update: {
+          billing_period_ar?: string
+          billing_period_en?: string
+          created_at?: string
+          description_ar?: string | null
+          description_en?: string | null
+          id?: string
+          is_active?: boolean
+          is_featured?: boolean
+          max_students?: number | null
+          mode?: string
+          name_ar?: string
+          name_en?: string
+          price_currency?: string
+          price_number?: number
+          session_duration_minutes?: number | null
+          sessions_per_month?: number | null
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      landing_settings: {
+        Row: {
+          address_ar: string | null
+          address_en: string | null
+          cta_text_ar: string
+          cta_text_en: string
+          cta_url: string
+          email: string | null
+          footer_text_ar: string
+          footer_text_en: string
+          hero_subtitle_ar: string
+          hero_subtitle_en: string
+          hero_title_ar: string
+          hero_title_en: string
+          id: string
+          logo_url: string | null
+          phone: string | null
+          social_links: Json
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          address_ar?: string | null
+          address_en?: string | null
+          cta_text_ar?: string
+          cta_text_en?: string
+          cta_url?: string
+          email?: string | null
+          footer_text_ar?: string
+          footer_text_en?: string
+          hero_subtitle_ar?: string
+          hero_subtitle_en?: string
+          hero_title_ar?: string
+          hero_title_en?: string
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          social_links?: Json
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          address_ar?: string | null
+          address_en?: string | null
+          cta_text_ar?: string
+          cta_text_en?: string
+          cta_url?: string
+          email?: string | null
+          footer_text_ar?: string
+          footer_text_en?: string
+          hero_subtitle_ar?: string
+          hero_subtitle_en?: string
+          hero_title_ar?: string
+          hero_title_en?: string
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          social_links?: Json
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      landing_track_groups: {
+        Row: {
+          age_group: string
+          id: string
+          intro_ar: string
+          intro_en: string
+          sort_order: number
+          title_ar: string
+          title_en: string
+        }
+        Insert: {
+          age_group: string
+          id?: string
+          intro_ar?: string
+          intro_en?: string
+          sort_order?: number
+          title_ar?: string
+          title_en?: string
+        }
+        Update: {
+          age_group?: string
+          id?: string
+          intro_ar?: string
+          intro_en?: string
+          sort_order?: number
+          title_ar?: string
+          title_en?: string
+        }
+        Relationships: []
+      }
+      landing_track_steps: {
+        Row: {
+          desc_ar: string
+          desc_en: string
+          group_id: string
+          id: string
+          path_type: string
+          specializations: Json | null
+          step_number: number
+          title_ar: string
+          title_en: string
+        }
+        Insert: {
+          desc_ar?: string
+          desc_en?: string
+          group_id: string
+          id?: string
+          path_type?: string
+          specializations?: Json | null
+          step_number: number
+          title_ar?: string
+          title_en?: string
+        }
+        Update: {
+          desc_ar?: string
+          desc_en?: string
+          group_id?: string
+          id?: string
+          path_type?: string
+          specializations?: Json | null
+          step_number?: number
+          title_ar?: string
+          title_en?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_track_steps_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "landing_track_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       level_grades: {
         Row: {
           created_at: string | null
@@ -2595,6 +2860,7 @@ export type Database = {
       }
       sessions: {
         Row: {
+          attendance_mode: string | null
           created_at: string
           duration_minutes: number
           group_id: string
@@ -2604,6 +2870,7 @@ export type Database = {
           makeup_session_id: string | null
           notes: string | null
           session_date: string
+          session_link: string | null
           session_number: number | null
           session_time: string
           status: string
@@ -2612,6 +2879,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attendance_mode?: string | null
           created_at?: string
           duration_minutes?: number
           group_id: string
@@ -2621,6 +2889,7 @@ export type Database = {
           makeup_session_id?: string | null
           notes?: string | null
           session_date: string
+          session_link?: string | null
           session_number?: number | null
           session_time: string
           status?: string
@@ -2629,6 +2898,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attendance_mode?: string | null
           created_at?: string
           duration_minutes?: number
           group_id?: string
@@ -2638,6 +2908,7 @@ export type Database = {
           makeup_session_id?: string | null
           notes?: string | null
           session_date?: string
+          session_link?: string | null
           session_number?: number | null
           session_time?: string
           status?: string
@@ -3524,6 +3795,7 @@ export type Database = {
         Args: { _instructor_id: string }
         Returns: string[]
       }
+      get_landing_content: { Args: never; Returns: Json }
       get_leaderboard: {
         Args: {
           p_age_group_id?: string

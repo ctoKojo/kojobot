@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users, ChevronDown, FolderOpen, Snowflake, Eye, AlertTriangle } from 'lucide-react';
+import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users, ChevronDown, FolderOpen, Snowflake, Eye, AlertTriangle, Video, Globe } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,10 +94,17 @@ export default function SessionsPage() {
     topic: '',
     status: 'scheduled',
     notes: '',
+    session_date: '',
+    session_time: '',
   });
   const [makeupDialogOpen, setMakeupDialogOpen] = useState(false);
   const [pendingCancelSession, setPendingCancelSession] = useState<Session | null>(null);
   const [creatingMakeup, setCreatingMakeup] = useState(false);
+  
+  // Online mode dialog
+  const [onlineDialogOpen, setOnlineDialogOpen] = useState(false);
+  const [onlineSession, setOnlineSession] = useState<Session | null>(null);
+  const [sessionLink, setSessionLink] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -165,6 +172,8 @@ export default function SessionsPage() {
       topic: session.topic || '',
       status: session.status,
       notes: session.notes || '',
+      session_date: session.session_date,
+      session_time: session.session_time,
     });
     setIsEditDialogOpen(true);
   };
@@ -187,6 +196,9 @@ export default function SessionsPage() {
     if (!editingSession) return;
     
     try {
+      const dateChanged = formData.session_date !== editingSession.session_date;
+      const timeChanged = formData.session_time !== editingSession.session_time;
+
       const { error } = await supabase
         .from('sessions')
         .update({
@@ -194,6 +206,8 @@ export default function SessionsPage() {
           topic_ar: formData.topic || null,
           status: formData.status,
           notes: formData.notes || null,
+          session_date: formData.session_date,
+          session_time: formData.session_time,
         })
         .eq('id', editingSession.id);
 
@@ -201,8 +215,45 @@ export default function SessionsPage() {
       
       await logUpdate('session', editingSession.id, {
         session_number: editingSession.session_number,
-        changes: { topic: formData.topic, status: formData.status },
+        changes: { 
+          topic: formData.topic, 
+          status: formData.status,
+          date: dateChanged ? { from: editingSession.session_date, to: formData.session_date } : undefined,
+          time: timeChanged ? { from: editingSession.session_time, to: formData.session_time } : undefined,
+        },
       });
+
+      // Send notification to students if date/time changed
+      if (dateChanged || timeChanged) {
+        const { data: groupData } = await supabase
+          .from('groups')
+          .select('name, name_ar')
+          .eq('id', editingSession.group_id)
+          .single();
+
+        if (groupData) {
+          const { data: groupStudents } = await supabase
+            .from('group_students')
+            .select('student_id')
+            .eq('group_id', editingSession.group_id)
+            .eq('is_active', true);
+
+          if (groupStudents && groupStudents.length > 0) {
+            const notifications = groupStudents.map(gs => ({
+              user_id: gs.student_id,
+              title: 'Session Rescheduled',
+              title_ar: 'تم تغيير موعد السيشن',
+              message: `Session ${editingSession.session_number} for "${groupData.name}" has been moved to ${formData.session_date} at ${formData.session_time}`,
+              message_ar: `سيشن ${editingSession.session_number} لمجموعة "${groupData.name_ar}" تم نقلها إلى ${formData.session_date} الساعة ${formData.session_time}`,
+              type: 'warning',
+              category: 'session',
+              action_url: `/session/${editingSession.id}`,
+            }));
+
+            await supabase.from('notifications').insert(notifications);
+          }
+        }
+      }
       
       toast({
         title: t.common.success,
@@ -336,11 +387,74 @@ export default function SessionsPage() {
     }
   };
 
+  const handleOpenOnlineDialog = (session: Session) => {
+    setOnlineSession(session);
+    setSessionLink('');
+    setOnlineDialogOpen(true);
+  };
+
+  const handleConvertToOnline = async () => {
+    if (!onlineSession || !sessionLink.trim()) return;
+    try {
+      const { error } = await supabase
+        .from('sessions')
+        .update({ attendance_mode: 'online', session_link: sessionLink.trim() } as any)
+        .eq('id', onlineSession.id);
+      if (error) throw error;
+
+      // Send notification to students
+      const { data: groupData } = await supabase
+        .from('groups')
+        .select('name, name_ar')
+        .eq('id', onlineSession.group_id)
+        .single();
+
+      if (groupData) {
+        const { data: groupStudents } = await supabase
+          .from('group_students')
+          .select('student_id')
+          .eq('group_id', onlineSession.group_id)
+          .eq('is_active', true);
+
+        if (groupStudents && groupStudents.length > 0) {
+          const notifications = groupStudents.map(gs => ({
+            user_id: gs.student_id,
+            title: 'Session Moved Online',
+            title_ar: 'تم تحويل السيشن لأونلاين',
+            message: `Session ${onlineSession.session_number} for "${groupData.name}" on ${onlineSession.session_date} will be online.`,
+            message_ar: `سيشن ${onlineSession.session_number} لمجموعة "${groupData.name_ar}" في ${onlineSession.session_date} ستكون أونلاين.`,
+            type: 'info',
+            category: 'session',
+            action_url: `/session/${onlineSession.id}`,
+          }));
+          await supabase.from('notifications').insert(notifications);
+        }
+      }
+
+      toast({
+        title: t.common.success,
+        description: isRTL ? 'تم تحويل السيشن لأونلاين' : 'Session converted to online',
+      });
+      setOnlineDialogOpen(false);
+      setOnlineSession(null);
+      fetchData();
+    } catch (error) {
+      console.error('Error:', error);
+      toast({ variant: 'destructive', title: t.common.error });
+    }
+  };
+
   const getStatusBadge = (status: string) => getSessionStatusBadge(status, language);
 
   const isToday = (dateStr: string) => {
     const today = new Date().toISOString().split('T')[0];
     return dateStr === today;
+  };
+
+  const isTomorrow = (dateStr: string) => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return dateStr === tomorrow.toISOString().split('T')[0];
   };
 
   // Time filter helper
@@ -378,6 +492,7 @@ export default function SessionsPage() {
       
       let matchesTime = true;
       if (timeFilter === 'today') matchesTime = isToday(session.session_date);
+      else if (timeFilter === 'tomorrow') matchesTime = isTomorrow(session.session_date);
       else if (timeFilter === 'week') matchesTime = isThisWeek(session.session_date);
       else if (timeFilter === 'upcoming') matchesTime = isUpcoming(session.session_date);
       
@@ -473,21 +588,27 @@ export default function SessionsPage() {
           {[
             { key: 'all', label: isRTL ? 'الكل' : 'All' },
             { key: 'today', label: isRTL ? 'اليوم' : 'Today' },
+            { key: 'tomorrow', label: isRTL ? 'غداً' : 'Tomorrow' },
             { key: 'week', label: isRTL ? 'هذا الأسبوع' : 'This Week' },
             { key: 'upcoming', label: isRTL ? 'القادم' : 'Upcoming' },
-          ].map(f => (
-            <Button
-              key={f.key}
-              variant={timeFilter === f.key ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTimeFilter(f.key)}
-            >
-              {f.label}
-              {f.key === 'today' && todaySessions.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-xs">{todaySessions.length}</Badge>
-              )}
-            </Button>
-          ))}
+          ].map(f => {
+            const count = f.key === 'today' ? todaySessions.length
+              : f.key === 'tomorrow' ? sessions.filter(s => isTomorrow(s.session_date)).length
+              : 0;
+            return (
+              <Button
+                key={f.key}
+                variant={timeFilter === f.key ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTimeFilter(f.key)}
+              >
+                {f.label}
+                {count > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">{count}</Badge>
+                )}
+              </Button>
+            );
+          })}
           {overdueSessions.length > 0 && (
             <Badge variant="destructive" className="self-center">
               <AlertTriangle className="h-3 w-3 mr-1" />
@@ -533,6 +654,28 @@ export default function SessionsPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              {editingSession?.status === 'scheduled' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label>{isRTL ? 'التاريخ' : 'Date'}</Label>
+                      <Input
+                        type="date"
+                        value={formData.session_date}
+                        onChange={(e) => setFormData({ ...formData, session_date: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>{isRTL ? 'الوقت' : 'Time'}</Label>
+                      <Input
+                        type="time"
+                        value={formData.session_time}
+                        onChange={(e) => setFormData({ ...formData, session_time: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
               <div className="grid gap-2">
                 <Label>{isRTL ? 'الحالة' : 'Status'}</Label>
                 <Select
@@ -595,6 +738,38 @@ export default function SessionsPage() {
               </Button>
               <Button className="kojo-gradient" onClick={() => handleCancelWithMakeup(true)} disabled={creatingMakeup}>
                 {creatingMakeup ? (isRTL ? 'جاري الإنشاء...' : 'Creating...') : (isRTL ? 'إلغاء + إنشاء تعويضات' : 'Cancel + Create Makeup')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Convert to Online Dialog */}
+        <Dialog open={onlineDialogOpen} onOpenChange={setOnlineDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{isRTL ? 'تحويل السيشن لأونلاين' : 'Convert Session to Online'}</DialogTitle>
+              <DialogDescription>
+                {isRTL ? 'أدخل لينك السيشن الأونلاين' : 'Enter the online session link'}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label>{isRTL ? 'لينك السيشن' : 'Session Link'}</Label>
+                <Input
+                  value={sessionLink}
+                  onChange={(e) => setSessionLink(e.target.value)}
+                  placeholder="https://zoom.us/j/..."
+                  type="url"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOnlineDialogOpen(false)}>
+                {t.common.cancel}
+              </Button>
+              <Button className="kojo-gradient" onClick={handleConvertToOnline} disabled={!sessionLink.trim()}>
+                <Globe className="h-4 w-4 mr-2" />
+                {isRTL ? 'تحويل لأونلاين' : 'Convert to Online'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -736,17 +911,25 @@ export default function SessionsPage() {
                                       <Eye className="h-4 w-4 mr-2" />
                                       {isRTL ? 'تفاصيل السيشن' : 'Session Details'}
                                     </DropdownMenuItem>
-                                    {session.status === 'scheduled' && (
+                                    {session.status !== 'cancelled' && session.status === 'scheduled' && (
                                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkComplete(session); }}>
                                         <CheckCircle className="h-4 w-4 mr-2" />
                                         {isRTL ? 'تحديد كمكتمل' : 'Mark Complete'}
                                       </DropdownMenuItem>
                                     )}
-                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(session); }}>
-                                      <Pencil className="h-4 w-4 mr-2" />
-                                      {t.common.edit}
-                                    </DropdownMenuItem>
-                                    {role === 'admin' && (
+                                    {session.status !== 'cancelled' && (
+                                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(session); }}>
+                                        <Pencil className="h-4 w-4 mr-2" />
+                                        {t.common.edit}
+                                      </DropdownMenuItem>
+                                    )}
+                                    {session.status !== 'cancelled' && session.status === 'scheduled' && (
+                                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenOnlineDialog(session); }}>
+                                        <Globe className="h-4 w-4 mr-2" />
+                                        {isRTL ? 'تحويل لأونلاين' : 'Convert to Online'}
+                                      </DropdownMenuItem>
+                                    )}
+                                    {role === 'admin' && session.status !== 'cancelled' && (
                                       <DropdownMenuItem
                                         onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
                                         className="text-destructive"
@@ -849,17 +1032,25 @@ export default function SessionsPage() {
                                           </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                                          {session.status === 'scheduled' && (
+                                          {session.status !== 'cancelled' && session.status === 'scheduled' && (
                                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMarkComplete(session); }}>
                                               <CheckCircle className="h-4 w-4 mr-2" />
                                               {isRTL ? 'تحديد كمكتمل' : 'Mark Complete'}
                                             </DropdownMenuItem>
                                           )}
-                                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(session); }}>
-                                            <Pencil className="h-4 w-4 mr-2" />
-                                            {t.common.edit}
-                                          </DropdownMenuItem>
-                                          {role === 'admin' && (
+                                          {session.status !== 'cancelled' && (
+                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEdit(session); }}>
+                                              <Pencil className="h-4 w-4 mr-2" />
+                                              {t.common.edit}
+                                            </DropdownMenuItem>
+                                          )}
+                                          {session.status !== 'cancelled' && session.status === 'scheduled' && (
+                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenOnlineDialog(session); }}>
+                                              <Globe className="h-4 w-4 mr-2" />
+                                              {isRTL ? 'تحويل لأونلاين' : 'Convert to Online'}
+                                            </DropdownMenuItem>
+                                          )}
+                                          {role === 'admin' && session.status !== 'cancelled' && (
                                             <DropdownMenuItem
                                               onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
                                               className="text-destructive"

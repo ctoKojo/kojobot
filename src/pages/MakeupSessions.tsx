@@ -69,7 +69,7 @@ export default function MakeupSessionsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<EnrichedMakeupSession | null>(null);
-  const [scheduleForm, setScheduleForm] = useState({ date: '', time: '', notes: '', instructorId: '' });
+  const [scheduleForm, setScheduleForm] = useState({ date: '', time: '', notes: '', instructorId: '', attendanceMode: 'offline', sessionLink: '' });
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [instructorConflicts, setInstructorConflicts] = useState<string[]>([]);
 
@@ -270,6 +270,8 @@ export default function MakeupSessionsPage() {
       time: defaultTime,
       notes: session.notes || '',
       instructorId: defaultInstructorId,
+      attendanceMode: 'offline',
+      sessionLink: '',
     });
     setScheduleDialogOpen(true);
   };
@@ -290,6 +292,22 @@ export default function MakeupSessionsPage() {
       });
 
       if (error) throw error;
+
+      // Update linked session with attendance mode if online
+      if (scheduleForm.attendanceMode === 'online' && scheduleForm.sessionLink) {
+        const { data: linkedSession } = await supabase
+          .from('sessions')
+          .select('id')
+          .eq('makeup_session_id', selectedSession.id)
+          .maybeSingle();
+        
+        if (linkedSession) {
+          await supabase
+            .from('sessions')
+            .update({ attendance_mode: 'online', session_link: scheduleForm.sessionLink } as any)
+            .eq('id', linkedSession.id);
+        }
+      }
 
       // Send notification to student
       await notificationService.create({
@@ -719,6 +737,27 @@ export default function MakeupSessionsPage() {
                   <ul className="text-sm text-destructive mt-1">
                     {instructorConflicts.map((c, i) => <li key={i}>• {c}</li>)}
                   </ul>
+                </div>
+              )}
+              <div className="grid gap-2">
+                <Label>{isRTL ? 'نوع الحضور' : 'Attendance Mode'}</Label>
+                <Select value={scheduleForm.attendanceMode} onValueChange={v => setScheduleForm(f => ({ ...f, attendanceMode: v, sessionLink: v === 'offline' ? '' : f.sessionLink }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="offline">{isRTL ? 'حضوري' : 'Offline'}</SelectItem>
+                    <SelectItem value="online">{isRTL ? 'أونلاين' : 'Online'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {scheduleForm.attendanceMode === 'online' && (
+                <div className="grid gap-2">
+                  <Label>{isRTL ? 'لينك السيشن' : 'Session Link'}</Label>
+                  <Input
+                    value={scheduleForm.sessionLink}
+                    onChange={e => setScheduleForm(f => ({ ...f, sessionLink: e.target.value }))}
+                    placeholder="https://zoom.us/j/..."
+                    type="url"
+                  />
                 </div>
               )}
               <div className="grid gap-2">

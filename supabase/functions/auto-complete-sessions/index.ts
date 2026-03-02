@@ -13,7 +13,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Authenticate: only service role or matching cron secret allowed
     const authHeader = req.headers.get("Authorization");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const cronSecret = Deno.env.get("CRON_SECRET");
@@ -25,17 +24,13 @@ Deno.serve(async (req) => {
     if (!isServiceRole && !isCronAuth) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Use Cairo time for "today" comparison
     const cairo = getCairoNow();
     const today = cairo.today;
 
@@ -49,18 +44,70 @@ Deno.serve(async (req) => {
     if (fetchError) throw fetchError;
 
     let completedCount = 0;
+    let warningCount = 0;
     const completedIds: string[] = [];
 
     for (const session of sessions || []) {
-      // Use Cairo-aware comparison for session end time
-      if (isCairoTimePastSessionEnd(
+      // Check if grace period (session end + 60 min) has passed
+      const gracePeriodPast = isCairoTimePastSessionEnd(
         session.session_date,
         session.session_time,
-        session.duration_minutes
-      )) {
-        completedIds.push(session.id);
-        completedCount++;
+        session.duration_minutes + 60 // Add 60 min grace period
+      );
+
+      if (!gracePeriodPast) continue;
+
+      // Grace period expired - check if actions were completed
+      const [attendanceRes, quizRes, assignmentRes] = await Promise.all([
+        supabase.from("attendance").select("id").eq("session_id", session.id).limit(1),
+        supabase.from("quiz_assignments").select("id").eq("session_id", session.id).eq("is_active", true).limit(1),
+        supabase.from("assignments").select("id").eq("session_id", session.id).eq("is_active", true).limit(1),
+      ]);
+
+      const hasAttendance = (attendanceRes.data?.length || 0) > 0;
+      const hasQuiz = (quizRes.data?.length || 0) > 0;
+      const hasAssignment = (assignmentRes.data?.length || 0) > 0;
+      const allActionsComplete = hasAttendance && hasQuiz && hasAssignment;
+
+      // Get instructor for this session's group
+      const { data: groupData } = await supabase
+        .from("groups")
+        .select("instructor_id, name, name_ar")
+        .eq("id", session.group_id)
+        .single();
+
+      if (!allActionsComplete && groupData?.instructor_id) {
+        // Issue warning for instructor
+        const missingActions = [];
+        if (!hasAttendance) missingActions.push("attendance");
+        if (!hasQuiz) missingActions.push("quiz");
+        if (!hasAssignment) missingActions.push("assignment");
+
+        await supabase.from("instructor_warnings").insert({
+          instructor_id: groupData.instructor_id,
+          warning_type: "missed_session_actions",
+          reason: `Failed to complete session actions (${missingActions.join(", ")}) within grace period for session on ${session.session_date}`,
+          reason_ar: `لم يكمل إجراءات السيشن (${missingActions.join("، ")}) خلال فترة السماح للسيشن بتاريخ ${session.session_date}`,
+          severity: "minor",
+          session_id: session.id,
+          reference_type: "session",
+          reference_id: session.id,
+        });
+
+        // Record instructor as absent
+        await supabase.from("session_staff_attendance").upsert({
+          session_id: session.id,
+          staff_id: groupData.instructor_id,
+          status: "absent",
+          actual_hours: 0,
+        }, { onConflict: "session_id,staff_id" });
+
+        warningCount++;
       }
+
+      // Mark session as completed regardless
+      completedIds.push(session.id);
+      completedCount++;
     }
 
     // Batch update
@@ -77,6 +124,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         completed: completedCount,
+        warnings_issued: warningCount,
         timestamp: new Date().toISOString(),
         cairoTime: `${cairo.today} ${cairo.timeHHMMSS}`,
       }),
@@ -86,10 +134,7 @@ Deno.serve(async (req) => {
     console.error("Error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { isSessionEndedCairo, isSessionActiveCairo } from '@/lib/sessionTimeGuard';
+import { isSessionEndedCairo, isSessionActiveCairo, isGracePeriodEndedCairo, getGracePeriodRemainingSeconds } from '@/lib/sessionTimeGuard';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PdfDownloadButton } from '@/components/PdfDownloadButton';
@@ -248,62 +248,30 @@ export default function SessionDetails() {
     return () => clearInterval(id);
   }, [session]);
 
-  // autoConfirmInstructorAttendance removed - handled by save_attendance RPC
+  // Grace period state
+  const [gracePeriodRemaining, setGracePeriodRemaining] = useState(-1);
 
-  // Check and update session status based on time
-  const checkAndUpdateSessionStatus = useCallback(async () => {
-    if (!session || session.status === 'completed') return;
-    
-    // Cairo parts-based guard — no new Date() in completion decision
-    if (!isSessionEndedCairo(session.session_date, session.session_time, session.duration_minutes)) {
-      return; // not ended yet — skip any auto-complete
-    }
+  useEffect(() => {
+    if (!session || session.status === 'completed' || session.status === 'cancelled') return;
+    const compute = () => {
+      const remaining = getGracePeriodRemainingSeconds(session.session_date, session.session_time, session.duration_minutes);
+      setGracePeriodRemaining(remaining);
+    };
+    compute();
+    const id = setInterval(compute, 1000);
+    return () => clearInterval(id);
+  }, [session]);
 
-    {
-      // For makeup sessions, use the complete_makeup_session RPC
-      if (session.is_makeup && session.makeup_session_id) {
-        const { error } = await supabase.rpc('complete_makeup_session', {
-          p_session_id: session.id,
-        });
-        if (!error) {
-          setSession(prev => prev ? { ...prev, status: 'completed' } : null);
-          toast({
-            title: isRTL ? 'تم تحديث الحالة' : 'Status Updated',
-            description: isRTL ? 'تم اكتمال السيشن التعويضية تلقائياً' : 'Makeup session completed automatically',
-          });
-        }
-      } else {
-        const { error } = await supabase
-          .from('sessions')
-          .update({ status: 'completed' })
-          .eq('id', session.id);
-        
-        if (!error) {
-          setSession(prev => prev ? { ...prev, status: 'completed' } : null);
-          toast({
-            title: isRTL ? 'تم تحديث الحالة' : 'Status Updated',
-            description: isRTL ? 'تم تحديث حالة السيشن تلقائياً' : 'Session status updated automatically',
-          });
-        }
-      }
-    }
-  }, [session, isRTL]);
+  // Grace period ended = instructor can't act
+  const graceEnded = isGracePeriodEndedCairo(session?.session_date, session?.session_time, session?.duration_minutes);
+  const sessionEnded = isSessionEndedCairo(session?.session_date, session?.session_time, session?.duration_minutes);
+  const instructorActionsDisabled = role === 'instructor' && graceEnded && session?.status !== 'completed';
 
   useEffect(() => {
     if (sessionId) {
       fetchSessionData();
     }
   }, [sessionId]);
-
-  // Real-time status sync
-  useEffect(() => {
-    checkAndUpdateSessionStatus();
-    
-    // Check every minute
-    const interval = setInterval(checkAndUpdateSessionStatus, 60000);
-    
-    return () => clearInterval(interval);
-  }, [checkAndUpdateSessionStatus]);
 
   const fetchSessionData = async () => {
     if (!sessionId) return;
@@ -1137,7 +1105,11 @@ export default function SessionDetails() {
   const assignmentSubmittedCount = students.filter(s => s.assignment_status).length;
 
   const canManage = role === 'admin' || role === 'instructor';
-  const isOnline = group?.attendance_mode === 'online';
+  // Session-level attendance_mode/session_link take priority over group-level
+  const sessionAttendanceMode = (session as any)?.attendance_mode;
+  const sessionSessionLink = (session as any)?.session_link;
+  const isOnline = sessionAttendanceMode ? sessionAttendanceMode === 'online' : group?.attendance_mode === 'online';
+  const activeSessionLink = sessionSessionLink || group?.session_link;
 
   if (loading) {
     return (
@@ -1162,7 +1134,22 @@ export default function SessionDetails() {
   return (
     <DashboardLayout title={isRTL ? `سيشن ${session.session_number}` : `Session ${session.session_number}`}>
       <div className="space-y-6">
-        {/* Header */}
+        {/* Cancelled Session Banner */}
+        {session.status === 'cancelled' && (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="flex items-center gap-3 py-4">
+              <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+              <div>
+                <p className="font-medium text-destructive">
+                  {isRTL ? 'هذه السيشن ملغية' : 'This Session is Cancelled'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {isRTL ? 'لا يمكن تنفيذ أي إجراءات على سيشن ملغية' : 'No actions can be performed on a cancelled session'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate(-1)}>
             {isRTL ? <ArrowRight className="h-4 w-4 ml-2" /> : <ArrowLeft className="h-4 w-4 mr-2" />}
@@ -1217,9 +1204,9 @@ export default function SessionDetails() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                {isOnline && group?.session_link && liveStatus === 'active' && (
+                {isOnline && activeSessionLink && liveStatus === 'active' && (
                   <Button variant="outline" size="sm" asChild>
-                    <a href={group.session_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                    <a href={activeSessionLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                       <Video className="h-4 w-4" />
                       {isRTL ? 'رابط السيشن' : 'Join Session'}
                       <ExternalLink className="h-3 w-3" />
@@ -1258,8 +1245,44 @@ export default function SessionDetails() {
           </CardHeader>
         </Card>
 
+        {/* Grace Period Countdown for Instructor */}
+        {role === 'instructor' && sessionEnded && !graceEnded && session?.status !== 'completed' && session?.status !== 'cancelled' && gracePeriodRemaining > 0 && (
+          <Card className="border-orange-300 bg-orange-50 dark:bg-orange-900/10 dark:border-orange-800">
+            <CardContent className="flex items-center gap-3 py-4">
+              <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400 shrink-0" />
+              <div>
+                <p className="font-medium text-orange-800 dark:text-orange-300">
+                  {isRTL ? 'فترة السماح' : 'Grace Period'}
+                </p>
+                <p className="text-sm text-orange-600 dark:text-orange-400">
+                  {isRTL 
+                    ? `متبقي ${Math.floor(gracePeriodRemaining / 60)} دقيقة و ${gracePeriodRemaining % 60} ثانية لإكمال الإجراءات`
+                    : `${Math.floor(gracePeriodRemaining / 60)}m ${gracePeriodRemaining % 60}s remaining to complete actions`}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Grace Period Expired Warning */}
+        {instructorActionsDisabled && session?.status !== 'cancelled' && (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="flex items-center gap-3 py-4">
+              <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
+              <div>
+                <p className="font-medium text-destructive">
+                  {isRTL ? 'انتهت فترة السماح' : 'Grace Period Expired'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {isRTL ? 'لا يمكنك تنفيذ إجراءات على هذه السيشن. تواصل مع الإدارة.' : 'You can no longer perform actions on this session. Contact admin.'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Quick Actions for Admin/Instructor */}
-        {canManage && (
+        {canManage && session?.status !== 'cancelled' && !instructorActionsDisabled && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">{isRTL ? 'إجراءات سريعة' : 'Quick Actions'}</CardTitle>
@@ -1290,9 +1313,9 @@ export default function SessionDetails() {
                   {isRTL ? 'تسجيل الحضور' : 'Record Attendance'}
                 </Button>
               )}
-              {isOnline && group?.session_link && liveStatus === 'active' && (
+              {isOnline && activeSessionLink && liveStatus === 'active' && (
                 <Button variant="outline" asChild>
-                  <a href={group.session_link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                  <a href={activeSessionLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                     <Video className="h-4 w-4" />
                     {isRTL ? 'انضم للسيشن' : 'Join Session'}
                     <ExternalLink className="h-3 w-3" />
