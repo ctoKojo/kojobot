@@ -1,0 +1,1 @@
+ALTER TABLE public.landing_plans ADD COLUMN price_online numeric NOT NULL DEFAULT 0;
