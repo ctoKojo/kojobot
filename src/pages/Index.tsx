@@ -296,7 +296,7 @@ const Index = () => {
             </p>
 
             <Tabs defaultValue={tracks[0]?.age_group} className="w-full">
-              <TabsList className="grid w-full max-w-md mx-auto mb-10" style={{ gridTemplateColumns: `repeat(${tracks.length}, 1fr)` }}>
+              <TabsList className="grid w-full max-w-2xl mx-auto mb-10" style={{ gridTemplateColumns: `repeat(${tracks.length}, 1fr)` }}>
                 {tracks.map((tr) =>
               <TabsTrigger key={tr.age_group} value={tr.age_group} className="text-sm">
                     {l(tr.title_en, tr.title_ar)}
