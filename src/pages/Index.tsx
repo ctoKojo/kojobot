@@ -223,7 +223,7 @@ const ParticleGrid = () => {
         if (d.y < 0 || d.y > canvas.height) d.vy *= -1;
         ctx.beginPath();
         ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(139,92,246,0.35)";
+        ctx.fillStyle = "rgba(100,85,240,0.35)";
         ctx.fill();
       });
       dots.forEach((a, i) =>
@@ -233,7 +233,7 @@ const ParticleGrid = () => {
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
-            ctx.strokeStyle = `rgba(139,92,246,${0.12 * (1 - dist / 120)})`;
+            ctx.strokeStyle = `rgba(100,85,240,${0.12 * (1 - dist / 120)})`;
             ctx.stroke();
           }
         }),
@@ -273,9 +273,9 @@ const Index = () => {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "#070714" }}>
         <div className="relative w-16 h-16">
-          <div className="absolute inset-0 rounded-full border-2 border-violet-500/30 animate-ping" />
-          <div className="absolute inset-2 rounded-full border-2 border-t-violet-400 border-transparent animate-spin" />
-          <div className="absolute inset-4 rounded-full bg-violet-500/20 animate-pulse" />
+          <div className="absolute inset-0 rounded-full border-2 border-[#6455F0]/30 animate-ping" />
+          <div className="absolute inset-2 rounded-full border-2 border-t-[#6455F0] border-transparent animate-spin" />
+          <div className="absolute inset-4 rounded-full bg-[#6455F0]/20 animate-pulse" />
         </div>
       </div>
     );
@@ -295,10 +295,10 @@ const Index = () => {
         :root {
           --kojo-bg: #070714;
           --kojo-surface: #0e0e2a;
-          --kojo-border: rgba(139,92,246,0.15);
-          --kojo-violet: #8b5cf6;
-          --kojo-pink: #ec4899;
-          --kojo-cyan: #06b6d4;
+          --kojo-border: rgba(100,85,240,0.15);
+          --kojo-violet: #6455F0;
+          --kojo-pink: #61BAE2;
+          --kojo-cyan: #61BAE2;
           --kojo-gold: #f59e0b;
           --kojo-text: #f0f0ff;
           --kojo-muted: rgba(240,240,255,0.45);
@@ -321,11 +321,11 @@ const Index = () => {
 
         /* ── Gradient utilities ── */
         .grad-text {
-          background: linear-gradient(135deg, var(--kojo-violet) 0%, var(--kojo-pink) 50%, var(--kojo-cyan) 100%);
+          background: linear-gradient(135deg, var(--kojo-pink) 0%, var(--kojo-violet) 100%);
           -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
         .grad-btn {
-          background: linear-gradient(135deg, var(--kojo-violet), var(--kojo-pink));
+          background: linear-gradient(135deg, var(--kojo-pink), var(--kojo-violet));
           border: none; color: #fff; position: relative; overflow: hidden;
           transition: transform .2s, box-shadow .2s;
         }
@@ -334,7 +334,7 @@ const Index = () => {
           background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
           opacity:0; transition: opacity .2s;
         }
-        .grad-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(139,92,246,.45); }
+        .grad-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(100,85,240,.45); }
         .grad-btn:hover::after { opacity:1; }
 
         .card {
@@ -345,8 +345,8 @@ const Index = () => {
         }
         .card:hover {
           transform: translateY(-6px);
-          border-color: rgba(139,92,246,.4);
-          box-shadow: 0 20px 60px rgba(139,92,246,.12), 0 0 0 1px rgba(139,92,246,.08);
+          border-color: rgba(100,85,240,.4);
+          box-shadow: 0 20px 60px rgba(100,85,240,.12), 0 0 0 1px rgba(100,85,240,.08);
         }
 
         /* ── Noise overlay ── */
@@ -376,7 +376,7 @@ const Index = () => {
         .badge-pill {
           display: inline-flex; align-items: center; gap: 6px;
           padding: 6px 16px; border-radius: 999px;
-          background: rgba(139,92,246,.12); border: 1px solid rgba(139,92,246,.3);
+          background: rgba(100,85,240,.12); border: 1px solid rgba(100,85,240,.3);
           font-size: 13px; font-weight: 500; color: rgba(240,240,255,.8);
           margin-bottom: 24px;
         }
@@ -408,7 +408,7 @@ const Index = () => {
           display: inline-block;
           padding: 4px 14px; border-radius: 999px;
           font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
-          background: rgba(139,92,246,.1); border: 1px solid rgba(139,92,246,.25);
+          background: rgba(100,85,240,.1); border: 1px solid rgba(100,85,240,.25);
           color: var(--kojo-violet); margin-bottom: 16px;
         }
 
@@ -418,18 +418,18 @@ const Index = () => {
           background: linear-gradient(135deg, var(--kojo-violet), var(--kojo-pink));
           display: flex; align-items: center; justify-content: center;
           margin-bottom: 16px; flex-shrink: 0;
-          box-shadow: 0 8px 24px rgba(139,92,246,.3);
+          box-shadow: 0 8px 24px rgba(100,85,240,.3);
           transition: transform .25s;
         }
         .card:hover .icon-wrap { transform: scale(1.1) rotate(-4deg); }
 
         /* ── Plan card ── */
         .plan-featured {
-          background: linear-gradient(160deg, rgba(139,92,246,.15) 0%, rgba(236,72,153,.08) 100%);
-          border: 1px solid rgba(139,92,246,.4) !important;
-          box-shadow: 0 0 60px rgba(139,92,246,.12);
+          background: linear-gradient(160deg, rgba(100,85,240,.15) 0%, rgba(97,186,226,.08) 100%);
+          border: 1px solid rgba(100,85,240,.4) !important;
+          box-shadow: 0 0 60px rgba(100,85,240,.12);
         }
-        .plan-featured:hover { box-shadow: 0 24px 80px rgba(139,92,246,.22); }
+        .plan-featured:hover { box-shadow: 0 24px 80px rgba(100,85,240,.22); }
 
         /* ── Track timeline ── */
         .timeline-line {
@@ -445,7 +445,7 @@ const Index = () => {
           border-radius: 16px; margin-bottom: 10px; overflow: hidden;
           transition: border-color .3s;
         }
-        .faq-item:hover { border-color: rgba(139,92,246,.3); }
+        .faq-item:hover { border-color: rgba(100,85,240,.3); }
 
         /* ── Contact card ── */
         .contact-card {
@@ -458,14 +458,14 @@ const Index = () => {
         }
         .contact-card:hover {
           transform: translateY(-6px);
-          border-color: rgba(139,92,246,.4);
-          box-shadow: 0 20px 50px rgba(139,92,246,.15);
+          border-color: rgba(100,85,240,.4);
+          box-shadow: 0 20px 50px rgba(100,85,240,.15);
         }
         .contact-icon {
           width: 60px; height: 60px; border-radius: 16px;
           background: linear-gradient(135deg, var(--kojo-violet), var(--kojo-pink));
           display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 8px 24px rgba(139,92,246,.3);
+          box-shadow: 0 8px 24px rgba(100,85,240,.3);
           transition: transform .25s;
         }
         .contact-card:hover .contact-icon { transform: scale(1.1); }
@@ -488,7 +488,7 @@ const Index = () => {
           border-radius: 12px !important; padding: 4px !important;
         }
         [role="tab"][data-state="active"] {
-          background: linear-gradient(135deg, var(--kojo-violet), var(--kojo-pink)) !important;
+          background: linear-gradient(135deg, var(--kojo-pink), var(--kojo-violet)) !important;
           color: #fff !important; border-radius: 9px !important;
         }
         [role="tab"] { color: var(--kojo-muted) !important; transition: color .2s !important; border-radius: 9px !important; }
@@ -502,11 +502,11 @@ const Index = () => {
         /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(139,92,246,.4); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(100,85,240,.4); border-radius: 4px; }
 
         /* ── Check list ── */
         .check-row { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; margin-bottom: 10px; }
-        .check-icon { width: 18px; height: 18px; border-radius: 50%; background: rgba(139,92,246,.2);
+        .check-icon { width: 18px; height: 18px; border-radius: 50%; background: rgba(100,85,240,.2);
           display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
 
         @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
@@ -546,7 +546,7 @@ const Index = () => {
                 }}
                 onMouseEnter={(e) => {
                   (e.target as HTMLElement).style.color = "#f0f0ff";
-                  (e.target as HTMLElement).style.background = "rgba(139,92,246,.08)";
+                  (e.target as HTMLElement).style.background = "rgba(100,85,240,.08)";
                 }}
                 onMouseLeave={(e) => {
                   (e.target as HTMLElement).style.color = "rgba(240,240,255,.5)";
@@ -577,15 +577,15 @@ const Index = () => {
           {/* Glows */}
           <div
             className="hero-glow"
-            style={{ width: 500, height: 500, top: -100, left: -150, background: "rgba(139,92,246,.18)" }}
+            style={{ width: 500, height: 500, top: -100, left: -150, background: "rgba(100,85,240,.18)" }}
           />
           <div
             className="hero-glow"
-            style={{ width: 400, height: 400, top: 50, right: -100, background: "rgba(236,72,153,.12)" }}
+            style={{ width: 400, height: 400, top: 50, right: -100, background: "rgba(97,186,226,.12)" }}
           />
           <div
             className="hero-glow"
-            style={{ width: 300, height: 300, bottom: -50, left: "40%", background: "rgba(6,182,212,.1)" }}
+            style={{ width: 300, height: 300, bottom: -50, left: "40%", background: "rgba(97,186,226,.1)" }}
           />
 
           <div
@@ -611,7 +611,7 @@ const Index = () => {
                   width: 120,
                   margin: "0 auto",
                   display: "block",
-                  filter: "drop-shadow(0 0 30px rgba(139,92,246,.5))",
+                  filter: "drop-shadow(0 0 30px rgba(100,85,240,.5))",
                 }}
               />
             </div>
@@ -662,7 +662,7 @@ const Index = () => {
                 }}
                 onMouseEnter={(e) => {
                   (e.target as HTMLElement).style.background = "rgba(255,255,255,.08)";
-                  (e.target as HTMLElement).style.borderColor = "rgba(139,92,246,.4)";
+                  (e.target as HTMLElement).style.borderColor = "rgba(100,85,240,.4)";
                 }}
                 onMouseLeave={(e) => {
                   (e.target as HTMLElement).style.background = "rgba(255,255,255,.04)";
@@ -746,7 +746,7 @@ const Index = () => {
               style={{
                 position: "absolute",
                 inset: 0,
-                background: "linear-gradient(180deg, transparent 0%, rgba(139,92,246,.04) 50%, transparent 100%)",
+                background: "linear-gradient(180deg, transparent 0%, rgba(100,85,240,.04) 50%, transparent 100%)",
                 pointerEvents: "none",
               }}
             />
@@ -819,7 +819,7 @@ const Index = () => {
                                 color: "#fff",
                                 flexShrink: 0,
                                 zIndex: 1,
-                                boxShadow: "0 0 0 4px rgba(139,92,246,.15)",
+                                boxShadow: "0 0 0 4px rgba(100,85,240,.15)",
                               }}
                             >
                               {step.step_number}
@@ -866,7 +866,7 @@ const Index = () => {
                                             width: 22,
                                             height: 22,
                                             borderRadius: "50%",
-                                            background: "rgba(139,92,246,.15)",
+                                            background: "rgba(100,85,240,.15)",
                                             display: "flex",
                                             alignItems: "center",
                                             justifyContent: "center",
@@ -901,9 +901,9 @@ const Index = () => {
                                                     fontSize: 11,
                                                     padding: "2px 8px",
                                                     borderRadius: 999,
-                                                    background: "rgba(6,182,212,.1)",
+                                                    background: "rgba(97,186,226,.1)",
                                                     color: "var(--kojo-cyan)",
-                                                    border: "1px solid rgba(6,182,212,.2)",
+                                                    border: "1px solid rgba(97,186,226,.2)",
                                                   }}
                                                 >
                                                   {sp}
@@ -963,7 +963,7 @@ const Index = () => {
                           fontWeight: 700,
                           color: "#fff",
                           whiteSpace: "nowrap",
-                          boxShadow: "0 6px 20px rgba(139,92,246,.4)",
+                          boxShadow: "0 6px 20px rgba(100,85,240,.4)",
                         }}
                       >
                         {language === "ar" ? "⭐ الأكثر طلباً" : "⭐ Most Popular"}
@@ -1016,7 +1016,7 @@ const Index = () => {
                               fontSize: 11,
                               padding: "2px 10px",
                               borderRadius: 999,
-                              background: "rgba(139,92,246,.12)",
+                              background: "rgba(100,85,240,.12)",
                               color: "var(--kojo-violet)",
                               marginInlineEnd: 8,
                             }}
@@ -1115,7 +1115,7 @@ const Index = () => {
             style={{
               position: "absolute",
               inset: 0,
-              background: "linear-gradient(180deg, transparent 0%, rgba(139,92,246,.04) 50%, transparent 100%)",
+              background: "linear-gradient(180deg, transparent 0%, rgba(100,85,240,.04) 50%, transparent 100%)",
               pointerEvents: "none",
             }}
           />
