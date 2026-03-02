@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CurriculumOverviewGrid } from '@/components/curriculum/CurriculumOverviewGrid';
 import { VersionHistoryPanel } from '@/components/curriculum/VersionHistoryPanel';
 import { CloneCurriculumDialog } from '@/components/curriculum/CloneCurriculumDialog';
-import { SessionEditDialog } from '@/components/curriculum/SessionEditDialog';
 
 interface CurriculumSession {
   id: string;
@@ -54,11 +54,11 @@ interface CurriculumSession {
 export default function CurriculumManagement() {
   const { isRTL } = useLanguage();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [selectedAgeGroup, setSelectedAgeGroup] = useState<string>('');
   const [selectedLevel, setSelectedLevel] = useState<string>('');
   const [viewingVersion, setViewingVersion] = useState<number | null>(null);
-  const [editSession, setEditSession] = useState<CurriculumSession | null>(null);
   const [cloneOpen, setCloneOpen] = useState(false);
 
   // Inline edit state
@@ -475,7 +475,7 @@ export default function CurriculumManagement() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Button variant="ghost" size="sm" onClick={() => setEditSession(session)}>
+                              <Button variant="ghost" size="sm" onClick={() => navigate(`/curriculum/session/${session.id}`)}>
                                 {isRTL ? 'تعديل' : 'Edit'}
                               </Button>
                             </TableCell>
@@ -517,11 +517,6 @@ export default function CurriculumManagement() {
           defaultTargetLevelId={selectedLevel}
         />
 
-        {/* Edit Dialog */}
-        <SessionEditDialog
-          session={editSession}
-          onClose={() => setEditSession(null)}
-        />
       </div>
     </DashboardLayout>
   );
