@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -10,57 +10,59 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAdminSessionTimeout } from "@/hooks/useAdminSessionTimeout";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import Students from "./pages/Students";
-import Instructors from "./pages/Instructors";
-import Groups from "./pages/Groups";
-import AgeGroups from "./pages/AgeGroups";
-import Levels from "./pages/Levels";
-import Notifications from "./pages/Notifications";
-import ActivityLog from "./pages/ActivityLog";
-import Settings from "./pages/Settings";
-import NotFound from "./pages/NotFound";
-import Quizzes from "./pages/Quizzes";
-import Assignments from "./pages/Assignments";
+// Lazy-loaded page components for code splitting
+const Auth = React.lazy(() => import("./pages/Auth"));
+const Dashboard = React.lazy(() => import("./pages/Dashboard"));
+const Students = React.lazy(() => import("./pages/Students"));
+const Instructors = React.lazy(() => import("./pages/Instructors"));
+const Groups = React.lazy(() => import("./pages/Groups"));
+const AgeGroups = React.lazy(() => import("./pages/AgeGroups"));
+const Levels = React.lazy(() => import("./pages/Levels"));
+const Notifications = React.lazy(() => import("./pages/Notifications"));
+const ActivityLog = React.lazy(() => import("./pages/ActivityLog"));
+const Settings = React.lazy(() => import("./pages/Settings"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
+const Quizzes = React.lazy(() => import("./pages/Quizzes"));
+const Assignments = React.lazy(() => import("./pages/Assignments"));
+const Sessions = React.lazy(() => import("./pages/Sessions"));
+const TakeQuiz = React.lazy(() => import("./pages/TakeQuiz"));
+const SubmitAssignment = React.lazy(() => import("./pages/SubmitAssignment"));
+const QuizEditor = React.lazy(() => import("./pages/QuizEditor"));
+const GradeAssignment = React.lazy(() => import("./pages/GradeAssignment"));
+const AssignmentSubmissions = React.lazy(() => import("./pages/AssignmentSubmissions"));
+const StudentProfile = React.lazy(() => import("./pages/StudentProfile"));
+const InstructorProfile = React.lazy(() => import("./pages/InstructorProfile"));
+const GroupDetails = React.lazy(() => import("./pages/GroupDetails"));
+const Profile = React.lazy(() => import("./pages/Profile"));
+const InstructorSchedule = React.lazy(() => import("./pages/InstructorSchedule"));
+const MyQuizzes = React.lazy(() => import("./pages/MyQuizzes"));
+const QuizReports = React.lazy(() => import("./pages/QuizReports"));
+const MyInstructorQuizzes = React.lazy(() => import("./pages/MyInstructorQuizzes"));
+const SessionDetails = React.lazy(() => import("./pages/SessionDetails"));
+const InstructorWarnings = React.lazy(() => import("./pages/InstructorWarnings"));
+const StudentWarnings = React.lazy(() => import("./pages/StudentWarnings"));
+const MyInstructorWarningsPage = React.lazy(() => import("./pages/MyInstructorWarnings"));
+const MonthlyReports = React.lazy(() => import("./pages/MonthlyReports"));
+const Materials = React.lazy(() => import("./pages/Materials"));
+const MyMaterials = React.lazy(() => import("./pages/MyMaterials"));
+const MakeupSessions = React.lazy(() => import("./pages/MakeupSessions"));
+const MyMakeupSessions = React.lazy(() => import("./pages/MyMakeupSessions"));
+const PricingPlans = React.lazy(() => import("./pages/PricingPlans"));
+const Finance = React.lazy(() => import("./pages/Finance"));
+const DeductionRules = React.lazy(() => import("./pages/DeductionRules"));
+const AccountSuspended = React.lazy(() => import("./pages/AccountSuspended"));
+const AccountTerminated = React.lazy(() => import("./pages/AccountTerminated"));
+const Messages = React.lazy(() => import("./pages/Messages"));
+const InstructorPerformanceDashboard = React.lazy(() => import("./pages/InstructorPerformanceDashboard"));
+const CurriculumManagement = React.lazy(() => import("./pages/CurriculumManagement"));
+const CurriculumSessionEdit = React.lazy(() => import("./pages/CurriculumSessionEdit"));
+const MySessions = React.lazy(() => import("./pages/MySessions"));
+const SSOTHealth = React.lazy(() => import("./pages/SSOTHealth"));
+const Leaderboard = React.lazy(() => import("./pages/Leaderboard"));
+const MyFinances = React.lazy(() => import("./pages/MyFinances"));
 
-import Sessions from "./pages/Sessions";
-import TakeQuiz from "./pages/TakeQuiz";
-import SubmitAssignment from "./pages/SubmitAssignment";
-import QuizEditor from "./pages/QuizEditor";
-import GradeAssignment from "./pages/GradeAssignment";
-import AssignmentSubmissions from "./pages/AssignmentSubmissions";
-import StudentProfile from "./pages/StudentProfile";
-import InstructorProfile from "./pages/InstructorProfile";
-import GroupDetails from "./pages/GroupDetails";
-import Profile from "./pages/Profile";
-import InstructorSchedule from "./pages/InstructorSchedule";
-import MyQuizzes from "./pages/MyQuizzes";
-import QuizReports from "./pages/QuizReports";
-import MyInstructorQuizzes from "./pages/MyInstructorQuizzes";
-import SessionDetails from "./pages/SessionDetails";
-import InstructorWarnings from "./pages/InstructorWarnings";
-import StudentWarnings from "./pages/StudentWarnings";
-import MyInstructorWarningsPage from "./pages/MyInstructorWarnings";
-import MonthlyReports from "./pages/MonthlyReports";
-import Materials from "./pages/Materials";
-import MyMaterials from "./pages/MyMaterials";
-import MakeupSessions from "./pages/MakeupSessions";
-import MyMakeupSessions from "./pages/MyMakeupSessions";
-import PricingPlans from "./pages/PricingPlans";
-import Finance from "./pages/Finance";
-import DeductionRules from "./pages/DeductionRules";
-import AccountSuspended from "./pages/AccountSuspended";
-import AccountTerminated from "./pages/AccountTerminated";
-import Messages from "./pages/Messages";
-import InstructorPerformanceDashboard from "./pages/InstructorPerformanceDashboard";
-import CurriculumManagement from "./pages/CurriculumManagement";
-import CurriculumSessionEdit from "./pages/CurriculumSessionEdit";
-import MySessions from "./pages/MySessions";
-import SSOTHealth from "./pages/SSOTHealth";
-import Leaderboard from "./pages/Leaderboard";
-import MyFinances from "./pages/MyFinances";
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
   useAdminSessionTimeout();
@@ -80,6 +82,7 @@ const App = () => (
               <Toaster />
               <Sonner />
             <BrowserRouter>
+              <Suspense fallback={<LoadingScreen />}>
                 <Routes>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/auth" element={<Auth />} />
@@ -89,7 +92,6 @@ const App = () => (
                   <Route path="/groups" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'reception']}><Groups /></ProtectedRoute>} />
                   <Route path="/quizzes" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><Quizzes /></ProtectedRoute>} />
                   <Route path="/assignments" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student']}><Assignments /></ProtectedRoute>} />
-                  
                   <Route path="/sessions" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'reception']}><Sessions /></ProtectedRoute>} />
                   <Route path="/age-groups" element={<ProtectedRoute allowedRoles={['admin']}><AgeGroups /></ProtectedRoute>} />
                   <Route path="/levels" element={<ProtectedRoute allowedRoles={['admin']}><Levels /></ProtectedRoute>} />
@@ -133,6 +135,7 @@ const App = () => (
                   <Route path="/account-terminated" element={<AccountTerminated />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
+              </Suspense>
             </BrowserRouter>
           </TooltipProvider>
         </AuthProvider>
