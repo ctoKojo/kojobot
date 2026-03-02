@@ -790,7 +790,7 @@ const Index = () => {
                       
                         {l(tr.intro_en, tr.intro_ar)}
                       </p>
-                      <div style={{ position: "relative", paddingInlineStart: 60 }}>
+              <div style={{ position: "relative", ...(isRTL ? { paddingRight: 60 } : { paddingLeft: 60 }) }}>
                         <div className="timeline-line" />
                         {generalSteps.map((step, i) =>
                       <div
@@ -806,7 +806,7 @@ const Index = () => {
                             <div
                           style={{
                             position: "absolute",
-                            insetInlineStart: -60 + 12,
+                            ...(isRTL ? { right: -60 + 12 } : { left: -60 + 12 }),
                             width: 24,
                             height: 24,
                             borderRadius: "50%",
