@@ -8,7 +8,7 @@ import kojobotLogo from '@/assets/kojobot-icon-128.webp';
 import {
   Monitor, BookOpen, BarChart3, Award, ArrowRight, ArrowLeft,
   Check, Cpu, Code, Puzzle, Bot, Palette, ChevronRight,
-  Mail, Phone, MapPin, MessageCircle, X
+  Mail, Phone, MapPin, MessageCircle, X, Instagram, Facebook
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +20,11 @@ const iconMap: Record<string, React.ElementType> = {
   Monitor, BookOpen, BarChart3, Award, Cpu, Code, Puzzle, Bot, Palette,
 };
 
+interface SocialLink {
+  platform: string;
+  url: string;
+}
+
 interface LandingContent {
   settings: {
     hero_title_en: string; hero_title_ar: string;
@@ -28,7 +33,7 @@ interface LandingContent {
     footer_text_en: string; footer_text_ar: string;
     logo_url?: string; email?: string; phone?: string;
     whatsapp?: string; address_en?: string; address_ar?: string;
-    social_links?: any[];
+    social_links?: SocialLink[];
   };
   features: {
     id: string; icon_name: string; sort_order: number;
@@ -94,6 +99,58 @@ const faqData = [
     a_en: 'We teach Scratch for younger students, then progress to Python, web development (HTML/CSS/JavaScript), and advanced topics like robotics and AI for older students.',
     a_ar: 'نعلم سكراتش للطلاب الأصغر سناً، ثم ننتقل إلى بايثون، تطوير الويب (HTML/CSS/JavaScript)، ومواضيع متقدمة مثل الروبوتيكس والذكاء الاصطناعي للطلاب الأكبر.',
   },
+  {
+    q_en: 'Do I need to buy a computer for my child?',
+    q_ar: 'هل أحتاج لشراء كمبيوتر لطفلي؟',
+    a_en: 'Yes, a laptop or desktop computer is required for the sessions. A tablet is not sufficient for coding exercises. We can recommend suitable options based on your budget.',
+    a_ar: 'نعم، يحتاج الطالب لابتوب أو كمبيوتر للحصص. التابلت غير كافي لتمارين البرمجة. نقدر نرشحلك أجهزة مناسبة حسب ميزانيتك.',
+  },
+  {
+    q_en: 'Can I change or upgrade my plan later?',
+    q_ar: 'هل يمكنني تغيير أو ترقية الباقة لاحقاً؟',
+    a_en: 'Absolutely! You can upgrade or change your plan at any time. The change will take effect from the next billing cycle.',
+    a_ar: 'طبعاً! تقدر تغير أو ترقي باقتك في أي وقت. التغيير هيبدأ من دورة الدفع الجاية.',
+  },
+  {
+    q_en: 'How do I track my child\'s progress?',
+    q_ar: 'كيف أتابع تقدم طفلي؟',
+    a_en: 'Depending on your plan, you receive monthly or weekly progress reports. KOJO CORE includes monthly reports, while KOJO X provides detailed weekly performance reports and direct communication with the instructor.',
+    a_ar: 'حسب باقتك، بتستلم تقارير شهرية أو أسبوعية. كوجو كور بيشمل تقارير شهرية، وكوجو إكس بيقدم تقارير أداء أسبوعية مفصلة وتواصل مباشر مع المدرب.',
+  },
+  {
+    q_en: 'What happens if my child misses a session?',
+    q_ar: 'ماذا يحدث إذا فات طفلي حصة؟',
+    a_en: 'We offer makeup sessions for missed classes. KOJO X subscribers have full schedule flexibility. For other plans, makeup sessions can be arranged based on availability.',
+    a_ar: 'بنقدم حصص تعويضية للحصص اللي فاتت. مشتركين كوجو إكس عندهم مرونة كاملة في المواعيد. للباقات التانية، الحصص التعويضية بتتحدد حسب المتاح.',
+  },
+];
+
+const TikTokIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7">
+    <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.51a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.48v-7.15a8.16 8.16 0 005.58 2.2V11.3a4.85 4.85 0 01-2-.6v-.01h.01l-.01-4z" />
+  </svg>
+);
+
+const socialIconMap: Record<string, React.ElementType | (() => JSX.Element)> = {
+  instagram: Instagram,
+  facebook: Facebook,
+  tiktok: TikTokIcon,
+  whatsapp: MessageCircle,
+};
+
+const socialLabelMap: Record<string, { en: string; ar: string }> = {
+  instagram: { en: 'Instagram', ar: 'انستجرام' },
+  facebook: { en: 'Facebook', ar: 'فيسبوك' },
+  tiktok: { en: 'TikTok', ar: 'تيك توك' },
+  whatsapp: { en: 'WhatsApp', ar: 'واتساب' },
+};
+
+const navSections = [
+  { id: 'features', en: 'Features', ar: 'المميزات' },
+  { id: 'tracks', en: 'Tracks', ar: 'المسارات' },
+  { id: 'plans', en: 'Plans', ar: 'الباقات' },
+  { id: 'faq', en: 'FAQ', ar: 'الأسئلة' },
+  { id: 'contact', en: 'Contact', ar: 'تواصل' },
 ];
 
 const Index = () => {
@@ -113,6 +170,10 @@ const Index = () => {
 
   const Arrow = isRTL ? ArrowLeft : ArrowRight;
 
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -125,6 +186,7 @@ const Index = () => {
   const features = content?.features || [];
   const plans = content?.plans || [];
   const tracks = content?.tracks || [];
+  const socialLinks: SocialLink[] = Array.isArray(s?.social_links) ? s.social_links : [];
 
   return (
     <div className={`min-h-screen bg-background text-foreground ${isRTL ? 'font-cairo' : 'font-poppins'}`} dir={isRTL ? 'rtl' : 'ltr'}>
@@ -135,6 +197,20 @@ const Index = () => {
             <img src={kojobotLogo} alt="Kojobot" className="w-9 h-9 rounded-xl" />
             <span className="text-xl font-bold kojo-gradient-text">Kojobot</span>
           </Link>
+
+          {/* Section shortcuts - hidden on small screens */}
+          <div className="hidden md:flex items-center gap-1">
+            {navSections.map((sec) => (
+              <button
+                key={sec.id}
+                onClick={() => scrollTo(sec.id)}
+                className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted/50"
+              >
+                {language === 'ar' ? sec.ar : sec.en}
+              </button>
+            ))}
+          </div>
+
           <div className="flex items-center gap-2">
             <LanguageToggle />
             <ThemeToggle />
@@ -178,7 +254,7 @@ const Index = () => {
 
       {/* ======== Features ======== */}
       {features.length > 0 && (
-        <section className="py-20 sm:py-28 bg-muted/30">
+        <section id="features" className="py-20 sm:py-28 bg-muted/30">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 kojo-gradient-text">
               {language === 'ar' ? 'لماذا كوجوبوت؟' : 'Why Kojobot?'}
@@ -210,7 +286,7 @@ const Index = () => {
 
       {/* ======== Tracks ======== */}
       {tracks.length > 0 && (
-        <section className="py-20 sm:py-28">
+        <section id="tracks" className="py-20 sm:py-28">
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 kojo-gradient-text">
               {language === 'ar' ? 'المسارات التعليمية' : 'Learning Tracks'}
@@ -304,7 +380,7 @@ const Index = () => {
 
       {/* ======== Plans ======== */}
       {plans.length > 0 && (
-        <section className="py-20 sm:py-28 bg-muted/30">
+        <section id="plans" className="py-20 sm:py-28 bg-muted/30">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 kojo-gradient-text">
               {language === 'ar' ? 'الباقات والأسعار' : 'Plans & Pricing'}
@@ -331,12 +407,18 @@ const Index = () => {
                   )}
                   <div className="text-center mb-6">
                     <h3 className="text-xl font-bold mb-2">{l(plan.name_en, plan.name_ar)}</h3>
-                    {plan.price_number > 0 && (
-                      <div className="mt-3">
-                        <span className="text-4xl font-extrabold kojo-gradient-text">{plan.price_number}</span>
-                        <span className="text-sm text-muted-foreground ms-1">{plan.price_currency} / {l(plan.billing_period_en, plan.billing_period_ar)}</span>
-                      </div>
-                    )}
+                    <div className="mt-3">
+                      {plan.price_number > 0 ? (
+                        <>
+                          <span className="text-4xl font-extrabold kojo-gradient-text">{plan.price_number}</span>
+                          <span className="text-sm text-muted-foreground ms-1">{plan.price_currency} / {l(plan.billing_period_en, plan.billing_period_ar)}</span>
+                        </>
+                      ) : (
+                        <span className="text-2xl font-bold kojo-gradient-text">
+                          {language === 'ar' ? 'تواصل معنا' : 'Contact Us'}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Session info */}
@@ -378,7 +460,7 @@ const Index = () => {
       )}
 
       {/* ======== FAQ ======== */}
-      <section className="py-20 sm:py-28">
+      <section id="faq" className="py-20 sm:py-28">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 kojo-gradient-text">
             {language === 'ar' ? 'الأسئلة الشائعة' : 'Frequently Asked Questions'}
@@ -402,7 +484,7 @@ const Index = () => {
       </section>
 
       {/* ======== Contact Us ======== */}
-      <section className="py-20 sm:py-28 bg-muted/30">
+      <section id="contact" className="py-20 sm:py-28 bg-muted/30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 kojo-gradient-text">
             {language === 'ar' ? 'تواصل معنا' : 'Contact Us'}
@@ -410,41 +492,54 @@ const Index = () => {
           <p className="text-muted-foreground text-center mb-12 max-w-xl mx-auto text-base sm:text-lg leading-relaxed">
             {language === 'ar' ? 'نحن هنا لمساعدتك! تواصل معنا بأي طريقة تناسبك' : "We're here to help! Reach out through any channel that suits you"}
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            {/* Social links from CMS */}
+            {socialLinks.map((link) => {
+              const Icon = socialIconMap[link.platform] || MessageCircle;
+              const label = socialLabelMap[link.platform] || { en: link.platform, ar: link.platform };
+              return (
+                <a
+                  key={link.platform}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex flex-col items-center gap-3 p-6 rounded-2xl bg-card border border-border/50 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1"
+                >
+                  <div className="w-14 h-14 rounded-xl kojo-gradient flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+                    <Icon className="w-7 h-7 text-white" />
+                  </div>
+                  <h4 className="font-semibold text-sm">{language === 'ar' ? label.ar : label.en}</h4>
+                </a>
+              );
+            })}
+
+            {/* Email */}
             {s?.email && (
-              <a href={`mailto:${s.email}`} className="group flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border border-border/50 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1">
+              <a href={`mailto:${s.email}`} className="group flex flex-col items-center gap-3 p-6 rounded-2xl bg-card border border-border/50 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1">
                 <div className="w-14 h-14 rounded-xl kojo-gradient flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
                   <Mail className="w-7 h-7 text-white" />
                 </div>
                 <div className="text-center">
-                  <h4 className="font-semibold mb-1">{language === 'ar' ? 'البريد الإلكتروني' : 'Email'}</h4>
-                  <p className="text-sm text-muted-foreground">{s.email}</p>
+                  <h4 className="font-semibold text-sm mb-0.5">{language === 'ar' ? 'البريد الإلكتروني' : 'Email'}</h4>
+                  <p className="text-xs text-muted-foreground">{s.email}</p>
                 </div>
               </a>
             )}
-            {s?.whatsapp && (
-              <a href={`https://wa.me/${s.whatsapp}`} target="_blank" rel="noopener noreferrer" className="group flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border border-border/50 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1">
-                <div className="w-14 h-14 rounded-xl kojo-gradient flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
-                  <MessageCircle className="w-7 h-7 text-white" />
-                </div>
-                <div className="text-center">
-                  <h4 className="font-semibold mb-1">{language === 'ar' ? 'واتساب' : 'WhatsApp'}</h4>
-                  <p className="text-sm text-muted-foreground">{s.whatsapp}</p>
-                </div>
-              </a>
-            )}
+
+            {/* Phone */}
             {s?.phone && (
-              <a href={`tel:${s.phone}`} className="group flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border border-border/50 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1">
+              <a href={`tel:${s.phone}`} className="group flex flex-col items-center gap-3 p-6 rounded-2xl bg-card border border-border/50 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1">
                 <div className="w-14 h-14 rounded-xl kojo-gradient flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
                   <Phone className="w-7 h-7 text-white" />
                 </div>
                 <div className="text-center">
-                  <h4 className="font-semibold mb-1">{language === 'ar' ? 'الهاتف' : 'Phone'}</h4>
-                  <p className="text-sm text-muted-foreground">{s.phone}</p>
+                  <h4 className="font-semibold text-sm mb-0.5">{language === 'ar' ? 'الهاتف' : 'Phone'}</h4>
+                  <p className="text-xs text-muted-foreground">{s.phone}</p>
                 </div>
               </a>
             )}
           </div>
+
           {(s?.address_en || s?.address_ar) && (
             <div className="mt-8 text-center">
               <div className="inline-flex items-center gap-2 text-muted-foreground">
@@ -464,6 +559,25 @@ const Index = () => {
               <img src={kojobotLogo} alt="Kojobot" className="w-8 h-8 rounded-lg" />
               <span className="font-bold kojo-gradient-text">Kojobot</span>
             </div>
+            {/* Social links in footer */}
+            {socialLinks.length > 0 && (
+              <div className="flex items-center gap-3">
+                {socialLinks.map((link) => {
+                  const Icon = socialIconMap[link.platform] || MessageCircle;
+                  return (
+                    <a
+                      key={link.platform}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-9 h-9 rounded-lg bg-muted/50 hover:bg-primary/10 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      <Icon className="w-4 h-4" />
+                    </a>
+                  );
+                })}
+              </div>
+            )}
             <div className="text-sm text-muted-foreground">
               {l(s?.footer_text_en, s?.footer_text_ar)}
             </div>

@@ -10,7 +10,8 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, Plus, Trash2, Save, Clock, Loader2, Bell, Key, CheckCircle, BookOpen } from 'lucide-react';
+import { AlertTriangle, Plus, Trash2, Save, Clock, Loader2, Bell, Key, CheckCircle, BookOpen, Globe } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { GROUP_TYPES_LIST } from '@/lib/constants';
@@ -306,6 +307,9 @@ export default function SettingsPage() {
 
         {/* Push Notifications - Admin Only */}
         {role === 'admin' && <PushNotificationSettings isRTL={isRTL} />}
+
+        {/* Social Links - Admin Only */}
+        {role === 'admin' && <SocialLinksSettings isRTL={isRTL} />}
       </div>
     </DashboardLayout>
   );
@@ -562,6 +566,151 @@ function PushNotificationSettings({ isRTL }: { isRTL: boolean }) {
                 <Key className="h-4 w-4 mr-2" />
               )}
               {isRTL ? 'إنشاء مفاتيح VAPID' : 'Generate VAPID Keys'}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+
+const socialPlatforms = [
+  { value: 'instagram', labelEn: 'Instagram', labelAr: 'انستجرام' },
+  { value: 'facebook', labelEn: 'Facebook', labelAr: 'فيسبوك' },
+  { value: 'tiktok', labelEn: 'TikTok', labelAr: 'تيك توك' },
+  { value: 'whatsapp', labelEn: 'WhatsApp', labelAr: 'واتساب' },
+];
+
+interface SocialLink {
+  platform: string;
+  url: string;
+}
+
+function SocialLinksSettings({ isRTL }: { isRTL: boolean }) {
+  const [links, setLinks] = useState<SocialLink[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [newPlatform, setNewPlatform] = useState('');
+  const [newUrl, setNewUrl] = useState('');
+
+  useEffect(() => {
+    supabase
+      .from('landing_settings')
+      .select('social_links')
+      .single()
+      .then(({ data }) => {
+        if (data?.social_links && Array.isArray(data.social_links)) {
+          setLinks(data.social_links as unknown as SocialLink[]);
+        }
+        setLoading(false);
+      });
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('landing_settings')
+        .update({ social_links: links as any })
+        .eq('id', '00000000-0000-0000-0000-000000000001');
+      if (error) throw error;
+      toast.success(isRTL ? 'تم حفظ روابط التواصل' : 'Social links saved');
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? 'فشل في الحفظ' : 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addLink = () => {
+    if (!newPlatform || !newUrl.trim()) return;
+    if (links.find(l => l.platform === newPlatform)) {
+      toast.error(isRTL ? 'هذه المنصة مضافة بالفعل' : 'This platform is already added');
+      return;
+    }
+    setLinks([...links, { platform: newPlatform, url: newUrl.trim() }]);
+    setNewPlatform('');
+    setNewUrl('');
+  };
+
+  const removeLink = (platform: string) => {
+    setLinks(links.filter(l => l.platform !== platform));
+  };
+
+  const updateUrl = (platform: string, url: string) => {
+    setLinks(links.map(l => l.platform === platform ? { ...l, url } : l));
+  };
+
+  const availablePlatforms = socialPlatforms.filter(p => !links.find(l => l.platform === p.value));
+
+  if (loading) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Globe className="h-5 w-5 text-primary" />
+            <CardTitle>{isRTL ? 'روابط التواصل الاجتماعي' : 'Social Media Links'}</CardTitle>
+          </div>
+          <Button onClick={handleSave} disabled={saving} size="sm">
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            {isRTL ? 'حفظ' : 'Save'}
+          </Button>
+        </div>
+        <CardDescription>
+          {isRTL ? 'إدارة روابط التواصل الاجتماعي في صفحة الهبوط' : 'Manage social media links on the landing page'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Existing links */}
+        {links.map((link) => {
+          const plat = socialPlatforms.find(p => p.value === link.platform);
+          return (
+            <div key={link.platform} className="flex items-center gap-2">
+              <Badge variant="secondary" className="min-w-[90px] justify-center">
+                {isRTL ? plat?.labelAr : plat?.labelEn}
+              </Badge>
+              <Input
+                value={link.url}
+                onChange={(e) => updateUrl(link.platform, e.target.value)}
+                placeholder="https://..."
+                className="flex-1"
+                dir="ltr"
+              />
+              <Button variant="ghost" size="icon" onClick={() => removeLink(link.platform)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </div>
+          );
+        })}
+
+        {/* Add new */}
+        {availablePlatforms.length > 0 && (
+          <div className="flex items-center gap-2 pt-2 border-t">
+            <Select value={newPlatform} onValueChange={setNewPlatform}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder={isRTL ? 'المنصة' : 'Platform'} />
+              </SelectTrigger>
+              <SelectContent>
+                {availablePlatforms.map(p => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {isRTL ? p.labelAr : p.labelEn}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              value={newUrl}
+              onChange={(e) => setNewUrl(e.target.value)}
+              placeholder="https://..."
+              className="flex-1"
+              dir="ltr"
+            />
+            <Button variant="outline" size="icon" onClick={addLink}>
+              <Plus className="h-4 w-4" />
             </Button>
           </div>
         )}
