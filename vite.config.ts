@@ -54,6 +54,18 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
   build: {
     target: "esnext",
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-query': ['@tanstack/react-query'],
+          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-popover', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-tooltip', '@radix-ui/react-dropdown-menu'],
+          'vendor-charts': ['recharts'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-utils': ['date-fns', 'zod', 'react-hook-form', '@hookform/resolvers'],
+        },
+      },
+    },
   },
   resolve: {
     alias: {
