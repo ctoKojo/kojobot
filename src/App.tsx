@@ -56,6 +56,7 @@ import AccountTerminated from "./pages/AccountTerminated";
 import Messages from "./pages/Messages";
 import InstructorPerformanceDashboard from "./pages/InstructorPerformanceDashboard";
 import CurriculumManagement from "./pages/CurriculumManagement";
+import CurriculumSessionEdit from "./pages/CurriculumSessionEdit";
 import MySessions from "./pages/MySessions";
 import SSOTHealth from "./pages/SSOTHealth";
 import Leaderboard from "./pages/Leaderboard";
@@ -123,6 +124,7 @@ const App = () => (
                   <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
                   <Route path="/instructor-performance" element={<ProtectedRoute allowedRoles={['admin']}><InstructorPerformanceDashboard /></ProtectedRoute>} />
                   <Route path="/curriculum" element={<ProtectedRoute allowedRoles={['admin']}><CurriculumManagement /></ProtectedRoute>} />
+                  <Route path="/curriculum/session/:sessionId" element={<ProtectedRoute allowedRoles={['admin']}><CurriculumSessionEdit /></ProtectedRoute>} />
                   <Route path="/my-sessions" element={<ProtectedRoute allowedRoles={['student']}><MySessions /></ProtectedRoute>} />
                   <Route path="/ssot-health" element={<ProtectedRoute allowedRoles={['admin']}><SSOTHealth /></ProtectedRoute>} />
                   <Route path="/leaderboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception']}><Leaderboard /></ProtectedRoute>} />
