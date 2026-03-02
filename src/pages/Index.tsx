@@ -199,7 +199,7 @@ const Index = () => {
           </Link>
 
           {/* Section shortcuts - hidden on small screens */}
-          <div className="hidden md:flex flex-1 items-center justify-center gap-1">
+          <div className="hidden md:flex flex-1 items-center justify-center gap-6">
             {navSections.map((sec) =>
             <button
               key={sec.id}
