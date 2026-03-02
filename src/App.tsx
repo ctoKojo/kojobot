@@ -13,6 +13,7 @@ import { useAdminSessionTimeout } from "@/hooks/useAdminSessionTimeout";
 import { LoadingScreen } from "@/components/LoadingScreen";
 
 // Lazy-loaded page components for code splitting
+const Index = React.lazy(() => import("./pages/Index"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Students = React.lazy(() => import("./pages/Students"));
@@ -84,7 +85,7 @@ const App = () => (
             <BrowserRouter>
               <Suspense fallback={<LoadingScreen />}>
                 <Routes>
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/students" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Students /></ProtectedRoute>} />
