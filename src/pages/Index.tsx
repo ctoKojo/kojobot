@@ -254,7 +254,7 @@ const Index = () => {
 
       {/* ======== Features ======== */}
       {features.length > 0 &&
-      <section id="features" className="py-20 sm:py-28 bg-muted/30">
+      <section id="features" className="py-20 sm:py-28 bg-gradient-to-b from-muted/40 to-muted/10">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 kojo-gradient-text">
               {language === 'ar' ? 'لماذا كوجوبوت؟' : 'Why Kojobot?'}
@@ -286,7 +286,7 @@ const Index = () => {
 
       {/* ======== Tracks ======== */}
       {tracks.length > 0 &&
-      <section id="tracks" className="py-20 sm:py-28">
+      <section id="tracks" className="py-20 sm:py-28 bg-gradient-to-b from-transparent to-muted/20">
           <div className="max-w-5xl mx-auto px-4 sm:px-6">
             <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 kojo-gradient-text">
               {language === 'ar' ? 'المسارات التعليمية' : 'Learning Tracks'}
@@ -380,7 +380,7 @@ const Index = () => {
 
       {/* ======== Plans ======== */}
       {plans.length > 0 &&
-      <section id="plans" className="py-20 sm:py-28 bg-muted/30">
+      <section id="plans" className="py-20 sm:py-28 bg-gradient-to-b from-muted/40 to-muted/10">
           <div className="max-w-6xl mx-auto px-4 sm:px-6">
             <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 kojo-gradient-text">
               {language === 'ar' ? 'الباقات والأسعار' : 'Plans & Pricing'}
@@ -482,7 +482,7 @@ const Index = () => {
       }
 
       {/* ======== FAQ ======== */}
-      <section id="faq" className="py-20 sm:py-28">
+      <section id="faq" className="py-20 sm:py-28 bg-gradient-to-b from-transparent to-muted/20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 kojo-gradient-text">
             {language === 'ar' ? 'الأسئلة الشائعة' : 'Frequently Asked Questions'}
@@ -506,7 +506,7 @@ const Index = () => {
       </section>
 
       {/* ======== Contact Us ======== */}
-      <section id="contact" className="py-20 sm:py-28 bg-muted/30">
+      <section id="contact" className="py-20 sm:py-28 bg-gradient-to-b from-muted/40 to-muted/10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 kojo-gradient-text">
             {language === 'ar' ? 'تواصل معنا' : 'Contact Us'}
