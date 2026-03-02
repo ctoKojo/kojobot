@@ -42,7 +42,7 @@ interface LandingContent {
   }[];
   plans: {
     id: string; name_en: string; name_ar: string;
-    price_number: number; price_online: number; price_currency: string;
+    price_number: number; price_online: number; price_currency: string; price_before_discount: number; price_online_before_discount: number;
     billing_period_en: string; billing_period_ar: string;
     mode: string; is_featured: boolean; sort_order: number;
     sessions_per_month?: number; session_duration_minutes?: number;
@@ -407,23 +407,29 @@ const Index = () => {
                   )}
                   <div className="text-center mb-6">
                     <h3 className="text-xl font-bold mb-3">{l(plan.name_en, plan.name_ar)}</h3>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {/* Offline price */}
                       {plan.price_number > 0 && (
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
                           <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
                             {language === 'ar' ? 'أوفلاين' : 'Offline'}
                           </span>
+                          {plan.price_before_discount > 0 && plan.price_before_discount > plan.price_number && (
+                            <span className="text-lg text-muted-foreground line-through">{plan.price_before_discount}</span>
+                          )}
                           <span className="text-3xl font-extrabold kojo-gradient-text">{plan.price_number}</span>
                           <span className="text-xs text-muted-foreground">{plan.price_currency}/{l(plan.billing_period_en, plan.billing_period_ar)}</span>
                         </div>
                       )}
                       {/* Online price */}
                       {plan.price_online > 0 && (
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
                           <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
                             {language === 'ar' ? 'أونلاين' : 'Online'}
                           </span>
+                          {plan.price_online_before_discount > 0 && plan.price_online_before_discount > plan.price_online && (
+                            <span className="text-lg text-muted-foreground line-through">{plan.price_online_before_discount}</span>
+                          )}
                           <span className="text-3xl font-extrabold kojo-gradient-text">{plan.price_online}</span>
                           <span className="text-xs text-muted-foreground">{plan.price_currency}/{l(plan.billing_period_en, plan.billing_period_ar)}</span>
                         </div>
