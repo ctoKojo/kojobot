@@ -42,7 +42,7 @@ interface LandingContent {
   }[];
   plans: {
     id: string; name_en: string; name_ar: string;
-    price_number: number; price_currency: string;
+    price_number: number; price_online: number; price_currency: string;
     billing_period_en: string; billing_period_ar: string;
     mode: string; is_featured: boolean; sort_order: number;
     sessions_per_month?: number; session_duration_minutes?: number;
@@ -406,14 +406,30 @@ const Index = () => {
                     </div>
                   )}
                   <div className="text-center mb-6">
-                    <h3 className="text-xl font-bold mb-2">{l(plan.name_en, plan.name_ar)}</h3>
-                    <div className="mt-3">
-                      {plan.price_number > 0 ? (
-                        <>
-                          <span className="text-4xl font-extrabold kojo-gradient-text">{plan.price_number}</span>
-                          <span className="text-sm text-muted-foreground ms-1">{plan.price_currency} / {l(plan.billing_period_en, plan.billing_period_ar)}</span>
-                        </>
-                      ) : (
+                    <h3 className="text-xl font-bold mb-3">{l(plan.name_en, plan.name_ar)}</h3>
+                    <div className="space-y-2">
+                      {/* Offline price */}
+                      {plan.price_number > 0 && (
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+                            {language === 'ar' ? 'أوفلاين' : 'Offline'}
+                          </span>
+                          <span className="text-3xl font-extrabold kojo-gradient-text">{plan.price_number}</span>
+                          <span className="text-xs text-muted-foreground">{plan.price_currency}/{l(plan.billing_period_en, plan.billing_period_ar)}</span>
+                        </div>
+                      )}
+                      {/* Online price */}
+                      {plan.price_online > 0 && (
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                            {language === 'ar' ? 'أونلاين' : 'Online'}
+                          </span>
+                          <span className="text-3xl font-extrabold kojo-gradient-text">{plan.price_online}</span>
+                          <span className="text-xs text-muted-foreground">{plan.price_currency}/{l(plan.billing_period_en, plan.billing_period_ar)}</span>
+                        </div>
+                      )}
+                      {/* No prices */}
+                      {plan.price_number <= 0 && plan.price_online <= 0 && (
                         <span className="text-2xl font-bold kojo-gradient-text">
                           {language === 'ar' ? 'تواصل معنا' : 'Contact Us'}
                         </span>
