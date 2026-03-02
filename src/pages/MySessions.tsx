@@ -344,12 +344,16 @@ export default function MySessions() {
                               body: { sessionId: s.id },
                             });
                             if (error || data?.error) throw new Error(data?.error || error?.message);
+                            const response = await fetch(data.url);
+                            const blob = await response.blob();
+                            const blobUrl = URL.createObjectURL(blob);
                             const link = document.createElement('a');
-                            link.href = data.url;
+                            link.href = blobUrl;
                             link.download = `session-${s.session_number}.pdf`;
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);
+                            URL.revokeObjectURL(blobUrl);
                           } catch (err: any) {
                             toast({ title: isRTL ? 'خطأ' : 'Error', description: err.message, variant: 'destructive' });
                           }
