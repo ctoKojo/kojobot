@@ -72,8 +72,8 @@ export function usePaginatedQuery<T>(
     const activeModifier = modifier || queryModifier;
 
     try {
-      let query = (supabase
-        .from(tableName) as any)
+      let query = supabase
+        .from(tableName)
         .select('*', { count: 'exact' });
 
       // Apply custom query modifications
@@ -90,7 +90,7 @@ export function usePaginatedQuery<T>(
 
       if (queryError) throw queryError;
 
-      setData((result || []) as unknown as T[]);
+      setData((result || []) as T[]);
       setPagination(prev => ({
         ...prev,
         totalCount: count || 0,
