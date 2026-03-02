@@ -72,7 +72,7 @@ export function usePaginatedQuery<T>(
     const activeModifier = modifier || queryModifier;
 
     try {
-      let query = supabase
+      let query: any = (supabase as any)
         .from(tableName)
         .select('*', { count: 'exact' });
 
