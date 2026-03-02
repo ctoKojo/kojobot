@@ -4,7 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { LanguageToggle } from '@/components/LanguageToggle';
-import kojobotLogo from '@/assets/kojobot-icon-128.webp';
+import kojobotLogo from '@/assets/kojobot-main-logo.png';
 import {
   Monitor, BookOpen, BarChart3, Award, ArrowRight, ArrowLeft,
   Check, Cpu, Code, Puzzle, Bot, Palette, ChevronRight,
@@ -233,7 +233,7 @@ const Index = () => {
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <div className="animate-fade-up">
-            <img src={kojobotLogo} alt="Kojobot" className="w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-3xl shadow-2xl mb-8 animate-float" />
+            <img src={kojobotLogo} alt="Kojobot" className="w-48 sm:w-64 mx-auto mb-8 animate-float" />
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight mb-6 animate-fade-up" style={{ animationDelay: '0.1s' }}>
             <span className="kojo-gradient-text">{l(s?.hero_title_en, s?.hero_title_ar)}</span>
