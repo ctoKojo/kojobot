@@ -824,7 +824,7 @@ const Index = () => {
                           
                               {step.step_number}
                             </div>
-                            <div className="card" style={{ padding: "16px 20px", flex: 1, marginBottom: 0 }}>
+                            <div className="card" style={{ padding: "16px 20px", flex: 1, marginBottom: 0, textAlign: isRTL ? "right" : "left" }}>
                               <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
                                 {l(step.title_en, step.title_ar)}
                               </h4>
@@ -857,7 +857,7 @@ const Index = () => {
                         map(
                           ({ label, steps: bs }) =>
                           bs.length > 0 &&
-                          <div className="card" key={label} style={{ padding: "20px 18px" }}>
+                          <div className="card" key={label} style={{ padding: "20px 18px", textAlign: isRTL ? "right" : "left" }}>
                                     <h5 style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>{label}</h5>
                                     {bs.map((step) =>
                             <div key={step.id} style={{ display: "flex", gap: 10, marginBottom: 12 }}>
