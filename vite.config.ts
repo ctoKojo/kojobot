@@ -52,6 +52,9 @@ export default defineConfig(({ mode }) => ({
       },
     }),
   ].filter(Boolean),
+  build: {
+    target: "esnext",
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
