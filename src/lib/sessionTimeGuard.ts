@@ -158,6 +158,52 @@ export function isSessionEndedCairo(
 }
 
 /**
+ * Returns true when the grace period (session end + 60 min) has passed.
+ */
+export function isGracePeriodEndedCairo(
+  sessionDate: string | null | undefined,
+  sessionTime: string | null | undefined,
+  durationMinutes?: number | null,
+): boolean {
+  if (!sessionDate || !sessionTime) return false;
+
+  const dur = (durationMinutes != null && durationMinutes > 0 ? durationMinutes : 120) + 60; // add 60 min grace
+  const end = buildSessionEndParts(sessionDate, sessionTime, dur);
+  if (!end) return false;
+
+  return compareParts(getCairoNowParts(), end) >= 0;
+}
+
+/**
+ * Returns remaining seconds in grace period. 0 if grace ended, -1 if session hasn't ended.
+ */
+export function getGracePeriodRemainingSeconds(
+  sessionDate: string | null | undefined,
+  sessionTime: string | null | undefined,
+  durationMinutes?: number | null,
+): number {
+  if (!sessionDate || !sessionTime) return -1;
+
+  const dur = durationMinutes != null && durationMinutes > 0 ? durationMinutes : 120;
+  const end = buildSessionEndParts(sessionDate, sessionTime, dur);
+  if (!end) return -1;
+
+  const now = getCairoNowParts();
+  if (compareParts(now, end) < 0) return -1; // session not ended yet
+
+  const graceEnd = buildSessionEndParts(sessionDate, sessionTime, dur + 60);
+  if (!graceEnd) return 0;
+
+  if (compareParts(now, graceEnd) >= 0) return 0; // grace ended
+
+  // Calculate remaining seconds
+  const nowTotalSec = ((now.year * 12 + now.month) * 31 + now.day) * 86400 + now.hour * 3600 + now.minute * 60 + now.second;
+  const graceEndTotalSec = ((graceEnd.year * 12 + graceEnd.month) * 31 + graceEnd.day) * 86400 + graceEnd.hour * 3600 + graceEnd.minute * 60 + graceEnd.second;
+  
+  return Math.max(0, graceEndTotalSec - nowTotalSec);
+}
+
+/**
  * Returns true when the current Cairo time is within the session window:
  *   start <= now < end
  * Safe: returns false on missing/invalid inputs (never allows accidental assignment).
