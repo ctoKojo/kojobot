@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import kojobotIconImg from '@/assets/kojobot-icon-128.webp';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -273,7 +274,7 @@ export default function Auth() {
             {/* Header */}
             <div className="text-center lg:text-start space-y-2">
               <div className="hidden lg:block mb-6">
-                <img src={kojobotIcon} alt="Kojobot" width={64} height={64} loading="lazy" decoding="async" className="w-16 h-16 rounded-2xl shadow-lg" />
+                <img src={kojobotIconImg} alt="Kojobot" width={64} height={64} loading="lazy" decoding="async" className="w-16 h-16 rounded-2xl shadow-lg" />
               </div>
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                 {t.auth.welcomeBack}
