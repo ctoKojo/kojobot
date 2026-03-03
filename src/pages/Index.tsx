@@ -931,7 +931,7 @@ const Index = ({ lang: routeLang }: IndexProps) => {
             {/* Stats */}
             <div className="stat-bar" style={{ marginTop: 64 }}>
               {[
-              { num: "500+", label: language === "ar" ? "طالب نشط" : "Active Students" },
+              { num: "500+", label: language === "ar" ? "طالب خريج" : "Active Students" },
               { num: "6-18", label: language === "ar" ? "الفئة العمرية" : "Age Range" },
               { num: "3", label: language === "ar" ? "مسارات تعليمية" : "Learning Tracks" },
               { num: "4x", label: language === "ar" ? "حصص في الشهر" : "Sessions / Month" }].
