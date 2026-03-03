@@ -279,8 +279,14 @@ export function StudentDashboard() {
         <Card className="kojo-gradient text-white">
           <CardContent className="py-4 sm:py-6">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/20 flex-shrink-0 overflow-hidden">
+                {stats.profile.avatar_url ? (
+                  <img src={stats.profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8" />
+                  </div>
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-lg sm:text-2xl font-bold truncate">
