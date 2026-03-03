@@ -308,8 +308,6 @@ serve(async (req) => {
     let lastErrorStatus: number | null = null;
 
     for (const { model, maxTokens } of models) {
-      const isOpenAI = model.startsWith("openai/");
-
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -320,7 +318,7 @@ serve(async (req) => {
           model,
           messages: aiMessages,
           stream: true,
-          ...(isOpenAI ? { max_completion_tokens: maxTokens } : { max_tokens: maxTokens }),
+          max_tokens: maxTokens,
         }),
       });
 
