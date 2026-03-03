@@ -25,11 +25,13 @@ export function LanguageToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Globe className="h-5 w-5" />
-          <span className="absolute -bottom-1 -right-1 text-[10px] font-bold uppercase">
-            {language}
-          </span>
+        <Button variant="ghost" size="icon" className="relative h-9 w-9 sm:h-10 sm:w-10 overflow-hidden flex items-center justify-center">
+          <div className="flex flex-col items-center gap-0">
+            <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="text-[8px] sm:text-[9px] font-bold uppercase leading-none">
+              {language}
+            </span>
+          </div>
           <span className="sr-only">Toggle language</span>
         </Button>
       </DropdownMenuTrigger>
