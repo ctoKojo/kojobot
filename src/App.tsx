@@ -86,6 +86,8 @@ const App = () => (
               <Suspense fallback={<LoadingScreen />}>
                 <Routes>
                   <Route path="/" element={<Index />} />
+                  <Route path="/ar" element={<Index lang="ar" />} />
+                  <Route path="/en" element={<Index lang="en" />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/students" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Students /></ProtectedRoute>} />

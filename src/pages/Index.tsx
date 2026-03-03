@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -250,8 +250,101 @@ const ParticleGrid = () => {
   return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0 opacity-60" />;
 };
 
-const Index = () => {
-  const { language, t, isRTL } = useLanguage();
+interface IndexProps {
+  lang?: 'ar' | 'en';
+}
+
+const SITE_URL = "https://kojobot.lovable.app";
+
+const Index = ({ lang: routeLang }: IndexProps) => {
+  const { language: ctxLanguage, setLanguage, t, isRTL: ctxRTL } = useLanguage();
+  const navigate = useNavigate();
+
+  // Determine effective language: route prop takes priority
+  const language = routeLang || ctxLanguage;
+  const isRTL = language === 'ar';
+
+  // Sync context language with route lang
+  useEffect(() => {
+    if (routeLang && routeLang !== ctxLanguage) {
+      setLanguage(routeLang);
+    }
+  }, [routeLang]);
+
+  // If on "/" with no lang prop, redirect to saved language route
+  useEffect(() => {
+    if (!routeLang) {
+      const saved = localStorage.getItem('kojobot-language') as 'ar' | 'en' | null;
+      navigate(`/${saved || 'ar'}`, { replace: true });
+    }
+  }, [routeLang]);
+
+  // SEO: Dynamic title, description, canonical, hreflang, OG tags
+  useEffect(() => {
+    if (!routeLang) return; // skip on "/" before redirect
+
+    // Title & Description
+    const title = language === 'ar'
+      ? 'كوجوبوت اكاديمي - تعليم البرمجة للأطفال من 6 لـ 18 سنة'
+      : 'Kojobot Academy - Coding & Technology for Kids Aged 6-18';
+    const description = language === 'ar'
+      ? 'اكاديمية كوجوبوت لتعليم البرمجة والتكنولوجيا للأطفال من 6 لـ 18 سنة - اونلاين واوفلاين في المنصورة'
+      : 'Kojobot Academy teaches coding and technology to kids aged 6-18 - online and offline in Mansoura, Egypt';
+
+    document.title = title;
+    document.documentElement.lang = language;
+    document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+
+    // Helper to set/create meta tags
+    const setMeta = (attr: string, key: string, content: string) => {
+      let el = document.querySelector(`meta[${attr}="${key}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+      }
+      el.content = content;
+    };
+    setMeta('name', 'description', description);
+    setMeta('property', 'og:title', title);
+    setMeta('property', 'og:description', description);
+    setMeta('name', 'twitter:title', title);
+    setMeta('name', 'twitter:description', description);
+
+    // Canonical
+    const canonicalUrl = `${SITE_URL}/${language}`;
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.rel = 'canonical';
+      document.head.appendChild(canonical);
+    }
+    canonical.href = canonicalUrl;
+
+    // Hreflang tags
+    const hreflangs = [
+      { lang: 'ar', href: `${SITE_URL}/ar` },
+      { lang: 'en', href: `${SITE_URL}/en` },
+      { lang: 'x-default', href: `${SITE_URL}/en` },
+    ];
+    // Remove old hreflang links
+    document.querySelectorAll('link[rel="alternate"][hreflang]').forEach(el => el.remove());
+    hreflangs.forEach(({ lang: hl, href }) => {
+      const link = document.createElement('link');
+      link.rel = 'alternate';
+      link.hreflang = hl;
+      link.href = href;
+      document.head.appendChild(link);
+    });
+
+    return () => {
+      // Cleanup hreflang on unmount
+      document.querySelectorAll('link[rel="alternate"][hreflang]').forEach(el => el.remove());
+      const can = document.querySelector('link[rel="canonical"]');
+      if (can) can.remove();
+    };
+  }, [language, routeLang]);
+
   const [content, setContent] = useState<LandingContent | null>(null);
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
@@ -270,6 +363,87 @@ const Index = () => {
   const Arrow = isRTL ? ArrowLeft : ArrowRight;
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 
+  const s = content?.settings;
+  const features = content?.features || [];
+  const plans = content?.plans || [];
+  const tracks = content?.tracks || [];
+  const socialLinks: SocialLink[] = Array.isArray(s?.social_links) ? s.social_links : [];
+
+  // JSON-LD Structured Data
+  useEffect(() => {
+    if (!routeLang || !content) return;
+
+    const orgSchema = {
+      "@context": "https://schema.org",
+      "@type": "EducationalOrganization",
+      "name": language === 'ar' ? "كوجوبوت اكاديمي" : "Kojobot Academy",
+      "alternateName": language === 'ar' ? "Kojobot Academy" : "كوجوبوت اكاديمي",
+      "url": `${SITE_URL}/${language}`,
+      "description": language === 'ar'
+        ? "اكاديمية كوجوبوت لتعليم البرمجة والتكنولوجيا للأطفال من 6 لـ 18 سنة - اونلاين واوفلاين في المنصورة"
+        : "Kojobot Academy teaches coding and technology to kids aged 6-18 - online and offline in Mansoura, Egypt",
+      "logo": `${SITE_URL}/kojobot-logo-white.png`,
+      ...(s?.email ? { "email": s.email } : {}),
+      ...(s?.phone ? { "telephone": s.phone } : {}),
+      ...(s?.address_en ? {
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Mansoura",
+          "addressCountry": "EG",
+          "streetAddress": language === 'ar' ? s?.address_ar : s?.address_en
+        }
+      } : {}),
+    };
+
+    const faqSchema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": faqData.map(faq => ({
+        "@type": "Question",
+        "name": language === 'ar' ? faq.q_ar : faq.q_en,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": language === 'ar' ? faq.a_ar : faq.a_en,
+        }
+      }))
+    };
+
+    const courseSchemas = [
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": language === 'ar' ? "مسار Software - كوجوبوت" : "Software Path - Kojobot",
+        "description": language === 'ar'
+          ? "تعلم البرمجة من سكراتش لبايثون وتطوير الويب"
+          : "Learn coding from Scratch to Python and web development",
+        "provider": { "@type": "Organization", "name": "Kojobot Academy" },
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": language === 'ar' ? "مسار Hardware - كوجوبوت" : "Hardware Path - Kojobot",
+        "description": language === 'ar'
+          ? "تعلم الإلكترونيات والروبوتيكس والاردوينو"
+          : "Learn electronics, robotics, and Arduino",
+        "provider": { "@type": "Organization", "name": "Kojobot Academy" },
+      }
+    ];
+
+    const schemas = [orgSchema, faqSchema, ...courseSchemas];
+    const scriptEls: HTMLScriptElement[] = [];
+    schemas.forEach(schema => {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.textContent = JSON.stringify(schema);
+      document.head.appendChild(script);
+      scriptEls.push(script);
+    });
+
+    return () => {
+      scriptEls.forEach(el => el.remove());
+    };
+  }, [language, routeLang, content]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "#070714" }}>
@@ -279,14 +453,7 @@ const Index = () => {
           <div className="absolute inset-4 rounded-full bg-[#6455F0]/20 animate-pulse" />
         </div>
       </div>);
-
   }
-
-  const s = content?.settings;
-  const features = content?.features || [];
-  const plans = content?.plans || [];
-  const tracks = content?.tracks || [];
-  const socialLinks: SocialLink[] = Array.isArray(s?.social_links) ? s.social_links : [];
 
   return (
     <>
@@ -554,7 +721,7 @@ const Index = () => {
 
         {/* ══════════ NAVBAR ══════════ */}
         <nav className={`kojo-nav${scrolled ? " scrolled" : ""}`}>
-          <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+          <Link to={`/${language}`} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
             <img src={kojobotLogo} alt="Kojobot" style={{ height: 36 }} />
             
 
@@ -645,6 +812,7 @@ const Index = () => {
           </div>
         }
 
+        <main>
         {/* ══════════ HERO ══════════ */}
         <section className="hero-section" style={{ position: "relative", paddingTop: 160, paddingBottom: 100, overflow: "hidden", zIndex: 1 }}>
           {/* Glows */}
@@ -1303,6 +1471,8 @@ const Index = () => {
             }
           </div>
         </section>
+
+        </main>
 
         {/* ══════════ FOOTER ══════════ */}
         <footer className="kojo-footer" style={{ position: "relative", zIndex: 1 }}>
