@@ -447,6 +447,20 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
     const missingKeys = criteria.filter(c => row.scores[c.key] === undefined);
     if (missingKeys.length > 0) return; // Not complete yet
 
+    // Verify student has attendance record before inserting evaluation
+    if (!row.existing_id) {
+      const { data: attRecord } = await supabase
+        .from('attendance')
+        .select('id')
+        .eq('session_id', sessionId)
+        .eq('student_id', row.student_id)
+        .maybeSingle();
+      if (!attRecord) {
+        console.warn(`Skipping evaluation save for student ${row.student_id}: no attendance record`);
+        return;
+      }
+    }
+
     setRows(prev => {
       const updated = [...prev];
       updated[rowIndex] = { ...updated[rowIndex], saving: true };
