@@ -8,7 +8,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_HISTORY = 20;
+const MAX_RECENT = 10;
 
 const SYSTEM_PROMPT = `انت Kojo، صاحب الطالب اللي بيفكر معاه ويوصله للإجابة خطوة بخطوة.
 بتتكلم عامية مصرية بسيطة جداً.
@@ -46,6 +46,13 @@ const SYSTEM_PROMPT = `انت Kojo، صاحب الطالب اللي بيفكر �
    مثال: "🧪 جرب: لو i=3 → 3+2=5 → 5%5=0 ✓ هيتطبع"
 3. لو الحل خلص ومفيش خطوات تانية، اسأل "عايز نجرب حاجة تانية؟" بدل ما تسأل سؤال توجيهي
 
+# ممنوع التكرار (مهم جداً):
+- لو مدحت الطالب على نقطة معينة، متمدحوش عليها تاني أبداً
+- لو الطالب جاوب صح على سؤال، متسألش نفس السؤال — كمّل فوراً
+- لو الطالب قال كلمة مفتاحية (زي "print")، اعترف بيها وابني عليها — متسألش "تفتكر إيه الأمر؟" تاني
+- كل رد لازم يضيف معلومة جديدة أو يتقدم خطوة — لو مفيش جديد، لخّص واسأل "عايز نكمل في حاجة تانية؟"
+- متعيدش نفس الجملة أو نفس الفكرة حتى بصياغة مختلفة
+
 # قواعدك:
 - ردك لازم يكون قصير أوي (3-5 سطور بس) ماعدا لما بتلخص الحل النهائي
 - كل رد ينتهي بسؤال واحد بس لو لسه فيه خطوات — لو خلصنا، لخّص ومتسألش
@@ -58,6 +65,16 @@ const SYSTEM_PROMPT = `انت Kojo، صاحب الطالب اللي بيفكر �
 # مثال على أسلوبك:
 سؤال: "ايه الـ variable؟"
 إجابة: "طيب سؤال.. لو عندك علبة فاضية وكتبت عليها اسم، وحطيت جواها حاجة.. إيه اللي ممكن تعمله بالعلبة دي بعدين؟"`;
+
+// ============================================================
+// Summarization prompt — strict factual only
+// ============================================================
+const SUMMARY_SYSTEM = `لخّص تقدم الطالب في 2-3 سطور. اكتب حقائق فقط:
+- هدف الطالب الحالي
+- آخر إجابة صحيحة
+- آخر خطأ اتصلح
+- مفاهيم اتعلمها
+ممنوع: مدح، أسئلة، نصايح، تكرار. اكتب نقاط مختصرة فقط.`;
 
 // ============================================================
 // Auth
@@ -123,6 +140,116 @@ function getRelevantContent(query: string, sessions: Array<{ id: string; student
     context: final.map((c) => c.text).join("\n---\n"),
     sources: final.map((c) => ({ session_id: c.sessionId, chunk_index: c.idx })),
   };
+}
+
+// ============================================================
+// Post-check: remove duplicate praise/questions
+// ============================================================
+function postCheckResponse(
+  response: string,
+  lastTwoAssistant: string[],
+  lastKojoQuestion: string | null,
+): string {
+  let cleaned = response;
+
+  // Remove duplicate question if it matches the last kojo question exactly
+  if (lastKojoQuestion && lastKojoQuestion.length > 10) {
+    const normalizedQ = lastKojoQuestion.trim();
+    if (cleaned.includes(normalizedQ)) {
+      cleaned = cleaned.replace(normalizedQ, "").trim();
+    }
+  }
+
+  // Remove repeated praise sentences found in last 2 assistant messages
+  const praisePatterns = [
+    /ممتاز[^.!؟\n]{0,40}[.!؟]/g,
+    /برافو[^.!؟\n]{0,40}[.!؟]/g,
+    /شاطر[^.!؟\n]{0,40}[.!؟]/g,
+    /عاش[^.!؟\n]{0,30}[.!؟]/g,
+  ];
+
+  for (const prev of lastTwoAssistant) {
+    for (const pattern of praisePatterns) {
+      const prevMatches = prev.match(pattern) || [];
+      for (const pm of prevMatches) {
+        const trimmed = pm.trim();
+        if (trimmed.length > 8 && cleaned.includes(trimmed)) {
+          cleaned = cleaned.replace(trimmed, "").trim();
+        }
+      }
+    }
+  }
+
+  // Clean up double spaces/newlines
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n").replace(/ {2,}/g, " ").trim();
+
+  return cleaned || response; // fallback to original if over-cleaned
+}
+
+// ============================================================
+// State extraction helpers
+// ============================================================
+function extractLastQuestion(text: string): string | null {
+  // Find the last line ending with ؟
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].includes("؟")) return lines[i].slice(0, 200);
+  }
+  return null;
+}
+
+function extractCurrentGoal(text: string): string | null {
+  // Take the first meaningful line as the current teaching goal
+  const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 5);
+  if (lines.length > 0) return lines[0].slice(0, 200);
+  return null;
+}
+
+// ============================================================
+// Summarize older messages (cumulative)
+// ============================================================
+async function summarizeMessages(
+  messages: Array<{ role: string; content: string }>,
+  existingSummary: string | null,
+  apiKey: string,
+): Promise<string> {
+  const conversationText = messages
+    .map((m) => `${m.role === "user" ? "طالب" : "Kojo"}: ${m.content}`)
+    .join("\n");
+
+  const userContent = existingSummary
+    ? `الملخص السابق:\n${existingSummary}\n\nرسايل جديدة:\n${conversationText}`
+    : conversationText;
+
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          { role: "system", content: SUMMARY_SYSTEM },
+          { role: "user", content: userContent },
+        ],
+        max_tokens: 200,
+        temperature: 0.1,
+      }),
+    });
+
+    if (!res.ok) {
+      console.error("Summary API error:", res.status, await res.text());
+      return existingSummary || "";
+    }
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || existingSummary || "";
+  } catch (e) {
+    console.error("Summary error:", e);
+    return existingSummary || "";
+  }
 }
 
 // ============================================================
@@ -222,8 +349,24 @@ serve(async (req) => {
       selectedGroup = { id: g.id, level_id: g.level_id, age_group_id: g.age_group_id };
     }
 
-    // Conversation
+    // Conversation — fetch or create, including state columns
     let conversationId = inputConvId;
+    let convState: {
+      summary: string | null;
+      summary_message_count: number;
+      praise_flags: string[];
+      concepts_mastered: string[];
+      last_kojo_question: string | null;
+      current_step: string | null;
+    } = {
+      summary: null,
+      summary_message_count: 0,
+      praise_flags: [],
+      concepts_mastered: [],
+      last_kojo_question: null,
+      current_step: null,
+    };
+
     if (!conversationId) {
       const { data: newConv, error: convError } = await db
         .from("chatbot_conversations")
@@ -245,7 +388,7 @@ serve(async (req) => {
     } else {
       const { data: existingConv } = await db
         .from("chatbot_conversations")
-        .select("id, student_id")
+        .select("id, student_id, summary, summary_message_count, praise_flags, concepts_mastered, last_kojo_question, current_step")
         .eq("id", conversationId)
         .single();
 
@@ -254,6 +397,14 @@ serve(async (req) => {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      convState = {
+        summary: existingConv.summary || null,
+        summary_message_count: existingConv.summary_message_count || 0,
+        praise_flags: existingConv.praise_flags || [],
+        concepts_mastered: existingConv.concepts_mastered || [],
+        last_kojo_question: existingConv.last_kojo_question || null,
+        current_step: existingConv.current_step || null,
+      };
     }
 
     // Save user message
@@ -263,25 +414,71 @@ serve(async (req) => {
       content: userMessage,
     });
 
-    // Fetch history
-    const { data: history } = await db
+    // Fetch ALL messages for this conversation
+    const { data: allMessages } = await db
       .from("chatbot_messages")
       .select("role, content")
       .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: true })
-      .limit(MAX_HISTORY + 1);
+      .order("created_at", { ascending: true });
 
-    const historyMessages = (history || []).slice(-MAX_HISTORY).map((m: any) => ({
-      role: m.role === "user" ? "user" : "assistant",
+    const messages = (allMessages || []).map((m: any) => ({
+      role: m.role === "user" ? "user" as const : "assistant" as const,
+      content: m.content as string,
+    }));
+
+    // ============================================================
+    // Cumulative summarization
+    // ============================================================
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ error: "AI not configured" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const totalMessages = messages.length;
+    let summaryText = convState.summary;
+    let summaryCount = convState.summary_message_count;
+
+    // If there are messages that need summarizing (older than MAX_RECENT)
+    if (totalMessages > summaryCount + MAX_RECENT) {
+      const newSegmentStart = summaryCount;
+      const newSegmentEnd = totalMessages - MAX_RECENT;
+
+      if (newSegmentEnd > newSegmentStart) {
+        const newSegment = messages.slice(newSegmentStart, newSegmentEnd);
+        summaryText = await summarizeMessages(newSegment, summaryText, LOVABLE_API_KEY);
+        summaryCount = newSegmentEnd;
+
+        // Save updated summary to DB (fire and forget)
+        db.from("chatbot_conversations")
+          .update({
+            summary: summaryText,
+            summary_message_count: summaryCount,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", conversationId)
+          .then(() => {});
+      }
+    }
+
+    // Build recent messages (last MAX_RECENT)
+    const recentMessages = messages.slice(-MAX_RECENT).map((m) => ({
+      role: m.role,
       content: m.content,
     }));
+
+    // Get last 2 assistant messages for post-check
+    const lastTwoAssistant = recentMessages
+      .filter((m) => m.role === "assistant")
+      .slice(-2)
+      .map((m) => m.content);
 
     // RAG
     let ragContext = "";
     let sourcesUsed: Array<{ session_id: string; chunk_index: number }> = [];
 
     if (selectedGroup?.level_id && selectedGroup?.age_group_id) {
-      // Get session IDs for this level/age_group
       const { data: sessionIds } = await db
         .from("curriculum_sessions")
         .select("id")
@@ -306,25 +503,52 @@ serve(async (req) => {
       }
     }
 
-    // Build messages
+    // ============================================================
+    // Build AI messages with state awareness
+    // ============================================================
     const nameLine = studentName ? `\n\nاسم الطالب اللي بتكلمه: ${studentName}. نادِيه باسمه أحياناً عشان يحس إنك صاحبه.` : "";
-    const systemContent = ragContext
-      ? `${SYSTEM_PROMPT}${nameLine}\n\nمحتوى المنهج:\n${ragContext}`
-      : `${SYSTEM_PROMPT}${nameLine}`;
 
-    const aiMessages = [
+    // State awareness section
+    const stateLines: string[] = [];
+    if (convState.concepts_mastered.length > 0) {
+      stateLines.push(`- مفاهيم اتعلمها: ${convState.concepts_mastered.join(", ")}`);
+    }
+    if (convState.praise_flags.length > 0) {
+      stateLines.push(`- مدح اتقال قبل كده (متكرروش): ${convState.praise_flags.join(", ")}`);
+    }
+    if (convState.last_kojo_question) {
+      stateLines.push(`- آخر سؤال اتسأل: ${convState.last_kojo_question}`);
+    }
+    if (convState.current_step) {
+      stateLines.push(`- الهدف الحالي: ${convState.current_step}`);
+    }
+    const stateSection = stateLines.length > 0
+      ? `\n\n# معلومات عن تقدم الطالب (متكررش حاجة من دول):\n${stateLines.join("\n")}`
+      : "";
+
+    let systemContent = `${SYSTEM_PROMPT}${nameLine}${stateSection}`;
+    if (ragContext) {
+      systemContent += `\n\nمحتوى المنهج:\n${ragContext}`;
+    }
+
+    const aiMessages: Array<{ role: string; content: string }> = [
       { role: "system", content: systemContent },
-      ...historyMessages,
     ];
 
-    // Call AI with streaming
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(JSON.stringify({ error: "AI not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Add summary as a system context message if exists
+    if (summaryText) {
+      aiMessages.push({
+        role: "system",
+        content: `ملخص المحادثة السابقة (للسياق فقط — متكررش منه حاجة):\n${summaryText}`,
       });
     }
 
+    // Add recent messages
+    aiMessages.push(...recentMessages);
+
+    // ============================================================
+    // Call AI with streaming
+    // ============================================================
     const models = [
       { model: "openai/gpt-5", maxTokens: 500 },
       { model: "google/gemini-2.5-flash", maxTokens: 500 },
@@ -408,7 +632,6 @@ serve(async (req) => {
                 const content = parsed.choices?.[0]?.delta?.content;
                 if (typeof content === "string" && content.length > 0) {
                   fullAssistantContent += content;
-                  // Forward as SSE token event
                   controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ token: content })}\n\n`));
                 }
               } catch {
@@ -420,24 +643,37 @@ serve(async (req) => {
           console.error("Stream read error:", e);
         }
 
-        // Save assistant message to DB
+        // Post-check: clean duplicates for DB save
         if (!fullAssistantContent) {
           fullAssistantContent = "عذراً، مقدرتش أساعدك دلوقتي. حاول تاني.";
         }
 
+        const cleanedContent = postCheckResponse(
+          fullAssistantContent,
+          lastTwoAssistant,
+          convState.last_kojo_question,
+        );
+
+        // Save assistant message to DB (use cleaned version)
         const { data: savedMsg } = await db.from("chatbot_messages").insert({
           conversation_id: conversationId,
           role: "assistant",
-          content: fullAssistantContent,
+          content: cleanedContent,
           sources_used: sourcesUsed.length > 0 ? sourcesUsed : null,
         }).select("id").single();
 
-        // Update conversation
+        // Update conversation metadata + state
+        const newLastQuestion = extractLastQuestion(fullAssistantContent);
+        const newCurrentStep = extractCurrentGoal(fullAssistantContent);
+
         const updateData: Record<string, unknown> = {
           last_message_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          last_kojo_question: newLastQuestion,
+          current_step: newCurrentStep,
         };
 
+        // Set title from first user message
         const { count: msgCount } = await db
           .from("chatbot_messages")
           .select("*", { count: "exact", head: true })

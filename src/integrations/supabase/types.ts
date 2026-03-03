@@ -340,6 +340,7 @@ export type Database = {
       chatbot_conversations: {
         Row: {
           age_group_id: string | null
+          concepts_mastered: string[] | null
           created_at: string
           current_step: string | null
           id: string
@@ -347,14 +348,17 @@ export type Database = {
           last_message_at: string | null
           level_id: string | null
           persona: string
+          praise_flags: string[] | null
           status: string
           student_id: string
           summary: string | null
+          summary_message_count: number | null
           title: string | null
           updated_at: string
         }
         Insert: {
           age_group_id?: string | null
+          concepts_mastered?: string[] | null
           created_at?: string
           current_step?: string | null
           id?: string
@@ -362,14 +366,17 @@ export type Database = {
           last_message_at?: string | null
           level_id?: string | null
           persona?: string
+          praise_flags?: string[] | null
           status?: string
           student_id: string
           summary?: string | null
+          summary_message_count?: number | null
           title?: string | null
           updated_at?: string
         }
         Update: {
           age_group_id?: string | null
+          concepts_mastered?: string[] | null
           created_at?: string
           current_step?: string | null
           id?: string
@@ -377,9 +384,11 @@ export type Database = {
           last_message_at?: string | null
           level_id?: string | null
           persona?: string
+          praise_flags?: string[] | null
           status?: string
           student_id?: string
           summary?: string | null
+          summary_message_count?: number | null
           title?: string | null
           updated_at?: string
         }
