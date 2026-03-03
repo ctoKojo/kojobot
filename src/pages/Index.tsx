@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import kojobotLogo from "@/assets/kojobot-main-logo.png";
 import {
   Monitor,
@@ -444,14 +445,7 @@ const Index = ({ lang: routeLang }: IndexProps) => {
   }, [language, routeLang, content]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#070714" }}>
-        <div className="relative w-16 h-16">
-          <div className="absolute inset-0 rounded-full border-2 border-[#6455F0]/30 animate-ping" />
-          <div className="absolute inset-2 rounded-full border-2 border-t-[#6455F0] border-transparent animate-spin" />
-          <div className="absolute inset-4 rounded-full bg-[#6455F0]/20 animate-pulse" />
-        </div>
-      </div>);
+    return <LoadingScreen />;
   }
 
   return (
