@@ -109,7 +109,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         
         <SidebarInset className="flex-1 flex flex-col min-w-0">
           {/* Header - fixed height, doesn't scroll with content */}
-          <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background px-4 md:px-6 relative">
+          <header className="sticky top-0 z-40 flex h-14 md:h-16 shrink-0 items-center gap-1.5 sm:gap-3 border-b border-border bg-background px-2 sm:px-4 md:px-6 relative">
             {isRamadan && <RamadanHeaderDecor />}
             <SidebarTrigger className="-ml-2" />
             
@@ -128,7 +128,7 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               <GlobalSearch />
             </div>
             
-            <div className="flex items-center gap-2 md:gap-3 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-3 shrink-0">
               <div className="md:hidden">
                 <GlobalSearch />
               </div>
@@ -146,8 +146,8 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                 )}
               </Button>
               <NotificationBell />
-              <ThemeToggle />
-              <LanguageToggle />
+              <span className="hidden sm:inline-flex"><ThemeToggle /></span>
+              <span className="hidden sm:inline-flex"><LanguageToggle /></span>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -180,6 +180,10 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                   <DropdownMenuItem onClick={() => navigate('/settings')}>
                     {t.nav.settings}
                   </DropdownMenuItem>
+                  <div className="sm:hidden px-2 py-1.5 flex items-center gap-2">
+                    <ThemeToggle />
+                    <LanguageToggle />
+                  </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                     {t.auth.logout}
@@ -190,10 +194,10 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
           </header>
           
           {/* Main Content - scrollable area for tables */}
-          <main className="flex-1 p-4 md:p-6 overflow-x-auto relative">
+          <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-x-hidden relative">
             {isRamadan && <RamadanContentDecor />}
             {isRamadan && <RamadanBanner />}
-            <div className="min-w-fit relative z-[1]">
+            <div className="w-full max-w-full relative z-[1]">
               {children}
             </div>
           </main>
