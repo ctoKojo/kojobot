@@ -387,6 +387,19 @@ Deno.serve(async (req) => {
         const percentage = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 10000) / 100 : 100
 
         for (const student of groupStudents as GroupStudent[]) {
+          // Verify attendance exists before inserting evaluation (required by DB trigger)
+          const { data: attRecord } = await supabase
+            .from('attendance')
+            .select('id')
+            .eq('session_id', session.id)
+            .eq('student_id', student.student_id)
+            .maybeSingle()
+
+          if (!attRecord) {
+            console.warn(`Skipping evaluation for student ${student.student_id}: no attendance record`)
+            continue
+          }
+
           const { data: existingEval } = await supabase
             .from('session_evaluations')
             .select('id')
