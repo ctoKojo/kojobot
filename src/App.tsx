@@ -83,7 +83,7 @@ const App = () => (
               <Toaster />
               <Sonner />
             <BrowserRouter>
-              <Suspense fallback={null}>
+              <Suspense fallback={<LoadingScreen />}>
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/ar" element={<Index lang="ar" />} />
