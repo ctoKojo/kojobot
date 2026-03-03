@@ -76,33 +76,62 @@ Deno.serve(async (req) => {
         .eq("id", session.group_id)
         .single();
 
-      if (!allActionsComplete && groupData?.instructor_id) {
-        // Issue warning for instructor
-        const missingActions = [];
-        if (!hasAttendance) missingActions.push("attendance");
-        if (!hasQuiz) missingActions.push("quiz");
-        if (!hasAssignment) missingActions.push("assignment");
+      if (groupData?.instructor_id) {
+        // Issue separate warnings for each missing action to match deduction rules
+        const warningsToInsert = [];
 
-        await supabase.from("instructor_warnings").insert({
-          instructor_id: groupData.instructor_id,
-          warning_type: "missed_session_actions",
-          reason: `Failed to complete session actions (${missingActions.join(", ")}) within grace period for session on ${session.session_date}`,
-          reason_ar: `لم يكمل إجراءات السيشن (${missingActions.join("، ")}) خلال فترة السماح للسيشن بتاريخ ${session.session_date}`,
-          severity: "minor",
-          session_id: session.id,
-          reference_type: "session",
-          reference_id: session.id,
-        });
+        if (!hasAttendance) {
+          warningsToInsert.push({
+            instructor_id: groupData.instructor_id,
+            warning_type: "no_attendance",
+            reason: `Failed to record attendance within grace period for session on ${session.session_date} (Group: ${groupData.name})`,
+            reason_ar: `لم يسجل الحضور خلال فترة السماح للسيشن بتاريخ ${session.session_date} (مجموعة: ${groupData.name_ar})`,
+            severity: "minor",
+            session_id: session.id,
+            reference_type: "session",
+            reference_id: session.id,
+          });
+        }
 
-        // Record instructor as absent
-        await supabase.from("session_staff_attendance").upsert({
-          session_id: session.id,
-          staff_id: groupData.instructor_id,
-          status: "absent",
-          actual_hours: 0,
-        }, { onConflict: "session_id,staff_id" });
+        if (!hasQuiz) {
+          warningsToInsert.push({
+            instructor_id: groupData.instructor_id,
+            warning_type: "no_quiz",
+            reason: `Failed to assign quiz within grace period for session on ${session.session_date} (Group: ${groupData.name})`,
+            reason_ar: `لم يعين كويز خلال فترة السماح للسيشن بتاريخ ${session.session_date} (مجموعة: ${groupData.name_ar})`,
+            severity: "minor",
+            session_id: session.id,
+            reference_type: "session",
+            reference_id: session.id,
+          });
+        }
 
-        warningCount++;
+        if (!hasAssignment) {
+          warningsToInsert.push({
+            instructor_id: groupData.instructor_id,
+            warning_type: "no_assignment",
+            reason: `Failed to assign homework within grace period for session on ${session.session_date} (Group: ${groupData.name})`,
+            reason_ar: `لم يعين واجب خلال فترة السماح للسيشن بتاريخ ${session.session_date} (مجموعة: ${groupData.name_ar})`,
+            severity: "minor",
+            session_id: session.id,
+            reference_type: "session",
+            reference_id: session.id,
+          });
+        }
+
+        if (warningsToInsert.length > 0) {
+          await supabase.from("instructor_warnings").insert(warningsToInsert);
+
+          // Record instructor as absent
+          await supabase.from("session_staff_attendance").upsert({
+            session_id: session.id,
+            staff_id: groupData.instructor_id,
+            status: "absent",
+            actual_hours: 0,
+          }, { onConflict: "session_id,staff_id" });
+
+          warningCount += warningsToInsert.length;
+        }
       }
 
       // Mark session as completed regardless
