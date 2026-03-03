@@ -109,13 +109,13 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
         
         <SidebarInset className="flex-1 flex flex-col min-w-0">
           {/* Header - fixed height, doesn't scroll with content */}
-          <header className="sticky top-0 z-40 flex h-14 md:h-16 shrink-0 items-center gap-1.5 sm:gap-3 border-b border-border bg-background px-2 sm:px-4 md:px-6 relative">
+          <header className="sticky top-0 z-40 flex h-14 md:h-16 shrink-0 items-center gap-1.5 sm:gap-3 border-b border-border bg-background px-2 sm:px-4 md:px-6 w-full relative">
             {isRamadan && <RamadanHeaderDecor />}
-            <SidebarTrigger className="-ml-2" />
+            <SidebarTrigger className="-ml-1 sm:-ml-2" />
             
             {/* Mobile Logo - shows only on small screens */}
             <div className="md:hidden flex items-center">
-              <div className="h-8 w-8 rounded-lg kojo-gradient flex items-center justify-center p-1">
+              <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg kojo-gradient flex items-center justify-center p-1">
                 <img src={kojobotLogoWhite} alt="Kojobot" className="h-full object-contain" />
               </div>
             </div>
@@ -127,6 +127,9 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
             <div className="hidden md:flex flex-1 mx-4">
               <GlobalSearch />
             </div>
+
+            {/* Spacer to push right side items */}
+            <div className="flex-1 md:hidden" />
             
             <div className="flex items-center gap-1 sm:gap-2 md:gap-3 shrink-0">
               <div className="md:hidden">
@@ -135,19 +138,19 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative"
+                className="relative h-8 w-8 sm:h-10 sm:w-10"
                 onClick={() => navigate('/messages')}
               >
-                <MessageSquare className="h-5 w-5" />
+                <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
                 {unreadMessages > 0 && (
-                  <Badge variant="default" className="absolute -top-1 -right-1 h-5 min-w-5 p-0 flex items-center justify-center rounded-full text-xs">
+                  <Badge variant="default" className="absolute -top-1 -right-1 h-4 min-w-4 sm:h-5 sm:min-w-5 p-0 flex items-center justify-center rounded-full text-[10px] sm:text-xs">
                     {unreadMessages > 9 ? '9+' : unreadMessages}
                   </Badge>
                 )}
               </Button>
               <NotificationBell />
               <span className="hidden sm:inline-flex"><ThemeToggle /></span>
-              <span className="hidden sm:inline-flex"><LanguageToggle /></span>
+              <LanguageToggle />
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -182,7 +185,6 @@ export function DashboardLayout({ children, title }: DashboardLayoutProps) {
                   </DropdownMenuItem>
                   <div className="sm:hidden px-2 py-1.5 flex items-center gap-2">
                     <ThemeToggle />
-                    <LanguageToggle />
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
