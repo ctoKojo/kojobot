@@ -703,15 +703,36 @@ const Index = ({ lang: routeLang }: IndexProps) => {
           .hero-section { padding-top: 110px !important; padding-bottom: 60px !important; }
           .hero-logo { width: 80px !important; }
           .badge-pill { font-size: 11px; padding: 4px 12px; }
+          [role="tablist"] {
+            display: flex !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            white-space: nowrap;
+            max-width: 100% !important;
+          }
+          [role="tablist"]::-webkit-scrollbar { display: none; }
+          [role="tab"] { flex-shrink: 0 !important; font-size: 12px !important; padding: 6px 12px !important; }
+          .contact-card { padding: 20px 12px !important; }
+          .contact-icon { width: 48px !important; height: 48px !important; border-radius: 12px !important; }
+          .contact-icon svg { width: 22px !important; height: 22px !important; }
+          .kojo-footer > div { flex-direction: column !important; align-items: center !important; text-align: center; gap: 12px !important; }
+          .plan-card-grid { grid-template-columns: 1fr !important; }
+          .timeline-line { left: 15px !important; }
+          [dir="rtl"] .timeline-line { left: auto !important; right: 15px !important; }
         }
         @media (max-width: 480px) {
-          .stat-bar { gap: 12px; padding: 14px 16px; flex-wrap: wrap; }
-          .stat-item { min-width: 70px; }
-          .contact-grid { grid-template-columns: 1fr !important; }
+          .stat-bar { gap: 10px; padding: 14px 12px; flex-wrap: wrap; justify-content: center; }
+          .stat-item { min-width: 65px; }
+          .contact-grid { grid-template-columns: 1fr 1fr !important; }
+          .hero-section { padding-top: 90px !important; padding-bottom: 40px !important; }
+          .faq-item { padding: 0 14px !important; }
+          [role="tab"] { font-size: 11px !important; padding: 5px 10px !important; }
         }
         @media (min-width: 769px) and (max-width: 1024px) {
           .section-pad { padding: 80px 20px !important; }
           .stat-bar { gap: 28px; }
+          .contact-grid { grid-template-columns: repeat(3, 1fr) !important; }
         }
       `}</style>
 
@@ -1002,8 +1023,8 @@ const Index = ({ lang: routeLang }: IndexProps) => {
 
               <Tabs defaultValue={tracks[0]?.age_group} className="w-full">
                 <TabsList
-                className="grid w-full max-w-xl mx-auto mb-12"
-                style={{ gridTemplateColumns: `repeat(${tracks.length}, 1fr)` }}>
+                className="w-full max-w-xl mx-auto mb-12"
+                style={{ display: "grid", gridTemplateColumns: `repeat(${tracks.length}, minmax(0, 1fr))` }}>
                 
                   {tracks.map((tr) =>
                 <TabsTrigger key={tr.age_group} value={tr.age_group}>
@@ -1030,7 +1051,7 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                       
                         {l(tr.intro_en, tr.intro_ar)}
                       </p>
-              <div style={{ position: "relative", ...(isRTL ? { paddingRight: 60 } : { paddingLeft: 60 }) }}>
+              <div className="timeline-container" style={{ position: "relative", ...(isRTL ? { paddingRight: 48 } : { paddingLeft: 48 }) }}>
                         <div className="timeline-line" />
                         {generalSteps.map((step, i) =>
                       <div
@@ -1046,7 +1067,7 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                             <div
                           style={{
                             position: "absolute",
-                            ...(isRTL ? { right: -60 + 12 } : { left: -60 + 12 }),
+                            ...(isRTL ? { right: -48 + 4 } : { left: -48 + 4 }),
                             width: 24,
                             height: 24,
                             borderRadius: "50%",
