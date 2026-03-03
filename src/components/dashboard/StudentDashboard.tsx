@@ -469,7 +469,7 @@ export function StudentDashboard() {
           <CardContent>
             <div className="space-y-3">
               {stats.scheduledMakeups.map((ms: any) => (
-                <div key={ms.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50">
+                <div key={ms.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-lg border hover:bg-muted/50 gap-2">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center">
                       <RefreshCw className="w-5 h-5 text-secondary" />
@@ -502,7 +502,7 @@ export function StudentDashboard() {
           <CardContent>
             <div className="space-y-3">
               {stats.upcomingSessions.map((session: any) => (
-                <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50">
+                <div key={session.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-lg border hover:bg-muted/50 gap-2">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Clock className="w-5 h-5 text-primary" />

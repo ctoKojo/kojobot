@@ -186,7 +186,7 @@ export function InstructorDashboard() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/groups')}>
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
             <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
@@ -280,7 +280,7 @@ export function InstructorDashboard() {
               {isRTL ? 'لا توجد سيشنات قادمة' : 'No upcoming sessions'}
             </p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {stats.upcomingSessions.map((session: any) => {
                 const today = new Date().toISOString().split('T')[0];
                 const isToday = session.session_date === today;
@@ -288,11 +288,11 @@ export function InstructorDashboard() {
                 return (
                   <div 
                     key={session.id} 
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer gap-2"
                     onClick={() => navigate(`/session/${session.id}`)}
                   >
-                    <div>
-                      <p className="font-medium">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm sm:text-base truncate">
                         {language === 'ar' ? session.groups?.name_ar : session.groups?.name}
                       </p>
                       <p className="text-sm text-muted-foreground">
@@ -300,7 +300,7 @@ export function InstructorDashboard() {
                         {session.topic && ` - ${language === 'ar' && session.topic_ar ? session.topic_ar : session.topic}`}
                       </p>
                     </div>
-                    <div className="text-right">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <Badge variant={isToday ? 'default' : 'outline'} className={isToday ? 'kojo-gradient' : ''}>
                         {isToday ? (isRTL ? 'اليوم' : 'Today') : (isRTL ? 'بكرة' : 'Tomorrow')}
                       </Badge>

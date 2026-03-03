@@ -123,21 +123,21 @@ export function ReceptionDashboard() {
   ];
 
   return (
-    <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
       {cards.map((card) => (
         <Card
           key={card.title}
           className="cursor-pointer hover:shadow-md transition-shadow"
           onClick={card.onClick}
         >
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${card.bg}`}>
-                <card.icon className={`h-5 w-5 ${card.color}`} />
+          <CardContent className="p-3 sm:pt-6 sm:px-6 sm:pb-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className={`p-1.5 sm:p-2 rounded-lg ${card.bg} flex-shrink-0`}>
+                <card.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${card.color}`} />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{loading ? '...' : card.value}</p>
-                <p className="text-xs text-muted-foreground">{card.title}</p>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : card.value}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{card.title}</p>
               </div>
             </div>
           </CardContent>
