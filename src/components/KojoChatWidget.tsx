@@ -293,7 +293,7 @@ export function KojoChatWidget() {
 
       {/* Chat window */}
       {isOpen && (
-        <div className="fixed bottom-6 ltr:right-6 rtl:left-6 z-50 w-80 h-[28rem] sm:w-96 flex flex-col rounded-2xl border border-border bg-background shadow-2xl overflow-hidden pb-safe">
+        <div className="fixed bottom-6 ltr:right-6 rtl:left-6 z-50 w-[22rem] h-[36rem] sm:w-[26rem] sm:h-[38rem] flex flex-col rounded-2xl border border-border bg-background shadow-2xl overflow-hidden pb-safe">
           {/* Header */}
           <div className="flex items-center gap-2 px-4 py-3 kojo-gradient text-white shrink-0">
             <img src={kojobotIcon} alt="Kojo" className="h-7 w-7 rounded-full" />
