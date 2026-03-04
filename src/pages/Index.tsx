@@ -497,6 +497,15 @@ const Index = ({ lang: routeLang }: IndexProps) => {
         }
         .grad-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(100,85,240,.45); }
         .grad-btn:hover::after { opacity:1; }
+        .plan-cta-btn {
+          transition: transform .2s, box-shadow .2s, border-color .2s, background .2s;
+        }
+        .plan-cta-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(100,85,240,.3);
+          border-color: rgba(100,85,240,.5) !important;
+          background: rgba(100,85,240,.12) !important;
+        }
 
         .card {
           background: var(--kojo-surface);
@@ -1330,7 +1339,7 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                     {/* CTA Button - right after price */}
                     <Button
                   asChild
-                  className={plan.is_featured ? "grad-btn" : ""}
+                  className={plan.is_featured ? "grad-btn" : "plan-cta-btn"}
                   style={{
                     width: "100%",
                     borderRadius: 12,
