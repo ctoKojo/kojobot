@@ -1399,7 +1399,7 @@ export type Database = {
           price_online_before_discount: number
           session_duration_minutes: number | null
           sessions_per_month: number | null
-          slug: string
+          slug: string | null
           sort_order: number
         }
         Insert: {
@@ -1422,7 +1422,7 @@ export type Database = {
           price_online_before_discount?: number
           session_duration_minutes?: number | null
           sessions_per_month?: number | null
-          slug: string
+          slug?: string | null
           sort_order?: number
         }
         Update: {
@@ -1445,7 +1445,7 @@ export type Database = {
           price_online_before_discount?: number
           session_duration_minutes?: number | null
           sessions_per_month?: number | null
-          slug?: string
+          slug?: string | null
           sort_order?: number
         }
         Relationships: []
