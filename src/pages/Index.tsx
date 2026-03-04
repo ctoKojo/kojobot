@@ -1354,7 +1354,7 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                     })
                   }}>
                   
-                      <Link to={s?.cta_url || "/auth"}>{l(s?.cta_text_en, s?.cta_text_ar)}</Link>
+                      <Link to={`/subscribe?plan=${(plan as any).slug || ''}`}>{language === "ar" ? "اشتراك" : "Subscribe"}</Link>
                     </Button>
 
                     <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 16, marginBottom: 16 }}>

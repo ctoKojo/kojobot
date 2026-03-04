@@ -63,6 +63,8 @@ const MySessions = React.lazy(() => import("./pages/MySessions"));
 const SSOTHealth = React.lazy(() => import("./pages/SSOTHealth"));
 const Leaderboard = React.lazy(() => import("./pages/Leaderboard"));
 const MyFinances = React.lazy(() => import("./pages/MyFinances"));
+const Subscribe = React.lazy(() => import("./pages/Subscribe"));
+const SubscriptionRequests = React.lazy(() => import("./pages/SubscriptionRequests"));
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
@@ -134,6 +136,8 @@ const App = () => (
                   <Route path="/ssot-health" element={<ProtectedRoute allowedRoles={['admin']}><SSOTHealth /></ProtectedRoute>} />
                   <Route path="/leaderboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception']}><Leaderboard /></ProtectedRoute>} />
                   <Route path="/my-finances" element={<ProtectedRoute allowedRoles={['student']}><MyFinances /></ProtectedRoute>} />
+                  <Route path="/subscribe" element={<Subscribe />} />
+                  <Route path="/subscription-requests" element={<ProtectedRoute allowedRoles={['admin']}><SubscriptionRequests /></ProtectedRoute>} />
                   <Route path="/account-suspended" element={<AccountSuspended />} />
                   <Route path="/account-terminated" element={<AccountTerminated />} />
                   <Route path="*" element={<NotFound />} />

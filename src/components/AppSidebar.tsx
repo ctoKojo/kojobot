@@ -7,7 +7,6 @@ import {
   Calendar,
   BookOpen,
   BookMarked,
-  ClipboardList,
   UserCheck,
   Settings,
   Layers,
@@ -27,6 +26,7 @@ import {
   TrendingUp,
   Briefcase,
   GraduationCap as AcademicCap,
+  ClipboardList,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -116,6 +116,7 @@ export function AppSidebar() {
               { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['admin'] },
               { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['admin'] },
               { title: isRTL ? 'قواعد الخصم' : 'Deduction Rules', url: '/deduction-rules', icon: AlertTriangle, roles: ['admin'] },
+              { title: isRTL ? 'طلبات الاشتراك' : 'Subscription Requests', url: '/subscription-requests', icon: ClipboardList, roles: ['admin'] },
             ],
           },
           {
