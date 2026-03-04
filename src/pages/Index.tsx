@@ -350,10 +350,20 @@ const Index = ({ lang: routeLang }: IndexProps) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useEffect(() => {
-    supabase.rpc("get_landing_content").then(({ data }) => {
-      if (data) setContent(data as unknown as LandingContent);
-      setLoading(false);
-    });
+    // Use a fresh anon client to avoid sending expired JWT tokens
+    const anonHeaders: Record<string, string> = {
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    };
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/get_landing_content`, {
+      method: 'POST',
+      headers: { ...anonHeaders, 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+      .then(res => res.json())
+      .then(data => { if (data && !data.code) setContent(data as unknown as LandingContent); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
