@@ -1198,11 +1198,25 @@ const Index = ({ lang: routeLang }: IndexProps) => {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
-                {plans.map((plan) =>
+                {plans.map((plan, planIndex) => {
+                  // Build cumulative benefits from ALL previous plans (no dedup against current plan)
+                  const inheritedBenefits: {id: string; text_en: string; text_ar: string; sort_order: number;}[] = [];
+                  for (let i = 0; i < planIndex; i++) {
+                    plans[i].benefits.forEach(b => {
+                      // Only avoid duplicates within inherited list itself
+                      if (!inheritedBenefits.some(pb => pb.text_en === b.text_en)) {
+                        inheritedBenefits.push(b);
+                      }
+                    });
+                  }
+                  // Current plan's own UNIQUE benefits (exclude ones already inherited)
+                  const ownBenefits = plan.benefits.filter(b => !inheritedBenefits.some(ib => ib.text_en === b.text_en));
+
+                  return (
               <div
                 key={plan.id}
                 className={`card${plan.is_featured ? " plan-featured" : ""}`}
-                style={{ padding: "32px 28px", position: "relative" }}>
+                style={{ padding: "32px 28px", position: "relative", display: "flex", flexDirection: "column" }}>
                 
                     {plan.is_featured &&
                 <div
@@ -1229,7 +1243,7 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                       {l(plan.name_en, plan.name_ar)}
                     </h3>
 
-                    <div style={{ textAlign: "center", marginBottom: 24 }}>
+                    <div style={{ textAlign: "center", marginBottom: 16 }}>
                       {plan.price_number > 0 &&
                   <div style={{ marginBottom: 8 }}>
                           <span
@@ -1305,6 +1319,27 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                   }
                     </div>
 
+                    {/* CTA Button - right after price */}
+                    <Button
+                  asChild
+                  className={plan.is_featured ? "grad-btn" : ""}
+                  style={{
+                    width: "100%",
+                    borderRadius: 12,
+                    height: 46,
+                    marginBottom: 20,
+                    ...(plan.is_featured ?
+                    {} :
+                    {
+                      background: "rgba(255,255,255,.05)",
+                      border: "1px solid rgba(255,255,255,.12)",
+                      color: "rgba(240,240,255,.8)"
+                    })
+                  }}>
+                  
+                      <Link to={s?.cta_url || "/auth"}>{l(s?.cta_text_en, s?.cta_text_ar)}</Link>
+                    </Button>
+
                     <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 16, marginBottom: 16 }}>
                       {plan.sessions_per_month &&
                   <div className="check-row">
@@ -1328,37 +1363,40 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                   }
                     </div>
 
-                    <div style={{ marginBottom: 24 }}>
-                      {plan.benefits.map((b) =>
-                  <div key={b.id} className="check-row">
+                    {/* Inherited benefits from previous plans */}
+                    {inheritedBenefits.length > 0 &&
+                    <div style={{ marginBottom: 12 }}>
+                      {inheritedBenefits.map((b) =>
+                        <div key={b.id} className="check-row">
+                          <div className="check-icon">
+                            <Check size={11} color="var(--kojo-violet)" />
+                          </div>
+                          <span style={{ color: "rgba(240,240,255,.5)" }}>{l(b.text_en, b.text_ar)}</span>
+                        </div>
+                      )}
+                    </div>
+                    }
+
+                    {/* This plan's own benefits */}
+                    {ownBenefits.length > 0 &&
+                    <div style={{ marginBottom: 8, ...(inheritedBenefits.length > 0 ? { borderTop: "1px dashed rgba(100,85,240,.2)", paddingTop: 12 } : {}) }}>
+                      {inheritedBenefits.length > 0 &&
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "var(--kojo-violet)", marginBottom: 8, textTransform: "uppercase", letterSpacing: ".05em" }}>
+                          {language === "ar" ? "✨ بالإضافة إلى" : "✨ Plus"}
+                        </p>
+                      }
+                      {ownBenefits.map((b) =>
+                        <div key={b.id} className="check-row">
                           <div className="check-icon">
                             <Check size={11} color="var(--kojo-violet)" />
                           </div>
                           <span style={{ color: "rgba(240,240,255,.7)" }}>{l(b.text_en, b.text_ar)}</span>
                         </div>
-                  )}
+                      )}
                     </div>
-
-                    <Button
-                  asChild
-                  className={plan.is_featured ? "grad-btn" : ""}
-                  style={{
-                    width: "100%",
-                    borderRadius: 12,
-                    height: 46,
-                    ...(plan.is_featured ?
-                    {} :
-                    {
-                      background: "rgba(255,255,255,.05)",
-                      border: "1px solid rgba(255,255,255,.12)",
-                      color: "rgba(240,240,255,.8)"
-                    })
-                  }}>
-                  
-                      <Link to={s?.cta_url || "/auth"}>{l(s?.cta_text_en, s?.cta_text_ar)}</Link>
-                    </Button>
-                  </div>
-              )}
+                    }
+                  </div>);
+                })}
               </div>
             </div>
           </section>
