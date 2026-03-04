@@ -1197,19 +1197,17 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                 </p>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20 }}>
+              <div className="plan-card-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, alignItems: "start" }}>
                 {plans.map((plan, planIndex) => {
                   // Build cumulative benefits from ALL previous plans (no dedup against current plan)
                   const inheritedBenefits: {id: string; text_en: string; text_ar: string; sort_order: number;}[] = [];
                   for (let i = 0; i < planIndex; i++) {
                     plans[i].benefits.forEach(b => {
-                      // Only avoid duplicates within inherited list itself
                       if (!inheritedBenefits.some(pb => pb.text_en === b.text_en)) {
                         inheritedBenefits.push(b);
                       }
                     });
                   }
-                  // Current plan's own UNIQUE benefits (exclude ones already inherited)
                   const ownBenefits = plan.benefits.filter(b => !inheritedBenefits.some(ib => ib.text_en === b.text_en));
 
                   return (
@@ -1239,9 +1237,18 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                       </div>
                 }
 
-                    <h3 className="font-display" style={{ fontSize: 20, marginBottom: 20, textAlign: "center" }}>
+                    {/* Fixed-height header section so CTA buttons align */}
+                    <div style={{ minHeight: 180, display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
+                    <h3 className="font-display" style={{ fontSize: 20, marginBottom: 6, textAlign: "center" }}>
                       {l(plan.name_en, plan.name_ar)}
                     </h3>
+
+                    {/* Student count description */}
+                    {(plan.description_en || plan.description_ar) &&
+                      <p style={{ textAlign: "center", fontSize: 13, color: "rgba(240,240,255,.45)", marginBottom: 16 }}>
+                        {l(plan.description_en, plan.description_ar)}
+                      </p>
+                    }
 
                     <div style={{ textAlign: "center", marginBottom: 16 }}>
                       {plan.price_number > 0 &&
@@ -1318,6 +1325,7 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                         </span>
                   }
                     </div>
+                    </div>{/* end fixed-height header */}
 
                     {/* CTA Button - right after price */}
                     <Button
