@@ -1238,7 +1238,7 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                 }
 
                     {/* Fixed-height header section so CTA buttons align */}
-                    <div style={{ minHeight: 180, display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
+                    <div style={{ minHeight: 210, display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
                     <h3 className="font-display" style={{ fontSize: 20, marginBottom: 6, textAlign: "center" }}>
                       {l(plan.name_en, plan.name_ar)}
                     </h3>
