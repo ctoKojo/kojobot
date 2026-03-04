@@ -1399,6 +1399,7 @@ export type Database = {
           price_online_before_discount: number
           session_duration_minutes: number | null
           sessions_per_month: number | null
+          slug: string
           sort_order: number
         }
         Insert: {
@@ -1421,6 +1422,7 @@ export type Database = {
           price_online_before_discount?: number
           session_duration_minutes?: number | null
           sessions_per_month?: number | null
+          slug: string
           sort_order?: number
         }
         Update: {
@@ -1443,6 +1445,7 @@ export type Database = {
           price_online_before_discount?: number
           session_duration_minutes?: number | null
           sessions_per_month?: number | null
+          slug?: string
           sort_order?: number
         }
         Relationships: []
@@ -3188,6 +3191,50 @@ export type Database = {
           xp_amount?: number
         }
         Relationships: []
+      }
+      subscription_requests: {
+        Row: {
+          attendance_mode: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          notes: string | null
+          phone: string
+          plan_id: string | null
+          status: string
+        }
+        Insert: {
+          attendance_mode?: string
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          notes?: string | null
+          phone: string
+          plan_id?: string | null
+          status?: string
+        }
+        Update: {
+          attendance_mode?: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string
+          plan_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_requests_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "landing_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscriptions: {
         Row: {

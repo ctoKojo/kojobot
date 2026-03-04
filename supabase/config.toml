@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.extract-assignment-slide]
 verify_jwt = false
+
+[functions.submit-subscription]
+verify_jwt = false
