@@ -133,6 +133,7 @@ export default function SubscriptionRequests() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>{l("Ref #", "رقم مرجعي")}</TableHead>
                     <TableHead>{l("Name", "الاسم")}</TableHead>
                     <TableHead>{l("Phone", "التليفون")}</TableHead>
                     <TableHead>{l("Email", "الإيميل")}</TableHead>
@@ -148,6 +149,7 @@ export default function SubscriptionRequests() {
                     const plan = req.landing_plans as any;
                     return (
                       <TableRow key={req.id}>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{req.id.substring(0, 8).toUpperCase()}</TableCell>
                         <TableCell className="font-medium">{req.name}</TableCell>
                         <TableCell dir="ltr">{req.phone}</TableCell>
                         <TableCell dir="ltr" className="text-sm">{req.email}</TableCell>
