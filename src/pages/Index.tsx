@@ -1371,25 +1371,29 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                   }
                     </div>
 
-                    {/* Inherited benefits from previous plans */}
-                    {inheritedBenefits.length > 0 &&
-                    <div style={{ marginBottom: 12 }}>
-                      {inheritedBenefits.map((b) =>
-                        <div key={b.id} className="check-row">
-                          <div className="check-icon">
-                            <Check size={11} color="var(--kojo-violet)" />
-                          </div>
-                          <span style={{ color: "rgba(240,240,255,.5)" }}>{l(b.text_en, b.text_ar)}</span>
-                        </div>
-                      )}
+                    {/* Reference to previous plan instead of listing all inherited */}
+                    {inheritedBenefits.length > 0 && planIndex > 0 &&
+                    <div style={{ 
+                      marginBottom: 12, 
+                      padding: "10px 14px", 
+                      borderRadius: 10, 
+                      background: "rgba(100,85,240,.06)", 
+                      border: "1px solid rgba(100,85,240,.12)" 
+                    }}>
+                      <p style={{ fontSize: 13, color: "rgba(240,240,255,.55)", margin: 0 }}>
+                        {language === "ar" 
+                          ? `✅ كل مميزات ${planIndex === 2 ? l(plans[0].name_en, plans[0].name_ar) + ' و ' + l(plans[1].name_en, plans[1].name_ar) : l(plans[planIndex - 1].name_en, plans[planIndex - 1].name_ar)}`
+                          : `✅ All ${planIndex === 2 ? l(plans[0].name_en, plans[0].name_ar) + ' & ' + l(plans[1].name_en, plans[1].name_ar) : l(plans[planIndex - 1].name_en, plans[planIndex - 1].name_ar)} features`
+                        }
+                      </p>
                     </div>
                     }
 
-                    {/* This plan's own benefits */}
+                    {/* This plan's own unique benefits */}
                     {ownBenefits.length > 0 &&
                     <div style={{ marginBottom: 8, ...(inheritedBenefits.length > 0 ? { borderTop: "1px dashed rgba(100,85,240,.2)", paddingTop: 12 } : {}) }}>
                       {inheritedBenefits.length > 0 &&
-                        <p style={{ fontSize: 11, fontWeight: 700, color: "var(--kojo-violet)", marginBottom: 8, textTransform: "uppercase", letterSpacing: ".05em" }}>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "var(--kojo-violet)", marginBottom: 8, letterSpacing: ".05em" }}>
                           {language === "ar" ? "✨ بالإضافة إلى" : "✨ Plus"}
                         </p>
                       }
