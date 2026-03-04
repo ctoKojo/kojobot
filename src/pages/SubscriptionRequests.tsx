@@ -71,7 +71,8 @@ export default function SubscriptionRequests() {
     return (
       r.name.toLowerCase().includes(s) ||
       r.email.toLowerCase().includes(s) ||
-      r.phone.includes(s)
+      r.phone.includes(s) ||
+      r.id.substring(0, 8).toUpperCase().includes(s.toUpperCase())
     );
   });
 
