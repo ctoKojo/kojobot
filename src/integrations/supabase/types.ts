@@ -2112,6 +2112,216 @@ export type Database = {
         }
         Relationships: []
       }
+      placement_question_levels: {
+        Row: {
+          id: string
+          level_id: string
+          question_id: string
+        }
+        Insert: {
+          id?: string
+          level_id: string
+          question_id: string
+        }
+        Update: {
+          id?: string
+          level_id?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_question_levels_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_question_levels_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: true
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_question_levels_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: true
+            referencedRelation: "quiz_questions_student_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      placement_quiz_config: {
+        Row: {
+          age_group_id: string
+          id: string
+          pass_threshold: number
+          quiz_id: string
+        }
+        Insert: {
+          age_group_id: string
+          id?: string
+          pass_threshold?: number
+          quiz_id: string
+        }
+        Update: {
+          age_group_id?: string
+          id?: string
+          pass_threshold?: number
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_quiz_config_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: true
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_quiz_config_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      placement_test_results: {
+        Row: {
+          approved_level_id: string | null
+          client_info: Json | null
+          created_at: string
+          id: string
+          max_score: number | null
+          percentage: number | null
+          placement_test_id: string
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          score: number | null
+          submission_answers: Json | null
+          suggested_level_id: string | null
+        }
+        Insert: {
+          approved_level_id?: string | null
+          client_info?: Json | null
+          created_at?: string
+          id?: string
+          max_score?: number | null
+          percentage?: number | null
+          placement_test_id: string
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          score?: number | null
+          submission_answers?: Json | null
+          suggested_level_id?: string | null
+        }
+        Update: {
+          approved_level_id?: string | null
+          client_info?: Json | null
+          created_at?: string
+          id?: string
+          max_score?: number | null
+          percentage?: number | null
+          placement_test_id?: string
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          score?: number | null
+          submission_answers?: Json | null
+          suggested_level_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_test_results_approved_level_id_fkey"
+            columns: ["approved_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_test_results_placement_test_id_fkey"
+            columns: ["placement_test_id"]
+            isOneToOne: true
+            referencedRelation: "placement_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_test_results_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "placement_test_results_suggested_level_id_fkey"
+            columns: ["suggested_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      placement_tests: {
+        Row: {
+          age_group_id: string | null
+          attempt_number: number
+          created_at: string
+          duration_minutes: number
+          id: string
+          quiz_id: string
+          scheduled_at: string
+          started_at: string | null
+          status: string
+          student_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          age_group_id?: string | null
+          attempt_number?: number
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          quiz_id: string
+          scheduled_at: string
+          started_at?: string | null
+          status?: string
+          student_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          age_group_id?: string | null
+          attempt_number?: number
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          quiz_id?: string
+          scheduled_at?: string
+          started_at?: string | null
+          status?: string
+          student_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_tests_age_group_id_fkey"
+            columns: ["age_group_id"]
+            isOneToOne: false
+            referencedRelation: "age_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_tests_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pricing_plans: {
         Row: {
           attendance_mode: string

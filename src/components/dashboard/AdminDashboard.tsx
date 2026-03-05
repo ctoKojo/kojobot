@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, GraduationCap, Calendar, TrendingUp, AlertTriangle, RefreshCw, DollarSign, Ban, Snowflake, ClipboardList } from 'lucide-react';
+import { Users, GraduationCap, Calendar, TrendingUp, AlertTriangle, RefreshCw, DollarSign, Ban, Snowflake, ClipboardList, ClipboardCheck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -19,6 +19,7 @@ interface AdminStats {
   suspendedStudents: number;
   frozenGroups: number;
   pendingSubscriptionRequests: number;
+  pendingPlacementTests: number;
 }
 
 export function AdminDashboard() {
@@ -37,6 +38,7 @@ export function AdminDashboard() {
     suspendedStudents: 0,
     frozenGroups: 0,
     pendingSubscriptionRequests: 0,
+    pendingPlacementTests: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -46,7 +48,7 @@ export function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const [studentsRes, instructorsRes, groupsRes, subscriptionsRes, warningsRes, makeupRes, frozenRes, subRequestsRes] = await Promise.all([
+      const [studentsRes, instructorsRes, groupsRes, subscriptionsRes, warningsRes, makeupRes, frozenRes, subRequestsRes, placementRes] = await Promise.all([
         supabase.from('user_roles').select('id', { count: 'exact' }).eq('role', 'student'),
         supabase.from('user_roles').select('user_id').eq('role', 'instructor'),
         supabase.from('groups').select('id', { count: 'exact' }).eq('is_active', true),
@@ -55,6 +57,7 @@ export function AdminDashboard() {
         supabase.from('makeup_sessions').select('id', { count: 'exact' }).eq('status', 'pending'),
         supabase.from('groups').select('id', { count: 'exact' }).eq('is_active', true).eq('status', 'frozen'),
         supabase.from('subscription_requests').select('id', { count: 'exact' }).eq('status', 'pending'),
+        supabase.from('placement_test_results').select('id', { count: 'exact' }).eq('review_status', 'pending'),
       ]);
 
       // Check for expiring subscriptions (within 7 days)
@@ -105,6 +108,7 @@ export function AdminDashboard() {
         suspendedStudents: suspendedCount || 0,
         frozenGroups: frozenRes.count || 0,
         pendingSubscriptionRequests: subRequestsRes.count || 0,
+        pendingPlacementTests: placementRes.count || 0,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -195,7 +199,27 @@ export function AdminDashboard() {
         </Card>
       )}
 
-      {/* Pending Makeup Sessions Alert */}
+      {/* Pending Placement Tests Alert */}
+      {stats.pendingPlacementTests > 0 && (
+        <Card 
+          className="border-primary/30 bg-primary/5 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/placement-test-review')}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <ClipboardCheck className="h-5 w-5" />
+              {isRTL ? 'امتحانات تحديد مستوى معلقة' : 'Pending Placement Tests'}
+            </CardTitle>
+            <CardDescription>
+              {isRTL 
+                ? `يوجد ${stats.pendingPlacementTests} امتحان في انتظار المراجعة`
+                : `${stats.pendingPlacementTests} placement test(s) awaiting review`
+              }
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
       {stats.pendingMakeupSessions > 0 && (
         <Card 
           className="border-orange-300 bg-orange-50 dark:bg-orange-950/20 dark:border-orange-800 cursor-pointer hover:shadow-lg transition-shadow"

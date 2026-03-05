@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw } from 'lucide-react';
+import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw, ClipboardCheck } from 'lucide-react';
 import { LevelPassedBanner } from '@/components/student/LevelPassedBanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -246,8 +246,95 @@ export function StudentDashboard() {
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 
+  // Check for pending placement test
+  const [placementTest, setPlacementTest] = useState<any>(null);
+  const [placementReviewPending, setPlacementReviewPending] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from('placement_tests')
+        .select('id, status, scheduled_at, duration_minutes')
+        .eq('student_id', user.id)
+        .in('status', ['pending', 'in_progress', 'completed'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setPlacementTest(data);
+            if (data.status === 'completed') {
+              setPlacementReviewPending(true);
+            }
+          }
+        });
+    }
+  }, [user]);
+
+  // Check if test window is active
+  const isTestWindowActive = () => {
+    if (!placementTest) return false;
+    const scheduled = new Date(placementTest.scheduled_at).getTime();
+    const now = Date.now();
+    const graceMs = 5 * 60 * 1000;
+    return now >= (scheduled - graceMs) && now <= (scheduled + placementTest.duration_minutes * 60 * 1000 + graceMs);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Placement Test Banner — blocks dashboard */}
+      {placementTest && (placementTest.status === 'pending' || placementTest.status === 'in_progress') && (
+        <Card className="border-primary bg-primary/5">
+          <CardContent className="py-8">
+            <div className="flex flex-col items-center text-center gap-4">
+              <ClipboardCheck className="h-16 w-16 text-primary" />
+              <h2 className="text-xl font-bold">
+                {isRTL ? 'يجب إجراء امتحان تحديد المستوى أولاً' : 'Placement Test Required'}
+              </h2>
+              <p className="text-muted-foreground max-w-md">
+                {isRTL
+                  ? 'لازم تمتحن امتحان تحديد المستوى قبل ما تقدر تستخدم باقي النظام'
+                  : 'You must complete the placement test before accessing the rest of the system'}
+              </p>
+              <p className="text-sm font-medium">
+                {isRTL ? 'الموعد: ' : 'Scheduled: '}
+                {new Date(placementTest.scheduled_at).toLocaleString(isRTL ? 'ar-EG' : 'en-US', { timeZone: 'Africa/Cairo' })}
+                {isRTL ? ' (بتوقيت القاهرة)' : ' (Cairo Time)'}
+              </p>
+              {isTestWindowActive() && (
+                <Button className="mt-2" size="lg" onClick={() => navigate(`/placement-test/${placementTest.id}`)}>
+                  <Play className="h-5 w-5 me-2" />
+                  {isRTL ? 'ابدأ الامتحان' : 'Start Test'}
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {placementReviewPending && (
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
+          <CardContent className="py-6">
+            <div className="flex items-center gap-4">
+              <Clock className="h-8 w-8 text-amber-600 flex-shrink-0" />
+              <div>
+                <h3 className="font-bold text-amber-800 dark:text-amber-300">
+                  {isRTL ? 'في انتظار مراجعة النتيجة' : 'Awaiting Result Review'}
+                </h3>
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  {isRTL
+                    ? 'تم تسليم الامتحان بنجاح. الإدارة هتراجع النتيجة وتحدد المستوى المناسب.'
+                    : 'Test submitted successfully. Administration will review and assign your level.'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Only show rest of dashboard if no pending placement test */}
+      {(!placementTest || placementTest.status === 'completed' || placementTest.status === 'expired') && (
+        <>
+
       {/* Frozen Group Alert */}
       {stats.groupInfo?.status === 'frozen' && (
         <Card className="border-sky-300 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-800">
@@ -648,6 +735,8 @@ export function StudentDashboard() {
           </CardHeader>
         </Card>
       </div>
+        </>
+      )}
     </div>
   );
 }

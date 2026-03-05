@@ -27,6 +27,7 @@ import {
   Briefcase,
   GraduationCap as AcademicCap,
   ClipboardList,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -124,6 +125,7 @@ export function AppSidebar() {
             items: [
               { title: isRTL ? 'أداء المدربين' : 'Instructor Performance', url: '/instructor-performance', icon: TrendingUp, roles: ['admin'] },
               { title: isRTL ? 'إنذارات المدربين' : 'Instructor Warnings', url: '/instructor-warnings', icon: AlertTriangle, roles: ['admin'] },
+              { title: isRTL ? 'مراجعة تحديد المستوى' : 'Placement Review', url: '/placement-test-review', icon: ClipboardCheck, roles: ['admin'] },
               { title: isRTL ? 'لوحة الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3, roles: ['admin', 'reception'] },
               { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['admin'] },
               { title: t.nav.activityLog, url: '/activity-log', icon: Activity, roles: ['admin'] },
@@ -132,6 +134,7 @@ export function AppSidebar() {
           {
             label: 'Settings', labelAr: 'الإعدادات',
             items: [
+              { title: isRTL ? 'إعدادات تحديد المستوى' : 'Placement Settings', url: '/placement-test-settings', icon: ClipboardCheck, roles: ['admin'] },
               { title: t.nav.ageGroups, url: '/age-groups', icon: Layers, roles: ['admin'] },
               { title: t.nav.levels, url: '/levels', icon: BookOpen, roles: ['admin'] },
               { title: t.nav.settings, url: '/settings', icon: Settings, roles: ['admin'] },
@@ -224,6 +227,7 @@ export function AppSidebar() {
               
               { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['reception'] },
               { title: isRTL ? 'جدول العمل' : 'Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['reception'] },
+              { title: isRTL ? 'مراجعة تحديد المستوى' : 'Placement Review', url: '/placement-test-review', icon: ClipboardCheck, roles: ['reception'] },
             ],
           },
           {
