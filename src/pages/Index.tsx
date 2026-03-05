@@ -298,21 +298,21 @@ const buildContentFromTables = async (): Promise<LandingContent> => {
     throw firstError;
   }
 
-  const settings = (settingsRes.data as LandingContent["settings"] | null) ?? DEFAULT_LANDING_SETTINGS;
+  const settings = (settingsRes.data as unknown as LandingContent["settings"] | null) ?? DEFAULT_LANDING_SETTINGS;
   const features = (featuresRes.data ?? []) as LandingContent["features"];
-  const rawPlans = (plansRes.data ?? []) as LandingContent["plans"];
-  const rawBenefits = (benefitsRes.data ?? []) as LandingContent["plans"][number]["benefits"];
-  const rawTrackGroups = (trackGroupsRes.data ?? []) as LandingContent["tracks"];
-  const rawTrackSteps = (trackStepsRes.data ?? []) as LandingContent["tracks"][number]["steps"];
+  const rawPlans = (plansRes.data ?? []) as unknown as LandingContent["plans"];
+  const rawBenefits = (benefitsRes.data ?? []) as unknown as LandingContent["plans"][number]["benefits"];
+  const rawTrackGroups = (trackGroupsRes.data ?? []) as unknown as LandingContent["tracks"];
+  const rawTrackSteps = (trackStepsRes.data ?? []) as unknown as LandingContent["tracks"][number]["steps"];
 
   const plans = rawPlans.map((plan) => ({
     ...plan,
-    benefits: rawBenefits.filter((benefit) => benefit.plan_id === plan.id)
+    benefits: (rawBenefits as any[]).filter((benefit) => benefit.plan_id === plan.id)
   }));
 
   const tracks = rawTrackGroups.map((group) => ({
     ...group,
-    steps: rawTrackSteps.filter((step) => step.group_id === group.id)
+    steps: (rawTrackSteps as any[]).filter((step) => step.group_id === group.id)
   }));
 
   return {
