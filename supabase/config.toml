@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.submit-subscription]
 verify_jwt = false
+
+[functions.grade-placement-test]
+verify_jwt = false
+
+[functions.expire-placement-tests]
+verify_jwt = false
