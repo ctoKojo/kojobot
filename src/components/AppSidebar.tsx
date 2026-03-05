@@ -28,6 +28,7 @@ import {
   GraduationCap as AcademicCap,
   ClipboardList,
   ClipboardCheck,
+  Target,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -98,6 +99,7 @@ export function AppSidebar() {
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['admin'] },
               
               { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['admin'] },
+              { title: isRTL ? 'الامتحانات النهائية' : 'Final Exams', url: '/final-exams', icon: Target, roles: ['admin'] },
             ],
           },
           {
@@ -226,6 +228,7 @@ export function AppSidebar() {
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['reception'] },
               
               { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['reception'] },
+              { title: isRTL ? 'الامتحانات النهائية' : 'Final Exams', url: '/final-exams', icon: Target, roles: ['reception'] },
               { title: isRTL ? 'جدول العمل' : 'Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['reception'] },
               { title: isRTL ? 'مراجعة تحديد المستوى' : 'Placement Review', url: '/placement-test-review', icon: ClipboardCheck, roles: ['reception'] },
             ],

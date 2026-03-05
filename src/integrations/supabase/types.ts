@@ -3778,6 +3778,49 @@ export type Database = {
           },
         ]
       }
+      final_exam_candidates: {
+        Row: {
+          avatar_url: string | null
+          current_level_id: string | null
+          exam_scheduled_at: string | null
+          exam_submitted_at: string | null
+          final_exam_quiz_id: string | null
+          full_name: string | null
+          full_name_ar: string | null
+          graded_at: string | null
+          group_id: string | null
+          group_name: string | null
+          group_name_ar: string | null
+          level_name: string | null
+          level_name_ar: string | null
+          progress_id: string | null
+          status: string | null
+          student_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_student_progress_current_level_id_fkey"
+            columns: ["current_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_student_progress_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "levels_final_exam_quiz_id_fkey"
+            columns: ["final_exam_quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_questions_student_view: {
         Row: {
           code_snippet: string | null
