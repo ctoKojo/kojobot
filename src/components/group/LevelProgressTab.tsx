@@ -162,8 +162,9 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
         icon: <Target className="h-5 w-5" />,
         title: isRTL ? 'طلاب جاهزون للامتحان النهائي' : 'Students Ready for Final Exam',
         desc: isRTL 
-          ? `${awaitingCount} طالب أكمل السيشنات وتم إزالتهم من المجموعة تلقائياً. يرجى جدولة الامتحان النهائي.`
-          : `${awaitingCount} student(s) completed sessions and were auto-removed. Schedule their final exam.`,
+          ? `${awaitingCount} طالب أكمل السيشنات وتم إزالتهم من المجموعة تلقائياً.`
+          : `${awaitingCount} student(s) completed sessions and were auto-removed.`,
+        link: '/final-exams',
       };
     }
     if (gradedCount > 0) {
@@ -273,7 +274,14 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
         <Alert>
           {banner.icon}
           <AlertTitle>{banner.title}</AlertTitle>
-          <AlertDescription>{banner.desc}</AlertDescription>
+          <AlertDescription className="flex items-center justify-between">
+            <span>{banner.desc}</span>
+            {'link' in banner && banner.link && (
+              <Button variant="outline" size="sm" className="ml-2 shrink-0" onClick={() => navigate(banner.link!)}>
+                {isRTL ? 'عرض الامتحانات النهائية' : 'View Final Exams'}
+              </Button>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 

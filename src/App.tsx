@@ -68,6 +68,7 @@ const SubscriptionRequests = React.lazy(() => import("./pages/SubscriptionReques
 const PlacementTestSettings = React.lazy(() => import("./pages/PlacementTestSettings"));
 const PlacementTestReview = React.lazy(() => import("./pages/PlacementTestReview"));
 const TakePlacementTest = React.lazy(() => import("./pages/TakePlacementTest"));
+const FinalExams = React.lazy(() => import("./pages/FinalExams"));
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
@@ -144,6 +145,7 @@ const App = () => (
                   <Route path="/placement-test-settings" element={<ProtectedRoute allowedRoles={['admin']}><PlacementTestSettings /></ProtectedRoute>} />
                   <Route path="/placement-test-review" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><PlacementTestReview /></ProtectedRoute>} />
                   <Route path="/placement-test/:id" element={<ProtectedRoute allowedRoles={['student']}><TakePlacementTest /></ProtectedRoute>} />
+                  <Route path="/final-exams" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><FinalExams /></ProtectedRoute>} />
                   <Route path="/account-suspended" element={<AccountSuspended />} />
                   <Route path="/account-terminated" element={<AccountTerminated />} />
                   <Route path="*" element={<NotFound />} />

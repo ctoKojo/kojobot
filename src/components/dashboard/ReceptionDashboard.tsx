@@ -130,7 +130,7 @@ export function ReceptionDashboard() {
       icon: Target,
       color: stats.awaitingFinalExam > 0 ? 'text-emerald-600' : 'text-green-600',
       bg: stats.awaitingFinalExam > 0 ? 'bg-emerald-100' : 'bg-green-100',
-      onClick: () => navigate('/students'),
+      onClick: () => navigate('/final-exams'),
     },
   ];
 

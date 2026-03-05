@@ -228,7 +228,7 @@ export function AdminDashboard() {
       {stats.awaitingFinalExam > 0 && (
         <Card 
           className="border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800 cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={() => navigate('/students')}
+          onClick={() => navigate('/final-exams')}
         >
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
