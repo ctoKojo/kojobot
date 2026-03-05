@@ -256,6 +256,104 @@ interface IndexProps {
 
 const SITE_URL = "https://kojobot.lovable.app";
 
+const DEFAULT_LANDING_SETTINGS: LandingContent["settings"] = {
+  hero_title_en: "Start Your Coding Journey",
+  hero_title_ar: "ابدأ رحلتك في عالم البرمجة",
+  hero_subtitle_en: "Learn coding and technology through an interactive learning experience with Kojobot",
+  hero_subtitle_ar: "تعلم البرمجة والتكنولوجيا بطريقة تفاعلية وممتعة مع كوجوبوت",
+  cta_text_en: "Login",
+  cta_text_ar: "تسجيل الدخول",
+  cta_url: "/auth",
+  footer_text_en: "Kojobot Academy",
+  footer_text_ar: "كوجوبوت اكاديمي",
+  social_links: []
+};
+
+const isLandingContentPayload = (value: unknown): value is LandingContent => {
+  if (!value || typeof value !== "object") return false;
+  const payload = value as Partial<LandingContent>;
+  return !!payload.settings && Array.isArray(payload.features) && Array.isArray(payload.plans) && Array.isArray(payload.tracks);
+};
+
+const buildContentFromTables = async (): Promise<LandingContent> => {
+  const [settingsRes, featuresRes, plansRes, benefitsRes, trackGroupsRes, trackStepsRes] = await Promise.all([
+    supabase.from("landing_settings").select("*").limit(1).maybeSingle(),
+    supabase.from("landing_features").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
+    supabase.from("landing_plans").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
+    supabase.from("landing_plan_benefits").select("*").order("sort_order", { ascending: true }),
+    supabase.from("landing_track_groups").select("*").order("sort_order", { ascending: true }),
+    supabase.from("landing_track_steps").select("*").order("path_type", { ascending: true }).order("step_number", { ascending: true })
+  ]);
+
+  const firstError = [
+    settingsRes.error,
+    featuresRes.error,
+    plansRes.error,
+    benefitsRes.error,
+    trackGroupsRes.error,
+    trackStepsRes.error
+  ].find(Boolean);
+
+  if (firstError) {
+    throw firstError;
+  }
+
+  const settings = (settingsRes.data as LandingContent["settings"] | null) ?? DEFAULT_LANDING_SETTINGS;
+  const features = (featuresRes.data ?? []) as LandingContent["features"];
+  const rawPlans = (plansRes.data ?? []) as LandingContent["plans"];
+  const rawBenefits = (benefitsRes.data ?? []) as LandingContent["plans"][number]["benefits"];
+  const rawTrackGroups = (trackGroupsRes.data ?? []) as LandingContent["tracks"];
+  const rawTrackSteps = (trackStepsRes.data ?? []) as LandingContent["tracks"][number]["steps"];
+
+  const plans = rawPlans.map((plan) => ({
+    ...plan,
+    benefits: rawBenefits.filter((benefit) => benefit.plan_id === plan.id)
+  }));
+
+  const tracks = rawTrackGroups.map((group) => ({
+    ...group,
+    steps: rawTrackSteps.filter((step) => step.group_id === group.id)
+  }));
+
+  return {
+    settings,
+    features,
+    plans,
+    tracks
+  };
+};
+
+const fetchLandingContent = async (): Promise<LandingContent> => {
+  const anonHeaders: Record<string, string> = {
+    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    "Content-Type": "application/json"
+  };
+
+  try {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/get_landing_content`, {
+      method: "POST",
+      headers: anonHeaders,
+      body: "{}",
+      cache: "no-store"
+    });
+
+    const payload = await response.json();
+    if (!response.ok || (payload && typeof payload === "object" && "code" in payload)) {
+      throw new Error("RPC get_landing_content failed");
+    }
+
+    if (!isLandingContentPayload(payload)) {
+      throw new Error("RPC payload shape is invalid");
+    }
+
+    return payload;
+  } catch (rpcError) {
+    console.warn("RPC fallback: querying landing tables directly", rpcError);
+    return buildContentFromTables();
+  }
+};
+
 const Index = ({ lang: routeLang }: IndexProps) => {
   const { language: ctxLanguage, setLanguage, t, isRTL: ctxRTL } = useLanguage();
   const navigate = useNavigate();
@@ -350,23 +448,40 @@ const Index = ({ lang: routeLang }: IndexProps) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   useEffect(() => {
-    // Use a fresh anon client to avoid sending expired JWT tokens
-    const anonHeaders: Record<string, string> = {
-      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    let isMounted = true;
+
+    const loadLandingContent = async () => {
+      try {
+        const landingContent = await fetchLandingContent();
+        if (isMounted) {
+          setContent(landingContent);
+        }
+      } catch (error) {
+        console.error("Failed to load landing content:", error);
+        if (isMounted) {
+          setContent({
+            settings: DEFAULT_LANDING_SETTINGS,
+            features: [],
+            plans: [],
+            tracks: []
+          });
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
     };
-    fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/get_landing_content`, {
-      method: 'POST',
-      headers: { ...anonHeaders, 'Content-Type': 'application/json' },
-      body: '{}',
-    })
-      .then(res => res.json())
-      .then(data => { if (data && !data.code) setContent(data as unknown as LandingContent); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+
+    void loadLandingContent();
+
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   const l = (en: string | undefined, ar: string | undefined) => language === "ar" ? ar || en || "" : en || ar || "";
