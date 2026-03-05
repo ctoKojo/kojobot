@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Calendar, Clock, AlertTriangle, CreditCard, RefreshCw } from 'lucide-react';
+import { Users, Calendar, Clock, AlertTriangle, CreditCard, RefreshCw, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ interface DashboardStats {
   unrecordedAttendance: number;
   overduePayments: number;
   pendingMakeups: number;
+  awaitingFinalExam: number;
 }
 
 export function ReceptionDashboard() {
@@ -26,6 +27,7 @@ export function ReceptionDashboard() {
     unrecordedAttendance: 0,
     overduePayments: 0,
     pendingMakeups: 0,
+    awaitingFinalExam: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -37,7 +39,7 @@ export function ReceptionDashboard() {
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      const [studentsRes, groupsRes, sessionsRes, attendanceRes, subsRes, makeupRes] = await Promise.all([
+      const [studentsRes, groupsRes, sessionsRes, attendanceRes, subsRes, makeupRes, awaitingExamRes] = await Promise.all([
         supabase.from('user_roles').select('id', { count: 'exact', head: true }).eq('role', 'student'),
         supabase.from('groups').select('id', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('sessions').select('id, group_id').eq('session_date', today).eq('status', 'scheduled'),
@@ -49,6 +51,7 @@ export function ReceptionDashboard() {
           .lt('next_payment_date', today)
           .gt('remaining_amount', 0),
         supabase.from('makeup_sessions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('group_student_progress').select('id', { count: 'exact', head: true }).eq('status', 'awaiting_exam'),
       ]);
 
       // Calculate unrecorded attendance
@@ -63,6 +66,7 @@ export function ReceptionDashboard() {
         unrecordedAttendance: unrecorded,
         overduePayments: subsRes.count || 0,
         pendingMakeups: makeupRes.count || 0,
+        awaitingFinalExam: awaitingExamRes.count || 0,
       });
     } catch (error) {
       console.error('Error fetching reception stats:', error);
@@ -119,6 +123,14 @@ export function ReceptionDashboard() {
       color: stats.pendingMakeups > 0 ? 'text-amber-600' : 'text-green-600',
       bg: stats.pendingMakeups > 0 ? 'bg-amber-100' : 'bg-green-100',
       onClick: () => navigate('/makeup-sessions'),
+    },
+    {
+      title: isRTL ? 'جاهزون للامتحان النهائي' : 'Awaiting Final Exam',
+      value: stats.awaitingFinalExam,
+      icon: Target,
+      color: stats.awaitingFinalExam > 0 ? 'text-emerald-600' : 'text-green-600',
+      bg: stats.awaitingFinalExam > 0 ? 'bg-emerald-100' : 'bg-green-100',
+      onClick: () => navigate('/students'),
     },
   ];
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, GraduationCap, Calendar, TrendingUp, AlertTriangle, RefreshCw, DollarSign, Ban, Snowflake, ClipboardList, ClipboardCheck } from 'lucide-react';
+import { Users, GraduationCap, Calendar, TrendingUp, AlertTriangle, RefreshCw, DollarSign, Ban, Snowflake, ClipboardList, ClipboardCheck, Target } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -20,6 +20,7 @@ interface AdminStats {
   frozenGroups: number;
   pendingSubscriptionRequests: number;
   pendingPlacementTests: number;
+  awaitingFinalExam: number;
 }
 
 export function AdminDashboard() {
@@ -39,6 +40,7 @@ export function AdminDashboard() {
     frozenGroups: 0,
     pendingSubscriptionRequests: 0,
     pendingPlacementTests: 0,
+    awaitingFinalExam: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +50,7 @@ export function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const [studentsRes, instructorsRes, groupsRes, subscriptionsRes, warningsRes, makeupRes, frozenRes, subRequestsRes, placementRes] = await Promise.all([
+      const [studentsRes, instructorsRes, groupsRes, subscriptionsRes, warningsRes, makeupRes, frozenRes, subRequestsRes, placementRes, awaitingExamRes] = await Promise.all([
         supabase.from('user_roles').select('id', { count: 'exact' }).eq('role', 'student'),
         supabase.from('user_roles').select('user_id').eq('role', 'instructor'),
         supabase.from('groups').select('id', { count: 'exact' }).eq('is_active', true),
@@ -58,6 +60,7 @@ export function AdminDashboard() {
         supabase.from('groups').select('id', { count: 'exact' }).eq('is_active', true).eq('status', 'frozen'),
         supabase.from('subscription_requests').select('id', { count: 'exact' }).eq('status', 'pending'),
         supabase.from('placement_test_results').select('id', { count: 'exact' }).eq('review_status', 'pending'),
+        supabase.from('group_student_progress').select('id', { count: 'exact' }).eq('status', 'awaiting_exam'),
       ]);
 
       // Check for expiring subscriptions (within 7 days)
@@ -109,6 +112,7 @@ export function AdminDashboard() {
         frozenGroups: frozenRes.count || 0,
         pendingSubscriptionRequests: subRequestsRes.count || 0,
         pendingPlacementTests: placementRes.count || 0,
+        awaitingFinalExam: awaitingExamRes.count || 0,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -214,6 +218,27 @@ export function AdminDashboard() {
               {isRTL 
                 ? `يوجد ${stats.pendingPlacementTests} امتحان في انتظار المراجعة`
                 : `${stats.pendingPlacementTests} placement test(s) awaiting review`
+              }
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+      {/* Students Awaiting Final Exam Alert */}
+      {stats.awaitingFinalExam > 0 && (
+        <Card 
+          className="border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => navigate('/students')}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+              <Target className="h-5 w-5" />
+              {isRTL ? 'طلاب جاهزون للامتحان النهائي' : 'Students Ready for Final Exam'}
+            </CardTitle>
+            <CardDescription className="text-emerald-600 dark:text-emerald-400">
+              {isRTL 
+                ? `يوجد ${stats.awaitingFinalExam} طالب أكمل السيشنات وينتظر جدولة الامتحان النهائي`
+                : `${stats.awaitingFinalExam} student(s) completed their sessions and await final exam scheduling`
               }
             </CardDescription>
           </CardHeader>

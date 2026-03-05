@@ -11,7 +11,6 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -20,8 +19,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { getStudentProgressStatusLabel, getStudentOutcomeLabel, getGroupLevelStatusLabel } from '@/lib/constants';
-import { Target, GraduationCap, Calculator, ArrowUpCircle, RotateCcw, CalendarCheck, Info } from 'lucide-react';
+import { getStudentProgressStatusLabel, getStudentOutcomeLabel } from '@/lib/constants';
+import { Target, GraduationCap, Calculator, ArrowUpCircle, RotateCcw, Info } from 'lucide-react';
 
 interface LevelProgressTabProps {
   groupId: string;
@@ -51,7 +50,7 @@ interface LevelGrade {
   outcome: string | null;
 }
 
-type FilterType = 'all' | 'awaiting_exam' | 'exam_scheduled' | 'graded' | 'passed' | 'failed';
+type FilterType = 'all' | 'in_progress' | 'awaiting_exam' | 'graded' | 'passed' | 'failed';
 
 export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: LevelProgressTabProps) {
   const { isRTL, language } = useLanguage();
@@ -62,18 +61,11 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
 
   const [progress, setProgress] = useState<ProgressRecord[]>([]);
   const [grades, setGrades] = useState<LevelGrade[]>([]);
-  const [levelStatus, setLevelStatus] = useState<any>(null);
   const [filter, setFilter] = useState<FilterType>('all');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [studentSessionCounts, setStudentSessionCounts] = useState<Record<string, number>>({});
   const [expectedSessions, setExpectedSessions] = useState<number>(12);
-
-  // Schedule exam dialog
-  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
-  const [examDate, setExamDate] = useState('');
-  const [examDuration, setExamDuration] = useState(60);
-  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
 
   // Upgrade dialog
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
@@ -95,10 +87,9 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [progressRes, gradesRes, statusRes, tracksRes] = await Promise.all([
+      const [progressRes, gradesRes, tracksRes] = await Promise.all([
         supabase.from('group_student_progress').select('*').eq('group_id', groupId),
         supabase.from('level_grades').select('*').eq('group_id', groupId),
-        supabase.rpc('get_group_level_status', { p_group_id: groupId }),
         supabase.from('tracks').select('*').eq('is_active', true),
       ]);
 
@@ -141,7 +132,6 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
 
       setProgress(enrichedProgress);
       setGrades((gradesRes.data || []) as LevelGrade[]);
-      setLevelStatus(statusRes.data);
       setTracks(tracksRes.data || []);
     } catch (err) {
       console.error('Error fetching level progress:', err);
@@ -152,8 +142,8 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
 
   const filteredProgress = progress.filter(p => {
     if (filter === 'all') return true;
-    if (filter === 'awaiting_exam') return p.status === 'awaiting_exam' || p.status === 'in_progress';
-    if (filter === 'exam_scheduled') return p.status === 'exam_scheduled';
+    if (filter === 'in_progress') return p.status === 'in_progress';
+    if (filter === 'awaiting_exam') return p.status === 'awaiting_exam' || p.status === 'exam_scheduled';
     if (filter === 'graded') return p.status === 'graded';
     if (filter === 'passed') return p.outcome === 'passed';
     if (filter === 'failed') return p.outcome === 'failed' || p.outcome === 'repeat';
@@ -162,63 +152,28 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
 
   const getGrade = (studentId: string) => grades.find(g => g.student_id === studentId);
 
-  // Banner message based on level status
+  // Banner message
   const getBanner = () => {
-    if (!levelStatus) return null;
-    const total = levelStatus.total_students || 0;
-    if (total === 0) return null;
-
-    const graded = levelStatus.graded || 0;
-    const examScheduled = levelStatus.exam_scheduled || 0;
-    const examSubmitted = levelStatus.exam_submitted || 0;
-    const awaitingExam = levelStatus.awaiting_exam || 0;
-    const inProgress = levelStatus.in_progress || 0;
-
-    if (graded > 0 && graded >= examScheduled + awaitingExam) {
-      return { icon: <Calculator className="h-5 w-5" />, variant: 'default' as const,
+    const awaitingCount = progress.filter(p => p.status === 'awaiting_exam').length;
+    const gradedCount = progress.filter(p => p.status === 'graded').length;
+    
+    if (awaitingCount > 0) {
+      return {
+        icon: <Target className="h-5 w-5" />,
+        title: isRTL ? 'طلاب جاهزون للامتحان النهائي' : 'Students Ready for Final Exam',
+        desc: isRTL 
+          ? `${awaitingCount} طالب أكمل السيشنات وتم إزالتهم من المجموعة تلقائياً. يرجى جدولة الامتحان النهائي.`
+          : `${awaitingCount} student(s) completed sessions and were auto-removed. Schedule their final exam.`,
+      };
+    }
+    if (gradedCount > 0) {
+      return {
+        icon: <Calculator className="h-5 w-5" />,
         title: isRTL ? 'الدرجات محسوبة' : 'Grades Computed',
-        desc: isRTL ? 'راجع النتائج وقرر الترقية' : 'Review results and decide promotions' };
-    }
-    if (examScheduled > 0) {
-      return { icon: <CalendarCheck className="h-5 w-5" />, variant: 'default' as const,
-        title: isRTL ? 'الامتحان النهائي مجدول' : 'Final Exam Scheduled',
-        desc: isRTL ? `${examSubmitted}/${examScheduled} سلموا الامتحان` : `${examSubmitted}/${examScheduled} submitted` };
-    }
-    if (awaitingExam > 0 || (inProgress === 0 && total > 0)) {
-      return { icon: <Target className="h-5 w-5" />, variant: 'default' as const,
-        title: isRTL ? 'السيشنات اكتملت' : 'Sessions Completed',
-        desc: isRTL ? 'حدد موعد الامتحان النهائي' : 'Schedule the final exam' };
+        desc: isRTL ? 'راجع النتائج وقرر الترقية' : 'Review results and decide promotions',
+      };
     }
     return null;
-  };
-
-  const handleScheduleExam = async () => {
-    if (!examDate || selectedStudents.length === 0) return;
-    setActionLoading(true);
-    try {
-      const { data, error } = await supabase.rpc('schedule_final_exam_for_students', {
-        p_group_id: groupId,
-        p_student_ids: selectedStudents,
-        p_date: new Date(examDate).toISOString(),
-        p_duration: examDuration,
-      });
-      if (error) throw error;
-      const result = data as any;
-      const desc = rescheduleCount > 0
-        ? (isRTL ? `تم جدولة ${newExamCount} جديد + ${rescheduleCount} إعادة جدولة` : `${newExamCount} new + ${rescheduleCount} rescheduled`)
-        : (isRTL ? `تم جدولة ${result.scheduled} طالب` : `${result.scheduled} students scheduled`);
-      toast({
-        title: isRTL ? 'تم الجدولة' : 'Scheduled',
-        description: desc,
-      });
-      setShowScheduleDialog(false);
-      fetchData();
-      onRefresh();
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: err.message });
-    } finally {
-      setActionLoading(false);
-    }
   };
 
   const handleComputeGrades = async () => {
@@ -287,18 +242,10 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
 
   const banner = getBanner();
 
-  // Eligible students = those with enough completed sessions (including exam_scheduled for rescheduling)
-  const eligibleForExam = progress.filter(p => 
-    (p.status === 'in_progress' || p.status === 'awaiting_exam' || p.status === 'exam_scheduled') &&
-    (studentSessionCounts[p.student_id] || 0) >= expectedSessions
-  );
-  const newExamCount = eligibleForExam.filter(p => p.status !== 'exam_scheduled').length;
-  const rescheduleCount = eligibleForExam.filter(p => p.status === 'exam_scheduled').length;
-
   const filterCounts = {
     all: progress.length,
-    awaiting_exam: progress.filter(p => p.status === 'awaiting_exam' || p.status === 'in_progress').length,
-    exam_scheduled: progress.filter(p => p.status === 'exam_scheduled').length,
+    in_progress: progress.filter(p => p.status === 'in_progress').length,
+    awaiting_exam: progress.filter(p => p.status === 'awaiting_exam' || p.status === 'exam_scheduled').length,
     graded: progress.filter(p => p.status === 'graded').length,
     passed: progress.filter(p => p.outcome === 'passed').length,
     failed: progress.filter(p => p.outcome === 'failed' || p.outcome === 'repeat').length,
@@ -333,23 +280,6 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
       {/* Admin Actions */}
       {isAdmin && (
         <div className="flex flex-wrap gap-2 items-center">
-          <Button variant="outline" size="sm" onClick={() => {
-            setSelectedStudents(eligibleForExam.map(p => p.student_id));
-            setShowScheduleDialog(true);
-          }} disabled={eligibleForExam.length === 0}>
-            <CalendarCheck className="h-4 w-4 mr-2" />
-            {isRTL ? 'جدول الامتحان النهائي' : 'Schedule Final Exam'}
-            {eligibleForExam.length > 0 && (
-              rescheduleCount > 0
-                ? ` (${newExamCount} + ${rescheduleCount} ${isRTL ? 'إعادة' : 'resched.'})`
-                : ` (${eligibleForExam.length})`
-            )}
-          </Button>
-          {eligibleForExam.length === 0 && progress.some(p => p.status === 'in_progress' || p.status === 'awaiting_exam') && (
-            <span className="text-xs text-muted-foreground">
-              {isRTL ? `لا يوجد طالب أكمل ${expectedSessions} سيشن` : `No student completed ${expectedSessions} sessions yet`}
-            </span>
-          )}
           <Button variant="outline" size="sm" onClick={handleComputeGrades} disabled={actionLoading}>
             <Calculator className="h-4 w-4 mr-2" />
             {isRTL ? 'احسب الدرجات النهائية' : 'Compute Final Grades'}
@@ -361,8 +291,8 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
       <div className="flex flex-wrap gap-2">
         {([
           ['all', isRTL ? 'الكل' : 'All'],
-          ['awaiting_exam', isRTL ? 'جاهزين' : 'Ready'],
-          ['exam_scheduled', isRTL ? 'مجدول' : 'Scheduled'],
+          ['in_progress', isRTL ? 'قيد التقدم' : 'In Progress'],
+          ['awaiting_exam', isRTL ? 'جاهز للامتحان' : 'Awaiting Exam'],
           ['graded', isRTL ? 'تم التقييم' : 'Graded'],
           ['passed', isRTL ? 'ناجح' : 'Passed'],
           ['failed', isRTL ? 'راسب' : 'Failed'],
@@ -424,7 +354,7 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant={p.status === 'awaiting_exam' ? 'default' : 'secondary'} className="text-xs">
                         {getStudentProgressStatusLabel(p.status, isRTL)}
                       </Badge>
                     </TableCell>
@@ -468,30 +398,6 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
           </Table>
         </CardContent>
       </Card>
-
-      {/* Schedule Exam Dialog */}
-      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{isRTL ? 'جدولة الامتحان النهائي' : 'Schedule Final Exam'}</DialogTitle>
-            <DialogDescription>{isRTL ? `${selectedStudents.length} طالب مؤهل` : `${selectedStudents.length} eligible students`}</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label>{isRTL ? 'تاريخ ووقت الامتحان' : 'Exam Date & Time'}</Label>
-              <Input type="datetime-local" value={examDate} onChange={e => setExamDate(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label>{isRTL ? 'المدة (دقيقة)' : 'Duration (minutes)'}</Label>
-              <Input type="number" value={examDuration} onChange={e => setExamDuration(parseInt(e.target.value) || 60)} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowScheduleDialog(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-            <Button onClick={handleScheduleExam} disabled={actionLoading || !examDate}>{isRTL ? 'جدولة' : 'Schedule'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Upgrade Dialog */}
       <Dialog open={showUpgradeDialog} onOpenChange={setShowUpgradeDialog}>
