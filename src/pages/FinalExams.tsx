@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,7 +19,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Target, CalendarClock, AlertTriangle, Search } from 'lucide-react';
+import {
+  Target, CalendarClock, AlertTriangle, Search, Clock, CheckCircle2,
+  GraduationCap, Users, Loader2,
+} from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ExamCandidate {
   progress_id: string;
@@ -48,6 +52,7 @@ export default function FinalExams() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const isAdmin = role === 'admin';
+  const isMobile = useIsMobile();
 
   const [candidates, setCandidates] = useState<ExamCandidate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +103,6 @@ export default function FinalExams() {
     return result;
   }, [candidates, filter, searchQuery]);
 
-  // Group selected candidates by group_id for validation
   const selectedCandidates = useMemo(() =>
     candidates.filter(c => selectedIds.has(c.progress_id)),
     [candidates, selectedIds]
@@ -120,14 +124,8 @@ export default function FinalExams() {
     });
   };
 
-  const handleSelectAllInGroup = (groupId: string) => {
-    const groupCandidates = filtered.filter(c => c.group_id === groupId && c.status === 'awaiting_exam');
-    setSelectedIds(new Set(groupCandidates.map(c => c.progress_id)));
-  };
-
   const handleOpenScheduleDialog = () => {
     if (!canSchedule) return;
-    // Check if level has final_exam_quiz_id
     const firstCandidate = selectedCandidates[0];
     if (!firstCandidate.final_exam_quiz_id) {
       toast({
@@ -152,7 +150,7 @@ export default function FinalExams() {
     try {
       const groupId = Array.from(selectedGroupIds)[0];
       const studentIds = selectedCandidates.map(c => c.student_id);
-      const dateTime = `${scheduleDate}T${scheduleTime}:00+02:00`; // Cairo timezone
+      const dateTime = `${scheduleDate}T${scheduleTime}:00+02:00`;
 
       const { data, error } = await supabase.rpc('schedule_final_exam_for_students', {
         p_group_id: groupId,
@@ -193,14 +191,41 @@ export default function FinalExams() {
   const getGroupName = (c: ExamCandidate) => language === 'ar' ? c.group_name_ar || c.group_name : c.group_name;
   const getLevelName = (c: ExamCandidate) => language === 'ar' ? c.level_name_ar || c.level_name : c.level_name;
 
+  // ─── Summary Stats ───
+  const statsCards = [
+    {
+      label: isRTL ? 'إجمالي الطلاب' : 'Total Students',
+      value: filterCounts.all,
+      icon: Users,
+      color: 'text-primary',
+      bg: 'bg-primary/10',
+    },
+    {
+      label: isRTL ? 'في انتظار الجدولة' : 'Awaiting Scheduling',
+      value: filterCounts.awaiting_exam,
+      icon: Clock,
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-500/10',
+    },
+    {
+      label: isRTL ? 'مجدول' : 'Scheduled',
+      value: filterCounts.exam_scheduled,
+      icon: CheckCircle2,
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-500/10',
+    },
+  ];
+
   return (
     <DashboardLayout>
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-5">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-              <Target className="h-6 w-6 text-primary" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <GraduationCap className="h-5 w-5 text-primary" />
+              </div>
               {isRTL ? 'الامتحانات النهائية' : 'Final Exams'}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
@@ -211,11 +236,37 @@ export default function FinalExams() {
             <Button
               onClick={handleOpenScheduleDialog}
               disabled={!canSchedule}
+              size={isMobile ? 'default' : 'default'}
+              className="gap-2"
             >
-              <CalendarClock className="h-4 w-4 mr-2" />
+              <CalendarClock className="h-4 w-4" />
               {isRTL ? 'جدولة امتحان' : 'Schedule Exam'}
+              {selectedCandidates.length > 0 && (
+                <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground text-xs px-1.5">
+                  {selectedCandidates.length}
+                </Badge>
+              )}
             </Button>
           )}
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-3 gap-3">
+          {statsCards.map((stat, i) => (
+            <Card key={i} className="border-0 shadow-sm">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${stat.bg}`}>
+                    <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-lg sm:text-2xl font-bold">{stat.value}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{stat.label}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Multi-group warning */}
@@ -234,24 +285,26 @@ export default function FinalExams() {
         {/* Search + Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground`} />
             <Input
               placeholder={isRTL ? 'بحث بالاسم أو المجموعة...' : 'Search by name or group...'}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className={isRTL ? 'pr-9' : 'pl-9'}
             />
           </div>
           <div className="flex flex-wrap gap-2">
             {([
               ['all', isRTL ? 'الكل' : 'All'],
-              ['awaiting_exam', isRTL ? 'في انتظار الجدولة' : 'Awaiting Scheduling'],
+              ['awaiting_exam', isRTL ? 'في انتظار الجدولة' : 'Awaiting'],
               ['exam_scheduled', isRTL ? 'مجدول' : 'Scheduled'],
             ] as [FilterType, string][]).map(([key, label]) => (
               <Badge
                 key={key}
                 variant={filter === key ? 'default' : 'outline'}
-                className="cursor-pointer px-3 py-1"
+                className={`cursor-pointer px-3 py-1.5 transition-all ${
+                  filter === key ? 'shadow-sm' : 'hover:bg-muted'
+                }`}
                 onClick={() => setFilter(key)}
               >
                 {label} ({filterCounts[key]})
@@ -260,26 +313,117 @@ export default function FinalExams() {
           </div>
         </div>
 
-        {/* Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              {isRTL ? `${filtered.length} طالب` : `${filtered.length} student(s)`}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {loading ? (
-              <div className="py-8 text-center text-muted-foreground">
-                {isRTL ? 'جاري التحميل...' : 'Loading...'}
+        {/* Content */}
+        {loading ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
+              <p className="text-sm text-muted-foreground">{isRTL ? 'جاري التحميل...' : 'Loading...'}</p>
+            </CardContent>
+          </Card>
+        ) : filtered.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="p-4 rounded-full bg-muted/50 mb-4">
+                <Target className="h-10 w-10 text-muted-foreground/40" />
               </div>
-            ) : filtered.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
-                {isRTL ? 'لا يوجد طلاب في هذه الحالة حالياً' : 'No students in this status currently'}
+              <h3 className="text-base font-semibold mb-1">
+                {isRTL ? 'لا يوجد طلاب حالياً' : 'No Students Yet'}
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                {isRTL
+                  ? 'سيظهر هنا الطلاب الذين أكملوا عدد السيشنات المطلوبة وجاهزين للامتحان النهائي'
+                  : 'Students who complete their required sessions will appear here ready for final exam scheduling'}
+              </p>
+            </CardContent>
+          </Card>
+        ) : isMobile ? (
+          /* ─── Mobile: Card View ─── */
+          <div className="space-y-3">
+            {filtered.map(c => (
+              <Card
+                key={c.progress_id}
+                className="overflow-hidden hover:shadow-md transition-shadow"
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    {isAdmin && c.status === 'awaiting_exam' && (
+                      <div className="pt-1" onClick={e => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(c.progress_id)}
+                          onCheckedChange={() => handleToggleSelect(c.progress_id)}
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0" onClick={() => navigate(`/student/${c.student_id}`)}>
+                      <div className="flex items-center gap-2.5 mb-2">
+                        <Avatar className="h-9 w-9 ring-2 ring-border">
+                          <AvatarImage src={c.avatar_url || undefined} />
+                          <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
+                            {getName(c)?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate">{getName(c)}</p>
+                          <p className="text-xs text-muted-foreground truncate">{getGroupName(c)}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant="outline" className="text-[10px] py-0">
+                          {getLevelName(c)}
+                        </Badge>
+                        <Badge
+                          variant={c.status === 'exam_scheduled' ? 'default' : 'secondary'}
+                          className="text-[10px] py-0"
+                        >
+                          {c.status === 'awaiting_exam'
+                            ? (isRTL ? 'في انتظار الجدولة' : 'Awaiting')
+                            : (isRTL ? 'مجدول' : 'Scheduled')}
+                        </Badge>
+                        {c.final_exam_quiz_id ? (
+                          <Badge variant="outline" className="text-[10px] py-0 text-emerald-600 border-emerald-300 dark:text-emerald-400 dark:border-emerald-700">
+                            {isRTL ? 'كويز مربوط' : 'Quiz linked'}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] py-0 text-destructive border-destructive/30">
+                            {isRTL ? 'بدون كويز' : 'No quiz'}
+                          </Badge>
+                        )}
+                      </div>
+                      {c.exam_scheduled_at && (
+                        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                          <CalendarClock className="h-3 w-3" />
+                          {new Date(c.exam_scheduled_at).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+                            year: 'numeric', month: 'short', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit',
+                          })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          /* ─── Desktop: Table View ─── */
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-0 pt-4 px-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {isRTL ? `عرض ${filtered.length} من ${candidates.length} طالب` : `Showing ${filtered.length} of ${candidates.length} students`}
+                </CardTitle>
+                {selectedCandidates.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {isRTL ? `${selectedCandidates.length} محدد` : `${selectedCandidates.length} selected`}
+                  </Badge>
+                )}
               </div>
-            ) : (
+            </CardHeader>
+            <CardContent className="p-0 pt-3">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="hover:bg-transparent">
                     {isAdmin && <TableHead className="w-10"></TableHead>}
                     <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
                     <TableHead>{isRTL ? 'المجموعة' : 'Group'}</TableHead>
@@ -291,7 +435,14 @@ export default function FinalExams() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map(c => (
-                    <TableRow key={c.progress_id} className="hover:bg-muted/50">
+                    <TableRow
+                      key={c.progress_id}
+                      className={`transition-colors ${
+                        selectedIds.has(c.progress_id)
+                          ? 'bg-primary/5 hover:bg-primary/10'
+                          : 'hover:bg-muted/50'
+                      }`}
+                    >
                       {isAdmin && (
                         <TableCell onClick={e => e.stopPropagation()}>
                           {c.status === 'awaiting_exam' && (
@@ -306,60 +457,82 @@ export default function FinalExams() {
                         className="cursor-pointer"
                         onClick={() => navigate(`/student/${c.student_id}`)}
                       >
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-7 w-7">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="h-8 w-8 ring-2 ring-border">
                             <AvatarImage src={c.avatar_url || undefined} />
-                            <AvatarFallback className="text-xs">{getName(c)?.charAt(0)}</AvatarFallback>
+                            <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
+                              {getName(c)?.charAt(0)}
+                            </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm font-medium">{getName(c)}</span>
+                          <span className="text-sm font-medium hover:underline">{getName(c)}</span>
                         </div>
                       </TableCell>
                       <TableCell
-                        className="cursor-pointer text-sm"
+                        className="cursor-pointer text-sm hover:underline"
                         onClick={() => navigate(`/group/${c.group_id}`)}
                       >
                         {getGroupName(c)}
                       </TableCell>
-                      <TableCell className="text-sm">{getLevelName(c)}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={c.status === 'exam_scheduled' ? 'default' : 'secondary'} className="text-xs">
-                          {c.status === 'awaiting_exam'
-                            ? (isRTL ? 'في انتظار الجدولة' : 'Awaiting')
-                            : (isRTL ? 'مجدول' : 'Scheduled')}
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs font-normal">
+                          {getLevelName(c)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center text-sm">
-                        {c.exam_scheduled_at
-                          ? new Date(c.exam_scheduled_at).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-                              year: 'numeric', month: 'short', day: 'numeric',
+                      <TableCell className="text-center">
+                        {c.status === 'exam_scheduled' ? (
+                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0 text-xs">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            {isRTL ? 'مجدول' : 'Scheduled'}
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-0 text-xs">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {isRTL ? 'في الانتظار' : 'Awaiting'}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center text-sm text-muted-foreground">
+                        {c.exam_scheduled_at ? (
+                          <span className="flex items-center justify-center gap-1">
+                            <CalendarClock className="h-3.5 w-3.5" />
+                            {new Date(c.exam_scheduled_at).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+                              month: 'short', day: 'numeric',
                               hour: '2-digit', minute: '2-digit',
-                            })
-                          : '-'}
+                            })}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         {c.final_exam_quiz_id ? (
-                          <Badge variant="outline" className="text-xs text-green-600 border-green-300">
+                          <div className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
                             {isRTL ? 'مربوط' : 'Linked'}
-                          </Badge>
+                          </div>
                         ) : (
-                          <Badge variant="outline" className="text-xs text-destructive border-destructive/30">
-                            {isRTL ? 'غير مربوط' : 'Not linked'}
-                          </Badge>
+                          <div className="inline-flex items-center gap-1 text-xs text-destructive">
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            {isRTL ? 'غير مربوط' : 'Missing'}
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Schedule Dialog */}
         <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>{isRTL ? 'جدولة الامتحان النهائي' : 'Schedule Final Exam'}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <CalendarClock className="h-5 w-5 text-primary" />
+                {isRTL ? 'جدولة الامتحان النهائي' : 'Schedule Final Exam'}
+              </DialogTitle>
               <DialogDescription>
                 {isRTL
                   ? `${selectedCandidates.length} طالب من مجموعة "${getGroupName(selectedCandidates[0] || {} as ExamCandidate)}"`
@@ -370,7 +543,7 @@ export default function FinalExams() {
               {/* Selected students list */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">{isRTL ? 'الطلاب المختارون' : 'Selected Students'}</Label>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
+                <div className="max-h-32 overflow-y-auto border rounded-lg p-2.5 space-y-1.5 bg-muted/30">
                   {selectedCandidates.map(c => (
                     <div key={c.progress_id} className="flex items-center gap-2 text-sm">
                       <Avatar className="h-5 w-5">
