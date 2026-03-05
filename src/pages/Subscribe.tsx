@@ -8,18 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { KojobotLogo } from "@/components/KojobotLogo";
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, CreditCard, Smartphone, Store } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 
 interface Plan {
   id: string;
   slug: string;
   name_en: string;
   name_ar: string;
-  price_number: number;
-  price_online: number;
 }
-
-type Step = "form" | "payment" | "success";
 
 export default function Subscribe() {
   const { language, isRTL } = useLanguage();
@@ -29,10 +25,7 @@ export default function Subscribe() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState<Step>("form");
-  const [requestId, setRequestId] = useState<string | null>(null);
-  const [refCode, setRefCode] = useState<string | null>(null);
-  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -50,12 +43,13 @@ export default function Subscribe() {
     const fetchPlans = async () => {
       const { data } = await supabase
         .from("landing_plans")
-        .select("id, slug, name_en, name_ar, price_number, price_online")
+        .select("id, slug, name_en, name_ar")
         .eq("is_active", true)
         .order("sort_order");
       
       if (data) {
         setPlans(data);
+        // Auto-select plan from URL
         if (planSlug) {
           const match = data.find((p) => p.slug === planSlug);
           if (match) setSelectedPlanId(match.id);
@@ -66,24 +60,30 @@ export default function Subscribe() {
     fetchPlans();
   }, [planSlug]);
 
-  const selectedPlan = plans.find((p) => p.id === selectedPlanId);
-  const displayPrice = selectedPlan
-    ? attendanceMode === "online"
-      ? selectedPlan.price_online
-      : selectedPlan.price_number
-    : 0;
-
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
-    if (!name.trim() || name.trim().length < 2)
+    
+    if (!name.trim() || name.trim().length < 2) {
       errs.name = l("Name must be at least 2 characters", "الاسم لازم يكون حرفين على الأقل");
+    }
+    
     const phoneClean = phone.replace(/[\s\-()]/g, "");
-    if (!phoneClean || !/^(\+?\d{10,15})$/.test(phoneClean))
+    if (!phoneClean || !/^(\+?\d{10,15})$/.test(phoneClean)) {
       errs.phone = l("Enter a valid phone number", "ادخل رقم تليفون صحيح");
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+    }
+    
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       errs.email = l("Enter a valid email", "ادخل إيميل صحيح");
-    if (!selectedPlanId) errs.plan = l("Select a plan", "اختر باقة");
-    if (!consent) errs.consent = l("You must agree to be contacted", "لازم توافق على التواصل");
+    }
+    
+    if (!selectedPlanId) {
+      errs.plan = l("Select a plan", "اختر باقة");
+    }
+    
+    if (!consent) {
+      errs.consent = l("You must agree to be contacted", "لازم توافق على التواصل");
+    }
+    
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -117,9 +117,7 @@ export default function Subscribe() {
 
       const data = res.data;
       if (data?.success) {
-        setRequestId(data.request_id);
-        setRefCode(data.request_id?.substring(0, 8).toUpperCase() || "OK");
-        setStep("payment");
+        setSuccess(data.request_id?.substring(0, 8).toUpperCase() || "OK");
       } else if (data?.error) {
         setErrors({ form: data.details?.join(", ") || data.error });
       }
@@ -128,38 +126,6 @@ export default function Subscribe() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handlePayment = async (method: "card" | "wallet" | "fawry") => {
-    if (!requestId) return;
-    setPaymentLoading(true);
-    setErrors({});
-
-    try {
-      const res = await supabase.functions.invoke("create-paymob-intention", {
-        body: { request_id: requestId, payment_method: method },
-      });
-
-      if (res.error) {
-        setErrors({ form: l("Failed to create payment session.", "فشل إنشاء جلسة الدفع.") });
-        return;
-      }
-
-      const { checkout_url } = res.data;
-      if (checkout_url) {
-        window.location.href = checkout_url;
-      } else {
-        setErrors({ form: l("Invalid payment response.", "رد غير صالح من بوابة الدفع.") });
-      }
-    } catch {
-      setErrors({ form: l("Network error. Please try again.", "خطأ في الشبكة. حاول تاني.") });
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
-
-  const handleSkipPayment = () => {
-    setStep("success");
   };
 
   if (loading) {
@@ -186,18 +152,14 @@ export default function Subscribe() {
           <KojobotLogo size="md" showText />
         </Link>
         <h1 className="text-2xl md:text-3xl font-bold" style={{ color: "rgba(240,240,255,.95)" }}>
-          {step === "payment"
-            ? l("Choose Payment Method", "اختر طريقة الدفع")
-            : l("Subscribe Now", "اشترك الآن")}
+          {l("Subscribe Now", "اشترك الآن")}
         </h1>
         <p className="mt-2 text-sm" style={{ color: "rgba(240,240,255,.5)" }}>
-          {step === "payment"
-            ? l("Pay securely via Card, Wallet, or Fawry", "ادفع بأمان عبر كارت أو محفظة أو فوري")
-            : l("Fill in your details and we'll contact you to complete the subscription", "املأ بياناتك وهنتواصل معاك لإتمام الاشتراك")}
+          {l("Fill in your details and we'll contact you to complete the subscription", "املأ بياناتك وهنتواصل معاك لإتمام الاشتراك")}
         </p>
       </div>
 
-      {step === "success" ? (
+      {success ? (
         <div
           className="w-full max-w-md rounded-2xl p-8 text-center"
           style={{
@@ -220,7 +182,7 @@ export default function Subscribe() {
               {l("Reference #", "رقم المرجع #")}
             </span>
             <span className="font-mono font-bold ms-1" style={{ color: "var(--kojo-violet, #6455F0)" }}>
-              {refCode}
+              {success}
             </span>
           </div>
           <div>
@@ -240,105 +202,6 @@ export default function Subscribe() {
             </Link>
           </div>
         </div>
-      ) : step === "payment" ? (
-        <div
-          className="w-full max-w-md rounded-2xl p-6 md:p-8 space-y-5"
-          style={{
-            background: "rgba(255,255,255,.04)",
-            border: "1px solid rgba(255,255,255,.08)",
-          }}
-        >
-          {/* Price display */}
-          <div className="text-center py-3 rounded-xl" style={{ background: "rgba(100,85,240,.1)", border: "1px solid rgba(100,85,240,.2)" }}>
-            <p className="text-xs mb-1" style={{ color: "rgba(240,240,255,.5)" }}>
-              {l("Amount to Pay", "المبلغ المطلوب")}
-            </p>
-            <p className="text-3xl font-bold" style={{ color: "var(--kojo-violet, #6455F0)" }}>
-              {displayPrice} <span className="text-base font-normal">{l("EGP", "ج.م")}</span>
-            </p>
-            {selectedPlan && (
-              <p className="text-xs mt-1" style={{ color: "rgba(240,240,255,.4)" }}>
-                {l(selectedPlan.name_en, selectedPlan.name_ar)}
-              </p>
-            )}
-          </div>
-
-          {/* Reference */}
-          <div className="text-center">
-            <span className="text-xs" style={{ color: "rgba(240,240,255,.4)" }}>
-              {l("Reference #", "رقم المرجع #")}
-            </span>
-            <span className="font-mono font-bold ms-1 text-sm" style={{ color: "rgba(240,240,255,.7)" }}>
-              {refCode}
-            </span>
-          </div>
-
-          {/* Payment methods */}
-          <div className="space-y-3">
-            <PaymentMethodButton
-              icon={<CreditCard className="h-5 w-5" />}
-              title={l("Credit / Debit Card", "كارت ائتمان / خصم")}
-              subtitle={l("Visa, Mastercard, Meeza", "فيزا، ماستركارد، ميزة")}
-              onClick={() => handlePayment("card")}
-              disabled={paymentLoading}
-              isRTL={isRTL}
-            />
-            <PaymentMethodButton
-              icon={<Smartphone className="h-5 w-5" />}
-              title={l("Mobile Wallet", "محفظة إلكترونية")}
-              subtitle={l("Vodafone Cash, Orange, Etisalat", "فودافون كاش، أورانج، اتصالات")}
-              onClick={() => handlePayment("wallet")}
-              disabled={paymentLoading}
-              isRTL={isRTL}
-            />
-            <PaymentMethodButton
-              icon={<Store className="h-5 w-5" />}
-              title={l("Fawry", "فوري")}
-              subtitle={l("Pay at any Fawry outlet", "ادفع من أي منفذ فوري")}
-              onClick={() => handlePayment("fawry")}
-              disabled={paymentLoading}
-              isRTL={isRTL}
-            />
-          </div>
-
-          {paymentLoading && (
-            <div className="flex items-center justify-center gap-2 py-2">
-              <Loader2 className="h-4 w-4 animate-spin" style={{ color: "var(--kojo-violet)" }} />
-              <span className="text-sm" style={{ color: "rgba(240,240,255,.6)" }}>
-                {l("Redirecting to payment...", "جاري التحويل للدفع...")}
-              </span>
-            </div>
-          )}
-
-          {errors.form && (
-            <div className="rounded-lg p-3 text-sm text-red-300" style={{ background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.2)" }}>
-              {errors.form}
-            </div>
-          )}
-
-          {/* Skip payment option */}
-          <div className="text-center pt-2 border-t" style={{ borderColor: "rgba(255,255,255,.06)" }}>
-            <button
-              onClick={handleSkipPayment}
-              className="text-xs hover:underline cursor-pointer"
-              style={{ color: "rgba(240,240,255,.35)" }}
-            >
-              {l("Skip payment — we'll contact you later", "تخطى الدفع — هنتواصل معاك بعدين")}
-            </button>
-          </div>
-
-          {/* Back */}
-          <div className="text-center">
-            <button
-              onClick={() => setStep("form")}
-              className="text-xs inline-flex items-center gap-1 hover:underline cursor-pointer"
-              style={{ color: "rgba(240,240,255,.4)" }}
-            >
-              {isRTL ? <ArrowRight className="h-3 w-3" /> : <ArrowLeft className="h-3 w-3" />}
-              {l("Back to form", "رجوع للنموذج")}
-            </button>
-          </div>
-        </div>
       ) : (
         <form
           onSubmit={handleSubmit}
@@ -348,7 +211,7 @@ export default function Subscribe() {
             border: "1px solid rgba(255,255,255,.08)",
           }}
         >
-          {/* Honeypot */}
+          {/* Honeypot - hidden from users */}
           <div className="absolute" style={{ left: "-9999px", opacity: 0, height: 0, overflow: "hidden" }} aria-hidden="true">
             <input tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
           </div>
@@ -439,18 +302,6 @@ export default function Subscribe() {
             </Select>
           </div>
 
-          {/* Price preview */}
-          {selectedPlan && (
-            <div className="rounded-lg px-4 py-3 flex items-center justify-between" style={{ background: "rgba(100,85,240,.08)", border: "1px solid rgba(100,85,240,.15)" }}>
-              <span className="text-sm" style={{ color: "rgba(240,240,255,.6)" }}>
-                {l("Total", "الإجمالي")}
-              </span>
-              <span className="text-lg font-bold" style={{ color: "var(--kojo-violet, #6455F0)" }}>
-                {displayPrice} {l("EGP", "ج.م")}
-              </span>
-            </div>
-          )}
-
           {/* Consent */}
           <div className="flex items-start gap-2">
             <Checkbox
@@ -468,12 +319,14 @@ export default function Subscribe() {
           </div>
           {errors.consent && <p className="text-xs text-red-400">{errors.consent}</p>}
 
+          {/* Error */}
           {errors.form && (
             <div className="rounded-lg p-3 text-sm text-red-300" style={{ background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.2)" }}>
               {errors.form}
             </div>
           )}
 
+          {/* Submit */}
           <Button
             type="submit"
             disabled={submitting}
@@ -483,10 +336,11 @@ export default function Subscribe() {
             {submitting ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              l("Continue to Payment", "متابعة للدفع")
+              l("Submit Request", "إرسال الطلب")
             )}
           </Button>
 
+          {/* Back link */}
           <div className="text-center pt-2">
             <Link
               to="/"
@@ -500,53 +354,5 @@ export default function Subscribe() {
         </form>
       )}
     </div>
-  );
-}
-
-function PaymentMethodButton({
-  icon,
-  title,
-  subtitle,
-  onClick,
-  disabled,
-  isRTL,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  subtitle: string;
-  onClick: () => void;
-  disabled: boolean;
-  isRTL: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full flex items-center gap-4 rounded-xl p-4 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-      style={{
-        background: "rgba(255,255,255,.04)",
-        border: "1px solid rgba(255,255,255,.1)",
-        textAlign: isRTL ? "right" : "left",
-      }}
-    >
-      <div
-        className="shrink-0 flex items-center justify-center w-10 h-10 rounded-lg"
-        style={{ background: "rgba(100,85,240,.15)", color: "var(--kojo-violet, #6455F0)" }}
-      >
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold" style={{ color: "rgba(240,240,255,.9)" }}>
-          {title}
-        </p>
-        <p className="text-xs" style={{ color: "rgba(240,240,255,.4)" }}>
-          {subtitle}
-        </p>
-      </div>
-      <div style={{ color: "rgba(240,240,255,.3)" }}>
-        {isRTL ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
-      </div>
-    </button>
   );
 }

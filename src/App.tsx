@@ -64,7 +64,6 @@ const SSOTHealth = React.lazy(() => import("./pages/SSOTHealth"));
 const Leaderboard = React.lazy(() => import("./pages/Leaderboard"));
 const MyFinances = React.lazy(() => import("./pages/MyFinances"));
 const Subscribe = React.lazy(() => import("./pages/Subscribe"));
-const PaymentCallback = React.lazy(() => import("./pages/PaymentCallback"));
 const SubscriptionRequests = React.lazy(() => import("./pages/SubscriptionRequests"));
 
 // Component to handle admin session timeout
@@ -138,7 +137,6 @@ const App = () => (
                   <Route path="/leaderboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception']}><Leaderboard /></ProtectedRoute>} />
                   <Route path="/my-finances" element={<ProtectedRoute allowedRoles={['student']}><MyFinances /></ProtectedRoute>} />
                   <Route path="/subscribe" element={<Subscribe />} />
-                  <Route path="/payment-callback" element={<PaymentCallback />} />
                   <Route path="/subscription-requests" element={<ProtectedRoute allowedRoles={['admin']}><SubscriptionRequests /></ProtectedRoute>} />
                   <Route path="/account-suspended" element={<AccountSuspended />} />
                   <Route path="/account-terminated" element={<AccountTerminated />} />

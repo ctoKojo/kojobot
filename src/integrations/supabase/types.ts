@@ -3194,49 +3194,34 @@ export type Database = {
       }
       subscription_requests: {
         Row: {
-          amount_cents: number | null
           attendance_mode: string
           created_at: string
           email: string
           id: string
           name: string
           notes: string | null
-          paid_at: string | null
-          payment_method: string | null
-          payment_status: string
-          paymob_order_id: string | null
           phone: string
           plan_id: string | null
           status: string
         }
         Insert: {
-          amount_cents?: number | null
           attendance_mode?: string
           created_at?: string
           email: string
           id?: string
           name: string
           notes?: string | null
-          paid_at?: string | null
-          payment_method?: string | null
-          payment_status?: string
-          paymob_order_id?: string | null
           phone: string
           plan_id?: string | null
           status?: string
         }
         Update: {
-          amount_cents?: number | null
           attendance_mode?: string
           created_at?: string
           email?: string
           id?: string
           name?: string
           notes?: string | null
-          paid_at?: string | null
-          payment_method?: string | null
-          payment_status?: string
-          paymob_order_id?: string | null
           phone?: string
           plan_id?: string | null
           status?: string

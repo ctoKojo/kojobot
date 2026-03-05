@@ -38,9 +38,3 @@ verify_jwt = false
 
 [functions.submit-subscription]
 verify_jwt = false
-
-[functions.create-paymob-intention]
-verify_jwt = false
-
-[functions.paymob-webhook]
-verify_jwt = false
