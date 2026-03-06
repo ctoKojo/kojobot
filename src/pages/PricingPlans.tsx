@@ -105,7 +105,7 @@ export default function PricingPlans() {
       <CardContent>
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-muted/30">
               <TableHead>{isRTL ? 'الباقة' : 'Plan'}</TableHead>
               <TableHead>{isRTL ? 'الطلاب' : 'Students'}</TableHead>
               <TableHead>{isRTL ? 'السعر الأصلي' : 'Original Price'}</TableHead>

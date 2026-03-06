@@ -303,7 +303,7 @@ export default function InstructorWarnings() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-muted/30">
                       <TableHead>{isRTL ? 'المدرب' : 'Instructor'}</TableHead>
                       <TableHead>{isRTL ? 'نوع الإنذار' : 'Warning Type'}</TableHead>
                       <TableHead>{isRTL ? 'الخطورة' : 'Severity'}</TableHead>

@@ -244,7 +244,7 @@ export default function DeductionRules() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-muted/30">
                       <TableHead>{isRTL ? 'نوع الإنذار' : 'Warning Type'}</TableHead>
                       <TableHead>{isRTL ? 'العدد' : 'Count'}</TableHead>
                       <TableHead>{isRTL ? 'الخطورة' : 'Severity'}</TableHead>

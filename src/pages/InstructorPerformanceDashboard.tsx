@@ -314,7 +314,7 @@ export default function InstructorPerformanceDashboard() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-muted/30">
                       <TableHead>{isRTL ? 'المدرب' : 'Instructor'}</TableHead>
                       <TableHead>{isRTL ? 'الأداء' : 'Score'}</TableHead>
                       <TableHead>{isRTL ? 'الاتجاه' : 'Trend'}</TableHead>

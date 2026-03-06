@@ -64,6 +64,8 @@ import { notificationService } from '@/lib/notificationService';
 import { logCreate, logUpdate, logDelete, logFreeze, logActivate } from '@/lib/activityLogger';
 import { GROUP_TYPES_LIST, DAYS_OF_WEEK, type GroupType, type AttendanceMode, type GroupStatus } from '@/lib/constants';
 import { getGroupStatusBadge } from '@/lib/statusBadges';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { StatsGrid } from '@/components/shared/StatsGrid';
 
 interface Group {
   id: string;
@@ -926,42 +928,43 @@ export default function GroupsPage() {
   return (
     <DashboardLayout title={t.groups.title}>
       <div className="space-y-6">
-        {/* Summary Stats */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: isRTL ? 'إجمالي المجموعات' : 'Total Groups', value: groups.length, icon: Users, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-500/10 to-blue-600/5' },
-            { label: isRTL ? 'نشطة' : 'Active', value: groups.filter(g => g.status === 'active' && g.has_started).length, icon: Play, gradient: 'from-emerald-500 to-emerald-600', bgGradient: 'from-emerald-500/10 to-emerald-600/5' },
-            { label: isRTL ? 'لم تبدأ' : 'Not Started', value: groups.filter(g => !g.has_started).length, icon: Clock, gradient: 'from-amber-500 to-orange-500', bgGradient: 'from-amber-500/10 to-orange-500/5' },
-            { label: isRTL ? 'مجمدة' : 'Frozen', value: groups.filter(g => g.status === 'frozen').length, icon: Snowflake, gradient: 'from-sky-400 to-sky-500', bgGradient: 'from-sky-400/10 to-sky-500/5' },
-          ].map((stat) => (
-            <Card key={stat.label} className="relative overflow-hidden border-0 shadow-sm">
-              <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`} />
-              <CardContent className="relative p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold tracking-tight">
-                      {loading ? <div className="h-7 w-10 bg-muted animate-pulse rounded" /> : stat.value}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
-                  </div>
-                  <div className={`p-2 rounded-xl bg-gradient-to-br ${stat.gradient}`}>
-                    <stat.icon className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* Page Header */}
+        <PageHeader
+          title={t.groups.title}
+          subtitle={isRTL ? `${groups.length} مجموعة` : `${groups.length} groups`}
+          icon={Users}
+          gradient="from-blue-500 to-blue-600"
+          actions={canManageGroups ? (
+            <Button className="kojo-gradient shadow-md" onClick={() => {
+              setEditingGroup(null);
+              resetForm();
+              setIsDialogOpen(true);
+            }}>
+              <Plus className="h-4 w-4 me-2" />
+              {t.groups.addGroup}
+            </Button>
+          ) : undefined}
+        />
 
-        {/* Header Actions */}
+        {/* Summary Stats */}
+        <StatsGrid
+          stats={[
+            { label: isRTL ? 'إجمالي المجموعات' : 'Total Groups', value: loading ? '...' : groups.length, icon: Users, gradient: 'from-blue-500 to-blue-600' },
+            { label: isRTL ? 'نشطة' : 'Active', value: loading ? '...' : groups.filter(g => g.status === 'active' && g.has_started).length, icon: Play, gradient: 'from-emerald-500 to-emerald-600' },
+            { label: isRTL ? 'لم تبدأ' : 'Not Started', value: loading ? '...' : groups.filter(g => !g.has_started).length, icon: Clock, gradient: 'from-amber-500 to-orange-500' },
+            { label: isRTL ? 'مجمدة' : 'Frozen', value: loading ? '...' : groups.filter(g => g.status === 'frozen').length, icon: Snowflake, gradient: 'from-sky-400 to-sky-500' },
+          ]}
+        />
+
+        {/* Search */}
         <div className="flex flex-col sm:flex-row gap-3 justify-between">
           <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={t.common.search}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="ps-10"
             />
           </div>
 

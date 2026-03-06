@@ -215,15 +215,30 @@ export default function AssignmentsPage() {
   return (
     <DashboardLayout title={t.assignments.title}>
       <div className="space-y-6">
-        {/* Header Actions */}
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
+                <ClipboardList className="h-5 w-5 text-white" />
+              </div>
+              {t.assignments.title}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1 ms-[52px]">
+              {isRTL ? `${filteredAssignments.length} اساينمنت` : `${filteredAssignments.length} assignments`}
+            </p>
+          </div>
+        </div>
+
+        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder={t.common.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder={t.common.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="ps-10" />
           </div>
           <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
             <SelectTrigger className="w-full sm:w-60">
-              <Filter className="h-4 w-4 mr-2" />
+              <Filter className="h-4 w-4 me-2" />
               <SelectValue placeholder={isRTL ? 'فلتر المجموعة' : 'Filter by Group'} />
             </SelectTrigger>
             <SelectContent>
@@ -289,7 +304,7 @@ export default function AssignmentsPage() {
                 {/* Desktop Table */}
                 <Table className="hidden md:table">
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-muted/30">
                       <TableHead>{t.assignments.assignmentName}</TableHead>
                       <TableHead>{isRTL ? 'رقم السيشن' : 'Session #'}</TableHead>
                       <TableHead>{t.assignments.dueDate}</TableHead>
