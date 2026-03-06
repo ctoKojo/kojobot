@@ -263,9 +263,9 @@ export default function StudentProfile() {
     <DashboardLayout title={isRTL ? 'ملف الطالب' : 'Student Profile'}>
       <div className="space-y-6">
         {/* Back Button & Actions */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center flex-wrap gap-2">
           <Button variant="ghost" onClick={() => navigate('/students')}>
-            <ArrowLeft className={`h-4 w-4 ${isRTL ? "ml-2 rotate-180" : "mr-2"}`} />
+            <ArrowLeft className={`h-4 w-4 ${isRTL ? "ms-2 rotate-180" : "me-2"}`} />
             {isRTL ? 'رجوع' : 'Back'}
           </Button>
           

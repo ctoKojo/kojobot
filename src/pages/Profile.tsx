@@ -183,12 +183,12 @@ export default function Profile() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/20">
                 <User className="h-5 w-5 text-white" />
               </div>
               {isRTL ? 'الملف الشخصي' : 'Profile'}
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1 ms-[52px]">
               {isRTL ? 'إدارة معلوماتك الشخصية' : 'Manage your personal information'}
             </p>
           </div>
@@ -196,7 +196,7 @@ export default function Profile() {
 
         <div className="grid gap-6 md:grid-cols-3">
           {/* Profile Card */}
-          <Card className="md:col-span-1">
+          <Card className="md:col-span-1 border-0 shadow-sm">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center">
                 {/* Avatar with upload button */}
@@ -253,7 +253,7 @@ export default function Profile() {
           </Card>
 
           {/* Edit Form */}
-          <Card className="md:col-span-2">
+          <Card className="md:col-span-2 border-0 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />

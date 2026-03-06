@@ -327,7 +327,7 @@ export default function Messages() {
           </Button>
         </div>
       )}
-      <div className="flex h-[calc(100vh-8rem)] gap-4">
+      <div className="flex h-[calc(100vh-8rem)] gap-4 overflow-hidden">
         <ConversationList
           conversations={conversations}
           selectedConversation={selectedConversation}

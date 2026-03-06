@@ -410,9 +410,9 @@ export default function InstructorProfile() {
   return (
     <DashboardLayout title={pageTitle}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <Button variant="ghost" onClick={() => navigate('/instructors')}>
-            <ArrowLeft className={`h-4 w-4 ${isRTL ? "ml-2 rotate-180" : "mr-2"}`} />
+            <ArrowLeft className={`h-4 w-4 ${isRTL ? "ms-2 rotate-180" : "me-2"}`} />
             {isRTL ? 'رجوع' : 'Back'}
           </Button>
           {role === 'admin' && (
