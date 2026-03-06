@@ -246,7 +246,7 @@ export default function AssignmentSubmissions() {
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/30">
                   <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
                   <TableHead>{isRTL ? 'تاريخ التسليم' : 'Submitted At'}</TableHead>
                   <TableHead>{isRTL ? 'آخر تحديث' : 'Last Updated'}</TableHead>
