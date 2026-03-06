@@ -236,13 +236,14 @@ export default function MySessions() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">
-              {isRTL ? 'سيشناتي' : 'My Sessions'}
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              {isRTL ? 'محتوى السيشنات اللي حضرتها' : 'Content from sessions you attended'}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/20">
+              <BookOpen className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">{isRTL ? 'سيشناتي' : 'My Sessions'}</h1>
+              <p className="text-muted-foreground text-sm">{isRTL ? 'محتوى السيشنات اللي حضرتها' : 'Content from sessions you attended'}</p>
+            </div>
           </div>
 
           {groups.length > 1 && (

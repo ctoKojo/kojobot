@@ -144,6 +144,17 @@ export default function SettingsPage() {
   return (
     <DashboardLayout title={t.settings.title}>
       <div className="space-y-6 max-w-2xl">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-slate-500 to-slate-600 shadow-lg shadow-slate-500/20">
+            <Globe className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">{t.settings.title}</h1>
+            <p className="text-sm text-muted-foreground">{isRTL ? 'إعدادات النظام والتخصيص' : 'System settings and customization'}</p>
+          </div>
+        </div>
+
         {/* General Settings */}
         <Card>
           <CardHeader>

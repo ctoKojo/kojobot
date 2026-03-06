@@ -44,14 +44,14 @@ export default function MyFinances() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <DollarSign className="h-6 w-6" />
-            {isRTL ? 'حسابي المالي' : 'My Finances'}
-          </h1>
-          <p className="text-muted-foreground">
-            {isRTL ? 'ملخص الاشتراك والدفعات والمستحقات' : 'Subscription summary, payments and receivables'}
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/20">
+            <DollarSign className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">{isRTL ? 'حسابي المالي' : 'My Finances'}</h1>
+            <p className="text-sm text-muted-foreground">{isRTL ? 'ملخص الاشتراك والدفعات والمستحقات' : 'Subscription summary, payments and receivables'}</p>
+          </div>
         </div>
 
         {loading ? (

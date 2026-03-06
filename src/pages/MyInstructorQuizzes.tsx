@@ -333,54 +333,28 @@ export default function MyInstructorQuizzes() {
     <DashboardLayout title={isRTL ? 'نتائج الكويزات' : 'Quiz Results'}>
       <div className="space-y-6">
         {/* Stats */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isRTL ? 'الكويزات المسندة' : 'Assigned Quizzes'}
-              </CardTitle>
-              <FileQuestion className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalAssigned}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isRTL ? 'إجمالي الطلاب' : 'Total Students'}
-              </CardTitle>
-              <Users className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalStudents}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isRTL ? 'الناجحون' : 'Passed'}
-              </CardTitle>
-              <Trophy className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{totalPassed}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isRTL ? 'متوسط الدرجات' : 'Average Score'}
-              </CardTitle>
-              <Clock className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{avgScore}%</div>
-            </CardContent>
-          </Card>
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: isRTL ? 'الكويزات المسندة' : 'Assigned Quizzes', value: totalAssigned, icon: FileQuestion, gradient: 'from-indigo-500 to-indigo-600' },
+            { label: isRTL ? 'إجمالي الطلاب' : 'Total Students', value: totalStudents, icon: Users, gradient: 'from-blue-500 to-blue-600' },
+            { label: isRTL ? 'الناجحون' : 'Passed', value: totalPassed, icon: Trophy, gradient: 'from-emerald-500 to-emerald-600' },
+            { label: isRTL ? 'متوسط الدرجات' : 'Average Score', value: `${avgScore}%`, icon: Clock, gradient: 'from-amber-500 to-orange-500' },
+          ].map((stat, i) => (
+            <Card key={i} className="relative overflow-hidden border-0 shadow-sm">
+              <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                    <stat.icon className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xl sm:text-2xl font-bold">{stat.value}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Assigned Quizzes List */}

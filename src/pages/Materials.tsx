@@ -351,11 +351,16 @@ export default function Materials() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">{isRTL ? 'المواد التعليمية' : 'Materials'}</h1>
-            <p className="text-muted-foreground text-sm">
-              {isRTL ? 'إدارة المواد التعليمية المنظمة حسب الفئة والمستوى' : 'Manage materials organized by age group and level'}
-            </p>
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-lg shadow-teal-500/20">
+              <FolderOpen className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">{isRTL ? 'المواد التعليمية' : 'Materials'}</h1>
+              <p className="text-muted-foreground text-sm">
+                {isRTL ? 'إدارة المواد التعليمية المنظمة حسب الفئة والمستوى' : 'Manage materials organized by age group and level'}
+              </p>
+            </div>
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
