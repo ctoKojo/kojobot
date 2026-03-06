@@ -128,15 +128,15 @@ export function ExpensesTab() {
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
-              <TableHead>{isRTL ? 'التصنيف' : 'Category'}</TableHead>
-              <TableHead>{isRTL ? 'الوصف' : 'Description'}</TableHead>
-              <TableHead>{isRTL ? 'المبلغ' : 'Amount'}</TableHead>
-              <TableHead>{isRTL ? 'متكرر' : 'Recurring'}</TableHead>
+            <TableRow className="bg-muted/20 hover:bg-muted/20">
+              <TableHead className="font-semibold">{isRTL ? 'التاريخ' : 'Date'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'التصنيف' : 'Category'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'الوصف' : 'Description'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'المبلغ' : 'Amount'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'متكرر' : 'Recurring'}</TableHead>
               <TableHead className="w-[60px]"></TableHead>
             </TableRow>
           </TableHeader>

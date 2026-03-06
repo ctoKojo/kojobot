@@ -229,15 +229,15 @@ export function PaymentTrackerTab() {
       <>
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-              <TableHead>{isRTL ? 'الباقة' : 'Plan'}</TableHead>
-              <TableHead>{isRTL ? 'نوع الدفع' : 'Type'}</TableHead>
-              <TableHead>{isRTL ? 'القسط' : 'Installment'}</TableHead>
-              <TableHead>{isRTL ? 'تاريخ الاستحقاق' : 'Due Date'}</TableHead>
-              <TableHead>{isRTL ? 'آخر دفعة' : 'Last Payment'}</TableHead>
-              <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-              <TableHead>{isRTL ? 'إجراء' : 'Action'}</TableHead>
+            <TableRow className="bg-muted/20 hover:bg-muted/20">
+              <TableHead className="font-semibold">{isRTL ? 'الطالب' : 'Student'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'الباقة' : 'Plan'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'نوع الدفع' : 'Type'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'القسط' : 'Installment'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'تاريخ الاستحقاق' : 'Due Date'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'آخر دفعة' : 'Last Payment'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'الحالة' : 'Status'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'إجراء' : 'Action'}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -283,69 +283,45 @@ export function PaymentTrackerTab() {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30"><CalendarClock className="h-5 w-5 text-amber-600" /></div>
-              <div>
-                <p className="text-2xl font-bold">{dueThisMonth.length}</p>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'مستحق هذا الشهر' : 'Due This Month'}</p>
-                <p className="text-xs text-amber-600 font-medium">{thisMonthTotal} {isRTL ? 'ج.م' : 'EGP'}</p>
+        {[
+          { label: isRTL ? 'مستحق هذا الشهر' : 'Due This Month', value: dueThisMonth.length, sub: `${thisMonthTotal} ${isRTL ? 'ج.م' : 'EGP'}`, icon: CalendarClock, gradient: 'from-amber-500 to-orange-500', subColor: 'text-amber-600' },
+          { label: isRTL ? 'مستحق الشهر القادم' : 'Due Next Month', value: dueNextMonth.length, sub: `${nextMonthTotal} ${isRTL ? 'ج.م' : 'EGP'}`, icon: CalendarCheck, gradient: 'from-blue-500 to-blue-600', subColor: 'text-blue-600' },
+          { label: isRTL ? 'تنتهي خلال 15 يوم' : 'Expiring in 15 days', value: expiringSoon.length, sub: null, icon: AlertTriangle, gradient: 'from-orange-500 to-red-500', subColor: '' },
+          { label: isRTL ? 'موقوفين' : 'Suspended', value: suspendedCount, sub: null, icon: Ban, gradient: 'from-red-500 to-red-600', subColor: '' },
+        ].map(stat => (
+          <Card key={stat.label} className="relative overflow-hidden hover:shadow-md transition-all duration-300">
+            <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                  <stat.icon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  {stat.sub && <p className={`text-xs font-medium ${stat.subColor}`}>{stat.sub}</p>}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30"><CalendarCheck className="h-5 w-5 text-blue-600" /></div>
-              <div>
-                <p className="text-2xl font-bold">{dueNextMonth.length}</p>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'مستحق الشهر القادم' : 'Due Next Month'}</p>
-                <p className="text-xs text-blue-600 font-medium">{nextMonthTotal} {isRTL ? 'ج.م' : 'EGP'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30"><AlertTriangle className="h-5 w-5 text-orange-600" /></div>
-              <div>
-                <p className="text-2xl font-bold">{expiringSoon.length}</p>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'تنتهي خلال 15 يوم' : 'Expiring in 15 days'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-destructive/10"><Ban className="h-5 w-5 text-destructive" /></div>
-              <div>
-                <p className="text-2xl font-bold">{suspendedCount}</p>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'موقوفين' : 'Suspended'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Due This Month */}
-      <Card>
-        <CardHeader><CardTitle>{isRTL ? 'مستحق هذا الشهر' : 'Due This Month'}</CardTitle></CardHeader>
-        <CardContent>{renderDueTable(dueThisMonth, thisMonthPage, setThisMonthPage)}</CardContent>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="border-b bg-muted/30"><CardTitle className="text-base">{isRTL ? 'مستحق هذا الشهر' : 'Due This Month'}</CardTitle></CardHeader>
+        <CardContent className="p-0">{renderDueTable(dueThisMonth, thisMonthPage, setThisMonthPage)}</CardContent>
       </Card>
 
       {/* Due Next Month */}
-      <Card>
-        <CardHeader><CardTitle>{isRTL ? 'مستحق الشهر القادم' : 'Due Next Month'}</CardTitle></CardHeader>
-        <CardContent>{renderDueTable(dueNextMonth, nextMonthPage, setNextMonthPage)}</CardContent>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="border-b bg-muted/30"><CardTitle className="text-base">{isRTL ? 'مستحق الشهر القادم' : 'Due Next Month'}</CardTitle></CardHeader>
+        <CardContent className="p-0">{renderDueTable(dueNextMonth, nextMonthPage, setNextMonthPage)}</CardContent>
       </Card>
 
       {/* Expiring Soon */}
-      <Card>
-        <CardHeader><CardTitle>{isRTL ? 'اشتراكات تنتهي قريباً' : 'Expiring Soon'}</CardTitle></CardHeader>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="border-b bg-muted/30"><CardTitle className="text-base">{isRTL ? 'اشتراكات تنتهي قريباً' : 'Expiring Soon'}</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
