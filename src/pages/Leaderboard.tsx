@@ -70,6 +70,16 @@ export default function Leaderboard() {
   return (
     <DashboardLayout title={t.evaluation.leaderboard}>
       <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-600 shadow-lg shadow-amber-500/20">
+            <Star className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">{t.evaluation.leaderboard}</h1>
+          </div>
+        </div>
+
         <LeaderboardFilters
           scope={scope} period={period}
           groupId={groupId} sessionId={sessionId}

@@ -122,51 +122,28 @@ export default function MyMakeupSessions() {
     <DashboardLayout title={isRTL ? 'سيشناتي التعويضية' : 'My Makeup Sessions'}>
       <div className="space-y-6">
         {/* Stats */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                <div>
-                  <p className="text-2xl font-bold">{sessions.filter(s => s.status === 'pending').length}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'معلق' : 'Pending'}</p>
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: isRTL ? 'معلق' : 'Pending', value: sessions.filter(s => s.status === 'pending').length, icon: AlertTriangle, gradient: 'from-yellow-500 to-amber-500' },
+            { label: isRTL ? 'مجدول' : 'Scheduled', value: sessions.filter(s => s.status === 'scheduled').length, icon: Calendar, gradient: 'from-blue-500 to-blue-600' },
+            { label: isRTL ? 'مكتمل' : 'Completed', value: sessions.filter(s => s.status === 'completed').length, icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600' },
+            { label: isRTL ? 'مجاني مستخدم' : 'Free Used', value: `${sessions.filter(s => s.is_free).length}/2`, icon: Clock, gradient: 'from-purple-500 to-purple-600' },
+          ].map((stat, i) => (
+            <Card key={i} className="relative overflow-hidden border-0 shadow-sm">
+              <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                    <stat.icon className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xl sm:text-2xl font-bold">{stat.value}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="text-2xl font-bold">{sessions.filter(s => s.status === 'scheduled').length}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'مجدول' : 'Scheduled'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="text-2xl font-bold">{sessions.filter(s => s.status === 'completed').length}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'مكتمل' : 'Completed'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-purple-600" />
-                <div>
-                  <p className="text-2xl font-bold">{sessions.filter(s => s.is_free).length}/2</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'مجاني مستخدم' : 'Free Used'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Action Required */}

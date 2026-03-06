@@ -15,7 +15,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -117,18 +116,57 @@ export default function QuizzesPage() {
     return level ? (language === 'ar' ? level.name_ar : level.name) : '-';
   };
 
+  const totalQuizzes = quizzes.length;
+  const linkedCount = quizzes.filter(q => curriculumMap.has(q.id)).length;
+  const unlinkedCount = totalQuizzes - linkedCount;
+
   return (
     <DashboardLayout title={t.nav.questionBank}>
       <div className="space-y-6">
-        {/* Info Alert */}
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            {isRTL ? 'الكويزات تُنشأ من داخل المنهج. اذهب لإدارة المنهج لإنشاء أو تعديل كويز.' : 'Quizzes are created from within the curriculum. Go to Curriculum Management to create or edit a quiz.'}
-          </AlertDescription>
-        </Alert>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg shadow-indigo-500/20">
+              <FileQuestion className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">{t.nav.questionBank}</h1>
+              <p className="text-sm text-muted-foreground">{isRTL ? 'الكويزات تُنشأ من داخل المنهج' : 'Quizzes are created from within the curriculum'}</p>
+            </div>
+          </div>
+          {role === 'admin' && (
+            <Button variant="outline" onClick={() => navigate('/quiz-reports')}>
+              <BarChart3 className="h-4 w-4 mr-2" />
+              {isRTL ? 'التقارير' : 'Reports'}
+            </Button>
+          )}
+        </div>
 
-        {/* Header Actions */}
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: isRTL ? 'إجمالي الكويزات' : 'Total Quizzes', value: totalQuizzes, gradient: 'from-indigo-500 to-indigo-600', icon: FileQuestion },
+            { label: isRTL ? 'مربوط بالمنهج' : 'Linked', value: linkedCount, gradient: 'from-emerald-500 to-emerald-600', icon: ListChecks },
+            { label: isRTL ? 'غير مربوط' : 'Unlinked', value: unlinkedCount, gradient: 'from-amber-500 to-amber-600', icon: FileQuestion },
+          ].map((stat, i) => (
+            <Card key={i} className="relative overflow-hidden border-0 shadow-sm">
+              <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                    <stat.icon className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-lg sm:text-2xl font-bold">{loading ? '...' : stat.value}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Search + Filters */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -140,24 +178,16 @@ export default function QuizzesPage() {
             />
           </div>
 
-          <div className="flex gap-2 flex-wrap">
-            <Select value={linkFilter} onValueChange={(v) => setLinkFilter(v as any)}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{isRTL ? 'الكل' : 'All'}</SelectItem>
-                <SelectItem value="linked">{isRTL ? 'مربوط بالمنهج' : 'Linked'}</SelectItem>
-                <SelectItem value="unlinked">{isRTL ? 'غير مربوط' : 'Unlinked'}</SelectItem>
-              </SelectContent>
-            </Select>
-            {role === 'admin' && (
-              <Button variant="outline" onClick={() => navigate('/quiz-reports')}>
-                <BarChart3 className="h-4 w-4 mr-2" />
-                {isRTL ? 'التقارير' : 'Reports'}
-              </Button>
-            )}
-          </div>
+          <Select value={linkFilter} onValueChange={(v) => setLinkFilter(v as any)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{isRTL ? 'الكل' : 'All'}</SelectItem>
+              <SelectItem value="linked">{isRTL ? 'مربوط بالمنهج' : 'Linked'}</SelectItem>
+              <SelectItem value="unlinked">{isRTL ? 'غير مربوط' : 'Unlinked'}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Mobile Cards View */}

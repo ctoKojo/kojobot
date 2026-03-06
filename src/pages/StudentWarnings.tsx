@@ -138,39 +138,44 @@ export default function StudentWarnings() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">
-            {isRTL ? 'إنذاراتي' : 'My Warnings'}
-          </h1>
-          <p className="text-muted-foreground">
-            {isRTL ? 'تتبع الإنذارات الصادرة لك' : 'Track warnings issued to you'}
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 shadow-lg shadow-red-500/20">
+            <AlertTriangle className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">{isRTL ? 'إنذاراتي' : 'My Warnings'}</h1>
+            <p className="text-sm text-muted-foreground">{isRTL ? 'تتبع الإنذارات الصادرة لك' : 'Track warnings issued to you'}</p>
+          </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid gap-4 grid-cols-2">
-          <Card className={activeWarnings.length > 0 ? 'border-warning' : ''}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isRTL ? 'إنذارات نشطة' : 'Active Warnings'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className={`text-3xl font-bold ${activeWarnings.length > 0 ? 'text-warning' : ''}`}>
-                {loading ? '...' : activeWarnings.length}
+          <Card className="relative overflow-hidden border-0 shadow-sm">
+            <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${activeWarnings.length > 0 ? 'from-red-500 to-orange-500' : 'from-emerald-500 to-emerald-600'}`} />
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${activeWarnings.length > 0 ? 'bg-red-500/10' : 'bg-emerald-500/10'}`}>
+                  <AlertTriangle className={`h-4 w-4 ${activeWarnings.length > 0 ? 'text-red-600' : 'text-emerald-600'}`} />
+                </div>
+                <div>
+                  <p className={`text-2xl font-bold ${activeWarnings.length > 0 ? 'text-red-600' : ''}`}>{loading ? '...' : activeWarnings.length}</p>
+                  <p className="text-xs text-muted-foreground">{isRTL ? 'إنذارات نشطة' : 'Active Warnings'}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isRTL ? 'إنذارات سابقة' : 'Resolved Warnings'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-muted-foreground">
-                {loading ? '...' : resolvedWarnings.length}
+          <Card className="relative overflow-hidden border-0 shadow-sm">
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-slate-400 to-slate-500" />
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-slate-500/10">
+                  <CheckCircle className="h-4 w-4 text-slate-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-muted-foreground">{loading ? '...' : resolvedWarnings.length}</p>
+                  <p className="text-xs text-muted-foreground">{isRTL ? 'إنذارات سابقة' : 'Resolved Warnings'}</p>
+                </div>
               </div>
             </CardContent>
           </Card>

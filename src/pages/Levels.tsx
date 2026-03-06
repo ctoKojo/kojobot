@@ -243,7 +243,18 @@ export default function LevelsPage() {
   return (
     <DashboardLayout title={t.levels.title}>
       <div className="space-y-6">
-        {/* Header Actions */}
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 shadow-lg shadow-violet-500/20">
+            <FileQuestion className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">{t.levels.title}</h1>
+            <p className="text-sm text-muted-foreground">{isRTL ? 'إدارة المستويات التعليمية' : 'Manage educational levels'}</p>
+          </div>
+        </div>
+
+        {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

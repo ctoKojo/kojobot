@@ -45,9 +45,14 @@ export default function MyMaterials() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">{isRTL ? 'موادي التعليمية' : 'My Materials'}</h1>
-          <p className="text-muted-foreground text-sm">{isRTL ? 'المواد المتاحة لك' : 'Materials available to you'}</p>
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-lg shadow-teal-500/20">
+            <FolderOpen className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">{isRTL ? 'موادي التعليمية' : 'My Materials'}</h1>
+            <p className="text-muted-foreground text-sm">{isRTL ? 'المواد المتاحة لك' : 'Materials available to you'}</p>
+          </div>
         </div>
 
         <div className="relative max-w-md">

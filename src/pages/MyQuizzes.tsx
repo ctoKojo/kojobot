@@ -167,9 +167,20 @@ export default function MyQuizzes() {
   return (
     <DashboardLayout title={isRTL ? 'كويزاتي' : 'My Quizzes'}>
       <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg shadow-indigo-500/20">
+            <FileQuestion className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">{isRTL ? 'كويزاتي' : 'My Quizzes'}</h1>
+            <p className="text-sm text-muted-foreground">{isRTL ? 'كويزات بانتظارك ونتائجك' : 'Your pending and completed quizzes'}</p>
+          </div>
+        </div>
+
         {/* Pending Quizzes */}
         <div>
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" />
             {isRTL ? 'كويزات بانتظارك' : 'Pending Quizzes'}
             {pendingQuizzes.length > 0 && (
