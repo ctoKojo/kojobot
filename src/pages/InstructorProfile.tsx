@@ -452,12 +452,14 @@ export default function InstructorProfile() {
         </div>
 
         {/* Profile Header */}
-        <Card>
-          <CardContent className="p-6">
+        <Card className="relative overflow-hidden border-0 shadow-md">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full -translate-y-10 translate-x-10" />
+          <CardContent className="relative p-6">
             <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={data.profile.avatar_url} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+              <Avatar className="h-24 w-24 ring-4 ring-primary/20 shadow-lg">
+                <AvatarImage src={data.profile.avatar_url} className="object-cover" />
+                <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-secondary text-white">
                   {data.profile.full_name?.charAt(0) || 'E'}
                 </AvatarFallback>
               </Avatar>
@@ -511,76 +513,29 @@ export default function InstructorProfile() {
 
         {/* Quick Stats - only show teaching stats for instructors */}
         {!isReception ? (
-          <div className="grid gap-4 md:grid-cols-5">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <User className="h-5 w-5 text-primary" />
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-5">
+            {[
+              { label: isRTL ? 'إجمالي الطلاب' : 'Total Students', value: data.totalStudents, icon: User, gradient: 'from-primary to-secondary', bgGradient: 'from-primary/10 to-secondary/5' },
+              { label: isRTL ? 'المجموعات' : 'Groups', value: data.groups.length, icon: Users, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-500/10 to-blue-600/5' },
+              { label: isRTL ? 'نسبة الحضور' : 'Attendance Rate', value: `${Math.round(data.attendanceStats.presentRate)}%`, icon: Calendar, gradient: 'from-emerald-500 to-emerald-600', bgGradient: 'from-emerald-500/10 to-emerald-600/5' },
+              { label: isRTL ? 'الكويزات' : 'Quizzes', value: data.quizzes.length, icon: BookOpen, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-500/10 to-purple-600/5' },
+              { label: isRTL ? 'الواجبات' : 'Assignments', value: data.assignments.length, icon: FileText, gradient: 'from-orange-500 to-orange-600', bgGradient: 'from-orange-500/10 to-orange-600/5' },
+            ].map((stat) => (
+              <Card key={stat.label} className="relative overflow-hidden border-0 shadow-sm">
+                <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`} />
+                <CardContent className="relative p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+                    </div>
+                    <div className={`p-2 rounded-xl bg-gradient-to-br ${stat.gradient}`}>
+                      <stat.icon className="h-4 w-4 text-white" />
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-2xl font-bold">{data.totalStudents}</p>
-                    <p className="text-sm text-muted-foreground">{isRTL ? 'إجمالي الطلاب' : 'Total Students'}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                    <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{data.groups.length}</p>
-                    <p className="text-sm text-muted-foreground">{isRTL ? 'المجموعات' : 'Groups'}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                    <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{Math.round(data.attendanceStats.presentRate)}%</p>
-                    <p className="text-sm text-muted-foreground">{isRTL ? 'نسبة الحضور' : 'Attendance Rate'}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                    <BookOpen className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{data.quizzes.length}</p>
-                    <p className="text-sm text-muted-foreground">{isRTL ? 'الكويزات' : 'Quizzes'}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-                    <FileText className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{data.assignments.length}</p>
-                    <p className="text-sm text-muted-foreground">{isRTL ? 'الواجبات' : 'Assignments'}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : null}
 
@@ -668,9 +623,10 @@ export default function InstructorProfile() {
           {visibleSections.includes('finance') && (
             <TabsContent value="finance">
               <div className="space-y-4">
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-                  <Card>
-                    <CardContent className="pt-6">
+                <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
+                  <Card className="relative overflow-hidden border-0 shadow-sm">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-blue-600/5" />
+                    <CardContent className="relative pt-6">
                       <p className="text-sm text-muted-foreground">
                         {data.hourlyCalc ? (isRTL ? 'الراتب (بالساعة)' : 'Salary (Hourly)') : (isRTL ? 'الراتب الأساسي' : 'Base Salary')}
                       </p>
@@ -682,21 +638,23 @@ export default function InstructorProfile() {
                       {data.hourlyCalc && (
                         <p className="text-xs text-muted-foreground mt-1">
                           {data.profile.hourly_rate} {isRTL ? 'ج.م/ساعة' : 'EGP/hr'} × {data.hourlyCalc.roundedHours} {isRTL ? 'ساعة' : 'hrs'}
-                          {data.hourlyCalc.hasInferred && <span className="text-amber-500 ml-2">⚠ {isRTL ? 'يشمل ساعات تقديرية' : 'Includes inferred hours'}</span>}
+                          {data.hourlyCalc.hasInferred && <span className="text-amber-500 ms-2">⚠ {isRTL ? 'يشمل ساعات تقديرية' : 'Includes inferred hours'}</span>}
                         </p>
                       )}
                     </CardContent>
                   </Card>
-                  <Card>
-                    <CardContent className="pt-6">
+                  <Card className="relative overflow-hidden border-0 shadow-sm">
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-emerald-600/5" />
+                    <CardContent className="relative pt-6">
                       <p className="text-sm text-muted-foreground">{isRTL ? 'إجمالي المدفوع' : 'Total Paid'}</p>
-                      <p className="text-2xl font-bold text-green-600">
+                      <p className="text-2xl font-bold text-emerald-600">
                         {data.salaryPayments.reduce((sum, p) => sum + Number(p.net_amount || 0), 0)} {isRTL ? 'ج.م' : 'EGP'}
                       </p>
                     </CardContent>
                   </Card>
-                  <Card>
-                    <CardContent className="pt-6">
+                  <Card className="relative overflow-hidden border-0 shadow-sm">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-purple-600/5" />
+                    <CardContent className="relative pt-6">
                       <p className="text-sm text-muted-foreground">{isRTL ? 'عدد الدفعات' : 'Payments Count'}</p>
                       <p className="text-2xl font-bold">{data.salaryPayments.length}</p>
                     </CardContent>

@@ -196,14 +196,15 @@ export default function Profile() {
 
         <div className="grid gap-6 md:grid-cols-3">
           {/* Profile Card */}
-          <Card className="md:col-span-1 border-0 shadow-sm">
-            <CardContent className="pt-6">
+          <Card className="md:col-span-1 border-0 shadow-sm relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+            <CardContent className="relative pt-6">
               <div className="flex flex-col items-center text-center">
                 {/* Avatar with upload button */}
                 <div className="relative group mb-4">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src={profile?.avatar_url || ''} />
-                    <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
+                  <Avatar className="h-24 w-24 ring-4 ring-primary/20 shadow-lg">
+                    <AvatarImage src={profile?.avatar_url || ''} className="object-cover" />
+                    <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-secondary text-white">
                       {profile ? getInitials(profile.full_name) : 'U'}
                     </AvatarFallback>
                   </Avatar>
