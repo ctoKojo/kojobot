@@ -236,6 +236,17 @@ export default function Finance() {
   return (
     <DashboardLayout title={isRTL ? 'الإدارة المالية' : 'Finance Management'}>
       <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/20">
+            <DollarSign className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold">{isRTL ? 'الإدارة المالية' : 'Finance Management'}</h1>
+            <p className="text-sm text-muted-foreground">{isRTL ? 'إدارة الاشتراكات والمدفوعات والتقارير المالية' : 'Manage subscriptions, payments and financial reports'}</p>
+          </div>
+        </div>
+
         {/* Stats */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
           {[
@@ -279,8 +290,8 @@ export default function Finance() {
               <CardHeader className="border-b bg-muted/30">
                 <div className="flex flex-col sm:flex-row gap-4 justify-between">
                   <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder={isRTL ? 'بحث عن طالب...' : 'Search student...'} value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+                    <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder={isRTL ? 'بحث عن طالب...' : 'Search student...'} value={search} onChange={e => setSearch(e.target.value)} className="ps-9" />
                   </div>
                   <Select value={filter} onValueChange={setFilter}>
                     <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
