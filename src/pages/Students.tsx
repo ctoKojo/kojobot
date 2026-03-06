@@ -6,6 +6,11 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { StatsGrid, type StatItem } from '@/components/shared/StatsGrid';
+import { TableToolbar, type ColumnDef } from '@/components/shared/TableToolbar';
+import { SortableTableHead, useTableSort } from '@/components/shared/SortableTableHead';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 import {
   Table,
   TableBody,
@@ -197,6 +202,36 @@ export default function StudentsPage() {
   }, [validationErrors, editingStudent, formData.subscription_type]);
 
   const subscriptionTypes = GROUP_TYPES_LIST;
+
+  // Table sort
+  const { sortKey, sortDirection, handleSort, sortData } = useTableSort();
+
+  // Column visibility
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
+    name: true,
+    email: true,
+    ageGroup: true,
+    level: true,
+    subscription: true,
+    payment: true,
+    attendance: true,
+  });
+  const columns: ColumnDef[] = [
+    { key: 'name', label: isRTL ? 'الاسم' : 'Name', visible: columnVisibility.name },
+    { key: 'email', label: isRTL ? 'البريد' : 'Email', visible: columnVisibility.email },
+    { key: 'ageGroup', label: isRTL ? 'الفئة العمرية' : 'Age Group', visible: columnVisibility.ageGroup },
+    { key: 'level', label: isRTL ? 'المستوى' : 'Level', visible: columnVisibility.level },
+    { key: 'subscription', label: isRTL ? 'الاشتراك' : 'Subscription', visible: columnVisibility.subscription },
+    { key: 'payment', label: isRTL ? 'الدفع' : 'Payment', visible: columnVisibility.payment },
+    { key: 'attendance', label: isRTL ? 'الحضور' : 'Attendance', visible: columnVisibility.attendance },
+  ];
+  const handleColumnToggle = (key: string) => {
+    setColumnVisibility(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
   const attendanceModes: { value: AttendanceMode; label: string; labelAr: string }[] = [
     { value: 'online', label: 'Online', labelAr: 'أونلاين' },
@@ -558,11 +593,33 @@ export default function StudentsPage() {
     }
   };
 
-  const filteredStudents = students.filter((student) =>
-    student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (student.full_name_ar && student.full_name_ar.includes(searchQuery)) ||
-    student.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredStudents = useMemo(() => {
+    const filtered = students.filter((student) =>
+      student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (student.full_name_ar && student.full_name_ar.includes(searchQuery)) ||
+      student.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    // Sort
+    return sortData(filtered, (item, key) => {
+      switch (key) {
+        case 'name': return language === 'ar' && item.full_name_ar ? item.full_name_ar : item.full_name;
+        case 'email': return item.email;
+        case 'ageGroup': return getAgeGroupName(item.age_group_id);
+        case 'level': return getLevelName(item.level_id);
+        default: return item[key];
+      }
+    });
+  }, [students, searchQuery, sortKey, sortDirection, language]);
+
+  // Paginated students
+  const totalPages = Math.ceil(filteredStudents.length / pageSize) || 1;
+  const paginatedStudents = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredStudents.slice(start, start + pageSize);
+  }, [filteredStudents, currentPage, pageSize]);
+
+  // Reset page when search changes
+  useEffect(() => { setCurrentPage(1); }, [searchQuery]);
 
   // Calculate age from date of birth
   const calculateAge = (dob: string): number | null => {
@@ -628,81 +685,45 @@ export default function StudentsPage() {
     return { label: isRTL ? 'جاري' : 'Active', variant: 'secondary' as const, color: '' };
   };
 
+  const statsItems: StatItem[] = [
+    { label: isRTL ? 'إجمالي الطلاب' : 'Total Students', value: loading ? '...' : students.length, icon: GraduationCap, gradient: 'from-blue-500 to-blue-600' },
+    { label: isRTL ? 'في مجموعات' : 'In Groups', value: loading ? '...' : students.filter(s => activeGroupStudentIds.has(s.user_id)).length, icon: Users, gradient: 'from-emerald-500 to-emerald-600' },
+    { label: isRTL ? 'غير مسكّن' : 'No Group', value: loading ? '...' : students.filter(s => !activeGroupStudentIds.has(s.user_id)).length, icon: AlertCircle, gradient: 'from-amber-500 to-orange-500' },
+    { label: isRTL ? 'اشتراك فعال' : 'Active Subs', value: loading ? '...' : subscriptions.length, icon: TrendingUp, gradient: 'from-purple-500 to-purple-600' },
+  ];
+
   return (
     <DashboardLayout title={t.students.title}>
       <div className="space-y-6">
-        {/* Summary Stats */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          {[
-            { 
-              label: isRTL ? 'إجمالي الطلاب' : 'Total Students', 
-              value: students.length, 
-              icon: GraduationCap, 
-              gradient: 'from-blue-500 to-blue-600',
-              bgGradient: 'from-blue-500/10 to-blue-600/5',
-            },
-            { 
-              label: isRTL ? 'في مجموعات' : 'In Groups', 
-              value: students.filter(s => activeGroupStudentIds.has(s.user_id)).length, 
-              icon: Users, 
-              gradient: 'from-emerald-500 to-emerald-600',
-              bgGradient: 'from-emerald-500/10 to-emerald-600/5',
-            },
-            { 
-              label: isRTL ? 'غير مسكّن' : 'No Group', 
-              value: students.filter(s => !activeGroupStudentIds.has(s.user_id)).length, 
-              icon: AlertCircle, 
-              gradient: 'from-amber-500 to-orange-500',
-              bgGradient: 'from-amber-500/10 to-orange-500/5',
-            },
-            { 
-              label: isRTL ? 'اشتراك فعال' : 'Active Subs', 
-              value: subscriptions.length, 
-              icon: TrendingUp, 
-              gradient: 'from-purple-500 to-purple-600',
-              bgGradient: 'from-purple-500/10 to-purple-600/5',
-            },
-          ].map((stat) => (
-            <Card key={stat.label} className="relative overflow-hidden border-0 shadow-sm">
-              <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`} />
-              <CardContent className="relative p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold tracking-tight">
-                      {loading ? <div className="h-7 w-10 bg-muted animate-pulse rounded" /> : stat.value}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
-                  </div>
-                  <div className={`p-2 rounded-xl bg-gradient-to-br ${stat.gradient}`}>
-                    <stat.icon className="h-4 w-4 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* Page Header */}
+        <PageHeader
+          title={t.students.title}
+          subtitle={isRTL ? 'إدارة الطلاب والاشتراكات' : 'Manage students and subscriptions'}
+          icon={GraduationCap}
+          gradient="from-blue-500 to-blue-600"
+          actions={
+            <Button className="kojo-gradient shadow-md" onClick={() => {
+              setEditingStudent(null);
+              resetForm();
+              setIsDialogOpen(true);
+            }}>
+              <UserPlus className="h-4 w-4 me-2" />
+              {t.students.addStudent}
+            </Button>
+          }
+        />
 
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-between">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t.common.search}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+        {/* Stats */}
+        <StatsGrid stats={statsItems} />
 
-          <Button className="kojo-gradient shadow-md" onClick={() => {
-            setEditingStudent(null);
-            resetForm();
-            setIsDialogOpen(true);
-          }}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            {t.students.addStudent}
-          </Button>
-        </div>
+        {/* Table Toolbar */}
+        <TableToolbar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder={isRTL ? 'بحث بالاسم أو الإيميل...' : 'Search by name or email...'}
+          columns={columns}
+          onColumnToggle={handleColumnToggle}
+        />
 
         {/* Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -1157,7 +1178,7 @@ export default function StudentsPage() {
               </CardContent>
             </Card>
           ) : (
-            filteredStudents.map((student) => (
+            paginatedStudents.map((student) => (
               <Card 
                 key={student.id} 
                 className={cn(
@@ -1252,14 +1273,14 @@ export default function StudentsPage() {
           <CardContent className="p-0">
             <Table className="table-fixed">
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[18%]">{t.students.fullName}</TableHead>
-                  <TableHead className="w-[18%]">{t.auth.email}</TableHead>
-                  <TableHead className="w-[12%]">{t.students.ageGroup}</TableHead>
-                  <TableHead className="w-[12%]">{t.students.level}</TableHead>
-                  <TableHead className="w-[13%]">{isRTL ? 'الاشتراك' : 'Subscription'}</TableHead>
-                  <TableHead className="w-[12%]">{isRTL ? 'حالة الدفع' : 'Payment'}</TableHead>
-                  <TableHead className="w-[10%]">{isRTL ? 'نوع الحضور' : 'Attendance'}</TableHead>
+                <TableRow className="bg-muted/30">
+                  {columnVisibility.name && <SortableTableHead sortKey="name" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="w-[18%]">{t.students.fullName}</SortableTableHead>}
+                  {columnVisibility.email && <SortableTableHead sortKey="email" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="w-[18%]">{t.auth.email}</SortableTableHead>}
+                  {columnVisibility.ageGroup && <SortableTableHead sortKey="ageGroup" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="w-[12%]">{t.students.ageGroup}</SortableTableHead>}
+                  {columnVisibility.level && <SortableTableHead sortKey="level" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="w-[12%]">{t.students.level}</SortableTableHead>}
+                  {columnVisibility.subscription && <TableHead className="w-[13%]">{isRTL ? 'الاشتراك' : 'Subscription'}</TableHead>}
+                  {columnVisibility.payment && <TableHead className="w-[12%]">{isRTL ? 'حالة الدفع' : 'Payment'}</TableHead>}
+                  {columnVisibility.attendance && <TableHead className="w-[10%]">{isRTL ? 'نوع الحضور' : 'Attendance'}</TableHead>}
                   <TableHead className="w-[5%]">{t.common.actions}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1277,7 +1298,7 @@ export default function StudentsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredStudents.map((student) => (
+                  paginatedStudents.map((student) => (
                     <TableRow 
                       key={student.id} 
                       className={cn(
@@ -1286,47 +1307,55 @@ export default function StudentsPage() {
                       )}
                       onClick={() => navigate(`/student/${student.user_id}`)}
                     >
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={student.avatar_url || undefined} />
-                            <AvatarFallback className="text-xs">
-                              {student.full_name.slice(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium">
-                            {language === 'ar' && student.full_name_ar 
-                              ? student.full_name_ar 
-                              : student.full_name}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="truncate">{student.email}</TableCell>
-                      <TableCell>{getAgeGroupName(student.age_group_id)}</TableCell>
-                      <TableCell>{getLevelName(student.level_id)}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {getSubscriptionTypeName(student.subscription_type)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {(() => {
-                          const ps = getPaymentStatus(student.user_id);
-                          return (
-                            <Badge variant={ps.variant} className={ps.color}>
-                              {ps.label}
-                            </Badge>
-                          );
-                        })()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={student.attendance_mode === 'online' ? 'default' : 'outline'}
-                          className={student.attendance_mode === 'online' ? 'bg-blue-500 hover:bg-blue-600' : ''}
-                        >
-                          {getAttendanceModeName(student.attendance_mode)}
-                        </Badge>
-                      </TableCell>
+                      {columnVisibility.name && (
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={student.avatar_url || undefined} />
+                              <AvatarFallback className="text-xs">
+                                {student.full_name.slice(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">
+                              {language === 'ar' && student.full_name_ar 
+                                ? student.full_name_ar 
+                                : student.full_name}
+                            </span>
+                          </div>
+                        </TableCell>
+                      )}
+                      {columnVisibility.email && <TableCell className="truncate">{student.email}</TableCell>}
+                      {columnVisibility.ageGroup && <TableCell>{getAgeGroupName(student.age_group_id)}</TableCell>}
+                      {columnVisibility.level && <TableCell>{getLevelName(student.level_id)}</TableCell>}
+                      {columnVisibility.subscription && (
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {getSubscriptionTypeName(student.subscription_type)}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {columnVisibility.payment && (
+                        <TableCell>
+                          {(() => {
+                            const ps = getPaymentStatus(student.user_id);
+                            return (
+                              <Badge variant={ps.variant} className={ps.color}>
+                                {ps.label}
+                              </Badge>
+                            );
+                          })()}
+                        </TableCell>
+                      )}
+                      {columnVisibility.attendance && (
+                        <TableCell>
+                          <Badge 
+                            variant={student.attendance_mode === 'online' ? 'default' : 'outline'}
+                            className={student.attendance_mode === 'online' ? 'bg-blue-500 hover:bg-blue-600' : ''}
+                          >
+                            {getAttendanceModeName(student.attendance_mode)}
+                          </Badge>
+                        </TableCell>
+                      )}
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1360,6 +1389,16 @@ export default function StudentsPage() {
                 )}
               </TableBody>
             </Table>
+            {/* Pagination */}
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalCount={filteredStudents.length}
+              hasNextPage={currentPage < totalPages}
+              hasPreviousPage={currentPage > 1}
+              onPageChange={setCurrentPage}
+            />
           </CardContent>
         </Card>
       </div>

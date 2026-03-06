@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { formatDateTime } from '@/lib/timeUtils';
 import { Activity, Search, Filter, Download, User, RefreshCw } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { exportActivityLogs } from '@/lib/exportUtils';
 import {
   Table,
@@ -24,6 +23,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { StatsGrid, type StatItem } from '@/components/shared/StatsGrid';
+import { TableToolbar } from '@/components/shared/TableToolbar';
+import { SortableTableHead, useTableSort } from '@/components/shared/SortableTableHead';
+import { DataTablePagination } from '@/components/ui/data-table-pagination';
 
 interface ActivityLog {
   id: string;
@@ -51,6 +55,9 @@ export default function ActivityLogPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [entityFilter, setEntityFilter] = useState('all');
+  const { sortKey, sortDirection, handleSort, sortData } = useTableSort();
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 30;
 
   useEffect(() => {
     fetchLogs();
@@ -161,15 +168,34 @@ export default function ActivityLogPage() {
     return language === 'ar' && user.full_name_ar ? user.full_name_ar : user.full_name;
   };
 
-  const filteredLogs = logs.filter((log) => {
-    const matchesSearch = 
-      log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.entity_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      getUserName(log.user_id).toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesAction = actionFilter === 'all' || log.action === actionFilter;
-    const matchesEntity = entityFilter === 'all' || log.entity_type === entityFilter;
-    return matchesSearch && matchesAction && matchesEntity;
-  });
+  const sortedFilteredLogs = useMemo(() => {
+    const filtered = logs.filter((log) => {
+      const matchesSearch = 
+        log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        log.entity_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        getUserName(log.user_id).toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesAction = actionFilter === 'all' || log.action === actionFilter;
+      const matchesEntity = entityFilter === 'all' || log.entity_type === entityFilter;
+      return matchesSearch && matchesAction && matchesEntity;
+    });
+    return sortData(filtered, (item, key) => {
+      switch (key) {
+        case 'timestamp': return item.created_at;
+        case 'user': return getUserName(item.user_id);
+        case 'action': return item.action;
+        case 'entity': return item.entity_type;
+        default: return item[key];
+      }
+    });
+  }, [logs, searchQuery, actionFilter, entityFilter, sortKey, sortDirection]);
+
+  const totalPages = Math.ceil(sortedFilteredLogs.length / pageSize) || 1;
+  const paginatedLogs = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedFilteredLogs.slice(start, start + pageSize);
+  }, [sortedFilteredLogs, currentPage]);
+
+  useEffect(() => { setCurrentPage(1); }, [searchQuery, actionFilter, entityFilter]);
 
   const uniqueActions = [...new Set(logs.map((log) => log.action))];
   const uniqueEntities = [...new Set(logs.map((log) => log.entity_type))];
@@ -177,108 +203,83 @@ export default function ActivityLogPage() {
   const formatDetails = (details: any) => {
     if (!details) return '-';
     if (typeof details === 'string') return details;
-    
-    // Format as key-value pairs
     const entries = Object.entries(details).slice(0, 3);
     return entries.map(([key, value]) => `${key}: ${value}`).join(', ');
   };
 
+  const statsItems: StatItem[] = [
+    { label: isRTL ? 'إجمالي السجلات' : 'Total Logs', value: logs.length, icon: Activity, gradient: 'from-indigo-500 to-indigo-600' },
+    { label: isRTL ? 'عمليات الدخول' : 'Logins', value: logs.filter(l => l.action === 'login').length, icon: User, gradient: 'from-emerald-500 to-emerald-600' },
+    { label: isRTL ? 'تحديثات' : 'Updates', value: logs.filter(l => l.action === 'update').length, icon: RefreshCw, gradient: 'from-blue-500 to-blue-600' },
+    { label: isRTL ? 'مستخدمين نشطين' : 'Active Users', value: Object.keys(users).length, icon: User, gradient: 'from-purple-500 to-purple-600' },
+  ];
+
   return (
     <DashboardLayout title={t.activityLog.title}>
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg">
-              <Activity className="h-5 w-5 text-white" />
-            </div>
-            {t.activityLog.title}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">{isRTL ? 'تتبع كل العمليات في النظام' : 'Track all system operations'}</p>
-        </div>
+        <PageHeader
+          title={t.activityLog.title}
+          subtitle={isRTL ? 'تتبع كل العمليات في النظام' : 'Track all system operations'}
+          icon={Activity}
+          gradient="from-indigo-500 to-indigo-600"
+        />
 
-        {/* Header Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          {[
-            { label: isRTL ? 'إجمالي السجلات' : 'Total Logs', value: logs.length, icon: Activity, gradient: 'from-indigo-500 to-indigo-600' },
-            { label: isRTL ? 'عمليات الدخول' : 'Logins', value: logs.filter(l => l.action === 'login').length, icon: User, gradient: 'from-emerald-500 to-emerald-600' },
-            { label: isRTL ? 'تحديثات' : 'Updates', value: logs.filter(l => l.action === 'update').length, icon: RefreshCw, gradient: 'from-blue-500 to-blue-600' },
-            { label: isRTL ? 'مستخدمين نشطين' : 'Active Users', value: Object.keys(users).length, icon: User, gradient: 'from-purple-500 to-purple-600' },
-          ].map((stat) => (
-            <Card key={stat.label} className="relative overflow-hidden hover:shadow-md transition-all duration-300">
-              <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
-                    <stat.icon className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <StatsGrid stats={statsItems} />
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t.common.search}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={actionFilter} onValueChange={setActionFilter}>
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder={t.activityLog.filterByType} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t.common.all}</SelectItem>
-              {uniqueActions.map((action) => (
-                <SelectItem key={action} value={action}>
-                  {getActionLabel(action)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={entityFilter} onValueChange={setEntityFilter}>
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder={isRTL ? 'نوع الكيان' : 'Entity Type'} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t.common.all}</SelectItem>
-              {uniqueEntities.map((entity) => (
-                <SelectItem key={entity} value={entity}>
-                  {getEntityLabel(entity)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={fetchLogs}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            {isRTL ? 'تحديث' : 'Refresh'}
-          </Button>
-          <Button variant="outline" onClick={() => exportActivityLogs(filteredLogs, users, language)}>
-            <Download className="h-4 w-4 mr-2" />
-            {isRTL ? 'تصدير' : 'Export'}
-          </Button>
-        </div>
+        {/* Toolbar */}
+        <TableToolbar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder={isRTL ? 'بحث بالاسم أو العملية...' : 'Search by name or action...'}
+          onExport={() => exportActivityLogs(sortedFilteredLogs, users, language)}
+          filters={
+            <>
+              <Select value={actionFilter} onValueChange={setActionFilter}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder={t.activityLog.filterByType} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.common.all}</SelectItem>
+                  {uniqueActions.map((action) => (
+                    <SelectItem key={action} value={action}>
+                      {getActionLabel(action)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={entityFilter} onValueChange={setEntityFilter}>
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue placeholder={isRTL ? 'نوع الكيان' : 'Entity Type'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.common.all}</SelectItem>
+                  {uniqueEntities.map((entity) => (
+                    <SelectItem key={entity} value={entity}>
+                      {getEntityLabel(entity)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          }
+          actions={
+            <Button variant="outline" size="sm" className="h-9" onClick={fetchLogs}>
+              <RefreshCw className="h-4 w-4 me-2" />
+              {isRTL ? 'تحديث' : 'Refresh'}
+            </Button>
+          }
+        />
 
         {/* Table */}
         <Card>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>{t.activityLog.timestamp}</TableHead>
-                  <TableHead>{t.activityLog.user}</TableHead>
-                  <TableHead>{t.activityLog.action}</TableHead>
-                  <TableHead>{t.activityLog.target}</TableHead>
+                <TableRow className="bg-muted/30">
+                  <SortableTableHead sortKey="timestamp" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{t.activityLog.timestamp}</SortableTableHead>
+                  <SortableTableHead sortKey="user" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{t.activityLog.user}</SortableTableHead>
+                  <SortableTableHead sortKey="action" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{t.activityLog.action}</SortableTableHead>
+                  <SortableTableHead sortKey="entity" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{t.activityLog.target}</SortableTableHead>
                   <TableHead className="max-w-[200px]">{t.activityLog.details}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -289,7 +290,7 @@ export default function ActivityLogPage() {
                       {t.common.loading}
                     </TableCell>
                   </TableRow>
-                ) : filteredLogs.length === 0 ? (
+                ) : paginatedLogs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8">
                       <Activity className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -299,7 +300,7 @@ export default function ActivityLogPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredLogs.map((log) => (
+                  paginatedLogs.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {formatDateTime(log.created_at, language)}
@@ -325,6 +326,15 @@ export default function ActivityLogPage() {
                 )}
               </TableBody>
             </Table>
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalCount={sortedFilteredLogs.length}
+              hasNextPage={currentPage < totalPages}
+              hasPreviousPage={currentPage > 1}
+              onPageChange={setCurrentPage}
+            />
           </CardContent>
         </Card>
       </div>
