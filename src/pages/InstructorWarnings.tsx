@@ -202,90 +202,34 @@ export default function InstructorWarnings() {
     <DashboardLayout title={isRTL ? 'إنذارات المدربين' : 'Instructor Warnings'}>
       <div className="space-y-6">
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+        <div className="grid gap-3 grid-cols-3 lg:grid-cols-6">
+          {[
+            { label: isRTL ? 'الإجمالي' : 'Total', value: stats.total, icon: AlertTriangle, gradient: 'from-red-500 to-red-600', filter: 'all' as string },
+            { label: isRTL ? 'كويز' : 'Quiz', value: stats.noQuiz, icon: AlertTriangle, gradient: 'from-purple-500 to-purple-600', filter: 'no_quiz' },
+            { label: isRTL ? 'حضور' : 'Attendance', value: stats.noAttendance, icon: AlertTriangle, gradient: 'from-orange-500 to-orange-600', filter: 'no_attendance' },
+            { label: isRTL ? 'واجب' : 'Assignment', value: stats.noAssignment, icon: AlertTriangle, gradient: 'from-blue-500 to-blue-600', filter: 'no_assignment' },
+            { label: isRTL ? 'عدم رد' : 'No Reply', value: stats.noReply, icon: MessageSquare, gradient: 'from-sky-500 to-sky-600', filter: 'no_reply' },
+            { label: isRTL ? 'تأخر تقييم' : 'Late Grade', value: stats.lateGrading, icon: Clock, gradient: 'from-violet-500 to-violet-600', filter: 'late_grading' },
+          ].map((stat) => (
+            <Card
+              key={stat.filter}
+              className={`relative overflow-hidden cursor-pointer hover:shadow-md transition-all duration-300 ${typeFilter === stat.filter ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setTypeFilter(stat.filter)}
+            >
+              <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
+              <CardContent className="pt-5 pb-4 px-3">
+                <div className="flex items-center gap-2">
+                  <div className={`p-2 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                    <stat.icon className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold">{stat.value}</p>
+                    <p className="text-[10px] text-muted-foreground">{stat.label}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground">{isRTL ? 'الإجمالي' : 'Total'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setTypeFilter('no_quiz')}>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-                  <AlertTriangle className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.noQuiz}</p>
-                  <p className="text-xs text-muted-foreground">{isRTL ? 'كويز' : 'Quiz'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setTypeFilter('no_attendance')}>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-                  <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.noAttendance}</p>
-                  <p className="text-xs text-muted-foreground">{isRTL ? 'حضور' : 'Attendance'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setTypeFilter('no_assignment')}>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                  <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.noAssignment}</p>
-                  <p className="text-xs text-muted-foreground">{isRTL ? 'واجب' : 'Assignment'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setTypeFilter('no_reply')}>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-sky-100 dark:bg-sky-900/30">
-                  <MessageSquare className="h-5 w-5 text-sky-600 dark:text-sky-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.noReply}</p>
-                  <p className="text-xs text-muted-foreground">{isRTL ? 'عدم رد' : 'No Reply'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setTypeFilter('late_grading')}>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-violet-100 dark:bg-violet-900/30">
-                  <Clock className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.lateGrading}</p>
-                  <p className="text-xs text-muted-foreground">{isRTL ? 'تأخر تقييم' : 'Late Grade'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Filters */}

@@ -461,10 +461,13 @@ export default function MonthlyReports() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">
+            <h1 className="text-2xl font-bold flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg">
+                <Calendar className="h-5 w-5 text-white" />
+              </div>
               {isRTL ? 'التقارير الشهرية' : 'Monthly Reports'}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm text-muted-foreground mt-1">
               {isRTL ? 'تتبع الأداء والتطور عبر الزمن' : 'Track performance and progress over time'}
             </p>
           </div>

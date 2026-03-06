@@ -255,64 +255,28 @@ export default function InstructorPerformanceDashboard() {
       <div className="space-y-6">
         {/* Quick Stats */}
         <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                  <Award className="h-5 w-5 text-green-600" />
+          {[
+            { label: isRTL ? 'أفضل مدرب' : 'Best Instructor', value: bestInstructor?.profile?.full_name || '-', sub: String(bestInstructor?.quality_score || 0), icon: Award, gradient: 'from-emerald-500 to-emerald-600' },
+            { label: isRTL ? 'يحتاج متابعة' : 'Needs Attention', value: worstInstructor?.profile?.full_name || '-', sub: String(worstInstructor?.quality_score || 0), icon: AlertTriangle, gradient: 'from-red-500 to-red-600' },
+            { label: isRTL ? 'متوسط الأداء' : 'Avg Score', value: String(avgScore), sub: '', icon: Activity, gradient: 'from-blue-500 to-blue-600' },
+            { label: isRTL ? 'توصيات معلقة' : 'Pending Recs', value: String(bonusRecommendations.length), sub: '', icon: Award, gradient: 'from-amber-500 to-orange-500' },
+          ].map((stat) => (
+            <Card key={stat.label} className="relative overflow-hidden hover:shadow-md transition-all duration-300">
+              <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                    <stat.icon className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="font-semibold truncate">{stat.value}</p>
+                    {stat.sub && <p className="text-xs text-muted-foreground">{stat.sub}</p>}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'أفضل مدرب' : 'Best Instructor'}</p>
-                  <p className="font-semibold truncate max-w-[140px]">
-                    {bestInstructor?.profile?.full_name || '-'}
-                  </p>
-                  <p className="text-xs text-green-600">{bestInstructor?.quality_score || 0}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'يحتاج متابعة' : 'Needs Attention'}</p>
-                  <p className="font-semibold truncate max-w-[140px]">
-                    {worstInstructor?.profile?.full_name || '-'}
-                  </p>
-                  <p className="text-xs text-red-600">{worstInstructor?.quality_score || 0}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                  <Activity className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'متوسط الأداء' : 'Avg Score'}</p>
-                  <p className="text-2xl font-bold">{avgScore}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-                  <Award className="h-5 w-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'توصيات معلقة' : 'Pending Recs'}</p>
-                  <p className="text-2xl font-bold">{bonusRecommendations.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Trend Chart */}

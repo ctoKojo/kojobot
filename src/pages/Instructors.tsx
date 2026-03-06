@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserPlus, Eye, CalendarDays, AlertCircle, Check, DollarSign, UserX } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, UserPlus, Eye, CalendarDays, AlertCircle, Check, DollarSign, UserX, Users } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { Button } from '@/components/ui/button';
@@ -442,18 +442,19 @@ export default function InstructorsPage() {
   return (
     <DashboardLayout title={t.instructors.employeesTitle}>
       <div className="space-y-6">
-        {/* Header Actions */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t.common.search}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              {t.instructors.employeesTitle}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isRTL ? `${activeEmployees.length} موظف نشط` : `${activeEmployees.length} active employees`}
+            </p>
           </div>
-
           <Button className="kojo-gradient" onClick={() => {
             setEditingInstructor(null);
             resetForm();
@@ -462,6 +463,17 @@ export default function InstructorsPage() {
             <UserPlus className="h-4 w-4 mr-2" />
             {t.instructors.addEmployee}
           </Button>
+        </div>
+
+        {/* Search */}
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t.common.search}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
         </div>
 
         {/* Category Tabs */}

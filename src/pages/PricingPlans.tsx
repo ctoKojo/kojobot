@@ -150,8 +150,16 @@ export default function PricingPlans() {
     <DashboardLayout title={isRTL ? 'خطط التسعير' : 'Pricing Plans'}>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">{isRTL ? 'إدارة خطط التسعير' : 'Manage Pricing Plans'}</h2>
-          {!isReadOnly && <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" />{isRTL ? 'إضافة باقة' : 'Add Plan'}</Button>}
+          <div>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg">
+                <DollarSign className="h-5 w-5 text-white" />
+              </div>
+              {isRTL ? 'إدارة خطط التسعير' : 'Manage Pricing Plans'}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">{isRTL ? 'إنشاء وتعديل باقات الأسعار' : 'Create and manage pricing plans'}</p>
+          </div>
+          {!isReadOnly && <Button onClick={openCreate} className="gap-2"><Plus className="h-4 w-4" />{isRTL ? 'إضافة باقة' : 'Add Plan'}</Button>}
         </div>
 
         {renderTable(offlinePlans, isRTL ? 'أوفلاين (حضوري)' : 'Offline (In-Person)')}

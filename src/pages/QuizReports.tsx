@@ -262,54 +262,28 @@ export default function QuizReportsPage() {
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isRTL ? 'إجمالي الكويزات' : 'Total Quizzes'}
-              </CardTitle>
-              <FileQuestion className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalQuizzes}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isRTL ? 'إجمالي المحاولات' : 'Total Attempts'}
-              </CardTitle>
-              <Users className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalSubmissions}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isRTL ? 'متوسط الدرجات' : 'Average Score'}
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.averageScore}%</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {isRTL ? 'نسبة النجاح' : 'Pass Rate'}
-              </CardTitle>
-              <Trophy className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.passRate}%</div>
-              <Progress value={stats.passRate} className="mt-2" />
-            </CardContent>
-          </Card>
+          {[
+            { label: isRTL ? 'إجمالي الكويزات' : 'Total Quizzes', value: stats.totalQuizzes, icon: FileQuestion, gradient: 'from-blue-500 to-blue-600' },
+            { label: isRTL ? 'إجمالي المحاولات' : 'Total Attempts', value: stats.totalSubmissions, icon: Users, gradient: 'from-purple-500 to-purple-600' },
+            { label: isRTL ? 'متوسط الدرجات' : 'Average Score', value: `${stats.averageScore}%`, icon: TrendingUp, gradient: 'from-amber-500 to-orange-500' },
+            { label: isRTL ? 'نسبة النجاح' : 'Pass Rate', value: `${stats.passRate}%`, icon: Trophy, gradient: 'from-emerald-500 to-emerald-600', extra: <Progress value={stats.passRate} className="mt-2" /> },
+          ].map((stat) => (
+            <Card key={stat.label} className="relative overflow-hidden hover:shadow-md transition-all duration-300">
+              <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                    <stat.icon className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-2xl font-bold">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    {stat.extra}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Charts */}
