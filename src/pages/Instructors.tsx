@@ -446,12 +446,12 @@ export default function InstructorsPage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg shadow-purple-500/20">
                 <Users className="h-5 w-5 text-white" />
               </div>
               {t.instructors.employeesTitle}
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1 ms-[52px]">
               {isRTL ? `${activeEmployees.length} موظف نشط` : `${activeEmployees.length} active employees`}
             </p>
           </div>
@@ -467,18 +467,18 @@ export default function InstructorsPage() {
 
         {/* Search */}
         <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={t.common.search}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="ps-10"
           />
         </div>
 
         {/* Category Tabs */}
         <Tabs value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as any)}>
-          <TabsList>
+          <TabsList className="bg-muted/60 rounded-xl">
             <TabsTrigger value="all">{t.instructors.allEmployees}</TabsTrigger>
             <TabsTrigger value="instructor">{t.instructors.instructorsOnly}</TabsTrigger>
             <TabsTrigger value="reception">{t.instructors.receptionOnly}</TabsTrigger>
@@ -961,11 +961,11 @@ export default function InstructorsPage() {
         </div>
 
         {/* Desktop Table View */}
-        <Card className="hidden md:block">
+        <Card className="hidden md:block border-0 shadow-sm">
           <CardContent className="p-0">
             <Table className="table-fixed">
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
                   <TableHead className="w-[25%]">{t.students.fullName}</TableHead>
                   <TableHead className="w-[12%]">{t.instructors.employeeType}</TableHead>
                   <TableHead className="w-[22%]">{t.auth.email}</TableHead>

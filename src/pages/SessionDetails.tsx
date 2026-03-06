@@ -1693,7 +1693,7 @@ export default function SessionDetails() {
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
                   <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
                   <TableHead className="text-center">{isRTL ? 'الحضور' : 'Attendance'}</TableHead>
                   <TableHead className="text-center">{isRTL ? 'الكويز' : 'Quiz'}</TableHead>
