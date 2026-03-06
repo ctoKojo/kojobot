@@ -23,6 +23,8 @@ import {
   Target, CalendarClock, AlertTriangle, Search, Clock, CheckCircle2,
   GraduationCap, Users, Loader2,
 } from 'lucide-react';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { StatsGrid } from '@/components/shared/StatsGrid';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ExamCandidate {
@@ -220,23 +222,15 @@ export default function FinalExams() {
     <DashboardLayout>
       <div className="space-y-5">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <GraduationCap className="h-5 w-5 text-primary" />
-              </div>
-              {isRTL ? 'الامتحانات النهائية' : 'Final Exams'}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {isRTL ? 'إدارة وجدولة الامتحانات النهائية للطلاب' : 'Manage and schedule student final exams'}
-            </p>
-          </div>
-          {isAdmin && (
+        <PageHeader
+          title={isRTL ? 'الامتحانات النهائية' : 'Final Exams'}
+          subtitle={isRTL ? 'إدارة وجدولة الامتحانات النهائية للطلاب' : 'Manage and schedule student final exams'}
+          icon={GraduationCap}
+          gradient="from-teal-500 to-cyan-600"
+          actions={isAdmin ? (
             <Button
               onClick={handleOpenScheduleDialog}
               disabled={!canSchedule}
-              size={isMobile ? 'default' : 'default'}
               className="gap-2"
             >
               <CalendarClock className="h-4 w-4" />
@@ -247,27 +241,18 @@ export default function FinalExams() {
                 </Badge>
               )}
             </Button>
-          )}
-        </div>
+          ) : undefined}
+        />
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-3">
-          {statsCards.map((stat, i) => (
-            <Card key={i} className="border-0 shadow-sm">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${stat.bg}`}>
-                    <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-lg sm:text-2xl font-bold">{stat.value}</p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{stat.label}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <StatsGrid
+          columns={3}
+          stats={[
+            { label: isRTL ? 'إجمالي الطلاب' : 'Total Students', value: filterCounts.all, icon: Users, gradient: 'from-blue-500 to-blue-600' },
+            { label: isRTL ? 'في انتظار الجدولة' : 'Awaiting Scheduling', value: filterCounts.awaiting_exam, icon: Clock, gradient: 'from-amber-500 to-orange-500' },
+            { label: isRTL ? 'مجدول' : 'Scheduled', value: filterCounts.exam_scheduled, icon: CheckCircle2, gradient: 'from-emerald-500 to-emerald-600' },
+          ]}
+        />
 
         {/* Multi-group warning */}
         {selectedGroupIds.size > 1 && (

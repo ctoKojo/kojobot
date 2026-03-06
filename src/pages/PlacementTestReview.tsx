@@ -209,7 +209,7 @@ export default function PlacementTestReview() {
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="bg-muted/30">
                     <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
                     <TableHead>{isRTL ? 'المحاولة' : 'Attempt'}</TableHead>
                     <TableHead>{isRTL ? 'الدرجة' : 'Score'}</TableHead>

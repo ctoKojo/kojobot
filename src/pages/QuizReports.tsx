@@ -391,7 +391,7 @@ export default function QuizReportsPage() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-muted/30">
                       <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
                       <TableHead>{isRTL ? 'الكويز' : 'Quiz'}</TableHead>
                       <TableHead>{isRTL ? 'الدرجة' : 'Score'}</TableHead>

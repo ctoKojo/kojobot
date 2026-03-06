@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, Search, Filter, CheckCircle, XCircle, AlertTriangle, Users, GraduationCap, RefreshCw, UserCheck, Timer, CalendarClock } from 'lucide-react';
+import { PageHeader } from '@/components/shared/PageHeader';
+import { StatsGrid } from '@/components/shared/StatsGrid';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -441,64 +443,25 @@ export default function MakeupSessionsPage() {
   return (
     <DashboardLayout title={isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions'}>
       <div className="space-y-6">
+        {/* Page Header */}
+        <PageHeader
+          title={isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions'}
+          subtitle={isRTL ? `${makeupSessions.length} سيشن تعويضية` : `${makeupSessions.length} makeup sessions`}
+          icon={CalendarClock}
+          gradient="from-violet-500 to-purple-600"
+        />
+
         {/* Stats */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.pending}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'معلق' : 'Pending'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.scheduled}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'مجدول' : 'Scheduled'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.completed}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'مكتمل' : 'Completed'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-purple-600" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.awaitingConfirmation}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'بانتظار التأكيد' : 'Awaiting Confirm'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <Timer className="h-5 w-5 text-indigo-600" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.responseRate}%</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'نسبة الاستجابة' : 'Response Rate'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <StatsGrid
+          columns={5}
+          stats={[
+            { label: isRTL ? 'معلق' : 'Pending', value: stats.pending, icon: AlertTriangle, gradient: 'from-amber-500 to-orange-500' },
+            { label: isRTL ? 'مجدول' : 'Scheduled', value: stats.scheduled, icon: Calendar, gradient: 'from-blue-500 to-blue-600' },
+            { label: isRTL ? 'مكتمل' : 'Completed', value: stats.completed, icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600' },
+            { label: isRTL ? 'بانتظار التأكيد' : 'Awaiting Confirm', value: stats.awaitingConfirmation, icon: UserCheck, gradient: 'from-purple-500 to-purple-600' },
+            { label: isRTL ? 'نسبة الاستجابة' : 'Response Rate', value: `${stats.responseRate}%`, icon: Timer, gradient: 'from-indigo-500 to-indigo-600' },
+          ]}
+        />
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4">

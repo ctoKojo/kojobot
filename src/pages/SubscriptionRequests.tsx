@@ -136,7 +136,7 @@ export default function SubscriptionRequests() {
             ) : (
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="bg-muted/30">
                     <TableHead>{l("Ref #", "رقم مرجعي")}</TableHead>
                     <TableHead>{l("Name", "الاسم")}</TableHead>
                     <TableHead>{l("Phone", "التليفون")}</TableHead>

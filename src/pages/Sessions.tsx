@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users, ChevronDown, FolderOpen, Snowflake, Eye, AlertTriangle, Video, Globe } from 'lucide-react';
+import { PageHeader } from '@/components/shared/PageHeader';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -546,16 +547,31 @@ export default function SessionsPage() {
   return (
     <DashboardLayout title={t.groups.sessions}>
       <div className="space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <div className="flex gap-4 flex-1 flex-wrap">
-            <div className="relative flex-1 min-w-[200px] max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* Page Header */}
+        <PageHeader
+          title={t.groups.sessions}
+          subtitle={isRTL ? `${sessions.length} سيشن في ${groups.length} مجموعة` : `${sessions.length} sessions across ${groups.length} groups`}
+          icon={Calendar}
+          gradient="from-indigo-500 to-purple-600"
+          actions={role === 'admin' ? (
+            <Button 
+              className="kojo-gradient" 
+              onClick={generateSessions}
+              disabled={generating}
+            >
+              <RefreshCw className={`h-4 w-4 me-2 ${generating ? 'animate-spin' : ''}`} />
+              {isRTL ? 'توليد السيشنات' : 'Generate Sessions'}
+            </Button>
+          ) : undefined}
+        />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t.common.search}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="ps-10"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -570,18 +586,6 @@ export default function SessionsPage() {
               </SelectContent>
             </Select>
           </div>
-
-          {role === 'admin' && (
-            <Button 
-              className="kojo-gradient" 
-              onClick={generateSessions}
-              disabled={generating}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${generating ? 'animate-spin' : ''}`} />
-              {isRTL ? 'توليد السيشنات' : 'Generate Sessions'}
-            </Button>
-          )}
-        </div>
 
         {/* Quick Time Filters */}
         <div className="flex gap-2 flex-wrap">
