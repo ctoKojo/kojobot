@@ -926,8 +926,35 @@ export default function GroupsPage() {
   return (
     <DashboardLayout title={t.groups.title}>
       <div className="space-y-6">
+        {/* Summary Stats */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: isRTL ? 'إجمالي المجموعات' : 'Total Groups', value: groups.length, icon: Users, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-500/10 to-blue-600/5' },
+            { label: isRTL ? 'نشطة' : 'Active', value: groups.filter(g => g.status === 'active' && g.has_started).length, icon: Play, gradient: 'from-emerald-500 to-emerald-600', bgGradient: 'from-emerald-500/10 to-emerald-600/5' },
+            { label: isRTL ? 'لم تبدأ' : 'Not Started', value: groups.filter(g => !g.has_started).length, icon: Clock, gradient: 'from-amber-500 to-orange-500', bgGradient: 'from-amber-500/10 to-orange-500/5' },
+            { label: isRTL ? 'مجمدة' : 'Frozen', value: groups.filter(g => g.status === 'frozen').length, icon: Snowflake, gradient: 'from-sky-400 to-sky-500', bgGradient: 'from-sky-400/10 to-sky-500/5' },
+          ].map((stat) => (
+            <Card key={stat.label} className="relative overflow-hidden border-0 shadow-sm">
+              <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`} />
+              <CardContent className="relative p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-2xl font-bold tracking-tight">
+                      {loading ? <div className="h-7 w-10 bg-muted animate-pulse rounded" /> : stat.value}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+                  </div>
+                  <div className={`p-2 rounded-xl bg-gradient-to-br ${stat.gradient}`}>
+                    <stat.icon className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
         {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 justify-between">
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -939,7 +966,7 @@ export default function GroupsPage() {
           </div>
 
           {canManageGroups && (
-            <Button className="kojo-gradient" onClick={() => {
+            <Button className="kojo-gradient shadow-md" onClick={() => {
               setEditingGroup(null);
               resetForm();
               setIsDialogOpen(true);
@@ -951,7 +978,7 @@ export default function GroupsPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           <Select value={filterDay} onValueChange={setFilterDay}>
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder={isRTL ? 'الموعد' : 'Day'} />

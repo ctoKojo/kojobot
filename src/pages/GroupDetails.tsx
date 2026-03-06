@@ -307,11 +307,13 @@ export default function GroupDetails() {
         )}
 
         {/* Group Header */}
-        <Card>
-          <CardContent className="p-6">
+        <Card className="relative overflow-hidden border-0 shadow-md">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full -translate-y-10 translate-x-10" />
+          <CardContent className="relative p-6">
             <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-              <div className="p-4 rounded-lg bg-primary/10">
-                <Users className="h-12 w-12 text-primary" />
+              <div className="p-4 rounded-xl bg-gradient-to-br from-primary to-secondary shadow-lg">
+                <Users className="h-12 w-12 text-white" />
               </div>
               <div className="flex-1">
                 <h1 className="text-2xl font-bold">
@@ -481,62 +483,28 @@ export default function GroupDetails() {
         </Card>
 
         {/* Quick Stats */}
-        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-          <Card>
-            <CardContent className="pt-4 md:pt-6 px-3 md:px-6">
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className="p-1.5 md:p-2 rounded-lg bg-blue-100">
-                  <Users className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+          {[
+            { label: isRTL ? 'الطلاب' : 'Students', value: data.students.length, icon: Users, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-500/10 to-blue-600/5' },
+            { label: isRTL ? 'الجلسات' : 'Sessions', value: data.sessions.length, icon: Calendar, gradient: 'from-emerald-500 to-emerald-600', bgGradient: 'from-emerald-500/10 to-emerald-600/5' },
+            { label: isRTL ? 'الكويزات' : 'Quizzes', value: data.quizAssignments.length, icon: BookOpen, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-500/10 to-purple-600/5' },
+            { label: isRTL ? 'الواجبات' : 'Assignments', value: data.assignments.length, icon: FileText, gradient: 'from-amber-500 to-orange-500', bgGradient: 'from-amber-500/10 to-orange-500/5' },
+          ].map((stat) => (
+            <Card key={stat.label} className="relative overflow-hidden border-0 shadow-sm">
+              <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`} />
+              <CardContent className="relative p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+                  </div>
+                  <div className={`p-2 rounded-xl bg-gradient-to-br ${stat.gradient}`}>
+                    <stat.icon className="h-4 w-4 text-white" />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xl md:text-2xl font-bold">{data.students.length}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">{isRTL ? 'الطلاب' : 'Students'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-4 md:pt-6 px-3 md:px-6">
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className="p-1.5 md:p-2 rounded-lg bg-green-100">
-                  <Calendar className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xl md:text-2xl font-bold">{data.sessions.length}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">{isRTL ? 'الجلسات' : 'Sessions'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-4 md:pt-6 px-3 md:px-6">
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className="p-1.5 md:p-2 rounded-lg bg-purple-100">
-                  <BookOpen className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-xl md:text-2xl font-bold">{data.quizAssignments.length}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">{isRTL ? 'الكويزات' : 'Quizzes'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-4 md:pt-6 px-3 md:px-6">
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className="p-1.5 md:p-2 rounded-lg bg-orange-100">
-                  <FileText className="h-4 w-4 md:h-5 md:w-5 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-xl md:text-2xl font-bold">{data.assignments.length}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">{isRTL ? 'الواجبات' : 'Assignments'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Detailed Tabs */}
