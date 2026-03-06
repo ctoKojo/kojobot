@@ -405,7 +405,7 @@ export default function InstructorProfile() {
 
   const isReception = employeeRole === 'reception';
   const tabCount = visibleSections.length;
-  const gridColsClass = tabCount <= 2 ? 'grid-cols-2' : tabCount <= 3 ? 'grid-cols-3' : tabCount <= 4 ? 'grid-cols-4' : tabCount <= 5 ? 'grid-cols-5' : 'grid-cols-6';
+  const gridColsClass = tabCount <= 1 ? 'grid-cols-1' : tabCount <= 2 ? 'grid-cols-2' : tabCount <= 3 ? 'grid-cols-3' : tabCount <= 4 ? 'grid-cols-4' : tabCount <= 5 ? 'grid-cols-5' : 'grid-cols-6';
 
   return (
     <DashboardLayout title={pageTitle}>
@@ -468,28 +468,26 @@ export default function InstructorProfile() {
                   {language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
                 </h1>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  <Badge variant="secondary" className={isReception ? "border-purple-500 text-purple-600" : "border-blue-500 text-blue-600"}>
+                  <Badge className={isReception ? "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 border-0" : "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-0"}>
                     {getRoleLabel(isReception ? 'reception' : 'instructor', isRTL)}
                   </Badge>
                   {!isReception && data.profile.specialization && (
-                    <Badge variant="outline">
+                    <Badge variant="outline" className="bg-muted/50">
                       {language === 'ar' ? data.profile.specialization_ar || data.profile.specialization : data.profile.specialization}
                     </Badge>
                   )}
                   <Badge 
-                    variant="outline"
-                    className={data.profile.employment_status === 'permanent' ? "bg-green-600 text-white border-green-600" : "border-amber-500 text-amber-600"}
+                    className={data.profile.employment_status === 'permanent' ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border-0" : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-0"}
                   >
                     {data.profile.employment_status === 'permanent' ? (isRTL ? 'مثبت' : 'Permanent') : (isRTL ? 'تدريب' : 'Training')}
                   </Badge>
                   <Badge 
-                    variant="outline"
-                    className={data.profile.work_type === 'full_time' ? "border-blue-500 text-blue-600" : "border-purple-500 text-purple-600"}
+                    className={data.profile.work_type === 'full_time' ? "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300 border-0" : "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300 border-0"}
                   >
                     {data.profile.work_type === 'full_time' ? (isRTL ? 'فول تايم' : 'Full-time') : (isRTL ? 'بارت تايم' : 'Part-time')}
                   </Badge>
                   {data.profile.employment_status === 'training' && data.profile.is_paid_trainee && (
-                    <Badge variant="outline" className="border-emerald-500 text-emerald-600">
+                    <Badge className="bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300 border-0">
                       {isRTL ? `متدرب بمقابل (${data.profile.hourly_rate} ج.م/ساعة)` : `Paid Trainee (${data.profile.hourly_rate} EGP/hr)`}
                     </Badge>
                   )}
