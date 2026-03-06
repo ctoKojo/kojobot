@@ -200,7 +200,9 @@ export default function PlacementTestSettings() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+              <div className="p-2 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg shadow-orange-500/20">
+                <Settings className="h-4 w-4 text-white" />
+              </div>
               {isRTL ? 'إعداد كويز تحديد المستوى' : 'Placement Quiz Configuration'}
             </CardTitle>
             <CardDescription>
@@ -279,7 +281,7 @@ export default function PlacementTestSettings() {
             <CardContent>
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
                     <TableHead>#</TableHead>
                     <TableHead>{isRTL ? 'السؤال' : 'Question'}</TableHead>
                     <TableHead>{isRTL ? 'المستوى' : 'Level'}</TableHead>

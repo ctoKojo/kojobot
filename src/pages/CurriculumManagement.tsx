@@ -403,11 +403,11 @@ export default function CurriculumManagement() {
             {loadingSessions ? (
               <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
             ) : sessions.length > 0 ? (
-              <Card>
+              <Card className="border-0 shadow-sm">
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
                         <TableHead className="w-12">#</TableHead>
                         <TableHead>{isRTL ? 'العنوان' : 'Title'}</TableHead>
                         <TableHead className="w-40">{isRTL ? 'الاكتمال' : 'Completion'}</TableHead>

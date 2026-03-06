@@ -257,12 +257,12 @@ export default function LevelsPage() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={t.common.search}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="ps-10"
             />
           </div>
 
@@ -390,11 +390,11 @@ export default function LevelsPage() {
         </div>
 
         {/* Table */}
-        <Card>
+        <Card className="border-0 shadow-sm">
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
                   <TableHead>{isRTL ? 'الترتيب' : 'Order'}</TableHead>
                   <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
                    <TableHead>{isRTL ? 'عدد السيشنات' : 'Sessions'}</TableHead>

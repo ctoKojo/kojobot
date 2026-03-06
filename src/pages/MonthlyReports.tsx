@@ -462,7 +462,7 @@ export default function MonthlyReports() {
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/20">
                 <Calendar className="h-5 w-5 text-white" />
               </div>
               {isRTL ? 'التقارير الشهرية' : 'Monthly Reports'}

@@ -597,7 +597,7 @@ export default function GroupDetails() {
                     {/* Desktop Table View */}
                     <Table className="hidden md:table">
                       <TableHeader>
-                        <TableRow>
+                        <TableRow className="bg-muted/30 hover:bg-muted/30">
                           <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
                           <TableHead className="text-center">{isRTL ? 'حضر' : 'Present'}</TableHead>
                           <TableHead className="text-center">{isRTL ? 'غاب' : 'Absent'}</TableHead>
@@ -672,7 +672,7 @@ export default function GroupDetails() {
                 ) : (
                   <Table>
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
                         <TableHead>#</TableHead>
                         <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
                         <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
