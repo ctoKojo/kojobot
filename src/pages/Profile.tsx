@@ -182,10 +182,13 @@ export default function Profile() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-2xl font-bold flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+                <User className="h-5 w-5 text-white" />
+              </div>
               {isRTL ? 'الملف الشخصي' : 'Profile'}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm text-muted-foreground mt-1">
               {isRTL ? 'إدارة معلوماتك الشخصية' : 'Manage your personal information'}
             </p>
           </div>

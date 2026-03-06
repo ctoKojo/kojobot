@@ -82,16 +82,19 @@ export default function SubscriptionRequests() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <ClipboardList className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
+                <ClipboardList className="h-5 w-5 text-white" />
+              </div>
               {l("Subscription Requests", "طلبات الاشتراك")}
+              {pendingCount > 0 && (
+                <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                  {pendingCount} {l("pending", "معلق")}
+                </Badge>
+              )}
             </h1>
-            {pendingCount > 0 && (
-              <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                {pendingCount} {l("pending", "معلق")}
-              </Badge>
-            )}
+            <p className="text-sm text-muted-foreground mt-1">{l("Manage incoming subscription requests", "إدارة طلبات الاشتراك الواردة")}</p>
           </div>
         </div>
 

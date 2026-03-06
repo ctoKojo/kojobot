@@ -123,13 +123,23 @@ export default function DeductionRules() {
   return (
     <DashboardLayout title={isRTL ? 'قواعد الخصم التلقائي' : 'Auto Deduction Rules'}>
       <div className="space-y-6 max-w-4xl">
-        {/* Explanation */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-destructive" />
-              <CardTitle className="text-xl">{isRTL ? 'كيف تعمل؟' : 'How it works?'}</CardTitle>
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 shadow-lg">
+              <DollarSign className="h-5 w-5 text-white" />
             </div>
+            {isRTL ? 'قواعد الخصم التلقائي' : 'Auto Deduction Rules'}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isRTL ? 'إدارة قواعد الخصم التلقائي من الرواتب' : 'Manage automatic salary deduction rules'}
+          </p>
+        </div>
+
+        {/* Explanation */}
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle className="text-base">{isRTL ? 'كيف تعمل؟' : 'How it works?'}</CardTitle>
             <CardDescription className="text-sm">
               {isRTL
                 ? 'حدد مبلغ الخصم التلقائي من الراتب بناءً على عدد ونوع وخطورة الإنذارات خلال 30 يوم. يمكنك أيضاً تحديد توصية بالإيقاف بدلاً من الخصم.'

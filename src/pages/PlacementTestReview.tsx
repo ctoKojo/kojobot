@@ -177,20 +177,29 @@ export default function PlacementTestReview() {
   return (
     <DashboardLayout title={isRTL ? 'مراجعة تحديد المستوى' : 'Placement Test Review'}>
       <div className="space-y-6">
-        {pendingCount > 0 && (
-          <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20">
-            <CardContent className="pt-6 flex items-center gap-3">
-              <ClipboardCheck className="h-5 w-5 text-amber-600" />
-              <span className="font-medium">
-                {isRTL ? `${pendingCount} امتحان في انتظار المراجعة` : `${pendingCount} test(s) pending review`}
-              </span>
-            </CardContent>
-          </Card>
-        )}
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 shadow-lg">
+                <ClipboardCheck className="h-5 w-5 text-white" />
+              </div>
+              {isRTL ? 'مراجعة تحديد المستوى' : 'Placement Test Review'}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isRTL ? 'مراجعة واعتماد نتائج امتحانات تحديد المستوى' : 'Review and approve placement test results'}
+            </p>
+          </div>
+          {pendingCount > 0 && (
+            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 text-sm px-3 py-1.5">
+              {isRTL ? `${pendingCount} في الانتظار` : `${pendingCount} pending`}
+            </Badge>
+          )}
+        </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>{isRTL ? 'نتائج امتحانات تحديد المستوى' : 'Placement Test Results'}</CardTitle>
+            <CardTitle className="text-base">{isRTL ? 'نتائج الامتحانات' : 'Test Results'}</CardTitle>
           </CardHeader>
           <CardContent>
             {results.length === 0 ? (

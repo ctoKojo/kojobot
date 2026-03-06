@@ -186,64 +186,40 @@ export default function ActivityLogPage() {
   return (
     <DashboardLayout title={t.activityLog.title}>
       <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg">
+              <Activity className="h-5 w-5 text-white" />
+            </div>
+            {t.activityLog.title}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">{isRTL ? 'تتبع كل العمليات في النظام' : 'Track all system operations'}</p>
+        </div>
+
         {/* Header Stats */}
         <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-2xl font-bold">{logs.length}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {isRTL ? 'إجمالي السجلات' : 'Total Logs'}
-                  </p>
+          {[
+            { label: isRTL ? 'إجمالي السجلات' : 'Total Logs', value: logs.length, icon: Activity, gradient: 'from-indigo-500 to-indigo-600' },
+            { label: isRTL ? 'عمليات الدخول' : 'Logins', value: logs.filter(l => l.action === 'login').length, icon: User, gradient: 'from-emerald-500 to-emerald-600' },
+            { label: isRTL ? 'تحديثات' : 'Updates', value: logs.filter(l => l.action === 'update').length, icon: RefreshCw, gradient: 'from-blue-500 to-blue-600' },
+            { label: isRTL ? 'مستخدمين نشطين' : 'Active Users', value: Object.keys(users).length, icon: User, gradient: 'from-purple-500 to-purple-600' },
+          ].map((stat) => (
+            <Card key={stat.label} className="relative overflow-hidden hover:shadow-md transition-all duration-300">
+              <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                    <stat.icon className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <User className="h-5 w-5 text-green-600" />
-                <div>
-                  <p className="text-2xl font-bold">
-                    {logs.filter(l => l.action === 'login').length}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {isRTL ? 'عمليات الدخول' : 'Logins'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="h-5 w-5 text-blue-600" />
-                <div>
-                  <p className="text-2xl font-bold">
-                    {logs.filter(l => l.action === 'update').length}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {isRTL ? 'تحديثات' : 'Updates'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-purple-600" />
-                <div>
-                  <p className="text-2xl font-bold">{Object.keys(users).length}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {isRTL ? 'مستخدمين نشطين' : 'Active Users'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Filters */}

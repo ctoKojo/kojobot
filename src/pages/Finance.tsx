@@ -239,16 +239,19 @@ export default function Finance() {
         {/* Stats */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
           {[
-            { label: isRTL ? 'إيرادات الشهر الحالي' : 'This Month Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-100', adminOnly: true },
-            { label: isRTL ? 'المبالغ المستحقة' : 'Outstanding', value: `${stats.totalOutstanding} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, color: 'text-orange-600', bg: 'bg-orange-100', adminOnly: true },
-            { label: isRTL ? 'اشتراكات نشطة' : 'Active', value: stats.activeCount, icon: Users, color: 'text-blue-600', bg: 'bg-blue-100', adminOnly: false },
-            { label: isRTL ? 'متأخرين' : 'Overdue', value: stats.overdueCount, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100', adminOnly: false },
-            { label: isRTL ? 'موقوفين' : 'Suspended', value: stats.suspendedCount, icon: Ban, color: 'text-gray-600', bg: 'bg-gray-100', adminOnly: false },
+            { label: isRTL ? 'إيرادات الشهر الحالي' : 'This Month Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600', adminOnly: true },
+            { label: isRTL ? 'المبالغ المستحقة' : 'Outstanding', value: `${stats.totalOutstanding} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, gradient: 'from-amber-500 to-orange-500', adminOnly: true },
+            { label: isRTL ? 'اشتراكات نشطة' : 'Active', value: stats.activeCount, icon: Users, gradient: 'from-blue-500 to-blue-600', adminOnly: false },
+            { label: isRTL ? 'متأخرين' : 'Overdue', value: stats.overdueCount, icon: AlertTriangle, gradient: 'from-red-500 to-red-600', adminOnly: false },
+            { label: isRTL ? 'موقوفين' : 'Suspended', value: stats.suspendedCount, icon: Ban, gradient: 'from-gray-500 to-gray-600', adminOnly: false },
           ].filter(stat => !stat.adminOnly || role === 'admin').map(stat => (
-            <Card key={stat.label}>
+            <Card key={stat.label} className="relative overflow-hidden hover:shadow-md transition-all duration-300">
+              <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${stat.bg}`}><stat.icon className={`h-5 w-5 ${stat.color}`} /></div>
+                  <div className={`p-2.5 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                    <stat.icon className="h-5 w-5 text-white" />
+                  </div>
                   <div>
                     <p className="text-2xl font-bold">{loading ? '...' : stat.value}</p>
                     <p className="text-xs text-muted-foreground">{stat.label}</p>
