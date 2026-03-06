@@ -619,18 +619,21 @@ export default function SessionsPage() {
 
         {/* Today's Sessions Bar */}
         {todaySessions.length > 0 && timeFilter === 'all' && (
-          <Card className="border-primary/30 bg-primary/5">
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="h-4 w-4 text-primary" />
+          <Card className="relative overflow-hidden border-0 shadow-md">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-secondary/5" />
+            <CardContent className="relative pt-4 pb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-1.5 rounded-lg bg-gradient-to-br from-primary to-secondary">
+                  <Calendar className="h-4 w-4 text-white" />
+                </div>
                 <h3 className="font-semibold text-sm">{isRTL ? `سيشنات اليوم (${todaySessions.length})` : `Today's Sessions (${todaySessions.length})`}</h3>
               </div>
-              <div className="flex gap-3 flex-wrap">
+              <div className="flex gap-2 flex-wrap">
                 {todaySessions.map(s => (
                   <Badge 
                     key={s.id} 
                     variant="outline" 
-                    className="cursor-pointer hover:bg-primary/10 py-1.5 px-3"
+                    className="cursor-pointer hover:bg-primary/10 hover:shadow-sm transition-all py-1.5 px-3"
                     onClick={() => navigate(`/session/${s.id}`)}
                   >
                     <span className="font-medium">{s.groupName}</span>

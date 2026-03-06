@@ -341,12 +341,14 @@ export default function StudentProfile() {
         </div>
 
         {/* Profile Header */}
-        <Card>
-          <CardContent className="p-6">
+        <Card className="relative overflow-hidden border-0 shadow-md">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full -translate-y-10 translate-x-10" />
+          <CardContent className="relative p-6">
             <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={data.profile.avatar_url} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+              <Avatar className="h-24 w-24 ring-4 ring-primary/20 shadow-lg">
+                <AvatarImage src={data.profile.avatar_url} className="object-cover" />
+                <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-secondary text-white">
                   {data.profile.full_name?.charAt(0) || 'S'}
                 </AvatarFallback>
               </Avatar>
@@ -437,62 +439,28 @@ export default function StudentProfile() {
         </Card>
 
         {/* Quick Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-100">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+          {[
+            { label: isRTL ? 'نسبة الحضور' : 'Attendance Rate', value: `${attendanceStats.rate}%`, icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bgGradient: 'from-emerald-500/10 to-emerald-600/5' },
+            { label: isRTL ? 'كويزات مكتملة' : 'Quizzes Completed', value: quizStats.completed, icon: BookOpen, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-500/10 to-blue-600/5' },
+            { label: isRTL ? 'متوسط الدرجات' : 'Avg. Score', value: `${quizStats.avgScore}%`, icon: Award, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-500/10 to-purple-600/5' },
+            { label: isRTL ? 'إنذارات' : 'Warnings', value: data.warnings.length, icon: AlertTriangle, gradient: data.warnings.length > 0 ? 'from-red-500 to-red-600' : 'from-amber-500 to-orange-500', bgGradient: data.warnings.length > 0 ? 'from-red-500/10 to-red-600/5' : 'from-amber-500/10 to-orange-500/5' },
+          ].map((stat) => (
+            <Card key={stat.label} className="relative overflow-hidden border-0 shadow-sm">
+              <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`} />
+              <CardContent className="relative p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+                  </div>
+                  <div className={`p-2 rounded-xl bg-gradient-to-br ${stat.gradient}`}>
+                    <stat.icon className="h-4 w-4 text-white" />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{attendanceStats.rate}%</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'نسبة الحضور' : 'Attendance Rate'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-100">
-                  <BookOpen className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{quizStats.completed}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'كويزات مكتملة' : 'Quizzes Completed'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-100">
-                  <Award className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{quizStats.avgScore}%</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'متوسط الدرجات' : 'Avg. Score'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-100">
-                  <AlertTriangle className="h-5 w-5 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{data.warnings.length}</p>
-                  <p className="text-sm text-muted-foreground">{isRTL ? 'إنذارات' : 'Warnings'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Group Info */}

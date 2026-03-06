@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, UserPlus, AlertCircle, Check } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, UserPlus, AlertCircle, Check, GraduationCap, Users, TrendingUp } from 'lucide-react';
 import { AvatarUpload } from '@/components/AvatarUpload';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -631,8 +631,59 @@ export default function StudentsPage() {
   return (
     <DashboardLayout title={t.students.title}>
       <div className="space-y-6">
+        {/* Summary Stats */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          {[
+            { 
+              label: isRTL ? 'إجمالي الطلاب' : 'Total Students', 
+              value: students.length, 
+              icon: GraduationCap, 
+              gradient: 'from-blue-500 to-blue-600',
+              bgGradient: 'from-blue-500/10 to-blue-600/5',
+            },
+            { 
+              label: isRTL ? 'في مجموعات' : 'In Groups', 
+              value: students.filter(s => activeGroupStudentIds.has(s.user_id)).length, 
+              icon: Users, 
+              gradient: 'from-emerald-500 to-emerald-600',
+              bgGradient: 'from-emerald-500/10 to-emerald-600/5',
+            },
+            { 
+              label: isRTL ? 'غير مسكّن' : 'No Group', 
+              value: students.filter(s => !activeGroupStudentIds.has(s.user_id)).length, 
+              icon: AlertCircle, 
+              gradient: 'from-amber-500 to-orange-500',
+              bgGradient: 'from-amber-500/10 to-orange-500/5',
+            },
+            { 
+              label: isRTL ? 'اشتراك فعال' : 'Active Subs', 
+              value: subscriptions.length, 
+              icon: TrendingUp, 
+              gradient: 'from-purple-500 to-purple-600',
+              bgGradient: 'from-purple-500/10 to-purple-600/5',
+            },
+          ].map((stat) => (
+            <Card key={stat.label} className="relative overflow-hidden border-0 shadow-sm">
+              <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`} />
+              <CardContent className="relative p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-2xl font-bold tracking-tight">
+                      {loading ? <div className="h-7 w-10 bg-muted animate-pulse rounded" /> : stat.value}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+                  </div>
+                  <div className={`p-2 rounded-xl bg-gradient-to-br ${stat.gradient}`}>
+                    <stat.icon className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
         {/* Header Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 justify-between">
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -643,7 +694,7 @@ export default function StudentsPage() {
             />
           </div>
 
-          <Button className="kojo-gradient" onClick={() => {
+          <Button className="kojo-gradient shadow-md" onClick={() => {
             setEditingStudent(null);
             resetForm();
             setIsDialogOpen(true);
