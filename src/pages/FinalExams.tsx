@@ -275,7 +275,7 @@ export default function FinalExams() {
               placeholder={isRTL ? 'بحث بالاسم أو المجموعة...' : 'Search by name or group...'}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className={isRTL ? 'pr-9' : 'pl-9'}
+              className="ps-9"
             />
           </div>
           <div className="flex flex-wrap gap-2">

@@ -1564,7 +1564,7 @@ export default function GroupsPage() {
           <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/30">
                   <TableHead>{t.groups.groupName}</TableHead>
                   <TableHead>{isRTL ? 'النوع' : 'Type'}</TableHead>
                   <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
