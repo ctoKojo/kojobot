@@ -165,41 +165,26 @@ export function CashFlowTab() {
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30"><TrendingUp className="h-5 w-5 text-emerald-600" /></div>
-              <div>
-                <p className="text-2xl font-bold text-emerald-600">{cashInThisMonth} {isRTL ? 'ج.م' : 'EGP'}</p>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'الوارد الفعلي هذا الشهر' : 'Actual Cash In (This Month)'}</p>
+        {[
+          { label: isRTL ? 'الوارد الفعلي هذا الشهر' : 'Actual Cash In (This Month)', value: `${cashInThisMonth} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600' },
+          { label: isRTL ? 'المصروفات هذا الشهر' : 'Expenses (This Month)', value: `${expensesThisMonth} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingDown, gradient: 'from-red-500 to-red-600' },
+          { label: isRTL ? 'صافي التدفق الفعلي' : 'Net Cash Flow', value: `${netFlow} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, gradient: netFlow >= 0 ? 'from-emerald-500 to-emerald-600' : 'from-red-500 to-red-600' },
+        ].map(stat => (
+          <Card key={stat.label} className="relative overflow-hidden hover:shadow-md transition-all duration-300">
+            <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                  <stat.icon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-destructive/10"><TrendingDown className="h-5 w-5 text-destructive" /></div>
-              <div>
-                <p className="text-2xl font-bold text-destructive">{expensesThisMonth} {isRTL ? 'ج.م' : 'EGP'}</p>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'المصروفات هذا الشهر' : 'Expenses (This Month)'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${netFlow >= 0 ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-destructive/10'}`}>
-                <DollarSign className={`h-5 w-5 ${netFlow >= 0 ? 'text-emerald-600' : 'text-destructive'}`} />
-              </div>
-              <div>
-                <p className={`text-2xl font-bold ${netFlow >= 0 ? 'text-emerald-600' : 'text-destructive'}`}>{netFlow} {isRTL ? 'ج.م' : 'EGP'}</p>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'صافي التدفق الفعلي' : 'Net Cash Flow'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Expected Revenue */}

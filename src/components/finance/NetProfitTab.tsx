@@ -88,50 +88,27 @@ export function NetProfitTab() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'إجمالي الإيرادات' : 'Total Revenue'}</p>
-                <p className="text-xl font-bold text-green-600">{totalRevenue} {isRTL ? 'ج.م' : 'EGP'}</p>
+        {[
+          { label: isRTL ? 'إجمالي الإيرادات' : 'Total Revenue', value: `${totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600' },
+          { label: isRTL ? 'إجمالي المصروفات' : 'Total Expenses', value: `${totalExpenses} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingDown, gradient: 'from-red-500 to-red-600' },
+          { label: isRTL ? 'إجمالي الرواتب' : 'Total Salaries', value: `${totalSalaries} ${isRTL ? 'ج.م' : 'EGP'}`, icon: Minus, gradient: 'from-orange-500 to-amber-500' },
+          { label: isRTL ? 'صافي الربح' : 'Net Profit', value: `${totalProfit} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, gradient: totalProfit >= 0 ? 'from-emerald-500 to-emerald-600' : 'from-red-500 to-red-600' },
+        ].map(stat => (
+          <Card key={stat.label} className="relative overflow-hidden hover:shadow-md transition-all duration-300">
+            <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                  <stat.icon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-destructive" />
-              <div>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'إجمالي المصروفات' : 'Total Expenses'}</p>
-                <p className="text-xl font-bold text-destructive">{totalExpenses} {isRTL ? 'ج.م' : 'EGP'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2">
-              <Minus className="h-5 w-5 text-orange-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'إجمالي الرواتب' : 'Total Salaries'}</p>
-                <p className="text-xl font-bold text-orange-600">{totalSalaries} {isRTL ? 'ج.م' : 'EGP'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className={totalProfit >= 0 ? 'border-green-200' : 'border-red-200'}>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2">
-              <DollarSign className={`h-5 w-5 ${totalProfit >= 0 ? 'text-green-600' : 'text-destructive'}`} />
-              <div>
-                <p className="text-xs text-muted-foreground">{isRTL ? 'صافي الربح' : 'Net Profit'}</p>
-                <p className={`text-xl font-bold ${totalProfit >= 0 ? 'text-green-600' : 'text-destructive'}`}>{totalProfit} {isRTL ? 'ج.م' : 'EGP'}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Charts */}
@@ -178,17 +155,17 @@ export function NetProfitTab() {
       </div>
 
       {/* Monthly Breakdown Table */}
-      <Card>
-        <CardHeader><CardTitle className="text-base">{isRTL ? 'التفاصيل الشهرية' : 'Monthly Breakdown'}</CardTitle></CardHeader>
-        <CardContent>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="border-b bg-muted/30"><CardTitle className="text-base">{isRTL ? 'التفاصيل الشهرية' : 'Monthly Breakdown'}</CardTitle></CardHeader>
+        <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>{isRTL ? 'الشهر' : 'Month'}</TableHead>
-                <TableHead>{isRTL ? 'الإيرادات' : 'Revenue'}</TableHead>
-                <TableHead>{isRTL ? 'المصروفات' : 'Expenses'}</TableHead>
-                <TableHead>{isRTL ? 'الرواتب' : 'Salaries'}</TableHead>
-                <TableHead>{isRTL ? 'صافي الربح' : 'Net Profit'}</TableHead>
+              <TableRow className="bg-muted/20 hover:bg-muted/20">
+                <TableHead className="font-semibold">{isRTL ? 'الشهر' : 'Month'}</TableHead>
+                <TableHead className="font-semibold">{isRTL ? 'الإيرادات' : 'Revenue'}</TableHead>
+                <TableHead className="font-semibold">{isRTL ? 'المصروفات' : 'Expenses'}</TableHead>
+                <TableHead className="font-semibold">{isRTL ? 'الرواتب' : 'Salaries'}</TableHead>
+                <TableHead className="font-semibold">{isRTL ? 'صافي الربح' : 'Net Profit'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

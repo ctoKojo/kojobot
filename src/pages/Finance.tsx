@@ -263,20 +263,20 @@ export default function Finance() {
         </div>
 
         <Tabs defaultValue="subscriptions">
-          <TabsList className="flex-wrap">
-            <TabsTrigger value="subscriptions">{isRTL ? 'الاشتراكات' : 'Subscriptions'}</TabsTrigger>
-            <TabsTrigger value="payments">{isRTL ? 'سجل المدفوعات' : 'Payment History'}</TabsTrigger>
-            <TabsTrigger value="expenses">{isRTL ? 'المصروفات' : 'Expenses'}</TabsTrigger>
-            {role === 'admin' && <TabsTrigger value="salaries">{isRTL ? 'الرواتب' : 'Salaries'}</TabsTrigger>}
-            {role === 'admin' && <TabsTrigger value="profit">{isRTL ? 'صافي الربح' : 'Net Profit'}</TabsTrigger>}
-            {role === 'admin' && <TabsTrigger value="reports">{isRTL ? 'التقارير' : 'Reports'}</TabsTrigger>}
-            <TabsTrigger value="tracker">{isRTL ? 'متابعة الأقساط' : 'Payment Tracker'}</TabsTrigger>
-            {role === 'admin' && <TabsTrigger value="cashflow">{isRTL ? 'التدفق النقدي' : 'Cash Flow'}</TabsTrigger>}
+          <TabsList className="flex-wrap h-auto gap-1 bg-muted/60 p-1.5 rounded-xl">
+            <TabsTrigger value="subscriptions" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'الاشتراكات' : 'Subscriptions'}</TabsTrigger>
+            <TabsTrigger value="payments" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'سجل المدفوعات' : 'Payment History'}</TabsTrigger>
+            <TabsTrigger value="expenses" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'المصروفات' : 'Expenses'}</TabsTrigger>
+            {role === 'admin' && <TabsTrigger value="salaries" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'الرواتب' : 'Salaries'}</TabsTrigger>}
+            {role === 'admin' && <TabsTrigger value="profit" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'صافي الربح' : 'Net Profit'}</TabsTrigger>}
+            {role === 'admin' && <TabsTrigger value="reports" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'التقارير' : 'Reports'}</TabsTrigger>}
+            <TabsTrigger value="tracker" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'متابعة الأقساط' : 'Payment Tracker'}</TabsTrigger>
+            {role === 'admin' && <TabsTrigger value="cashflow" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'التدفق النقدي' : 'Cash Flow'}</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="subscriptions">
-            <Card>
-              <CardHeader>
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="border-b bg-muted/30">
                 <div className="flex flex-col sm:flex-row gap-4 justify-between">
                   <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -294,18 +294,18 @@ export default function Finance() {
                   </Select>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                      <TableHead>{isRTL ? 'الباقة' : 'Plan'}</TableHead>
-                      <TableHead>{isRTL ? 'نوع الدفع' : 'Payment Type'}</TableHead>
-                      <TableHead>{isRTL ? 'المدفوع' : 'Paid'}</TableHead>
-                      <TableHead>{isRTL ? 'المتبقي' : 'Remaining'}</TableHead>
-                      <TableHead>{isRTL ? 'الدفع القادم' : 'Next Payment'}</TableHead>
-                      <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                      <TableHead>{isRTL ? 'إجراءات' : 'Actions'}</TableHead>
+                    <TableRow className="bg-muted/20 hover:bg-muted/20">
+                      <TableHead className="font-semibold">{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'الباقة' : 'Plan'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'نوع الدفع' : 'Payment Type'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'المدفوع' : 'Paid'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'المتبقي' : 'Remaining'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'الدفع القادم' : 'Next Payment'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'إجراءات' : 'Actions'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -364,31 +364,37 @@ export default function Finance() {
           </TabsContent>
 
           <TabsContent value="payments">
-            <Card>
-              <CardHeader><CardTitle>{isRTL ? 'آخر المدفوعات' : 'Recent Payments'}</CardTitle></CardHeader>
-              <CardContent>
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="border-b bg-muted/30">
+                <CardTitle className="text-base">{isRTL ? 'آخر المدفوعات' : 'Recent Payments'}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
-                      <TableHead>{isRTL ? 'المبلغ' : 'Amount'}</TableHead>
-                      <TableHead>{isRTL ? 'طريقة الدفع' : 'Method'}</TableHead>
-                      <TableHead>{isRTL ? 'النوع' : 'Type'}</TableHead>
-                      <TableHead>{isRTL ? 'ملاحظات' : 'Notes'}</TableHead>
+                    <TableRow className="bg-muted/20 hover:bg-muted/20">
+                      <TableHead className="font-semibold">{isRTL ? 'التاريخ' : 'Date'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'المبلغ' : 'Amount'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'طريقة الدفع' : 'Method'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'النوع' : 'Type'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'ملاحظات' : 'Notes'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedPayments.map((p: any) => (
-                      <TableRow key={p.id}>
+                      <TableRow key={p.id} className="hover:bg-muted/30 transition-colors">
                         <TableCell>{formatDate(p.payment_date, language)}</TableCell>
-                        <TableCell className="font-medium text-green-600">{p.amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
-                        <TableCell>{p.payment_method === 'cash' ? (isRTL ? 'كاش' : 'Cash') : (isRTL ? 'تحويل' : 'Transfer')}</TableCell>
+                        <TableCell className="font-medium text-emerald-600">{p.amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="font-normal">
+                            {p.payment_method === 'cash' ? (isRTL ? 'كاش' : 'Cash') : (isRTL ? 'تحويل' : 'Transfer')}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline">
                             {p.payment_type === 'prior_payment' ? (isRTL ? 'دفعة سابقة' : 'Prior') : (isRTL ? 'عادي' : 'Regular')}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{p.notes || '-'}</TableCell>
+                        <TableCell className="text-muted-foreground max-w-[200px] truncate">{p.notes || '-'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

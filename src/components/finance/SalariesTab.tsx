@@ -291,43 +291,48 @@ export function SalariesTab() {
     <div className="space-y-4">
       {/* Summary Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card><CardContent className="pt-6">
-          <p className="text-sm text-muted-foreground">{isRTL ? 'إجمالي الرواتب الأساسية' : 'Total Base Salaries'}</p>
-          <p className="text-2xl font-bold">{totalBaseSalaries} {isRTL ? 'ج.م' : 'EGP'}</p>
-        </CardContent></Card>
-        <Card><CardContent className="pt-6">
-          <p className="text-sm text-muted-foreground">{isRTL ? 'صافي الشهر الحالي' : 'Current Month Net'}</p>
-          <p className="text-2xl font-bold text-primary">{totalNetThisMonth} {isRTL ? 'ج.م' : 'EGP'}</p>
-        </CardContent></Card>
-        <Card><CardContent className="pt-6">
-          <p className="text-sm text-muted-foreground">{isRTL ? 'عدد الموظفين' : 'Employees'}</p>
-          <p className="text-2xl font-bold">{employees.length}</p>
-        </CardContent></Card>
-        <Card><CardContent className="pt-6">
-          <p className="text-sm text-muted-foreground">{isRTL ? 'حركات الشهر' : 'Month Events'}</p>
-          <p className="text-2xl font-bold">{events.length}</p>
-        </CardContent></Card>
+        {[
+          { label: isRTL ? 'إجمالي الرواتب الأساسية' : 'Total Base Salaries', value: `${totalBaseSalaries} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, gradient: 'from-purple-500 to-purple-600' },
+          { label: isRTL ? 'صافي الشهر الحالي' : 'Current Month Net', value: `${totalNetThisMonth} ${isRTL ? 'ج.م' : 'EGP'}`, icon: Wallet, gradient: 'from-emerald-500 to-emerald-600' },
+          { label: isRTL ? 'عدد الموظفين' : 'Employees', value: employees.length, icon: Clock, gradient: 'from-blue-500 to-blue-600' },
+          { label: isRTL ? 'حركات الشهر' : 'Month Events', value: events.length, icon: AlertCircle, gradient: 'from-amber-500 to-orange-500' },
+        ].map(stat => (
+          <Card key={stat.label} className="relative overflow-hidden hover:shadow-md transition-all duration-300">
+            <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
+                  <stat.icon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stat.value}</p>
+                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Tabs defaultValue="employees">
-        <TabsList>
-          <TabsTrigger value="employees"><Wallet className="h-4 w-4 mr-1.5" />{isRTL ? 'المحافظ' : 'Wallets'}</TabsTrigger>
-          <TabsTrigger value="ledger">{isRTL ? 'سجل الحركات' : 'Event Ledger'}</TabsTrigger>
-          <TabsTrigger value="history">{isRTL ? 'سجل الصرف' : 'Payment History'}</TabsTrigger>
+        <TabsList className="h-auto gap-1 bg-muted/60 p-1.5 rounded-xl">
+          <TabsTrigger value="employees" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm"><Wallet className="h-4 w-4 mr-1.5" />{isRTL ? 'المحافظ' : 'Wallets'}</TabsTrigger>
+          <TabsTrigger value="ledger" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'سجل الحركات' : 'Event Ledger'}</TabsTrigger>
+          <TabsTrigger value="history" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'سجل الصرف' : 'Payment History'}</TabsTrigger>
         </TabsList>
 
         {/* ==================== TAB 1: Employee Wallets ==================== */}
         <TabsContent value="employees">
-          <Card><CardContent className="pt-6">
+          <Card className="border-0 shadow-sm"><CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
-                  <TableHead>{isRTL ? 'الدور' : 'Role'}</TableHead>
-                  <TableHead>{isRTL ? 'الراتب الأساسي' : 'Base Salary'}</TableHead>
-                  <TableHead>{isRTL ? 'الرصيد الحالي' : 'Current Balance'}</TableHead>
-                  <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                  <TableHead>{isRTL ? 'إجراءات' : 'Actions'}</TableHead>
+                <TableRow className="bg-muted/20 hover:bg-muted/20">
+                  <TableHead className="font-semibold">{isRTL ? 'الاسم' : 'Name'}</TableHead>
+                  <TableHead className="font-semibold">{isRTL ? 'الدور' : 'Role'}</TableHead>
+                  <TableHead className="font-semibold">{isRTL ? 'الراتب الأساسي' : 'Base Salary'}</TableHead>
+                  <TableHead className="font-semibold">{isRTL ? 'الرصيد الحالي' : 'Current Balance'}</TableHead>
+                  <TableHead className="font-semibold">{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                  <TableHead className="font-semibold">{isRTL ? 'إجراءات' : 'Actions'}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
