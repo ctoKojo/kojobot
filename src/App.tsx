@@ -144,7 +144,7 @@ const App = () => (
                   <Route path="/subscription-requests" element={<ProtectedRoute allowedRoles={['admin']}><SubscriptionRequests /></ProtectedRoute>} />
                   <Route path="/placement-test-settings" element={<ProtectedRoute allowedRoles={['admin']}><PlacementTestSettings /></ProtectedRoute>} />
                   <Route path="/placement-test-review" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><PlacementTestReview /></ProtectedRoute>} />
-                  <Route path="/placement-test/:id" element={<ProtectedRoute allowedRoles={['student']}><TakePlacementTest /></ProtectedRoute>} />
+                  <Route path="/placement-test" element={<ProtectedRoute allowedRoles={['student']}><TakePlacementTest /></ProtectedRoute>} />
                   <Route path="/final-exams" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><FinalExams /></ProtectedRoute>} />
                   <Route path="/account-suspended" element={<AccountSuspended />} />
                   <Route path="/account-terminated" element={<AccountTerminated />} />

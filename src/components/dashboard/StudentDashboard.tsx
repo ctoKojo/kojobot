@@ -254,17 +254,17 @@ export function StudentDashboard() {
 
   useEffect(() => {
     if (user) {
-      supabase.from('placement_tests')
-        .select('id, status, scheduled_at, duration_minutes')
+      (supabase.from('placement_exam_student_view' as any)
+        .select('id, status')
         .eq('student_id', user.id)
-        .in('status', ['pending', 'in_progress', 'completed'])
+        .in('status', ['in_progress', 'submitted']) as any)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
         .then(({ data }) => {
           if (data) {
             setPlacementTest(data);
-            if (data.status === 'completed') {
+            if (data.status === 'submitted') {
               setPlacementReviewPending(true);
             }
           }
@@ -272,19 +272,12 @@ export function StudentDashboard() {
     }
   }, [user]);
 
-  // Check if test window is active
-  const isTestWindowActive = () => {
-    if (!placementTest) return false;
-    const scheduled = new Date(placementTest.scheduled_at).getTime();
-    const now = Date.now();
-    const graceMs = 5 * 60 * 1000;
-    return now >= (scheduled - graceMs) && now <= (scheduled + placementTest.duration_minutes * 60 * 1000 + graceMs);
-  };
+
 
   return (
     <div className="space-y-6">
       {/* Placement Test Banner — blocks dashboard */}
-      {placementTest && (placementTest.status === 'pending' || placementTest.status === 'in_progress') && (
+      {placementTest && placementTest.status === 'in_progress' && (
         <Card className="border-primary bg-primary/5">
           <CardContent className="py-8">
             <div className="flex flex-col items-center text-center gap-4">
@@ -297,17 +290,10 @@ export function StudentDashboard() {
                   ? 'لازم تمتحن امتحان تحديد المستوى قبل ما تقدر تستخدم باقي النظام'
                   : 'You must complete the placement test before accessing the rest of the system'}
               </p>
-              <p className="text-sm font-medium">
-                {isRTL ? 'الموعد: ' : 'Scheduled: '}
-                {new Date(placementTest.scheduled_at).toLocaleString(isRTL ? 'ar-EG' : 'en-US', { timeZone: 'Africa/Cairo' })}
-                {isRTL ? ' (بتوقيت القاهرة)' : ' (Cairo Time)'}
-              </p>
-              {isTestWindowActive() && (
-                <Button className="mt-2" size="lg" onClick={() => navigate(`/placement-test/${placementTest.id}`)}>
-                  <Play className="h-5 w-5 me-2" />
-                  {isRTL ? 'ابدأ الامتحان' : 'Start Test'}
-                </Button>
-              )}
+              <Button className="mt-2" size="lg" onClick={() => navigate('/placement-test')}>
+                <Play className="h-5 w-5 me-2" />
+                {isRTL ? 'أكمل الامتحان' : 'Continue Exam'}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -334,7 +320,7 @@ export function StudentDashboard() {
       )}
 
       {/* Only show rest of dashboard if no pending placement test */}
-      {(!placementTest || placementTest.status === 'completed' || placementTest.status === 'expired') && (
+      {(!placementTest || placementTest.status === 'submitted' || placementTest.status === 'reviewed') && (
         <>
 
       {/* Frozen Group Alert */}

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Clock, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Clock, CheckCircle, Play } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,119 +14,112 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { CodeBlock } from '@/components/quiz/CodeBlock';
 
-interface Question {
-  id: string;
-  question_text: string;
+interface ExamQuestion {
+  order: number;
+  question_id: number;
   question_text_ar: string;
-  options: unknown;
-  points: number;
-  order_index: number;
-  image_url?: string | null;
-  code_snippet?: string | null;
+  options: string[];
+  skill: string;
+  code_snippet: string | null;
+  image_url: string | null;
 }
 
+type ExamPhase = 'loading' | 'ready' | 'in_progress' | 'submitting' | 'submitted' | 'error';
+
 export default function TakePlacementTest() {
-  const { id: placementTestId } = useParams();
   const navigate = useNavigate();
-  const { isRTL, language } = useLanguage();
+  const { isRTL } = useLanguage();
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const [placementTest, setPlacementTest] = useState<any>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [phase, setPhase] = useState<ExamPhase>('loading');
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<ExamQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [timeLeft, setTimeLeft] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
+  // Check for existing in_progress attempt on mount
   useEffect(() => {
-    if (placementTestId && user) fetchPlacementTest();
-  }, [placementTestId, user]);
+    if (!user) return;
+    checkExistingAttempt();
+  }, [user]);
 
-  useEffect(() => {
-    if (timeLeft <= 0) return;
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft]);
-
-  const fetchPlacementTest = async () => {
+  const checkExistingAttempt = async () => {
     try {
-      const { data: pt, error } = await supabase
-        .from('placement_tests')
-        .select('*')
-        .eq('id', placementTestId)
-        .single();
+      const { data } = await supabase
+        .from('placement_exam_student_view' as any)
+        .select('id, status')
+        .eq('student_id', user!.id)
+        .eq('status', 'in_progress')
+        .maybeSingle();
 
-      if (error || !pt) {
-        toast({ title: isRTL ? 'لم يتم العثور على الامتحان' : 'Test not found', variant: 'destructive' });
-        navigate('/dashboard');
-        return;
+      if (data) {
+        // Resume — re-draw will return the existing attempt
+        setPhase('ready');
+      } else {
+        setPhase('ready');
       }
-
-      if (pt.status === 'completed') {
-        setSubmitted(true);
-        setLoading(false);
-        return;
-      }
-
-      if (pt.status === 'expired') {
-        toast({ title: isRTL ? 'انتهت صلاحية الامتحان' : 'Test has expired', variant: 'destructive' });
-        navigate('/dashboard');
-        return;
-      }
-
-      setPlacementTest(pt);
-
-      // Calculate time left
-      const scheduledAt = new Date(pt.scheduled_at).getTime();
-      const endTime = scheduledAt + pt.duration_minutes * 60 * 1000;
-      const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
-      setTimeLeft(remaining);
-
-      // Update status to in_progress if still pending
-      if (pt.status === 'pending') {
-        await supabase.from('placement_tests')
-          .update({ status: 'in_progress', started_at: new Date().toISOString() })
-          .eq('id', placementTestId);
-      }
-
-      // Fetch questions (student view — no correct_answer)
-      const { data: qData } = await supabase
-        .from('quiz_questions_student_view')
-        .select('id, question_text, question_text_ar, options, points, order_index, image_url, code_snippet')
-        .eq('quiz_id', pt.quiz_id)
-        .order('order_index');
-
-      setQuestions(qData || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+    } catch {
+      setPhase('ready');
     }
   };
 
-  const handleSubmit = async () => {
-    if (submitting || submitted) return;
-    setSubmitting(true);
+  const startExam = useCallback(async () => {
+    setPhase('loading');
+    try {
+      const { data, error } = await supabase.functions.invoke('draw-placement-exam');
+
+      if (error) {
+        const body = typeof error === 'object' && 'message' in error ? error.message : String(error);
+        throw new Error(body);
+      }
+
+      if (data?.error) {
+        if (data.attempt_id) {
+          // Already in progress — we don't have questions though, so show error
+          setErrorMsg(isRTL ? 'لديك امتحان جارٍ بالفعل' : 'You already have an exam in progress');
+          setPhase('error');
+          return;
+        }
+        throw new Error(data.error);
+      }
+
+      setAttemptId(data.attempt_id);
+      setQuestions(data.questions || []);
+      setAnswers({});
+      setCurrentIndex(0);
+      setPhase('in_progress');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to start exam');
+      setPhase('error');
+    }
+  }, [isRTL]);
+
+  const handleSubmit = useCallback(async () => {
+    if (!attemptId || phase === 'submitting') return;
+    setPhase('submitting');
+
+    // Build answers map: question_id -> "A"|"B"|"C"|"D"
+    const letterMap = ['A', 'B', 'C', 'D'];
+    const formattedAnswers: Record<string, string> = {};
+    for (const q of questions) {
+      const selectedIdx = answers[String(q.question_id)];
+      if (selectedIdx !== undefined) {
+        const idx = parseInt(selectedIdx);
+        formattedAnswers[String(q.question_id)] = letterMap[idx] || selectedIdx;
+      }
+    }
 
     try {
-      const { data, error } = await supabase.functions.invoke('grade-placement-test', {
-        body: { placement_test_id: placementTestId, answers },
+      const { data, error } = await supabase.functions.invoke('grade-placement-exam', {
+        body: { attempt_id: attemptId, answers: formattedAnswers },
       });
 
       if (error) throw error;
-      setSubmitted(true);
+      if (data?.error) throw new Error(data.error);
+
+      setPhase('submitted');
       toast({ title: isRTL ? 'تم التسليم بنجاح' : 'Submitted successfully' });
     } catch (err: any) {
       toast({
@@ -134,31 +127,18 @@ export default function TakePlacementTest() {
         description: err.message,
         variant: 'destructive',
       });
-    } finally {
-      setSubmitting(false);
+      setPhase('in_progress');
     }
-  };
+  }, [attemptId, answers, questions, phase, isRTL, toast]);
 
   const currentQuestion = questions[currentIndex];
   const progress = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0;
   const answeredCount = Object.keys(answers).length;
 
-  const getOptions = (q: Question): string[] => {
-    const opts = q.options as any;
-    if (opts?.en && Array.isArray(opts.en)) return language === 'ar' && opts.ar ? opts.ar : opts.en;
-    if (opts?.options && Array.isArray(opts.options)) return opts.options.map((o: any) => o.text);
-    return [];
-  };
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  if (loading) {
+  // Loading
+  if (phase === 'loading') {
     return (
-      <DashboardLayout title={isRTL ? 'امتحان تحديد المستوى' : 'Placement Test'}>
+      <DashboardLayout title={isRTL ? 'امتحان تحديد المستوى' : 'Placement Exam'}>
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         </div>
@@ -166,9 +146,49 @@ export default function TakePlacementTest() {
     );
   }
 
-  if (submitted) {
+  // Error
+  if (phase === 'error') {
     return (
-      <DashboardLayout title={isRTL ? 'امتحان تحديد المستوى' : 'Placement Test'}>
+      <DashboardLayout title={isRTL ? 'امتحان تحديد المستوى' : 'Placement Exam'}>
+        <div className="flex flex-col items-center justify-center h-96 gap-4">
+          <p className="text-destructive text-lg font-medium">{errorMsg}</p>
+          <Button onClick={() => navigate('/dashboard')}>
+            {isRTL ? 'العودة للرئيسية' : 'Back to Dashboard'}
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Ready — show start button
+  if (phase === 'ready') {
+    return (
+      <DashboardLayout title={isRTL ? 'امتحان تحديد المستوى' : 'Placement Exam'}>
+        <div className="flex flex-col items-center justify-center h-96 gap-6">
+          <div className="p-4 rounded-full bg-primary/10">
+            <Clock className="h-16 w-16 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold text-center">
+            {isRTL ? 'امتحان تحديد المستوى' : 'Placement Exam'}
+          </h2>
+          <p className="text-muted-foreground text-center max-w-md">
+            {isRTL
+              ? 'سيتم سحب أسئلة عشوائية مناسبة لفئتك العمرية. أجب على جميع الأسئلة ثم اضغط تسليم.'
+              : 'Random questions will be drawn for your age group. Answer all questions then submit.'}
+          </p>
+          <Button size="lg" onClick={startExam}>
+            <Play className="h-5 w-5 me-2" />
+            {isRTL ? 'ابدأ الامتحان' : 'Start Exam'}
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Submitted
+  if (phase === 'submitted') {
+    return (
+      <DashboardLayout title={isRTL ? 'امتحان تحديد المستوى' : 'Placement Exam'}>
         <div className="flex flex-col items-center justify-center h-96 gap-6">
           <CheckCircle className="h-20 w-20 text-green-500" />
           <h2 className="text-2xl font-bold text-center">
@@ -187,16 +207,16 @@ export default function TakePlacementTest() {
     );
   }
 
+  // In progress
   return (
-    <DashboardLayout title={isRTL ? 'امتحان تحديد المستوى' : 'Placement Test'}>
+    <DashboardLayout title={isRTL ? 'امتحان تحديد المستوى' : 'Placement Exam'}>
       <div className="max-w-3xl mx-auto space-y-6">
-        {/* Timer + Progress */}
+        {/* Progress */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-4">
-              <Badge variant={timeLeft < 60 ? 'destructive' : 'secondary'} className="text-base px-3 py-1">
-                <Clock className="h-4 w-4 me-1" />
-                {formatTime(timeLeft)}
+              <Badge variant="secondary" className="text-base px-3 py-1">
+                {isRTL ? `سؤال ${currentIndex + 1} من ${questions.length}` : `Question ${currentIndex + 1} of ${questions.length}`}
               </Badge>
               <span className="text-sm text-muted-foreground">
                 {answeredCount}/{questions.length} {isRTL ? 'مجاب' : 'answered'}
@@ -212,12 +232,12 @@ export default function TakePlacementTest() {
             <CardHeader>
               <CardTitle className="text-lg">
                 {isRTL ? `سؤال ${currentIndex + 1}` : `Question ${currentIndex + 1}`}
-                <Badge variant="outline" className="ms-2">{currentQuestion.points} {isRTL ? 'نقطة' : 'pts'}</Badge>
+                <Badge variant="outline" className="ms-2 text-xs">{currentQuestion.skill}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-base leading-relaxed">
-                {isRTL ? currentQuestion.question_text_ar : currentQuestion.question_text}
+              <p className="text-base leading-relaxed whitespace-pre-wrap">
+                {currentQuestion.question_text_ar}
               </p>
 
               {currentQuestion.image_url && (
@@ -229,10 +249,10 @@ export default function TakePlacementTest() {
               )}
 
               <RadioGroup
-                value={answers[currentQuestion.id] || ''}
-                onValueChange={val => setAnswers(prev => ({ ...prev, [currentQuestion.id]: val }))}
+                value={answers[String(currentQuestion.question_id)] || ''}
+                onValueChange={val => setAnswers(prev => ({ ...prev, [String(currentQuestion.question_id)]: val }))}
               >
-                {getOptions(currentQuestion).map((opt, idx) => (
+                {(currentQuestion.options || []).map((opt, idx) => (
                   <div key={idx} className="flex items-center space-x-2 rtl:space-x-reverse p-3 rounded-lg border hover:bg-accent transition-colors">
                     <RadioGroupItem value={String(idx)} id={`opt-${idx}`} />
                     <Label htmlFor={`opt-${idx}`} className="flex-1 cursor-pointer">{opt}</Label>
@@ -262,11 +282,11 @@ export default function TakePlacementTest() {
           ) : (
             <Button
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={phase === 'submitting'}
               className="bg-green-600 hover:bg-green-700"
             >
               <CheckCircle className="h-4 w-4 me-1" />
-              {submitting ? (isRTL ? 'جارٍ التسليم...' : 'Submitting...') : (isRTL ? 'تسليم الامتحان' : 'Submit Test')}
+              {phase === 'submitting' ? (isRTL ? 'جارٍ التسليم...' : 'Submitting...') : (isRTL ? 'تسليم الامتحان' : 'Submit Exam')}
             </Button>
           )}
         </div>
