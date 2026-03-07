@@ -252,7 +252,7 @@ export default function TakePlacementTest() {
                 value={answers[String(currentQuestion.question_id)] || ''}
                 onValueChange={val => setAnswers(prev => ({ ...prev, [String(currentQuestion.question_id)]: val }))}
               >
-                {(currentQuestion.options || []).map((opt, idx) => (
+                {(Array.isArray(currentQuestion.options) ? currentQuestion.options : (() => { try { return JSON.parse(currentQuestion.options as any); } catch { return []; } })()).map((opt: string, idx: number) => (
                   <div key={idx} className="flex items-center space-x-2 rtl:space-x-reverse p-3 rounded-lg border hover:bg-accent transition-colors">
                     <RadioGroupItem value={String(idx)} id={`opt-${idx}`} />
                     <Label htmlFor={`opt-${idx}`} className="flex-1 cursor-pointer">{opt}</Label>
