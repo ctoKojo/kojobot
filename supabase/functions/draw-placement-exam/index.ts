@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-const LEVEL_DISTRIBUTION: Record<string, Record<string, number>> = {
+const DEFAULT_DISTRIBUTION: Record<string, Record<string, number>> = {
   '6_9':   { foundation: 6, intermediate: 6, advanced: 6 },
   '10_13': { foundation: 8, intermediate: 8, advanced: 8 },
   '14_18': { foundation: 10, intermediate: 10, advanced: 10 },
@@ -205,8 +205,28 @@ serve(async (req) => {
       if (usedQs) usedQuestionIds = usedQs.map(q => q.question_id)
     }
 
-    // ===== LEVEL-DISTRIBUTED DRAW =====
-    const distribution = LEVEL_DISTRIBUTION[ageGroupCode]
+    // ===== LOAD SETTINGS FROM DB (fallback to defaults) =====
+    const { data: dbSettings } = await adminClient
+      .from('placement_exam_settings')
+      .select('foundation_questions, intermediate_questions, advanced_questions, is_active, max_attempts')
+      .eq('age_group', ageGroupCode)
+      .maybeSingle()
+
+    let distribution: Record<string, number>
+    if (dbSettings) {
+      if (!dbSettings.is_active) {
+        return new Response(JSON.stringify({ error: 'Placement exam is disabled for this age group' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      distribution = {
+        foundation: dbSettings.foundation_questions,
+        intermediate: dbSettings.intermediate_questions,
+        advanced: dbSettings.advanced_questions,
+      }
+    } else {
+      distribution = DEFAULT_DISTRIBUTION[ageGroupCode]
+    }
+
     if (!distribution) {
       return new Response(JSON.stringify({ error: 'Invalid age group configuration' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })

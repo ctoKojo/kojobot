@@ -6,7 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-const PASS_THRESHOLD = 60
+const DEFAULT_PASS_THRESHOLD = 60
+const DEFAULT_CONFIDENCE_MARGIN = 10
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -156,6 +157,16 @@ serve(async (req) => {
       })
     }
 
+    // ===== LOAD RULES FROM DB =====
+    const { data: dbRules } = await adminClient
+      .from('placement_rules')
+      .select('*')
+      .eq('age_group', attempt.age_group || '6_9')
+      .maybeSingle()
+
+    const PASS_THRESHOLD = dbRules?.pass_threshold ?? DEFAULT_PASS_THRESHOLD
+    const CONFIDENCE_MARGIN = dbRules?.confidence_margin ?? DEFAULT_CONFIDENCE_MARGIN
+
     // ===== CALCULATE RESULTS =====
     const foundationPct = levelScores.foundation.max > 0
       ? (levelScores.foundation.score / levelScores.foundation.max) * 100 : 0
@@ -165,11 +176,21 @@ serve(async (req) => {
       ? (levelScores.advanced.score / levelScores.advanced.max) * 100 : 0
     const overallPct = maxScore > 0 ? Math.round((totalScore / maxScore) * 10000) / 100 : 0
 
-    // Recommended level
+    // Recommended level using DB rules
     let recommendedLevel: string
-    if (advancedPct >= PASS_THRESHOLD) recommendedLevel = 'advanced'
-    else if (intermediatePct >= PASS_THRESHOLD) recommendedLevel = 'intermediate'
-    else recommendedLevel = 'foundation'
+    const advMinAdv = dbRules?.advanced_min_for_advanced ?? PASS_THRESHOLD
+    const intMinAdv = dbRules?.intermediate_min_for_advanced ?? PASS_THRESHOLD
+    const fndMinAdv = dbRules?.foundation_min_for_advanced ?? PASS_THRESHOLD
+    const fndMinInt = dbRules?.foundation_min_for_intermediate ?? PASS_THRESHOLD
+    const intMinInt = dbRules?.intermediate_min_for_intermediate ?? 0
+
+    if (advancedPct >= advMinAdv && intermediatePct >= intMinAdv && foundationPct >= fndMinAdv) {
+      recommendedLevel = 'advanced'
+    } else if (intermediatePct >= (intMinInt || PASS_THRESHOLD) && foundationPct >= fndMinInt) {
+      recommendedLevel = 'intermediate'
+    } else {
+      recommendedLevel = 'foundation'
+    }
 
     // Confidence level
     const inconsistent =
@@ -183,10 +204,11 @@ serve(async (req) => {
 
     let confidenceLevel: string
     if (inconsistent) confidenceLevel = 'low'
-    else if (minMargin <= 10) confidenceLevel = 'medium'
+    else if (minMargin <= CONFIDENCE_MARGIN) confidenceLevel = 'medium'
     else confidenceLevel = 'high'
 
-    const needsManualReview = confidenceLevel !== 'high' || foundationPct < PASS_THRESHOLD
+    const manualReviewMargin = dbRules?.manual_review_margin ?? DEFAULT_CONFIDENCE_MARGIN
+    const needsManualReview = confidenceLevel !== 'high' || foundationPct < PASS_THRESHOLD || minMargin <= manualReviewMargin
 
     // Weak skills (< 50% correct)
     const weakSkills = Object.entries(skillResults)
