@@ -2112,6 +2112,210 @@ export type Database = {
         }
         Relationships: []
       }
+      placement_exam_attempt_questions: {
+        Row: {
+          attempt_id: string
+          created_at: string | null
+          id: string
+          is_correct: boolean | null
+          order_index: number
+          question_id: number
+          student_answer: string | null
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string | null
+          id?: string
+          is_correct?: boolean | null
+          order_index: number
+          question_id: number
+          student_answer?: string | null
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string | null
+          id?: string
+          is_correct?: boolean | null
+          order_index?: number
+          question_id?: number
+          student_answer?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_exam_attempt_questions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "placement_exam_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_exam_attempt_questions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "placement_exam_student_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_exam_attempt_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "placement_question_bank"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      placement_exam_attempts: {
+        Row: {
+          advanced_max: number | null
+          advanced_score: number | null
+          age_group: string
+          approved_level_id: string | null
+          attempt_number: number
+          confidence_level: string | null
+          created_at: string | null
+          foundation_max: number | null
+          foundation_score: number | null
+          id: string
+          intermediate_max: number | null
+          intermediate_score: number | null
+          max_score: number | null
+          needs_manual_review: boolean | null
+          percentage: number | null
+          recommended_level: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          started_at: string | null
+          status: string
+          student_id: string
+          submitted_at: string | null
+          total_score: number | null
+          weak_skills: Json | null
+        }
+        Insert: {
+          advanced_max?: number | null
+          advanced_score?: number | null
+          age_group: string
+          approved_level_id?: string | null
+          attempt_number?: number
+          confidence_level?: string | null
+          created_at?: string | null
+          foundation_max?: number | null
+          foundation_score?: number | null
+          id?: string
+          intermediate_max?: number | null
+          intermediate_score?: number | null
+          max_score?: number | null
+          needs_manual_review?: boolean | null
+          percentage?: number | null
+          recommended_level?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          started_at?: string | null
+          status?: string
+          student_id: string
+          submitted_at?: string | null
+          total_score?: number | null
+          weak_skills?: Json | null
+        }
+        Update: {
+          advanced_max?: number | null
+          advanced_score?: number | null
+          age_group?: string
+          approved_level_id?: string | null
+          attempt_number?: number
+          confidence_level?: string | null
+          created_at?: string | null
+          foundation_max?: number | null
+          foundation_score?: number | null
+          id?: string
+          intermediate_max?: number | null
+          intermediate_score?: number | null
+          max_score?: number | null
+          needs_manual_review?: boolean | null
+          percentage?: number | null
+          recommended_level?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          started_at?: string | null
+          status?: string
+          student_id?: string
+          submitted_at?: string | null
+          total_score?: number | null
+          weak_skills?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_exam_attempts_approved_level_id_fkey"
+            columns: ["approved_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      placement_question_bank: {
+        Row: {
+          age_group: string
+          code_snippet: string | null
+          correct_answer: string
+          created_at: string | null
+          difficulty: string
+          explanation_ar: string | null
+          id: number
+          image_url: string | null
+          is_active: boolean
+          level: string
+          options: Json
+          question_text_ar: string
+          question_type: string
+          skill: string
+          success_rate: number
+          updated_at: string | null
+          usage_count: number
+        }
+        Insert: {
+          age_group: string
+          code_snippet?: string | null
+          correct_answer: string
+          created_at?: string | null
+          difficulty: string
+          explanation_ar?: string | null
+          id?: never
+          image_url?: string | null
+          is_active?: boolean
+          level: string
+          options: Json
+          question_text_ar: string
+          question_type?: string
+          skill: string
+          success_rate?: number
+          updated_at?: string | null
+          usage_count?: number
+        }
+        Update: {
+          age_group?: string
+          code_snippet?: string | null
+          correct_answer?: string
+          created_at?: string | null
+          difficulty?: string
+          explanation_ar?: string | null
+          id?: never
+          image_url?: string | null
+          is_active?: boolean
+          level?: string
+          options?: Json
+          question_text_ar?: string
+          question_type?: string
+          skill?: string
+          success_rate?: number
+          updated_at?: string | null
+          usage_count?: number
+        }
+        Relationships: []
+      }
       placement_question_levels: {
         Row: {
           id: string
@@ -3821,6 +4025,53 @@ export type Database = {
           },
         ]
       }
+      placement_exam_student_view: {
+        Row: {
+          age_group: string | null
+          approved_level_id: string | null
+          attempt_number: number | null
+          created_at: string | null
+          id: string | null
+          review_status: string | null
+          started_at: string | null
+          status: string | null
+          student_id: string | null
+          submitted_at: string | null
+        }
+        Insert: {
+          age_group?: string | null
+          approved_level_id?: string | null
+          attempt_number?: number | null
+          created_at?: string | null
+          id?: string | null
+          review_status?: string | null
+          started_at?: string | null
+          status?: string | null
+          student_id?: string | null
+          submitted_at?: string | null
+        }
+        Update: {
+          age_group?: string | null
+          approved_level_id?: string | null
+          attempt_number?: number | null
+          created_at?: string | null
+          id?: string | null
+          review_status?: string | null
+          started_at?: string | null
+          status?: string | null
+          student_id?: string | null
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_exam_attempts_approved_level_id_fkey"
+            columns: ["approved_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_questions_student_view: {
         Row: {
           code_snippet: string | null
@@ -4233,6 +4484,10 @@ export type Database = {
       update_curriculum_session: {
         Args: { p_data: Json; p_expected_updated_at: string; p_id: string }
         Returns: Json
+      }
+      update_question_stats: {
+        Args: { p_is_correct: boolean; p_question_id: number }
+        Returns: undefined
       }
       upgrade_student_level: {
         Args: {
