@@ -254,10 +254,10 @@ export function StudentDashboard() {
 
   useEffect(() => {
     if (user) {
-      supabase.from('placement_exam_student_view' as any)
+      (supabase.from('placement_exam_student_view' as any)
         .select('id, status')
         .eq('student_id', user.id)
-        .in('status', ['in_progress', 'submitted'])
+        .in('status', ['in_progress', 'submitted']) as any)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()

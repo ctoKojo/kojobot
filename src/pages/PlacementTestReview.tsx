@@ -66,14 +66,14 @@ export default function PlacementTestReview() {
   const fetchData = async () => {
     try {
       const [attemptsRes, levelsRes] = await Promise.all([
-        supabase.from('placement_exam_attempts' as any)
+        (supabase.from('placement_exam_attempts' as any)
           .select('*')
-          .eq('status', 'submitted')
+          .eq('status', 'submitted') as any)
           .order('submitted_at', { ascending: false }),
         supabase.from('levels').select('id, name, name_ar, level_order').eq('is_active', true).order('level_order'),
       ]);
 
-      const attemptsData = (attemptsRes.data || []) as PlacementAttempt[];
+      const attemptsData = (attemptsRes.data || []) as unknown as PlacementAttempt[];
       setAttempts(attemptsData);
       setLevels(levelsRes.data || []);
 
@@ -101,8 +101,8 @@ export default function PlacementTestReview() {
       if (error) throw error;
 
       // Mark attempt as reviewed
-      await supabase.from('placement_exam_attempts' as any)
-        .update({ status: 'reviewed' })
+      await (supabase.from('placement_exam_attempts' as any)
+        .update({ status: 'reviewed' }) as any)
         .eq('id', attempt.id);
 
       toast({ title: isRTL ? 'تم تحديد المستوى بنجاح' : 'Level assigned successfully' });
