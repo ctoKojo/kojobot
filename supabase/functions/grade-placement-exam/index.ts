@@ -220,6 +220,13 @@ serve(async (req) => {
       })
       .eq('id', attempt_id)
 
+    // ===== MARK SCHEDULE AS COMPLETED =====
+    await adminClient
+      .from('placement_exam_schedules')
+      .update({ status: 'completed', updated_at: new Date().toISOString() })
+      .eq('student_id', studentId)
+      .in('status', ['scheduled', 'open'])
+
     // ===== NOTIFY ADMINS =====
     try {
       const { data: studentProfile } = await adminClient
