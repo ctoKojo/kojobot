@@ -48,9 +48,11 @@ function buildCairoDate(sessionDate: string, sessionTime: string): Date | null {
 
   if ([year, month, day, hour, minute].some(isNaN)) return null;
 
-  // TZDate creates a Date anchored to the specified timezone
-  // so hour=15 in Africa/Cairo means 15:00 Cairo local time
-  return new TZDate(year, month - 1, day, hour, minute, 0, APP_TIMEZONE);
+  // fromZonedTime interprets the given date components as local time
+  // in the specified timezone, and returns a proper UTC Date.
+  // So 15:00 in Africa/Cairo becomes the correct UTC instant.
+  const fakeLocalDate = new Date(year, month - 1, day, hour, minute, 0);
+  return fromZonedTime(fakeLocalDate, APP_TIMEZONE);
 }
 
 /**
