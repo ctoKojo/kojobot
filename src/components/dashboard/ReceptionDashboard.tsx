@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getCairoToday } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
 import { Users, Calendar, Clock, AlertTriangle, CreditCard, RefreshCw, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,7 +38,7 @@ export function ReceptionDashboard() {
 
   const fetchStats = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getCairoToday();
 
       const [studentsRes, groupsRes, sessionsRes, attendanceRes, subsRes, makeupRes, awaitingExamRes] = await Promise.all([
         supabase.from('user_roles').select('id', { count: 'exact', head: true }).eq('role', 'student'),
