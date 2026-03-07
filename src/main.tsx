@@ -22,9 +22,4 @@ createRoot(document.getElementById("root")!).render(
   </React.StrictMode>
 );
 
-// Register service worker after app renders (non-blocking)
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
-  });
-}
+

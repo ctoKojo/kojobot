@@ -35,10 +35,21 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         importScripts: ['/sw-push.js'],
+        skipWaiting: true,
+        clientsClaim: true,
+        navigateFallback: null,
         navigateFallbackDenylist: [/^\/~oauth/],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff,woff2}"],
         runtimeCaching: [
+          {
+            urlPattern: ({request}: {request: Request}) => request.mode === 'navigate',
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "navigation-cache",
+              networkTimeoutSeconds: 3,
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: "CacheFirst",
