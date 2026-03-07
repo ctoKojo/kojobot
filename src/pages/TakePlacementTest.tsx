@@ -258,7 +258,7 @@ export default function TakePlacementTest() {
                   const entries: [string, string][] = Array.isArray(opts)
                     ? opts.map((o, i) => [String(i), o])
                     : typeof opts === 'object' && opts !== null
-                      ? Object.entries(opts).sort(([a], [b]) => a.localeCompare(b))
+                      ? (Object.entries(opts) as [string, string][]).sort(([a], [b]) => a.localeCompare(b))
                       : [];
                   return entries.map(([key, val], idx) => (
                     <div key={key} className="flex items-center space-x-2 rtl:space-x-reverse p-3 rounded-lg border hover:bg-accent transition-colors">
