@@ -801,6 +801,19 @@ export default function SessionsPage() {
             {filteredGroups.map((group) => {
               const groupSessions = getFilteredSessionsForGroup(group.id);
               const stats = getGroupStats(group.id);
+
+              // Find next upcoming session to show actual day/time
+              const today = getCairoToday();
+              const nextSession = sessions
+                .filter(s => s.group_id === group.id && s.session_date >= today && s.status === 'scheduled')
+                .sort((a, b) => a.session_date.localeCompare(b.session_date) || a.session_time.localeCompare(b.session_time))[0];
+
+              // Determine display day name from actual session date (or fallback to group schedule_day)
+              const displayDate = nextSession?.session_date;
+              const displayTime = nextSession?.session_time || group.schedule_time;
+              const displayDay = displayDate
+                ? new Date(`${displayDate}T12:00:00Z`).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'long', timeZone: 'Africa/Cairo' })
+                : (language === 'ar' ? { Sunday: 'الأحد', Monday: 'الاثنين', Tuesday: 'الثلاثاء', Wednesday: 'الأربعاء', Thursday: 'الخميس', Friday: 'الجمعة', Saturday: 'السبت' }[group.schedule_day] || group.schedule_day : group.schedule_day);
               
               return (
                 <AccordionItem 
@@ -819,7 +832,7 @@ export default function SessionsPage() {
                             {language === 'ar' ? group.name_ar : group.name}
                           </h3>
                           <p className="text-xs sm:text-sm text-muted-foreground">
-                            <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={group.schedule_time} isRTL={isRTL} />
+                            <SessionTimeDisplay sessionDate={displayDate || getCairoToday()} sessionTime={displayTime} isRTL={isRTL} /> - {displayDay}
                           </p>
                         </div>
                       </div>
