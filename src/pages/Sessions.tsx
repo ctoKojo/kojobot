@@ -48,7 +48,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { formatTime12Hour } from '@/lib/timeUtils';
+import { formatTime12Hour, getCairoToday, getCairoDateOffset } from '@/lib/timeUtils';
 import { logUpdate, logDelete } from '@/lib/activityLogger';
 import { isSessionEndedCairo } from '@/lib/sessionTimeGuard';
 import { getSessionStatusBadge } from '@/lib/statusBadges';
