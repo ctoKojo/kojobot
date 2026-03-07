@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import kojobotLogo from "@/assets/kojobot-main-logo.png";
@@ -349,9 +349,21 @@ const Index = ({ lang: routeLang }: IndexProps) => {
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   useEffect(() => {
-    supabase.rpc("get_landing_content").then(({ data }) => {
-      if (data) setContent(data as unknown as LandingContent);
+    publicSupabase.rpc("get_landing_content").then(({ data, error }) => {
+      if (error) {
+        console.error("Failed to load landing content:", error);
+        setFetchError(true);
+      } else if (data) {
+        setContent(data as unknown as LandingContent);
+      } else {
+        setFetchError(true);
+      }
+      setLoading(false);
+    }).catch((err) => {
+      console.error("Landing content fetch exception:", err);
+      setFetchError(true);
       setLoading(false);
     });
     const handleScroll = () => setScrolled(window.scrollY > 20);
