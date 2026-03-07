@@ -100,14 +100,12 @@ export default function TakePlacementTest() {
     if (!attemptId || phase === 'submitting') return;
     setPhase('submitting');
 
-    // Build answers map: question_id -> "A"|"B"|"C"|"D"
-    const letterMap = ['A', 'B', 'C', 'D'];
+    // Build answers map: question_id -> selected key (A/B/C/D or index)
     const formattedAnswers: Record<string, string> = {};
     for (const q of questions) {
-      const selectedIdx = answers[String(q.question_id)];
-      if (selectedIdx !== undefined) {
-        const idx = parseInt(selectedIdx);
-        formattedAnswers[String(q.question_id)] = letterMap[idx] || selectedIdx;
+      const selected = answers[String(q.question_id)];
+      if (selected !== undefined) {
+        formattedAnswers[String(q.question_id)] = selected;
       }
     }
 
@@ -252,12 +250,21 @@ export default function TakePlacementTest() {
                 value={answers[String(currentQuestion.question_id)] || ''}
                 onValueChange={val => setAnswers(prev => ({ ...prev, [String(currentQuestion.question_id)]: val }))}
               >
-                {(currentQuestion.options || []).map((opt, idx) => (
-                  <div key={idx} className="flex items-center space-x-2 rtl:space-x-reverse p-3 rounded-lg border hover:bg-accent transition-colors">
-                    <RadioGroupItem value={String(idx)} id={`opt-${idx}`} />
-                    <Label htmlFor={`opt-${idx}`} className="flex-1 cursor-pointer">{opt}</Label>
-                  </div>
-                ))}
+                {(() => {
+                  const opts = currentQuestion.options;
+                  // Handle both array and object formats
+                  const entries: [string, string][] = Array.isArray(opts)
+                    ? opts.map((o, i) => [String(i), o])
+                    : typeof opts === 'object' && opts !== null
+                      ? (Object.entries(opts) as [string, string][]).sort(([a], [b]) => a.localeCompare(b))
+                      : [];
+                  return entries.map(([key, val], idx) => (
+                    <div key={key} className="flex items-center space-x-2 rtl:space-x-reverse p-3 rounded-lg border hover:bg-accent transition-colors">
+                      <RadioGroupItem value={key} id={`opt-${key}`} />
+                      <Label htmlFor={`opt-${key}`} className="flex-1 cursor-pointer">{val}</Label>
+                    </div>
+                  ));
+                })()}
               </RadioGroup>
             </CardContent>
           </Card>
