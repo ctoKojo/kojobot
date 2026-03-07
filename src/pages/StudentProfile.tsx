@@ -26,6 +26,7 @@ import { EditSubscriptionDialog } from '@/components/student/EditSubscriptionDia
 import { ResetPasswordButton } from '@/components/ResetPasswordButton';
 import { generateStudentReport } from '@/lib/pdfReports';
 import { PaymentsHistory } from '@/components/student/PaymentsHistory';
+import { SchedulePlacementDialog } from '@/components/student/SchedulePlacementDialog';
 
 interface StudentData {
   profile: any;
@@ -126,6 +127,7 @@ export default function StudentProfile() {
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
   const [showEditSubscriptionDialog, setShowEditSubscriptionDialog] = useState(false);
+  const [showPlacementSchedule, setShowPlacementSchedule] = useState(false);
 
   useEffect(() => {
     if (studentId) fetchStudentData();
