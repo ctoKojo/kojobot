@@ -2295,6 +2295,51 @@ export type Database = {
         }
         Relationships: []
       }
+      placement_exam_settings: {
+        Row: {
+          advanced_questions: number
+          age_group: string
+          allow_retake: boolean
+          created_at: string | null
+          duration_minutes: number
+          foundation_questions: number
+          id: string
+          intermediate_questions: number
+          is_active: boolean
+          max_attempts: number
+          total_questions: number
+          updated_at: string | null
+        }
+        Insert: {
+          advanced_questions?: number
+          age_group: string
+          allow_retake?: boolean
+          created_at?: string | null
+          duration_minutes?: number
+          foundation_questions?: number
+          id?: string
+          intermediate_questions?: number
+          is_active?: boolean
+          max_attempts?: number
+          total_questions?: number
+          updated_at?: string | null
+        }
+        Update: {
+          advanced_questions?: number
+          age_group?: string
+          allow_retake?: boolean
+          created_at?: string | null
+          duration_minutes?: number
+          foundation_questions?: number
+          id?: string
+          intermediate_questions?: number
+          is_active?: boolean
+          max_attempts?: number
+          total_questions?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       placement_question_bank: {
         Row: {
           age_group: string
@@ -2430,6 +2475,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      placement_rules: {
+        Row: {
+          advanced_min_for_advanced: number
+          age_group: string
+          confidence_margin: number
+          created_at: string | null
+          foundation_min_for_advanced: number
+          foundation_min_for_intermediate: number
+          id: string
+          intermediate_min_for_advanced: number
+          intermediate_min_for_intermediate: number
+          manual_review_margin: number
+          pass_threshold: number
+          updated_at: string | null
+        }
+        Insert: {
+          advanced_min_for_advanced?: number
+          age_group: string
+          confidence_margin?: number
+          created_at?: string | null
+          foundation_min_for_advanced?: number
+          foundation_min_for_intermediate?: number
+          id?: string
+          intermediate_min_for_advanced?: number
+          intermediate_min_for_intermediate?: number
+          manual_review_margin?: number
+          pass_threshold?: number
+          updated_at?: string | null
+        }
+        Update: {
+          advanced_min_for_advanced?: number
+          age_group?: string
+          confidence_margin?: number
+          created_at?: string | null
+          foundation_min_for_advanced?: number
+          foundation_min_for_intermediate?: number
+          id?: string
+          intermediate_min_for_advanced?: number
+          intermediate_min_for_intermediate?: number
+          manual_review_margin?: number
+          pass_threshold?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      placement_skill_blueprint: {
+        Row: {
+          age_group: string
+          created_at: string | null
+          id: string
+          level: string
+          question_count: number
+          skill: string
+          updated_at: string | null
+        }
+        Insert: {
+          age_group: string
+          created_at?: string | null
+          id?: string
+          level: string
+          question_count?: number
+          skill: string
+          updated_at?: string | null
+        }
+        Update: {
+          age_group?: string
+          created_at?: string | null
+          id?: string
+          level?: string
+          question_count?: number
+          skill?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       placement_test_results: {
         Row: {
