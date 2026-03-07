@@ -76,12 +76,6 @@ export default function TakePlacementTest() {
       }
 
       if (data?.error) {
-        if (data.attempt_id) {
-          // Already in progress — we don't have questions though, so show error
-          setErrorMsg(isRTL ? 'لديك امتحان جارٍ بالفعل' : 'You already have an exam in progress');
-          setPhase('error');
-          return;
-        }
         throw new Error(data.error);
       }
 
