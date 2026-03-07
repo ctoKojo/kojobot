@@ -13,7 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { formatTime12Hour, formatDate, getCairoToday } from '@/lib/timeUtils';
+import { formatDate, getCairoToday } from '@/lib/timeUtils';
+import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { getRoleLabel } from '@/lib/constants';
 import { InstructorPerformanceCharts } from '@/components/instructor/InstructorPerformanceCharts';
 import { IssueEmployeeWarningDialog } from '@/components/instructor/IssueEmployeeWarningDialog';
@@ -753,7 +754,7 @@ export default function InstructorProfile() {
                           </div>
                           <div className="text-right">
                             <Badge variant="outline">
-                              {group.schedule_day} - {formatTime12Hour(group.schedule_time, isRTL)}
+                              {group.schedule_day} - <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={group.schedule_time} isRTL={isRTL} />
                             </Badge>
                           </div>
                         </div>
@@ -804,7 +805,7 @@ export default function InstructorProfile() {
                             </div>
                             <div className="text-right">
                               <p className="font-medium">{formatDate(session.session_date)}</p>
-                              <p className="text-sm text-muted-foreground">{formatTime12Hour(session.session_time, isRTL)}</p>
+                              <p className="text-sm text-muted-foreground"><SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} /></p>
                             </div>
                           </div>
                         ))}
@@ -849,7 +850,7 @@ export default function InstructorProfile() {
                             </div>
                             <div className="text-right">
                               <p className="font-medium">{formatDate(session.session_date)}</p>
-                              <p className="text-sm text-muted-foreground">{formatTime12Hour(session.session_time, isRTL)}</p>
+                              <p className="text-sm text-muted-foreground"><SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} /></p>
                             </div>
                           </div>
                         ))}

@@ -6,7 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { formatTime12Hour, getCairoToday } from '@/lib/timeUtils';
+import { getCairoToday } from '@/lib/timeUtils';
+import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 
 interface InstructorWarning {
   id: string;
@@ -304,7 +305,7 @@ export function InstructorDashboard() {
                       <Badge variant={isToday ? 'default' : 'outline'} className={isToday ? 'kojo-gradient' : ''}>
                         {isToday ? (isRTL ? 'اليوم' : 'Today') : (isRTL ? 'بكرة' : 'Tomorrow')}
                       </Badge>
-                      <p className="text-sm text-muted-foreground mt-1">{formatTime12Hour(session.session_time, isRTL)}</p>
+                      <p className="text-sm text-muted-foreground mt-1"><SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} /></p>
                     </div>
                   </div>
                 );

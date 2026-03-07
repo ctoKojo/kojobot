@@ -48,7 +48,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { formatTime12Hour } from '@/lib/timeUtils';
+import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { QuizResultsDialog } from '@/components/session/QuizResultsDialog';
 import { AssignmentSubmissionsDialog } from '@/components/session/AssignmentSubmissionsDialog';
 import { SessionEvaluationGrid } from '@/components/session/SessionEvaluationGrid';
@@ -1199,7 +1199,7 @@ export default function SessionDetails() {
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {formatTime12Hour(session.session_time, isRTL)}
+                    <SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} />
                   </span>
                 </CardDescription>
               </div>

@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
+import { getCairoToday } from '@/lib/timeUtils';
 import { cn } from '@/lib/utils';
 
 interface InstructorSchedule {
@@ -70,6 +72,7 @@ export function WeeklyScheduleGrid({
     return groups.filter(g => g.schedule_day === dayEn);
   };
 
+  // Keep formatTime for working hours display (non-session context)
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(':');
     const h = parseInt(hours, 10);
@@ -174,8 +177,8 @@ export function WeeklyScheduleGrid({
                               <p className="font-medium truncate">
                                 {language === 'ar' ? group.name_ar : group.name}
                               </p>
-                              <p className="opacity-75">
-                                {formatTime(group.schedule_time)} ({group.duration_minutes}{isRTL ? 'د' : 'm'})
+                              <p className="opacity-75 flex items-center gap-1">
+                                <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={group.schedule_time} isRTL={isRTL} /> ({group.duration_minutes}{isRTL ? 'د' : 'm'})
                               </p>
                             </div>
                           ))}

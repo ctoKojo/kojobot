@@ -28,7 +28,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { RescheduleDialog } from '@/components/group/RescheduleDialog';
 import { EditSessionDialog } from '@/components/group/EditSessionDialog';
 import { LevelProgressTab } from '@/components/group/LevelProgressTab';
-import { formatTime12Hour, formatDate } from '@/lib/timeUtils';
+import { formatDate, getCairoToday } from '@/lib/timeUtils';
+import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { getGroupTypeLabel, getDayName } from '@/lib/constants';
 import { isSessionActiveCairo } from '@/lib/sessionTimeGuard';
 
@@ -352,7 +353,7 @@ export default function GroupDetails() {
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {formatTime12Hour(data.group.schedule_time, isRTL)}
+                    <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={data.group.schedule_time} isRTL={isRTL} />
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
@@ -692,7 +693,7 @@ export default function GroupDetails() {
                           <TableCell>
                             <div>
                               <p className="font-medium">{formatDate(session.session_date)}</p>
-                              <p className="text-xs text-muted-foreground">{formatTime12Hour(session.session_time, isRTL)}</p>
+                              <p className="text-xs text-muted-foreground"><SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} /></p>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -756,7 +757,7 @@ export default function GroupDetails() {
                                 : session.topic || `Session ${session.session_number}`}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              {formatDate(session.session_date)} - {formatTime12Hour(session.session_time, isRTL)}
+                              {formatDate(session.session_date)} - <SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} />
                             </p>
                           </div>
                         </div>
