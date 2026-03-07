@@ -128,19 +128,57 @@ serve(async (req) => {
     else if (ageGroup.min_age <= 13) ageGroupCode = '10_13'
     else ageGroupCode = '14_18'
 
-    // ===== BLOCK DUPLICATE IN_PROGRESS =====
+    // ===== RESUME IN_PROGRESS ATTEMPT =====
     const { data: existingAttempt } = await adminClient
       .from('placement_exam_attempts')
-      .select('id')
+      .select('id, age_group, attempt_number')
       .eq('student_id', studentId)
       .eq('status', 'in_progress')
       .maybeSingle()
 
     if (existingAttempt) {
+      // Fetch existing questions for resume
+      const { data: existingQuestions } = await adminClient
+        .from('placement_exam_attempt_questions')
+        .select('question_id, order_index')
+        .eq('attempt_id', existingAttempt.id)
+        .order('order_index')
+
+      if (!existingQuestions || existingQuestions.length === 0) {
+        return new Response(JSON.stringify({ error: 'Attempt has no questions' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      const qIds = existingQuestions.map(q => q.question_id)
+      const { data: bankQs } = await adminClient
+        .from('placement_question_bank')
+        .select('id, question_text_ar, options, skill, code_snippet, image_url')
+        .in('id', qIds)
+
+      const bankMap = new Map((bankQs || []).map(q => [q.id, q]))
+
+      const resumeQuestions = existingQuestions.map(eq => {
+        const bq = bankMap.get(eq.question_id)
+        return {
+          order: eq.order_index,
+          question_id: eq.question_id,
+          question_text_ar: bq?.question_text_ar || '',
+          options: bq?.options || {},
+          skill: bq?.skill || '',
+          code_snippet: bq?.code_snippet || null,
+          image_url: bq?.image_url || null,
+        }
+      })
+
+      console.log(`Placement exam resumed: student=${studentId}, attempt=${existingAttempt.id}, questions=${resumeQuestions.length}`)
+
       return new Response(JSON.stringify({
-        error: 'You already have an exam in progress',
         attempt_id: existingAttempt.id,
-      }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        age_group: existingAttempt.age_group,
+        total_questions: resumeQuestions.length,
+        questions: resumeQuestions,
+        resumed: true,
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     // ===== ATTEMPT NUMBER =====
