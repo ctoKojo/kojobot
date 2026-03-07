@@ -10,7 +10,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { getCairoToday } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
-import { formatTime12Hour, formatDate } from '@/lib/timeUtils';
+import { formatDate } from '@/lib/timeUtils';
+import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { isSessionActiveCairo } from '@/lib/sessionTimeGuard';
 
 interface GroupInfo {
@@ -407,7 +408,7 @@ export function StudentDashboard() {
                   {language === 'ar' ? stats.groupInfo.name_ar : stats.groupInfo.name}
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                  {stats.groupInfo.schedule_day} - {formatTime12Hour(stats.groupInfo.schedule_time, isRTL)}
+                  {stats.groupInfo.schedule_day} - <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={stats.groupInfo.schedule_time} isRTL={isRTL} />
                 </p>
                 {/* Session Link for Online Groups */}
                 {stats.groupInfo.attendance_mode === 'online' && stats.groupInfo.session_link && (() => {
@@ -573,7 +574,7 @@ export function StudentDashboard() {
                         {language === 'ar' ? ms.groups?.name_ar : ms.groups?.name}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {ms.scheduled_date} • {formatTime12Hour(ms.scheduled_time, isRTL)}
+                        {ms.scheduled_date} • <SessionTimeDisplay sessionDate={ms.scheduled_date} sessionTime={ms.scheduled_time} isRTL={isRTL} />
                       </p>
                     </div>
                   </div>
@@ -613,7 +614,7 @@ export function StudentDashboard() {
                   <div className="flex items-center gap-2">
                     <div className="text-right">
                       <Badge variant="outline">{session.session_date}</Badge>
-                      <p className="text-sm text-muted-foreground mt-1">{formatTime12Hour(session.session_time, isRTL)}</p>
+                      <p className="text-sm text-muted-foreground mt-1"><SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} /></p>
                     </div>
                     {/* Join Session Button for Online Groups */}
                     {session.groups?.attendance_mode === 'online' && session.groups?.session_link && 
