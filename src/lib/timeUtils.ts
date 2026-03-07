@@ -1,5 +1,5 @@
 import { APP_TIMEZONE } from './constants';
-import { TZDate } from 'date-fns-tz';
+import { fromZonedTime } from 'date-fns-tz';
 
 // ============================================================
 // Timezone Detection Helpers
