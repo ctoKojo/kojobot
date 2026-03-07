@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
+import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import kojobotLogo from "@/assets/kojobot-main-logo.png";
@@ -349,11 +349,27 @@ const Index = ({ lang: routeLang }: IndexProps) => {
   const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   useEffect(() => {
-    supabase.rpc("get_landing_content").then(({ data }) => {
-      if (data) setContent(data as unknown as LandingContent);
-      setLoading(false);
-    });
+    const loadContent = async () => {
+      try {
+        const { data, error } = await publicSupabase.rpc("get_landing_content");
+        if (error) {
+          console.error("Failed to load landing content:", error);
+          setFetchError(true);
+        } else if (data) {
+          setContent(data as unknown as LandingContent);
+        } else {
+          setFetchError(true);
+        }
+      } catch (err) {
+        console.error("Landing content fetch exception:", err);
+        setFetchError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadContent();
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -446,6 +462,25 @@ const Index = ({ lang: routeLang }: IndexProps) => {
 
   if (loading) {
     return <LoadingScreen />;
+  }
+
+  if (fetchError && !content) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-8" dir={isRTL ? 'rtl' : 'ltr'}>
+        <img src={kojobotLogo} alt="Kojobot" className="h-16 mb-6" />
+        <h1 className="text-2xl font-bold mb-2">
+          {language === 'ar' ? 'تعذّر تحميل المحتوى' : 'Unable to load content'}
+        </h1>
+        <p className="text-muted-foreground mb-6 text-center max-w-md">
+          {language === 'ar'
+            ? 'حدث خطأ أثناء تحميل بيانات الصفحة. يرجى المحاولة مرة أخرى.'
+            : 'An error occurred while loading page data. Please try again.'}
+        </p>
+        <Button onClick={() => window.location.reload()}>
+          {language === 'ar' ? 'إعادة المحاولة' : 'Retry'}
+        </Button>
+      </div>
+    );
   }
 
   return (
