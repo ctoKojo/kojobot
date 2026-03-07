@@ -819,7 +819,7 @@ export default function SessionsPage() {
                             {language === 'ar' ? group.name_ar : group.name}
                           </h3>
                           <p className="text-xs sm:text-sm text-muted-foreground">
-                            {group.schedule_day} - <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={group.schedule_time} isRTL={isRTL} />
+                            <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={group.schedule_time} isRTL={isRTL} /> · {isRTL ? getDayName(group.schedule_day) : group.schedule_day}
                           </p>
                         </div>
                       </div>
