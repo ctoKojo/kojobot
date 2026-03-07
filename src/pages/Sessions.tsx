@@ -500,7 +500,7 @@ export default function SessionsPage() {
 
   // Today's sessions across all groups
   const todaySessions = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getCairoToday();
     return sessions
       .filter(s => s.session_date === today)
       .map(s => ({
@@ -514,7 +514,7 @@ export default function SessionsPage() {
 
   // Overdue sessions
   const overdueSessions = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getCairoToday();
     return sessions.filter(s => s.status === 'scheduled' && s.session_date < today);
   }, [sessions]);
 
