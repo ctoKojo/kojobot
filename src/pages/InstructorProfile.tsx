@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
-import { formatTime12Hour, formatDate } from '@/lib/timeUtils';
+import { formatTime12Hour, formatDate, getCairoToday } from '@/lib/timeUtils';
 import { getRoleLabel } from '@/lib/constants';
 import { InstructorPerformanceCharts } from '@/components/instructor/InstructorPerformanceCharts';
 import { IssueEmployeeWarningDialog } from '@/components/instructor/IssueEmployeeWarningDialog';
@@ -198,7 +198,7 @@ export default function InstructorProfile() {
           .eq('is_active', true);
 
         const [upcomingRes, completedRes, allSessionsRes] = await Promise.all([
-          supabase.from('sessions').select('*, groups(name, name_ar)').in('group_id', groupIds.length > 0 ? groupIds : ['no-groups']).gte('session_date', new Date().toISOString().split('T')[0]).order('session_date', { ascending: true }).limit(10),
+          supabase.from('sessions').select('*, groups(name, name_ar)').in('group_id', groupIds.length > 0 ? groupIds : ['no-groups']).gte('session_date', getCairoToday()).order('session_date', { ascending: true }).limit(10),
           supabase.from('sessions').select('*, groups(name, name_ar)').in('group_id', groupIds.length > 0 ? groupIds : ['no-groups']).eq('status', 'completed').order('session_date', { ascending: false }).limit(20),
           supabase.from('sessions').select('id, session_date').in('group_id', groupIds.length > 0 ? groupIds : ['no-groups']).eq('status', 'completed'),
         ]);
