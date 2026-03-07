@@ -272,14 +272,7 @@ export function StudentDashboard() {
     }
   }, [user]);
 
-  // Check if test window is active
-  const isTestWindowActive = () => {
-    if (!placementTest) return false;
-    const scheduled = new Date(placementTest.scheduled_at).getTime();
-    const now = Date.now();
-    const graceMs = 5 * 60 * 1000;
-    return now >= (scheduled - graceMs) && now <= (scheduled + placementTest.duration_minutes * 60 * 1000 + graceMs);
-  };
+
 
   return (
     <div className="space-y-6">
