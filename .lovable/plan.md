@@ -1,5 +1,6 @@
 
 
+
 # خطة تنفيذ نظام امتحان تحديد المستوى
 
 الخطة اللي بعتها مكتملة ومتماسكة. هنفذها كالتالي:
@@ -46,3 +47,39 @@
 5. صفحة المراجعة (PlacementTestReview)
 6. تعديل Students.tsx + Dashboard + ProtectedRoute + Sidebar + Routes
 
+---
+
+## ✅ تم التنفيذ: عرض التوقيت المحلي + مرجع القاهرة (Dual Timezone Display)
+
+### ما تم تنفيذه:
+1. **دوال جديدة في `src/lib/timeUtils.ts`**:
+   - `getUserTimezone()` — IANA timezone detection مع fallback لـ Africa/Cairo
+   - `isCairoTimezone()` — مقارنة مباشرة مع Africa/Cairo
+   - `formatSessionTimeForViewer(sessionDate, sessionTime, isRTL)` — بناء Date صحيح باستخدام `fromZonedTime` من `date-fns-tz` (يعامل sessionTime كوقت محلي في القاهرة)
+   - `formatSessionDateTimeForViewer(sessionDate, sessionTime, isRTL)` — نفس المنطق مع التاريخ
+
+2. **كومبوننت مركزي `src/components/shared/SessionTimeDisplay.tsx`**:
+   - مصر: وقت واحد فقط
+   - برا مصر Desktop: `10:00 AM (3:00 PM Cairo)`
+   - برا مصر Mobile: سطرين
+   - Props: `sessionDate`, `sessionTime`, `isRTL`, `showCairoReference?`, `className?`
+   - Graceful fallback لو البيانات ناقصة
+
+3. **استبدال `formatTime12Hour` في 10 ملفات**:
+   - Sessions.tsx (4 أماكن)
+   - GroupDetails.tsx (3 أماكن)
+   - SessionDetails.tsx (1 مكان)
+   - Groups.tsx (2 مكان)
+   - InstructorProfile.tsx (3 أماكن)
+   - StudentDashboard.tsx (3 أماكن)
+   - InstructorDashboard.tsx (1 مكان)
+   - RescheduleDialog.tsx (1 مكان)
+   - WeeklyScheduleGrid.tsx (1 مكان)
+   - MakeupSessions.tsx (2 مكان — كانت raw بدون formatting)
+
+4. **`formatTime12Hour` محفوظة** كـ fallback لأماكن مش مرتبطة بسيشن
+
+### ملاحظات تقنية:
+- `fromZonedTime` من `date-fns-tz@3.2.0` يستخدم لبناء Date من أرقام محلية في Cairo ← UTC Date صحيح
+- لا يستخدم `new Date(string)` parsing مباشر
+- الأماكن اللي فيها `schedule_time` بدون `sessionDate` بتمرر `getCairoToday()` كـ approximation
