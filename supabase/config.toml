@@ -44,3 +44,9 @@ verify_jwt = false
 
 [functions.expire-placement-tests]
 verify_jwt = false
+
+[functions.draw-placement-exam]
+verify_jwt = false
+
+[functions.grade-placement-exam]
+verify_jwt = false
