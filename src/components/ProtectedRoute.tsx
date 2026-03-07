@@ -9,8 +9,8 @@ interface ProtectedRouteProps {
   allowedRoles?: ('admin' | 'instructor' | 'student' | 'reception')[];
 }
 
-// Routes students can access even without level_id
-const STUDENT_ALLOWED_WITHOUT_LEVEL = ['/dashboard', '/profile', '/placement-test', '/account-suspended', '/messages', '/notifications'];
+// Routes students can access even without level_id (placement flow only)
+const STUDENT_ALLOWED_WITHOUT_LEVEL = ['/placement-gate', '/placement-test', '/account-suspended', '/profile'];
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, role, loading } = useAuth();
@@ -89,11 +89,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/account-suspended" replace />;
   }
 
-  // Enforce level_id for students — block sensitive routes
+  // Enforce level_id for students — block ALL routes except placement flow
   if (role === 'student' && hasLevel === false) {
     const isAllowed = STUDENT_ALLOWED_WITHOUT_LEVEL.some(path => location.pathname.startsWith(path));
     if (!isAllowed) {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to="/placement-gate" replace />;
     }
   }
 

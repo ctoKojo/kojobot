@@ -39,7 +39,7 @@ export default function PlacementGate() {
         .maybeSingle();
 
       if (!scheduleData) {
-        // Check if there's a submitted attempt awaiting review
+      // Check if there's a submitted attempt awaiting review
         const { data: attempt } = await supabase
           .from('placement_exam_attempts' as any)
           .select('id, status')
@@ -47,11 +47,12 @@ export default function PlacementGate() {
           .in('status', ['submitted', 'in_progress'])
           .maybeSingle();
 
-        if (attempt?.status === 'submitted') {
+        const attemptStatus = (attempt as any)?.status;
+        if (attemptStatus === 'submitted') {
           setStatus('submitted');
           return;
         }
-        if (attempt?.status === 'in_progress') {
+        if (attemptStatus === 'in_progress') {
           setStatus('open');
           setSchedule(null);
           return;
