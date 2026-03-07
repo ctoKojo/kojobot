@@ -5,37 +5,35 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, Eye, ClipboardCheck } from 'lucide-react';
+import { CheckCircle, Eye, ClipboardCheck, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatDate } from '@/lib/timeUtils';
 
-interface PlacementResult {
+interface PlacementAttempt {
   id: string;
-  placement_test_id: string;
-  score: number;
-  max_score: number;
-  percentage: number;
-  suggested_level_id: string | null;
-  approved_level_id: string | null;
-  review_status: string;
-  reviewed_by: string | null;
-  reviewed_at: string | null;
-  submission_answers: Record<string, number> | null;
+  student_id: string;
+  age_group: string;
+  attempt_number: number;
+  status: string;
+  total_score: number | null;
+  max_score: number | null;
+  percentage: number | null;
+  recommended_level: string | null;
+  confidence_level: string | null;
+  needs_manual_review: boolean;
+  weak_skills: any;
+  foundation_score: number | null;
+  foundation_max: number | null;
+  intermediate_score: number | null;
+  intermediate_max: number | null;
+  advanced_score: number | null;
+  advanced_max: number | null;
   created_at: string;
-  placement_tests: {
-    id: string;
-    student_id: string;
-    quiz_id: string;
-    age_group_id: string | null;
-    attempt_number: number;
-    scheduled_at: string;
-    status: string;
-  };
+  submitted_at: string | null;
 }
 
 interface Level {
@@ -55,36 +53,31 @@ export default function PlacementTestReview() {
   const { isRTL } = useLanguage();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [results, setResults] = useState<PlacementResult[]>([]);
+  const [attempts, setAttempts] = useState<PlacementAttempt[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [profiles, setProfiles] = useState<Record<string, StudentProfile>>({});
   const [loading, setLoading] = useState(true);
-  const [selectedResult, setSelectedResult] = useState<PlacementResult | null>(null);
-  const [overrideLevel, setOverrideLevel] = useState<string>('');
+  const [selectedAttempt, setSelectedAttempt] = useState<PlacementAttempt | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [approving, setApproving] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewAnswers, setPreviewAnswers] = useState<any>(null);
-  const [previewQuestions, setPreviewQuestions] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     try {
-      const [resultsRes, levelsRes] = await Promise.all([
-        supabase.from('placement_test_results')
-          .select('*, placement_tests(*)')
-          .order('created_at', { ascending: false }),
+      const [attemptsRes, levelsRes] = await Promise.all([
+        supabase.from('placement_exam_attempts' as any)
+          .select('*')
+          .eq('status', 'submitted')
+          .order('submitted_at', { ascending: false }),
         supabase.from('levels').select('id, name, name_ar, level_order').eq('is_active', true).order('level_order'),
       ]);
 
-      const resultsData = (resultsRes.data || []) as PlacementResult[];
-      setResults(resultsData);
+      const attemptsData = (attemptsRes.data || []) as PlacementAttempt[];
+      setAttempts(attemptsData);
       setLevels(levelsRes.data || []);
 
-      // Fetch student profiles
-      const studentIds = [...new Set(resultsData.map(r => r.placement_tests?.student_id).filter(Boolean))];
+      const studentIds = [...new Set(attemptsData.map(a => a.student_id))];
       if (studentIds.length > 0) {
         const { data: profilesData } = await supabase
           .rpc('get_conversation_participant_profiles', { p_user_ids: studentIds });
@@ -97,36 +90,24 @@ export default function PlacementTestReview() {
     }
   };
 
-  const getLevelName = (levelId: string | null) => {
-    if (!levelId) return isRTL ? 'غير محدد' : 'Not set';
-    const level = levels.find(l => l.id === levelId);
-    return level ? (isRTL ? level.name_ar : level.name) : levelId;
-  };
-
-  const handleApprove = async (result: PlacementResult, levelId: string) => {
+  const handleApproveLevel = async (attempt: PlacementAttempt, levelId: string) => {
     setApproving(true);
     try {
-      // Update result
-      const { error: resultError } = await supabase.from('placement_test_results')
-        .update({
-          approved_level_id: levelId,
-          review_status: levelId === result.suggested_level_id ? 'approved' : 'overridden',
-          reviewed_by: user?.id,
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq('id', result.id);
-
-      if (resultError) throw resultError;
-
-      // Update student profile level_id
-      const { error: profileError } = await supabase.from('profiles')
+      // Update profile level_id
+      const { error } = await supabase.from('profiles')
         .update({ level_id: levelId })
-        .eq('user_id', result.placement_tests.student_id);
+        .eq('user_id', attempt.student_id);
 
-      if (profileError) throw profileError;
+      if (error) throw error;
 
-      toast({ title: isRTL ? 'تمت الموافقة وتحديد المستوى' : 'Approved and level assigned' });
+      // Mark attempt as reviewed
+      await supabase.from('placement_exam_attempts' as any)
+        .update({ status: 'reviewed' })
+        .eq('id', attempt.id);
+
+      toast({ title: isRTL ? 'تم تحديد المستوى بنجاح' : 'Level assigned successfully' });
       fetchData();
+      setDetailOpen(false);
     } catch (err: any) {
       toast({ title: isRTL ? 'خطأ' : 'Error', description: err.message, variant: 'destructive' });
     } finally {
@@ -134,36 +115,21 @@ export default function PlacementTestReview() {
     }
   };
 
-  const handlePreview = async (result: PlacementResult) => {
-    setPreviewAnswers(result.submission_answers);
-
-    // Fetch questions
-    const { data } = await supabase
-      .from('quiz_questions')
-      .select('id, question_text, question_text_ar, options, correct_answer, points, order_index')
-      .eq('quiz_id', result.placement_tests.quiz_id)
-      .order('order_index');
-
-    setPreviewQuestions(data || []);
-    setPreviewOpen(true);
+  const getConfidenceBadge = (level: string | null) => {
+    if (!level) return null;
+    const colors: Record<string, string> = {
+      high: 'bg-green-600',
+      medium: 'bg-amber-600',
+      low: 'bg-red-600',
+    };
+    return <Badge className={colors[level] || ''}>{level}</Badge>;
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="secondary">{isRTL ? 'في انتظار المراجعة' : 'Pending Review'}</Badge>;
-      case 'approved':
-        return <Badge className="bg-green-600">{isRTL ? 'تمت الموافقة' : 'Approved'}</Badge>;
-      case 'overridden':
-        return <Badge className="bg-amber-600">{isRTL ? 'تم تعديل المستوى' : 'Overridden'}</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
+  const needsReviewCount = attempts.filter(a => a.needs_manual_review).length;
 
   if (loading) {
     return (
-      <DashboardLayout title={isRTL ? 'مراجعة تحديد المستوى' : 'Placement Test Review'}>
+      <DashboardLayout title={isRTL ? 'مراجعة تحديد المستوى' : 'Placement Exam Review'}>
         <div className="space-y-4">
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-64 w-full" />
@@ -172,102 +138,71 @@ export default function PlacementTestReview() {
     );
   }
 
-  const pendingCount = results.filter(r => r.review_status === 'pending').length;
-
   return (
-    <DashboardLayout title={isRTL ? 'مراجعة تحديد المستوى' : 'Placement Test Review'}>
+    <DashboardLayout title={isRTL ? 'مراجعة تحديد المستوى' : 'Placement Exam Review'}>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-3">
               <div className="p-2 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 shadow-lg">
                 <ClipboardCheck className="h-5 w-5 text-white" />
               </div>
-              {isRTL ? 'مراجعة تحديد المستوى' : 'Placement Test Review'}
+              {isRTL ? 'مراجعة امتحانات تحديد المستوى' : 'Placement Exam Review'}
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {isRTL ? 'مراجعة واعتماد نتائج امتحانات تحديد المستوى' : 'Review and approve placement test results'}
-            </p>
           </div>
-          {pendingCount > 0 && (
+          {needsReviewCount > 0 && (
             <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 text-sm px-3 py-1.5">
-              {isRTL ? `${pendingCount} في الانتظار` : `${pendingCount} pending`}
+              <AlertTriangle className="h-3 w-3 me-1" />
+              {isRTL ? `${needsReviewCount} تحتاج مراجعة يدوية` : `${needsReviewCount} need manual review`}
             </Badge>
           )}
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{isRTL ? 'نتائج الامتحانات' : 'Test Results'}</CardTitle>
+            <CardTitle className="text-base">{isRTL ? 'الامتحانات المقدمة' : 'Submitted Exams'}</CardTitle>
           </CardHeader>
           <CardContent>
-            {results.length === 0 ? (
+            {attempts.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
-                {isRTL ? 'لا توجد نتائج بعد' : 'No results yet'}
+                {isRTL ? 'لا توجد امتحانات مقدمة' : 'No submitted exams yet'}
               </p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/30">
                     <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                    <TableHead>{isRTL ? 'الفئة العمرية' : 'Age Group'}</TableHead>
                     <TableHead>{isRTL ? 'المحاولة' : 'Attempt'}</TableHead>
                     <TableHead>{isRTL ? 'الدرجة' : 'Score'}</TableHead>
-                    <TableHead>{isRTL ? 'النسبة' : 'Percentage'}</TableHead>
-                    <TableHead>{isRTL ? 'المستوى المقترح' : 'Suggested Level'}</TableHead>
-                    <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                    <TableHead>{isRTL ? 'المستوى المقترح' : 'Recommended'}</TableHead>
+                    <TableHead>{isRTL ? 'الثقة' : 'Confidence'}</TableHead>
                     <TableHead>{isRTL ? 'إجراءات' : 'Actions'}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {results.map(r => {
-                    const studentId = r.placement_tests?.student_id;
-                    const profile = studentId ? profiles[studentId] : null;
+                  {attempts.map(a => {
+                    const profile = profiles[a.student_id];
                     return (
-                      <TableRow key={r.id}>
+                      <TableRow key={a.id} className={a.needs_manual_review ? 'bg-amber-50/50 dark:bg-amber-950/10' : ''}>
                         <TableCell>
                           {profile ? (isRTL ? (profile.full_name_ar || profile.full_name) : profile.full_name) : '—'}
                         </TableCell>
-                        <TableCell>#{r.placement_tests?.attempt_number}</TableCell>
-                        <TableCell>{r.score}/{r.max_score}</TableCell>
+                        <TableCell><Badge variant="outline">{a.age_group}</Badge></TableCell>
+                        <TableCell>#{a.attempt_number}</TableCell>
                         <TableCell>
-                          <Badge variant={r.percentage >= 60 ? 'default' : 'destructive'}>
-                            {r.percentage}%
-                          </Badge>
+                          <span className="font-mono">{a.total_score}/{a.max_score}</span>
+                          <span className="text-muted-foreground ms-1">({a.percentage}%)</span>
                         </TableCell>
-                        <TableCell>{getLevelName(r.suggested_level_id)}</TableCell>
-                        <TableCell>{getStatusBadge(r.review_status)}</TableCell>
+                        <TableCell>
+                          <Badge>{a.recommended_level || '—'}</Badge>
+                        </TableCell>
+                        <TableCell>{getConfidenceBadge(a.confidence_level)}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => handlePreview(r)}>
+                            <Button variant="ghost" size="sm" onClick={() => { setSelectedAttempt(a); setDetailOpen(true); }}>
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {r.review_status === 'pending' && (
-                              <>
-                                {r.suggested_level_id && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleApprove(r, r.suggested_level_id!)}
-                                    disabled={approving}
-                                  >
-                                    <CheckCircle className="h-4 w-4 me-1" />
-                                    {isRTL ? 'موافقة' : 'Approve'}
-                                  </Button>
-                                )}
-                                <Select onValueChange={val => handleApprove(r, val)}>
-                                  <SelectTrigger className="w-32">
-                                    <SelectValue placeholder={isRTL ? 'تغيير' : 'Override'} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {levels.map(l => (
-                                      <SelectItem key={l.id} value={l.id}>
-                                        {isRTL ? l.name_ar : l.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </>
-                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -280,53 +215,96 @@ export default function PlacementTestReview() {
         </Card>
       </div>
 
-      {/* Answer Preview Dialog */}
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      {/* Detail Dialog */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{isRTL ? 'بريفيو الإجابات' : 'Answer Preview'}</DialogTitle>
+            <DialogTitle>{isRTL ? 'تفاصيل الامتحان' : 'Exam Details'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            {previewQuestions.map((q, i) => {
-              const selectedIdx = previewAnswers?.[q.id];
-              const opts = q.options as any;
-              let optionsList: string[] = [];
-              if (opts?.en) optionsList = isRTL && opts.ar ? opts.ar : opts.en;
-              else if (opts?.options) optionsList = opts.options.map((o: any) => o.text);
+          {selectedAttempt && (
+            <div className="space-y-4">
+              {/* Level breakdown */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'Foundation', score: selectedAttempt.foundation_score, max: selectedAttempt.foundation_max },
+                  { label: 'Intermediate', score: selectedAttempt.intermediate_score, max: selectedAttempt.intermediate_max },
+                  { label: 'Advanced', score: selectedAttempt.advanced_score, max: selectedAttempt.advanced_max },
+                ].map(item => (
+                  <Card key={item.label}>
+                    <CardContent className="pt-4 text-center">
+                      <p className="text-xs text-muted-foreground">{item.label}</p>
+                      <p className="text-lg font-bold">{item.score}/{item.max}</p>
+                      <p className="text-xs">
+                        {item.max ? Math.round(((item.score || 0) / item.max) * 100) : 0}%
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-              let correctIdx = parseInt(q.correct_answer);
-              if (isNaN(correctIdx)) correctIdx = optionsList.findIndex(o => o === q.correct_answer);
+              {/* Weak skills */}
+              {selectedAttempt.weak_skills && Array.isArray(selectedAttempt.weak_skills) && selectedAttempt.weak_skills.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2">{isRTL ? 'مهارات ضعيفة' : 'Weak Skills'}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedAttempt.weak_skills.map((ws: any, i: number) => (
+                      <Badge key={i} variant="destructive">{ws.skill} ({ws.rate}%)</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-              const isCorrect = selectedIdx >= 0 && selectedIdx === correctIdx;
+              {/* Recommended level */}
+              <div className="flex items-center justify-between p-3 rounded-lg border">
+                <span className="text-sm font-medium">{isRTL ? 'المستوى المقترح' : 'Recommended Level'}</span>
+                <Badge className="text-base">{selectedAttempt.recommended_level}</Badge>
+              </div>
 
-              return (
-                <Card key={q.id} className={isCorrect ? 'border-green-300' : 'border-red-300'}>
-                  <CardContent className="pt-4">
-                    <p className="font-medium mb-2">
-                      {i + 1}. {isRTL ? q.question_text_ar : q.question_text}
-                      <Badge variant="outline" className="ms-2">{q.points} pts</Badge>
-                    </p>
-                    <div className="space-y-1">
-                      {optionsList.map((opt: string, idx: number) => (
-                        <div key={idx} className={`p-2 rounded text-sm ${
-                          idx === correctIdx ? 'bg-green-100 dark:bg-green-900/30 font-medium' :
-                          idx === selectedIdx && !isCorrect ? 'bg-red-100 dark:bg-red-900/30' : ''
-                        }`}>
-                          {idx === selectedIdx && '→ '}{opt}
-                          {idx === correctIdx && ' ✓'}
-                        </div>
+              {selectedAttempt.needs_manual_review && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <span className="text-sm text-amber-800 dark:text-amber-300">
+                    {isRTL ? 'يحتاج مراجعة يدوية — الثقة منخفضة أو نتائج غير متسقة' : 'Needs manual review — low confidence or inconsistent results'}
+                  </span>
+                </div>
+              )}
+
+              {/* Approve with level selection */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{isRTL ? 'اعتماد المستوى' : 'Assign Level'}</p>
+                <div className="flex gap-2">
+                  {selectedAttempt.recommended_level && (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        // Find matching level by name pattern
+                        const matchLevel = levels.find(l =>
+                          l.name.toLowerCase().includes(selectedAttempt.recommended_level!.toLowerCase())
+                        );
+                        if (matchLevel) handleApproveLevel(selectedAttempt, matchLevel.id);
+                      }}
+                      disabled={approving}
+                    >
+                      <CheckCircle className="h-4 w-4 me-1" />
+                      {isRTL ? 'موافقة على المقترح' : 'Approve Recommended'}
+                    </Button>
+                  )}
+                  <Select onValueChange={val => handleApproveLevel(selectedAttempt, val)} disabled={approving}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder={isRTL ? 'مستوى آخر' : 'Override'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {levels.map(l => (
+                        <SelectItem key={l.id} value={l.id}>
+                          {isRTL ? l.name_ar : l.name}
+                        </SelectItem>
                       ))}
-                      {selectedIdx === undefined || selectedIdx < 0 ? (
-                        <p className="text-sm text-muted-foreground italic">
-                          {isRTL ? 'لم يتم الإجابة' : 'Not answered'}
-                        </p>
-                      ) : null}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>
