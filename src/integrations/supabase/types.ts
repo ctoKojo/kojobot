@@ -2256,6 +2256,45 @@ export type Database = {
           },
         ]
       }
+      placement_exam_schedules: {
+        Row: {
+          closes_at: string
+          created_at: string
+          id: string
+          notes: string | null
+          opens_at: string
+          scheduled_at: string
+          scheduled_by: string
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          closes_at: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opens_at: string
+          scheduled_at?: string
+          scheduled_by: string
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          closes_at?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opens_at?: string
+          scheduled_at?: string
+          scheduled_by?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       placement_question_bank: {
         Row: {
           age_group: string
