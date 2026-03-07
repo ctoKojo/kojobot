@@ -1,0 +1,217 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+}
+
+const LEVEL_DISTRIBUTION: Record<string, Record<string, number>> = {
+  '6_9':   { foundation: 6, intermediate: 6, advanced: 6 },
+  '10_13': { foundation: 8, intermediate: 8, advanced: 8 },
+  '14_18': { foundation: 10, intermediate: 10, advanced: 10 },
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+
+    // ===== AUTH: extract student_id from JWT =====
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    })
+    const { data: { user }, error: userError } = await userClient.auth.getUser()
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    const studentId = user.id
+
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    })
+
+    // ===== RESOLVE AGE GROUP =====
+    const { data: profile } = await adminClient
+      .from('profiles')
+      .select('age_group_id')
+      .eq('user_id', studentId)
+      .single()
+
+    if (!profile?.age_group_id) {
+      return new Response(JSON.stringify({ error: 'Student has no age group assigned' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    const { data: ageGroup } = await adminClient
+      .from('age_groups')
+      .select('min_age')
+      .eq('id', profile.age_group_id)
+      .single()
+
+    if (!ageGroup) {
+      return new Response(JSON.stringify({ error: 'Age group not found' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    let ageGroupCode: string
+    if (ageGroup.min_age <= 9) ageGroupCode = '6_9'
+    else if (ageGroup.min_age <= 13) ageGroupCode = '10_13'
+    else ageGroupCode = '14_18'
+
+    // ===== BLOCK DUPLICATE IN_PROGRESS =====
+    const { data: existingAttempt } = await adminClient
+      .from('placement_exam_attempts')
+      .select('id')
+      .eq('student_id', studentId)
+      .eq('status', 'in_progress')
+      .maybeSingle()
+
+    if (existingAttempt) {
+      return new Response(JSON.stringify({
+        error: 'You already have an exam in progress',
+        attempt_id: existingAttempt.id,
+      }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // ===== ATTEMPT NUMBER =====
+    const { count: prevCount } = await adminClient
+      .from('placement_exam_attempts')
+      .select('id', { count: 'exact', head: true })
+      .eq('student_id', studentId)
+
+    const attemptNumber = (prevCount || 0) + 1
+
+    // ===== EXCLUDE PREVIOUSLY USED QUESTIONS =====
+    let usedQuestionIds: number[] = []
+    const { data: prevAttempts } = await adminClient
+      .from('placement_exam_attempts')
+      .select('id')
+      .eq('student_id', studentId)
+
+    if (prevAttempts && prevAttempts.length > 0) {
+      const { data: usedQs } = await adminClient
+        .from('placement_exam_attempt_questions')
+        .select('question_id')
+        .in('attempt_id', prevAttempts.map(a => a.id))
+
+      if (usedQs) usedQuestionIds = usedQs.map(q => q.question_id)
+    }
+
+    // ===== LEVEL-DISTRIBUTED DRAW =====
+    const distribution = LEVEL_DISTRIBUTION[ageGroupCode]
+    if (!distribution) {
+      return new Response(JSON.stringify({ error: 'Invalid age group configuration' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    const allQuestions: any[] = []
+
+    for (const [level, count] of Object.entries(distribution)) {
+      const { data: available, error: qError } = await adminClient
+        .from('placement_question_bank')
+        .select('id, question_text_ar, options, skill, difficulty, code_snippet, image_url')
+        .eq('age_group', ageGroupCode)
+        .eq('level', level)
+        .eq('is_active', true)
+        .limit(200)
+
+      if (qError || !available) {
+        return new Response(JSON.stringify({ error: `Failed to load ${level} questions` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      // Filter out used, fallback to all if not enough
+      let filtered = available.filter(q => !usedQuestionIds.includes(q.id))
+      if (filtered.length < count) filtered = available
+
+      // Random shuffle and pick exact count
+      const shuffled = filtered.sort(() => Math.random() - 0.5)
+      const picked = shuffled.slice(0, count)
+
+      if (picked.length < count) {
+        return new Response(JSON.stringify({
+          error: `Not enough ${level} questions. Need ${count}, have ${picked.length}`,
+        }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      allQuestions.push(...picked.map(q => ({ ...q, level })))
+    }
+
+    // Shuffle all questions together
+    const shuffledAll = allQuestions.sort(() => Math.random() - 0.5)
+
+    // ===== CREATE ATTEMPT (service role — bypasses RLS) =====
+    const { data: attempt, error: attemptError } = await adminClient
+      .from('placement_exam_attempts')
+      .insert({
+        student_id: studentId,
+        age_group: ageGroupCode,
+        attempt_number: attemptNumber,
+        status: 'in_progress',
+      })
+      .select('id')
+      .single()
+
+    if (attemptError || !attempt) {
+      console.error('Failed to create attempt:', attemptError)
+      return new Response(JSON.stringify({ error: 'Failed to create exam attempt' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // ===== INSERT ATTEMPT QUESTIONS =====
+    const questionRows = shuffledAll.map((q, idx) => ({
+      attempt_id: attempt.id,
+      question_id: q.id,
+      order_index: idx + 1,
+    }))
+
+    const { error: insertError } = await adminClient
+      .from('placement_exam_attempt_questions')
+      .insert(questionRows)
+
+    if (insertError) {
+      await adminClient.from('placement_exam_attempts').delete().eq('id', attempt.id)
+      return new Response(JSON.stringify({ error: 'Failed to save exam questions' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
+    // ===== RETURN QUESTIONS WITHOUT correct_answer =====
+    const safeQuestions = shuffledAll.map((q, idx) => ({
+      order: idx + 1,
+      question_id: q.id,
+      question_text_ar: q.question_text_ar,
+      options: q.options,
+      skill: q.skill,
+      code_snippet: q.code_snippet || null,
+      image_url: q.image_url || null,
+    }))
+
+    console.log(`Placement exam drawn: student=${studentId}, age=${ageGroupCode}, questions=${safeQuestions.length}, attempt=#${attemptNumber}`)
+
+    return new Response(JSON.stringify({
+      attempt_id: attempt.id,
+      age_group: ageGroupCode,
+      total_questions: safeQuestions.length,
+      questions: safeQuestions,
+    }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
+  } catch (error) {
+    console.error('draw-placement-exam error:', error)
+    return new Response(JSON.stringify({ error: 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+})
