@@ -448,36 +448,33 @@ export default function SessionsPage() {
   const getStatusBadge = (status: string) => getSessionStatusBadge(status, language);
 
   const isToday = (dateStr: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    return dateStr === today;
+    return dateStr === getCairoToday();
   };
 
   const isTomorrow = (dateStr: string) => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return dateStr === tomorrow.toISOString().split('T')[0];
+    return dateStr === getCairoDateOffset(1);
   };
 
   // Time filter helper
   const isThisWeek = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
+    const today = getCairoToday();
+    const todayDate = new Date(`${today}T12:00:00Z`);
+    const dayOfWeek = todayDate.getUTCDay(); // 0=Sun
+    const startOfWeek = new Date(todayDate);
+    startOfWeek.setUTCDate(todayDate.getUTCDate() - dayOfWeek);
     const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 7);
-    return date >= startOfWeek && date < endOfWeek;
+    endOfWeek.setUTCDate(startOfWeek.getUTCDate() + 7);
+
+    const target = new Date(`${dateStr}T12:00:00Z`);
+    return target >= startOfWeek && target < endOfWeek;
   };
 
   const isUpcoming = (dateStr: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    return dateStr >= today;
+    return dateStr >= getCairoToday();
   };
 
   const isOverdue = (session: Session) => {
-    const today = new Date().toISOString().split('T')[0];
-    return session.status === 'scheduled' && session.session_date < today;
+    return session.status === 'scheduled' && session.session_date < getCairoToday();
   };
 
   // Filter sessions based on search, status, and time
