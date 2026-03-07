@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { Calendar, Clock, Search, Filter, CheckCircle, XCircle, AlertTriangle, Users, GraduationCap, RefreshCw, UserCheck, Timer, CalendarClock } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatsGrid } from '@/components/shared/StatsGrid';
@@ -544,7 +545,7 @@ export default function MakeupSessionsPage() {
                               {session.scheduled_date && (
                                 <span className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3" />
-                                  {session.scheduled_date} {session.scheduled_time}
+                                  {session.scheduled_date} <SessionTimeDisplay sessionDate={session.scheduled_date!} sessionTime={session.scheduled_time || ''} isRTL={isRTL} />
                                 </span>
                               )}
                               {session.instructor_name !== '-' && (
@@ -599,7 +600,7 @@ export default function MakeupSessionsPage() {
                             <div className="flex items-center gap-3 text-xs text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
-                                {session.scheduled_date} {session.scheduled_time}
+                                {session.scheduled_date} <SessionTimeDisplay sessionDate={session.scheduled_date!} sessionTime={session.scheduled_time || ''} isRTL={isRTL} />
                               </span>
                               <span>{isRTL ? 'المدرب:' : 'Instructor:'} {session.instructor_name}</span>
                             </div>
