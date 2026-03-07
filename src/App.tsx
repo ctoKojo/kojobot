@@ -68,6 +68,7 @@ const SubscriptionRequests = React.lazy(() => import("./pages/SubscriptionReques
 const PlacementTestSettings = React.lazy(() => import("./pages/PlacementTestSettings"));
 const PlacementTestReview = React.lazy(() => import("./pages/PlacementTestReview"));
 const TakePlacementTest = React.lazy(() => import("./pages/TakePlacementTest"));
+const PlacementGate = React.lazy(() => import("./pages/PlacementGate"));
 const FinalExams = React.lazy(() => import("./pages/FinalExams"));
 
 // Component to handle admin session timeout
@@ -145,6 +146,7 @@ const App = () => (
                   <Route path="/placement-test-settings" element={<ProtectedRoute allowedRoles={['admin']}><PlacementTestSettings /></ProtectedRoute>} />
                   <Route path="/placement-test-review" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><PlacementTestReview /></ProtectedRoute>} />
                   <Route path="/placement-test" element={<ProtectedRoute allowedRoles={['student']}><TakePlacementTest /></ProtectedRoute>} />
+                  <Route path="/placement-gate" element={<ProtectedRoute allowedRoles={['student']}><PlacementGate /></ProtectedRoute>} />
                   <Route path="/final-exams" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><FinalExams /></ProtectedRoute>} />
                   <Route path="/account-suspended" element={<AccountSuspended />} />
                   <Route path="/account-terminated" element={<AccountTerminated />} />
