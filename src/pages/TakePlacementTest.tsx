@@ -100,14 +100,12 @@ export default function TakePlacementTest() {
     if (!attemptId || phase === 'submitting') return;
     setPhase('submitting');
 
-    // Build answers map: question_id -> "A"|"B"|"C"|"D"
-    const letterMap = ['A', 'B', 'C', 'D'];
+    // Build answers map: question_id -> selected key (A/B/C/D or index)
     const formattedAnswers: Record<string, string> = {};
     for (const q of questions) {
-      const selectedIdx = answers[String(q.question_id)];
-      if (selectedIdx !== undefined) {
-        const idx = parseInt(selectedIdx);
-        formattedAnswers[String(q.question_id)] = letterMap[idx] || selectedIdx;
+      const selected = answers[String(q.question_id)];
+      if (selected !== undefined) {
+        formattedAnswers[String(q.question_id)] = selected;
       }
     }
 
