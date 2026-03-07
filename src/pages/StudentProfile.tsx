@@ -338,6 +338,16 @@ export default function StudentProfile() {
                 <AlertTriangle className="h-4 w-4 mr-2" />
                 {isRTL ? 'إصدار إنذار' : 'Issue Warning'}
               </Button>
+              {/* Schedule Placement Exam — only if student has no level */}
+              {!data?.profile?.level_id && (role === 'admin' || role === 'reception') && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPlacementSchedule(true)}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {isRTL ? 'جدولة امتحان تحديد المستوى' : 'Schedule Placement Exam'}
+                </Button>
+              )}
             </div>
           )}
         </div>
