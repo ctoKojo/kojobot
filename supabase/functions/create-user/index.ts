@@ -240,7 +240,51 @@ serve(async (req) => {
     // Add role-specific fields
     if (body.role === 'student') {
       profileData.date_of_birth = body.date_of_birth || null
-      profileData.age_group_id = body.age_group_id || null
+
+      // Auto-calculate age_group_id from date_of_birth if not provided
+      let resolvedAgeGroupId = body.age_group_id || null
+      if (!resolvedAgeGroupId && body.date_of_birth) {
+        const birthDate = new Date(body.date_of_birth)
+        const today = new Date()
+        let age = today.getFullYear() - birthDate.getFullYear()
+        const monthDiff = today.getMonth() - birthDate.getMonth()
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--
+        }
+
+        // Query age_groups to find the best match (smallest range)
+        const { data: ageGroups } = await adminSupabase
+          .from('age_groups')
+          .select('id, min_age, max_age')
+          .eq('is_active', true)
+          .lte('min_age', age)
+          .gte('max_age', age)
+          .order('min_age', { ascending: true })
+
+        if (ageGroups && ageGroups.length > 0) {
+          // Pick the most specific (smallest range)
+          const sorted = ageGroups.sort((a: any, b: any) => (a.max_age - a.min_age) - (b.max_age - b.min_age))
+          resolvedAgeGroupId = sorted[0].id
+          console.log(`Auto-detected age_group_id=${resolvedAgeGroupId} for age=${age}`)
+        } else {
+          console.warn(`No matching age group found for age=${age}`)
+        }
+      }
+
+      // Validate: student must have age_group_id
+      if (!resolvedAgeGroupId) {
+        // Clean up: delete the auth user we just created
+        await adminSupabase.auth.admin.deleteUser(newUserId)
+        return new Response(
+          JSON.stringify({ 
+            error: 'Could not determine age group. Please provide a valid date of birth.', 
+            error_ar: 'لم يتم تحديد الفئة العمرية. يرجى إدخال تاريخ ميلاد صحيح.' 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      profileData.age_group_id = resolvedAgeGroupId
       profileData.level_id = body.level_id || null
       profileData.subscription_type = body.subscription_type || null
       profileData.attendance_mode = body.attendance_mode || 'offline'
