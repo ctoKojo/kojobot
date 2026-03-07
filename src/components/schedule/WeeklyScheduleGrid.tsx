@@ -180,7 +180,6 @@ export function WeeklyScheduleGrid({
                               <p className="opacity-75 flex items-center gap-1">
                                 <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={group.schedule_time} isRTL={isRTL} /> ({group.duration_minutes}{isRTL ? 'د' : 'm'})
                               </p>
-                              </p>
                             </div>
                           ))}
                         </div>
