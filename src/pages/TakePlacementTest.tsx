@@ -199,8 +199,8 @@ export default function TakePlacementTest() {
               ? 'ستتواصل معك الإدارة بخصوص نتيجة الامتحان وتحديد المستوى المناسب لك.'
               : 'The administration will contact you regarding your test results and appropriate level placement.'}
           </p>
-          <Button onClick={() => navigate('/dashboard')}>
-            {isRTL ? 'العودة للرئيسية' : 'Back to Dashboard'}
+          <Button onClick={() => navigate('/placement-gate')}>
+            {isRTL ? 'العودة' : 'Back'}
           </Button>
         </div>
       </DashboardLayout>

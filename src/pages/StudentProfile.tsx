@@ -26,6 +26,7 @@ import { EditSubscriptionDialog } from '@/components/student/EditSubscriptionDia
 import { ResetPasswordButton } from '@/components/ResetPasswordButton';
 import { generateStudentReport } from '@/lib/pdfReports';
 import { PaymentsHistory } from '@/components/student/PaymentsHistory';
+import { SchedulePlacementDialog } from '@/components/student/SchedulePlacementDialog';
 
 interface StudentData {
   profile: any;
@@ -126,6 +127,7 @@ export default function StudentProfile() {
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
   const [showEditSubscriptionDialog, setShowEditSubscriptionDialog] = useState(false);
+  const [showPlacementSchedule, setShowPlacementSchedule] = useState(false);
 
   useEffect(() => {
     if (studentId) fetchStudentData();
@@ -336,6 +338,16 @@ export default function StudentProfile() {
                 <AlertTriangle className="h-4 w-4 mr-2" />
                 {isRTL ? 'إصدار إنذار' : 'Issue Warning'}
               </Button>
+              {/* Schedule Placement Exam — only if student has no level */}
+              {!data?.profile?.level_id && (role === 'admin' || role === 'reception') && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPlacementSchedule(true)}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  {isRTL ? 'جدولة امتحان تحديد المستوى' : 'Schedule Placement Exam'}
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -880,6 +892,15 @@ export default function StudentProfile() {
           onSuccess={fetchStudentData}
         />
       )}
+
+      {/* Schedule Placement Exam Dialog */}
+      <SchedulePlacementDialog
+        open={showPlacementSchedule}
+        onOpenChange={setShowPlacementSchedule}
+        studentId={studentId!}
+        studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+        onScheduled={fetchStudentData}
+      />
     </DashboardLayout>
   );
 }

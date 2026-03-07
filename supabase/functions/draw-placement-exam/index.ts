@@ -44,6 +44,62 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     })
 
+    // ===== CHECK SCHEDULE WINDOW =====
+    const { data: activeSchedule } = await adminClient
+      .from('placement_exam_schedules')
+      .select('id, opens_at, closes_at, status')
+      .eq('student_id', studentId)
+      .in('status', ['scheduled', 'open'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const now = new Date()
+
+    if (activeSchedule) {
+      const opensAt = new Date(activeSchedule.opens_at)
+      const closesAt = new Date(activeSchedule.closes_at)
+
+      if (now < opensAt) {
+        return new Response(JSON.stringify({ 
+          error: 'Exam is not open yet',
+          opens_at: activeSchedule.opens_at,
+        }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      if (now > closesAt) {
+        // Mark as expired
+        await adminClient
+          .from('placement_exam_schedules')
+          .update({ status: 'expired' })
+          .eq('id', activeSchedule.id)
+
+        return new Response(JSON.stringify({ error: 'Exam window has expired' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      // Update schedule status to 'open' if still 'scheduled'
+      if (activeSchedule.status === 'scheduled') {
+        await adminClient
+          .from('placement_exam_schedules')
+          .update({ status: 'open' })
+          .eq('id', activeSchedule.id)
+      }
+    } else {
+      // No schedule found — check if there's an in_progress attempt (resume case)
+      const { data: inProgressAttempt } = await adminClient
+        .from('placement_exam_attempts')
+        .select('id')
+        .eq('student_id', studentId)
+        .eq('status', 'in_progress')
+        .maybeSingle()
+
+      if (!inProgressAttempt) {
+        return new Response(JSON.stringify({ error: 'No placement exam scheduled for you' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+    }
+
     // ===== RESOLVE AGE GROUP =====
     const { data: profile } = await adminClient
       .from('profiles')
