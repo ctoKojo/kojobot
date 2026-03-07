@@ -892,6 +892,15 @@ export default function StudentProfile() {
           onSuccess={fetchStudentData}
         />
       )}
+
+      {/* Schedule Placement Exam Dialog */}
+      <SchedulePlacementDialog
+        open={showPlacementSchedule}
+        onOpenChange={setShowPlacementSchedule}
+        studentId={studentId!}
+        studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+        onScheduled={fetchStudentData}
+      />
     </DashboardLayout>
   );
 }
