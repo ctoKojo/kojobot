@@ -351,21 +351,25 @@ const Index = ({ lang: routeLang }: IndexProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [fetchError, setFetchError] = useState(false);
   useEffect(() => {
-    publicSupabase.rpc("get_landing_content").then(({ data, error }) => {
-      if (error) {
-        console.error("Failed to load landing content:", error);
+    const loadContent = async () => {
+      try {
+        const { data, error } = await publicSupabase.rpc("get_landing_content");
+        if (error) {
+          console.error("Failed to load landing content:", error);
+          setFetchError(true);
+        } else if (data) {
+          setContent(data as unknown as LandingContent);
+        } else {
+          setFetchError(true);
+        }
+      } catch (err) {
+        console.error("Landing content fetch exception:", err);
         setFetchError(true);
-      } else if (data) {
-        setContent(data as unknown as LandingContent);
-      } else {
-        setFetchError(true);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }).catch((err) => {
-      console.error("Landing content fetch exception:", err);
-      setFetchError(true);
-      setLoading(false);
-    });
+    };
+    loadContent();
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
