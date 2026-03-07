@@ -59,7 +59,8 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { formatTime12Hour } from '@/lib/timeUtils';
+import { getCairoToday } from '@/lib/timeUtils';
+import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { notificationService } from '@/lib/notificationService';
 import { logCreate, logUpdate, logDelete, logFreeze, logActivate } from '@/lib/activityLogger';
 import { GROUP_TYPES_LIST, DAYS_OF_WEEK, type GroupType, type AttendanceMode, type GroupStatus } from '@/lib/constants';
@@ -1461,7 +1462,7 @@ export default function GroupsPage() {
                             );
                           })()}
                           <span>•</span>
-                          <span>{getDayName(group.schedule_day)} {formatTime12Hour(group.schedule_time, isRTL)}</span>
+                          <span>{getDayName(group.schedule_day)} <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={group.schedule_time} isRTL={isRTL} /></span>
                         </div>
                         
                         <div className="flex items-center gap-3 flex-wrap">
@@ -1672,7 +1673,7 @@ export default function GroupsPage() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {getDayName(group.schedule_day)} - {formatTime12Hour(group.schedule_time, isRTL)}
+                            {getDayName(group.schedule_day)} - <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={group.schedule_time} isRTL={isRTL} />
                           </Badge>
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>

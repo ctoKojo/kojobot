@@ -48,7 +48,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { formatTime12Hour, getCairoToday, getCairoDateOffset } from '@/lib/timeUtils';
+import { getCairoToday, getCairoDateOffset } from '@/lib/timeUtils';
+import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { logUpdate, logDelete } from '@/lib/activityLogger';
 import { isSessionEndedCairo } from '@/lib/sessionTimeGuard';
 import { getSessionStatusBadge } from '@/lib/statusBadges';
@@ -638,7 +639,7 @@ export default function SessionsPage() {
                     onClick={() => navigate(`/session/${s.id}`)}
                   >
                     <span className="font-medium">{s.groupName}</span>
-                    <span className="text-muted-foreground ml-2">{formatTime12Hour(s.session_time, isRTL)}</span>
+                    <span className="text-muted-foreground ml-2"><SessionTimeDisplay sessionDate={s.session_date} sessionTime={s.session_time} isRTL={isRTL} /></span>
                     {s.status === 'completed' && <CheckCircle className="h-3 w-3 ml-1 text-green-600" />}
                   </Badge>
                 ))}
@@ -818,7 +819,7 @@ export default function SessionsPage() {
                             {language === 'ar' ? group.name_ar : group.name}
                           </h3>
                           <p className="text-xs sm:text-sm text-muted-foreground">
-                            {group.schedule_day} - {formatTime12Hour(group.schedule_time, isRTL)}
+                            {group.schedule_day} - <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={group.schedule_time} isRTL={isRTL} />
                           </p>
                         </div>
                       </div>
@@ -891,7 +892,7 @@ export default function SessionsPage() {
                                   </span>
                                   <span className="flex items-center gap-1">
                                     <Clock className="h-3 w-3" />
-                                    {formatTime12Hour(session.session_time, isRTL)}
+                                    <SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} />
                                   </span>
                                 </div>
                                 {(session.topic || session.topic_ar) && (
@@ -996,7 +997,7 @@ export default function SessionsPage() {
                                 <TableCell>
                                   <Badge variant="outline">
                                     <Clock className="h-3 w-3 mr-1" />
-                                    {formatTime12Hour(session.session_time, isRTL)}
+                                    <SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} />
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
