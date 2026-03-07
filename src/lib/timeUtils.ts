@@ -94,3 +94,41 @@ export function formatDateTime12Hour(dateString: string, isRTL: boolean = false,
     timeZone: timezone,
   });
 }
+
+/**
+ * Get today's date string (YYYY-MM-DD) in Cairo timezone.
+ * Uses Intl.DateTimeFormat to avoid relying on the browser's local timezone.
+ */
+export function getCairoToday(): string {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+
+  const y = parts.find(p => p.type === 'year')!.value;
+  const m = parts.find(p => p.type === 'month')!.value;
+  const d = parts.find(p => p.type === 'day')!.value;
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Get a date string (YYYY-MM-DD) offset by N days from today in Cairo timezone.
+ */
+export function getCairoDateOffset(days: number): string {
+  const now = new Date();
+  now.setDate(now.getDate() + days);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+
+  const y = parts.find(p => p.type === 'year')!.value;
+  const m = parts.find(p => p.type === 'month')!.value;
+  const d = parts.find(p => p.type === 'day')!.value;
+  return `${y}-${m}-${d}`;
+}
