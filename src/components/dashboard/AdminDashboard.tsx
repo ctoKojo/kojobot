@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { getCairoToday } from '@/lib/timeUtils';
 import { AdminAnalytics } from './AdminAnalytics';
 
 interface AdminStats {
@@ -79,7 +80,7 @@ export function AdminDashboard() {
         .eq('status', 'active')
         .eq('is_suspended', true);
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = getCairoToday();
       const { count: overdueCount } = await supabase
         .from('subscriptions')
         .select('id', { count: 'exact' })

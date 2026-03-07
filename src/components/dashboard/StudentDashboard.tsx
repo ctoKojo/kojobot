@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { getCairoToday } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
 import { formatTime12Hour, formatDate } from '@/lib/timeUtils';
 import { isSessionActiveCairo } from '@/lib/sessionTimeGuard';
@@ -148,7 +149,7 @@ export function StudentDashboard() {
       const pendingAssignments = assignments?.filter(a => !submittedIds.includes(a.id)) || [];
 
       // Get upcoming sessions
-      const today = new Date().toISOString().split('T')[0];
+      const today = getCairoToday();
       let upcomingSessions: any[] = [];
       if (groupStudent?.group_id) {
         const { data } = await supabase

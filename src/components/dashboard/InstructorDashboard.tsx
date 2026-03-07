@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { formatTime12Hour } from '@/lib/timeUtils';
+import { formatTime12Hour, getCairoToday } from '@/lib/timeUtils';
 
 interface InstructorWarning {
   id: string;
@@ -282,7 +282,7 @@ export function InstructorDashboard() {
           ) : (
             <div className="space-y-2 sm:space-y-3">
               {stats.upcomingSessions.map((session: any) => {
-                const today = new Date().toISOString().split('T')[0];
+                const today = getCairoToday();
                 const isToday = session.session_date === today;
                 
                 return (
