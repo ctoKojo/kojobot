@@ -464,6 +464,25 @@ const Index = ({ lang: routeLang }: IndexProps) => {
     return <LoadingScreen />;
   }
 
+  if (fetchError && !content) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-8" dir={isRTL ? 'rtl' : 'ltr'}>
+        <img src={kojobotLogo} alt="Kojobot" className="h-16 mb-6" />
+        <h1 className="text-2xl font-bold mb-2">
+          {language === 'ar' ? 'تعذّر تحميل المحتوى' : 'Unable to load content'}
+        </h1>
+        <p className="text-muted-foreground mb-6 text-center max-w-md">
+          {language === 'ar'
+            ? 'حدث خطأ أثناء تحميل بيانات الصفحة. يرجى المحاولة مرة أخرى.'
+            : 'An error occurred while loading page data. Please try again.'}
+        </p>
+        <Button onClick={() => window.location.reload()}>
+          {language === 'ar' ? 'إعادة المحاولة' : 'Retry'}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <>
       <style>{`
