@@ -191,7 +191,7 @@ export default function BlueprintTab() {
                     <Badge variant="outline">{actual} {isRTL ? 'سؤال' : 'questions'}</Badge>
                     {expected !== null && (
                       isMatch ? (
-                        <Badge variant="default" className="bg-green-600 text-white">
+                        <Badge variant="default" className="bg-primary text-primary-foreground">
                           <CheckCircle2 className="h-3 w-3 me-1" />
                           {isRTL ? 'مطابق' : 'Matched'} ({expected})
                         </Badge>
