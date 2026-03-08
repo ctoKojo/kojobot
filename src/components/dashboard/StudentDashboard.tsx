@@ -164,36 +164,21 @@ export function StudentDashboard() {
         upcomingSessions = data || [];
       }
 
-      // Fetch level progress from actual attendance records
+      // Fetch level progress from group's last_delivered_content_number
       let levelProgress = null;
       if (groupStudent?.group_id) {
-        // Get sessions where student was present or late
-        const { data: presentAttendance } = await supabase
-          .from('attendance')
-          .select('session_id, status, compensation_status, sessions!inner(session_number, group_id)')
-          .eq('student_id', user?.id)
-          .eq('sessions.group_id', groupStudent.group_id)
-          .in('status', ['present', 'late']);
-
-        // Get sessions where student was compensated (regardless of original status)
-        const { data: compensatedAttendance } = await supabase
-          .from('attendance')
-          .select('session_id, sessions!inner(session_number, group_id)')
-          .eq('student_id', user?.id)
-          .eq('sessions.group_id', groupStudent.group_id)
-          .eq('compensation_status', 'compensated');
-
-        // Calculate unique session numbers attended
-        const attendedSessionNumbers = new Set<number>();
-        presentAttendance?.forEach((a: any) => {
-          if (a.sessions?.session_number) attendedSessionNumbers.add(a.sessions.session_number);
-        });
-        compensatedAttendance?.forEach((a: any) => {
-          if (a.sessions?.session_number) attendedSessionNumbers.add(a.sessions.session_number);
-        });
-
-        if (attendedSessionNumbers.size > 0 || presentAttendance?.length === 0) {
-          levelProgress = { completed: attendedSessionNumbers.size, total: 12 };
+        const { data: groupInfo } = await supabase
+          .from('groups')
+          .select('last_delivered_content_number, starting_session_number, owed_sessions_count, levels(expected_sessions_count)')
+          .eq('id', groupStudent.group_id)
+          .single();
+        
+        if (groupInfo) {
+          const delivered = groupInfo.last_delivered_content_number ?? 0;
+          const startingNum = groupInfo.starting_session_number ?? 1;
+          const total = (groupInfo.levels as any)?.expected_sessions_count ?? 12;
+          const completed = Math.max(0, delivered - (startingNum - 1));
+          levelProgress = { completed, total };
         }
       }
 

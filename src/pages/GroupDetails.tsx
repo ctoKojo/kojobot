@@ -75,7 +75,7 @@ interface GroupData {
   attendance: AttendanceRecord[];
 }
 
-const SESSIONS_PER_LEVEL = 12;
+const DEFAULT_SESSIONS_PER_LEVEL = 12;
 
 export default function GroupDetails() {
   const { groupId } = useParams();
@@ -105,7 +105,7 @@ export default function GroupDetails() {
       // Fetch group with related data
       const { data: group } = await supabase
         .from('groups')
-        .select('*, age_groups(name, name_ar), levels(name, name_ar)')
+        .select('*, age_groups(name, name_ar), levels(name, name_ar, expected_sessions_count)')
         .eq('id', groupId)
         .single();
 
@@ -187,22 +187,25 @@ export default function GroupDetails() {
 
   // SSOT: getDayName and getGroupTypeLabel imported from constants.ts
 
-  // Level Progress calculations
+  // Level Progress calculations — uses last_delivered_content_number from group
   const getLevelProgress = () => {
-    const sessions = data?.sessions || [];
-    const completed = sessions.filter(s => s.status === 'completed').length;
-    const total = SESSIONS_PER_LEVEL;
-    const currentMax = Math.max(...sessions.map(s => s.session_number || 0), 0);
-    const remaining = total - completed;
-    const percentage = Math.round((completed / total) * 100);
+    const group = data?.group;
+    const delivered = group?.last_delivered_content_number ?? 0;
+    const startingNum = group?.starting_session_number ?? 1;
+    const total = group?.levels?.expected_sessions_count ?? DEFAULT_SESSIONS_PER_LEVEL;
+    const completed = Math.max(0, delivered - (startingNum - 1));
+    const remaining = Math.max(0, total - completed);
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const owedSessions = group?.owed_sessions_count ?? 0;
     
     return {
       completed,
       total,
-      currentMax,
+      currentMax: delivered,
       remaining,
       percentage,
-      isComplete: completed >= total,
+      isComplete: delivered >= (startingNum - 1 + total) && owedSessions <= 0,
+      owedSessions,
     };
   };
 
@@ -459,8 +462,18 @@ export default function GroupDetails() {
                   <p className="text-xs text-muted-foreground">{isRTL ? 'متبقي' : 'Remaining'}</p>
                 </div>
               </div>
+              {levelProgress.owedSessions > 0 && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                  <AlertCircle className="h-5 w-5" />
+                  <span className="text-sm font-medium">
+                    {isRTL 
+                      ? `${levelProgress.owedSessions} سيشن مُستحق (ملغاة سابقاً)` 
+                      : `${levelProgress.owedSessions} owed session(s) from cancellations`}
+                  </span>
+                </div>
+              )}
               {levelProgress.isComplete && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-100 text-green-800">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                   <CheckCircle className="h-5 w-5" />
                   <span className="font-medium">
                     {isRTL ? 'تم إكمال المستوى!' : 'Level Complete!'}

@@ -119,7 +119,7 @@ export default function MySessions() {
       // 4. Fetch session data
       const { data: sessionsData } = await supabase
         .from('sessions')
-        .select('id, session_number, session_date, session_time, status, group_id, is_makeup')
+        .select('id, session_number, content_number, session_date, session_time, status, group_id, is_makeup')
         .in('id', Array.from(attendedMap.keys()))
         .order('session_date', { ascending: false });
 
@@ -145,8 +145,9 @@ export default function MySessions() {
 
       sessionsData.forEach(s => {
         const g = groupMap.get(s.group_id);
-        if (g?.age_group_id && g?.level_id && s.session_number) {
-          uniqueCurrKeys.add(`${g.age_group_id}|${g.level_id}|${s.session_number}`);
+        const currNum = s.content_number ?? s.session_number;
+        if (g?.age_group_id && g?.level_id && currNum) {
+          uniqueCurrKeys.add(`${g.age_group_id}|${g.level_id}|${currNum}`);
         }
       });
 
@@ -175,7 +176,7 @@ export default function MySessions() {
       const result: AttendedSession[] = sessionsData.map(s => {
         const g = groupMap.get(s.group_id);
         const att = attendedMap.get(s.id);
-        const currKey = g ? `${g.age_group_id}|${g.level_id}|${s.session_number}` : '';
+        const currKey = g ? `${g.age_group_id}|${g.level_id}|${s.content_number ?? s.session_number}` : '';
         const curr = curriculumCache.get(currKey);
 
         return {
