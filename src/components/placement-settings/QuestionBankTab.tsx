@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,10 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Upload, FileJson, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import QuestionEditDialog from './QuestionEditDialog';
+import ImportPreviewDialog from './ImportPreviewDialog';
 
 interface Question {
   id: number;
@@ -35,7 +37,12 @@ interface Question {
 
 const AGE_GROUPS = ['6_9', '10_13', '14_18'];
 const LEVELS = ['foundation', 'intermediate', 'advanced'];
-const SKILLS = ['algorithms','conditions','control_flow','data_structures','data_types','debugging','events','functions','lists','logic','loops','oop','patterns','problem_solving','sequences','variables','web_basics'];
+const SKILLS = [
+  'algorithmic_thinking', 'conditions', 'control_flow', 'data_structures',
+  'data_types', 'debugging', 'debugging_basic', 'events', 'functions',
+  'lists', 'logic', 'loops', 'oop', 'patterns', 'problem_solving',
+  'sequence', 'variables', 'web_basics',
+];
 const DIFFICULTIES = ['easy', 'medium', 'hard'];
 
 const EMPTY_QUESTION: Partial<Question> = {
@@ -53,6 +60,14 @@ export default function QuestionBankTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editQ, setEditQ] = useState<Partial<Question> | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Import state
+  const [importPreviewOpen, setImportPreviewOpen] = useState(false);
+  const [importData, setImportData] = useState<any>(null);
+  const [importValidation, setImportValidation] = useState<any>(null);
+  const [validating, setValidating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Filters
   const [fAge, setFAge] = useState<string>('all');
@@ -74,11 +89,11 @@ export default function QuestionBankTab() {
     if (fStatus === 'active') query = query.eq('is_active', true);
     if (fStatus === 'inactive') query = query.eq('is_active', false);
     if (searchText) query = query.ilike('question_text_ar', `%${searchText}%`);
-    
-    const { data, count } = await query
+
+    const { data } = await query
       .order('id', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-    
+
     if (data) setQuestions(data as any);
     setLoading(false);
   }, [fAge, fLevel, fSkill, fDifficulty, fStatus, searchText, page]);
@@ -146,6 +161,97 @@ export default function QuestionBankTab() {
     setEditQ(prev => prev ? { ...prev, options: { ...(prev.options as any), [key]: value } } : null);
   };
 
+  // === IMPORT FLOW ===
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+
+      // Support both { questions: [...] } and direct array
+      const questionsArr = Array.isArray(parsed) ? parsed : parsed.questions;
+      if (!Array.isArray(questionsArr) || questionsArr.length === 0) {
+        toast({
+          title: isRTL ? 'خطأ' : 'Error',
+          description: isRTL ? 'الملف لا يحتوي على أسئلة صالحة' : 'File contains no valid questions array',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setImportData(questionsArr);
+      setValidating(true);
+      setImportPreviewOpen(true);
+
+      // Call edge function in validate_only mode
+      const { data, error } = await supabase.functions.invoke('import-question-bank', {
+        body: { questions: questionsArr, mode: 'validate_only' },
+      });
+
+      if (error) {
+        setImportValidation({ valid: false, errors: [error.message], total: questionsArr.length });
+      } else {
+        setImportValidation(data);
+      }
+    } catch (err: any) {
+      toast({
+        title: isRTL ? 'خطأ في قراءة الملف' : 'File read error',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setValidating(false);
+      // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImportConfirm = async () => {
+    if (!importData) return;
+    setImporting(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('import-question-bank', {
+        body: { questions: importData, mode: 'import' },
+      });
+
+      if (error) {
+        toast({
+          title: isRTL ? 'فشل الاستيراد' : 'Import failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } else if (data?.error) {
+        toast({
+          title: isRTL ? 'فشل الاستيراد' : 'Import failed',
+          description: data.error,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: isRTL ? 'تم الاستيراد بنجاح' : 'Import successful',
+          description: isRTL
+            ? `تم استيراد ${data.imported} سؤال`
+            : `${data.imported} questions imported`,
+        });
+        setImportPreviewOpen(false);
+        setImportData(null);
+        setImportValidation(null);
+        fetchQuestions();
+      }
+    } catch (err: any) {
+      toast({
+        title: isRTL ? 'خطأ' : 'Error',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Filters */}
@@ -178,7 +284,7 @@ export default function QuestionBankTab() {
                 <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{isRTL ? 'الكل' : 'All'}</SelectItem>
-                  {SKILLS.map(s => <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g,' ')}</SelectItem>)}
+                  {SKILLS.map(s => <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g, ' ')}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -211,7 +317,23 @@ export default function QuestionBankTab() {
                   value={searchText} onChange={e => setSearchText(e.target.value)} />
               </div>
             </div>
-            <Button onClick={openNew}><Plus className="h-4 w-4 me-1" />{isRTL ? 'سؤال جديد' : 'New Question'}</Button>
+            <div className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-4 w-4 me-1" />
+                {isRTL ? 'استيراد JSON' : 'Import JSON'}
+              </Button>
+              <Button onClick={openNew}>
+                <Plus className="h-4 w-4 me-1" />
+                {isRTL ? 'سؤال جديد' : 'New Question'}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -243,7 +365,7 @@ export default function QuestionBankTab() {
                     <TableCell className="max-w-[200px] truncate text-sm">{q.question_text_ar}</TableCell>
                     <TableCell><Badge variant="outline" className="text-xs">{q.age_group}</Badge></TableCell>
                     <TableCell className="capitalize text-xs">{q.level}</TableCell>
-                    <TableCell className="capitalize text-xs">{q.skill.replace(/_/g,' ')}</TableCell>
+                    <TableCell className="capitalize text-xs">{q.skill.replace(/_/g, ' ')}</TableCell>
                     <TableCell className="capitalize text-xs">{q.difficulty}</TableCell>
                     <TableCell className="font-mono">{q.correct_answer}</TableCell>
                     <TableCell>{q.usage_count}</TableCell>
@@ -282,99 +404,33 @@ export default function QuestionBankTab() {
       </div>
 
       {/* Edit/Add Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editQ?.id ? (isRTL ? 'تعديل سؤال' : 'Edit Question') : (isRTL ? 'سؤال جديد' : 'New Question')}</DialogTitle>
-          </DialogHeader>
-          {editQ && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div>
-                  <Label>{isRTL ? 'الفئة' : 'Age Group'}</Label>
-                  <Select value={editQ.age_group} onValueChange={v => updateEditField('age_group', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{AGE_GROUPS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{isRTL ? 'المستوى' : 'Level'}</Label>
-                  <Select value={editQ.level} onValueChange={v => updateEditField('level', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{LEVELS.map(l => <SelectItem key={l} value={l} className="capitalize">{l}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{isRTL ? 'المهارة' : 'Skill'}</Label>
-                  <Select value={editQ.skill} onValueChange={v => updateEditField('skill', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{SKILLS.map(s => <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g,' ')}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{isRTL ? 'الصعوبة' : 'Difficulty'}</Label>
-                  <Select value={editQ.difficulty} onValueChange={v => updateEditField('difficulty', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{DIFFICULTIES.map(d => <SelectItem key={d} value={d} className="capitalize">{d}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
+      <QuestionEditDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editQ={editQ}
+        saving={saving}
+        onSave={handleSave}
+        onUpdateField={updateEditField}
+        onUpdateOption={updateOption}
+        isRTL={isRTL}
+      />
 
-              <div>
-                <Label>{isRTL ? 'نص السؤال (عربي)' : 'Question Text (Arabic)'}</Label>
-                <Textarea value={editQ.question_text_ar || ''} rows={3}
-                  onChange={e => updateEditField('question_text_ar', e.target.value)} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {['A', 'B', 'C', 'D'].map(key => (
-                  <div key={key}>
-                    <Label>{isRTL ? `الإجابة ${key}` : `Option ${key}`}</Label>
-                    <Input value={(editQ.options as any)?.[key] || ''}
-                      onChange={e => updateOption(key, e.target.value)} />
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>{isRTL ? 'الإجابة الصحيحة' : 'Correct Answer'}</Label>
-                  <Select value={editQ.correct_answer} onValueChange={v => updateEditField('correct_answer', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{['A','B','C','D'].map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center gap-2 pt-6">
-                  <Switch checked={editQ.is_active ?? true} onCheckedChange={v => updateEditField('is_active', v)} />
-                  <Label>{isRTL ? 'مفعل' : 'Active'}</Label>
-                </div>
-              </div>
-
-              <div>
-                <Label>{isRTL ? 'الشرح (عربي)' : 'Explanation (Arabic)'}</Label>
-                <Textarea value={editQ.explanation_ar || ''} rows={2}
-                  onChange={e => updateEditField('explanation_ar', e.target.value)} />
-              </div>
-
-              <div>
-                <Label>{isRTL ? 'كود (اختياري)' : 'Code Snippet (optional)'}</Label>
-                <Textarea value={editQ.code_snippet || ''} rows={3} className="font-mono text-sm"
-                  onChange={e => updateEditField('code_snippet', e.target.value)} />
-              </div>
-
-              <div>
-                <Label>{isRTL ? 'رابط صورة (اختياري)' : 'Image URL (optional)'}</Label>
-                <Input value={editQ.image_url || ''}
-                  onChange={e => updateEditField('image_url', e.target.value)} />
-              </div>
-
-              <Button onClick={handleSave} disabled={saving} className="w-full">
-                {saving ? (isRTL ? 'جارٍ الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Import Preview Dialog */}
+      <ImportPreviewDialog
+        open={importPreviewOpen}
+        onOpenChange={(open) => {
+          setImportPreviewOpen(open);
+          if (!open) {
+            setImportData(null);
+            setImportValidation(null);
+          }
+        }}
+        validation={importValidation}
+        validating={validating}
+        importing={importing}
+        onConfirmImport={handleImportConfirm}
+        isRTL={isRTL}
+      />
     </div>
   );
 }
