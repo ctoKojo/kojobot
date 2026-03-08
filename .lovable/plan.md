@@ -1,85 +1,49 @@
 
-
-
-# خطة تنفيذ نظام امتحان تحديد المستوى
-
-الخطة اللي بعتها مكتملة ومتماسكة. هنفذها كالتالي:
+# خطة فصل مفاهيم السيشنات: Delivery Slot vs Curriculum Content vs Owed Sessions
 
 ---
 
-## المرحلة 1: Database Migration
+## ✅ Phase 1: Schema + Backfill (مكتمل)
 
-4 جداول جديدة مع RLS:
-- **`placement_tests`** — حجز الامتحان (الطالب يقرأ بياناته فقط)
-- **`placement_test_results`** — النتائج (admin/reception فقط، الطالب ممنوع تماماً)
-- **`placement_question_levels`** — ربط كل سؤال بمستوى (admin فقط)
-- **`placement_quiz_config`** — ربط كويز بفئة عمرية + pass_threshold (admin فقط)
+- `groups.last_delivered_content_number` INTEGER DEFAULT 0
+- `groups.owed_sessions_count` INTEGER DEFAULT 0
+- `sessions.content_number` INTEGER (nullable)
+- Backfill: `content_number = session_number` لـ regular completed sessions فقط
+- `last_delivered_content_number = MAX(content_number)` لكل مجموعة
 
-## المرحلة 2: Edge Functions
+## ✅ Phase 2 Step 1: Database Logic (مكتمل)
 
-- **`grade-placement-test`** — تصحيح أوتوماتيك + حساب المستوى المقترح + إشعار أدمن
-- **`expire-placement-tests`** — cron كل 15 دقيقة لتقليب `pending` → `expired`
+### القواعد المعتمدة:
+1. `session_number` على makeup sessions يبقى للعرض و tracking فقط
+2. `content_number` هو المرجع الحقيقي للمحتوى
+3. `curriculum lookup` يعتمد على `content_number`
+4. `level progress` يعتمد على `last_delivered_content_number`
+5. **Level completion** = `last_delivered_content_number >= expected_sessions_count AND owed_sessions_count <= 0`
+6. **Cancelled** regular session → `session_number + 1` + `owed_sessions_count += 1`
+7. **Unique index** يمنع تكرار `session_number` لـ regular sessions فقط
 
-## المرحلة 3: صفحات جديدة
+### Trigger Execution Order (AFTER UPDATE on sessions):
+1. `a_assign_content_on_complete` — يعيّن `content_number` + يحدث group counters (مع FOR UPDATE)
+2. `on_session_status_change` — يولّد السيشن التالية (cancelled → +1 + owed++)
+3. `trg_check_level_completion` — يتحقق من اكتمال المستوى (يقرأ الحالة المُحدّثة)
 
-- **`PlacementTestSettings.tsx`** (`/placement-test-settings`) — إعداد كويز لكل فئة عمرية + ربط أسئلة بمستويات
-- **`PlacementTestReview.tsx`** (`/placement-test-review`) — مراجعة النتائج + موافقة/تغيير المستوى + بريفيو إجابات
-- **`TakePlacementTest.tsx`** (`/placement-test/:id`) — صفحة أداء الامتحان للطالب (بدون عرض نتيجة)
-
-## المرحلة 4: تعديلات على ملفات موجودة
-
-- **`Students.tsx`** — dialog جدولة امتحان بعد إنشاء طالب جديد
-- **`StudentDashboard.tsx`** — بانر يحجب الداشبورد حتى الامتحان والمراجعة
-- **`ProtectedRoute.tsx`** — منع دخول routes حساسة بدون `level_id`
-- **`AdminDashboard.tsx`** — كارت تنبيه بامتحانات معلقة
-- **`AppSidebar.tsx`** — روابط جديدة
-- **`App.tsx`** — routes جديدة
-
----
-
-## ترتيب التنفيذ
-
-نظراً لحجم العمل الكبير، هنفذ على مراحل:
-1. DB migration (الأساس)
-2. Edge functions (grade + expire)
-3. إعدادات الأدمن (PlacementTestSettings)
-4. صفحة الامتحان (TakePlacementTest)
-5. صفحة المراجعة (PlacementTestReview)
-6. تعديل Students.tsx + Dashboard + ProtectedRoute + Sidebar + Routes
+### Functions Modified:
+- `assign_content_number_on_completion()` — **جديدة** — idempotency guard + FOR UPDATE + atomic group update
+- `auto_generate_next_session()` — **معدّلة** — cancelled يولّد +1 + owed++ + stop condition جديد
+- `check_students_level_completion()` — **معدّلة** — يستخدم القاعدة الجديدة بدل عد السيشنات
+- Unique Index — **معدّل** — بدون استثناء cancelled
 
 ---
 
-## ✅ تم التنفيذ: عرض التوقيت المحلي + مرجع القاهرة (Dual Timezone Display)
+## 🔲 Phase 2 Step 2: Edge Functions (قادم)
 
-### ما تم تنفيذه:
-1. **دوال جديدة في `src/lib/timeUtils.ts`**:
-   - `getUserTimezone()` — IANA timezone detection مع fallback لـ Africa/Cairo
-   - `isCairoTimezone()` — مقارنة مباشرة مع Africa/Cairo
-   - `formatSessionTimeForViewer(sessionDate, sessionTime, isRTL)` — بناء Date صحيح باستخدام `fromZonedTime` من `date-fns-tz` (يعامل sessionTime كوقت محلي في القاهرة)
-   - `formatSessionDateTimeForViewer(sessionDate, sessionTime, isRTL)` — نفس المنطق مع التاريخ
+- `start-group`: ضبط `last_delivered_content_number = starting_session_number - 1`
+- `populate-completed-sessions`: تعيين `content_number`
+- `auto-complete-sessions`: يعتمد على trigger (لا تغيير كبير)
 
-2. **كومبوننت مركزي `src/components/shared/SessionTimeDisplay.tsx`**:
-   - مصر: وقت واحد فقط
-   - برا مصر Desktop: `10:00 AM (3:00 PM Cairo)`
-   - برا مصر Mobile: سطرين
-   - Props: `sessionDate`, `sessionTime`, `isRTL`, `showCairoReference?`, `className?`
-   - Graceful fallback لو البيانات ناقصة
+## 🔲 Phase 2 Step 3: Frontend (قادم)
 
-3. **استبدال `formatTime12Hour` في 10 ملفات**:
-   - Sessions.tsx (4 أماكن)
-   - GroupDetails.tsx (3 أماكن)
-   - SessionDetails.tsx (1 مكان)
-   - Groups.tsx (2 مكان)
-   - InstructorProfile.tsx (3 أماكن)
-   - StudentDashboard.tsx (3 أماكن)
-   - InstructorDashboard.tsx (1 مكان)
-   - RescheduleDialog.tsx (1 مكان)
-   - WeeklyScheduleGrid.tsx (1 مكان)
-   - MakeupSessions.tsx (2 مكان — كانت raw بدون formatting)
-
-4. **`formatTime12Hour` محفوظة** كـ fallback لأماكن مش مرتبطة بسيشن
-
-### ملاحظات تقنية:
-- `fromZonedTime` من `date-fns-tz@3.2.0` يستخدم لبناء Date من أرقام محلية في Cairo ← UTC Date صحيح
-- لا يستخدم `new Date(string)` parsing مباشر
-- الأماكن اللي فيها `schedule_time` بدون `sessionDate` بتمرر `getCairoToday()` كـ approximation
+- `SessionDetails.tsx` — curriculum lookup بـ `content_number`
+- `MySessions.tsx` — نفس التعديل
+- `GroupDetails.tsx` — level progress بـ `last_delivered_content_number`
+- `Sessions.tsx` — عرض + sorting
