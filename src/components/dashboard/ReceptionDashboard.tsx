@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { getCairoToday } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
-import { Users, Calendar, Clock, AlertTriangle, CreditCard, RefreshCw, Target } from 'lucide-react';
+import { Users, Calendar, Clock, AlertTriangle, CreditCard, RefreshCw, Target, ChevronRight, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -76,86 +75,162 @@ export function ReceptionDashboard() {
     }
   };
 
-  const cards = [
+  const statCards = [
     {
       title: isRTL ? 'الطلاب النشطين' : 'Active Students',
       value: stats.activeStudents,
       icon: Users,
-      color: 'text-blue-600',
-      bg: 'bg-blue-100',
+      gradient: 'from-blue-500 to-blue-600',
       onClick: () => navigate('/students'),
     },
     {
       title: isRTL ? 'المجموعات النشطة' : 'Active Groups',
       value: stats.activeGroups,
       icon: Calendar,
-      color: 'text-green-600',
-      bg: 'bg-green-100',
+      gradient: 'from-emerald-500 to-emerald-600',
       onClick: () => navigate('/groups'),
     },
     {
       title: isRTL ? 'جلسات اليوم' : "Today's Sessions",
       value: stats.todaySessions,
       icon: Clock,
-      color: 'text-purple-600',
-      bg: 'bg-purple-100',
+      gradient: 'from-purple-500 to-purple-600',
       onClick: () => navigate('/sessions'),
-    },
-    {
-      title: isRTL ? 'حضور غير مسجل' : 'Unrecorded Attendance',
-      value: stats.unrecordedAttendance,
-      icon: AlertTriangle,
-      color: stats.unrecordedAttendance > 0 ? 'text-orange-600' : 'text-green-600',
-      bg: stats.unrecordedAttendance > 0 ? 'bg-orange-100' : 'bg-green-100',
-      onClick: () => navigate('/sessions'),
-    },
-    {
-      title: isRTL ? 'مدفوعات متأخرة' : 'Overdue Payments',
-      value: stats.overduePayments,
-      icon: CreditCard,
-      color: stats.overduePayments > 0 ? 'text-red-600' : 'text-green-600',
-      bg: stats.overduePayments > 0 ? 'bg-red-100' : 'bg-green-100',
-      onClick: () => navigate('/finance'),
-    },
-    {
-      title: isRTL ? 'تعويضات معلقة' : 'Pending Makeups',
-      value: stats.pendingMakeups,
-      icon: RefreshCw,
-      color: stats.pendingMakeups > 0 ? 'text-amber-600' : 'text-green-600',
-      bg: stats.pendingMakeups > 0 ? 'bg-amber-100' : 'bg-green-100',
-      onClick: () => navigate('/makeup-sessions'),
-    },
-    {
-      title: isRTL ? 'جاهزون للامتحان النهائي' : 'Awaiting Final Exam',
-      value: stats.awaitingFinalExam,
-      icon: Target,
-      color: stats.awaitingFinalExam > 0 ? 'text-emerald-600' : 'text-green-600',
-      bg: stats.awaitingFinalExam > 0 ? 'bg-emerald-100' : 'bg-green-100',
-      onClick: () => navigate('/final-exams'),
     },
   ];
 
+  const alerts = [
+    stats.unrecordedAttendance > 0 && {
+      icon: AlertTriangle,
+      title: isRTL ? 'حضور غير مسجل' : 'Unrecorded Attendance',
+      description: isRTL
+        ? `${stats.unrecordedAttendance} جلسة بدون تسجيل حضور`
+        : `${stats.unrecordedAttendance} sessions without recorded attendance`,
+      count: stats.unrecordedAttendance,
+      variant: 'destructive' as const,
+      onClick: () => navigate('/sessions'),
+    },
+    stats.overduePayments > 0 && {
+      icon: CreditCard,
+      title: isRTL ? 'مدفوعات متأخرة' : 'Overdue Payments',
+      description: isRTL
+        ? `${stats.overduePayments} طالب متأخر في الدفع`
+        : `${stats.overduePayments} students with overdue payments`,
+      count: stats.overduePayments,
+      variant: 'destructive' as const,
+      onClick: () => navigate('/finance'),
+    },
+    stats.pendingMakeups > 0 && {
+      icon: RefreshCw,
+      title: isRTL ? 'تعويضات معلقة' : 'Pending Makeups',
+      description: isRTL
+        ? `${stats.pendingMakeups} سيشن تعويضية تحتاج جدولة`
+        : `${stats.pendingMakeups} makeup sessions need scheduling`,
+      count: stats.pendingMakeups,
+      variant: 'default' as const,
+      onClick: () => navigate('/makeup-sessions'),
+    },
+    stats.awaitingFinalExam > 0 && {
+      icon: Target,
+      title: isRTL ? 'جاهزون للامتحان النهائي' : 'Awaiting Final Exam',
+      description: isRTL
+        ? `${stats.awaitingFinalExam} طالب ينتظر جدولة الامتحان النهائي`
+        : `${stats.awaitingFinalExam} students await final exam scheduling`,
+      count: stats.awaitingFinalExam,
+      variant: 'secondary' as const,
+      onClick: () => navigate('/final-exams'),
+    },
+  ].filter(Boolean) as Array<{
+    icon: any;
+    title: string;
+    description: string;
+    count: number;
+    variant: 'destructive' | 'default' | 'secondary' | 'outline';
+    onClick?: () => void;
+  }>;
+
   return (
-    <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
-      {cards.map((card) => (
-        <Card
-          key={card.title}
-          className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={card.onClick}
-        >
-          <CardContent className="p-3 sm:pt-6 sm:px-6 sm:pb-6">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className={`p-1.5 sm:p-2 rounded-lg ${card.bg} flex-shrink-0`}>
-                <card.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${card.color}`} />
+    <div className="space-y-8">
+      {/* Stats Grid - Gradient Cards */}
+      <div className="grid gap-4 sm:gap-5 grid-cols-2 lg:grid-cols-3">
+        {statCards.map((stat) => (
+          <Card
+            key={stat.title}
+            className={`relative overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 ${stat.onClick ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
+            onClick={stat.onClick}
+          >
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-[0.08] dark:opacity-[0.15]`} />
+            <div className={`absolute top-0 ${isRTL ? 'left-0' : 'right-0'} w-20 h-20 bg-gradient-to-br ${stat.gradient} opacity-[0.12] dark:opacity-[0.2] rounded-full -translate-y-6 ${isRTL ? '-translate-x-6' : 'translate-x-6'}`} />
+            
+            <CardHeader className="relative flex flex-row items-center justify-between pb-1 p-4 sm:p-5 sm:pb-1">
+              <div className={`p-2 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-sm`}>
+                <stat.icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
-              <div className="min-w-0">
-                <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : card.value}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{card.title}</p>
+              {stat.onClick && (
+                <ChevronRight className={`h-4 w-4 text-muted-foreground/50 ${isRTL ? 'rotate-180' : ''}`} />
+              )}
+            </CardHeader>
+            <CardContent className="relative p-4 sm:p-5 pt-2 sm:pt-2">
+              <div className="text-3xl sm:text-4xl font-bold tracking-tight">
+                {loading ? (
+                  <div className="h-9 w-16 bg-muted animate-pulse rounded" />
+                ) : (
+                  stat.value
+                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-1">
+                {stat.title}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Alerts Section */}
+      {alerts.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            {isRTL ? 'تنبيهات تحتاج انتباهك' : 'Needs Your Attention'}
+          </h2>
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
+            {alerts.map((alert, index) => (
+              <Card
+                key={index}
+                className={`group transition-all duration-200 hover:shadow-md ${alert.onClick ? 'cursor-pointer hover:-translate-y-0.5' : ''} ${
+                  alert.variant === 'destructive' 
+                    ? 'border-destructive/30 bg-destructive/5 dark:bg-destructive/10' 
+                    : 'border-border'
+                }`}
+                onClick={alert.onClick}
+              >
+                <CardContent className="flex items-center gap-4 p-4">
+                  <div className={`flex-shrink-0 p-2.5 rounded-xl ${
+                    alert.variant === 'destructive' 
+                      ? 'bg-destructive/10 text-destructive' 
+                      : alert.variant === 'secondary'
+                      ? 'bg-secondary/10 text-secondary'
+                      : 'bg-primary/10 text-primary'
+                  }`}>
+                    <alert.icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="font-semibold text-sm truncate">{alert.title}</p>
+                      <Badge variant={alert.variant} className="text-xs tabular-nums flex-shrink-0">
+                        {alert.count}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-1">{alert.description}</p>
+                  </div>
+                  {alert.onClick && (
+                    <ArrowRight className={`h-4 w-4 text-muted-foreground/40 group-hover:text-foreground/60 transition-colors flex-shrink-0 ${isRTL ? 'rotate-180' : ''}`} />
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
