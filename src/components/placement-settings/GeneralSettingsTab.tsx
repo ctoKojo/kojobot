@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Save } from 'lucide-react';
+import { Save, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,13 +32,23 @@ const AGE_GROUP_LABELS: Record<string, { en: string; ar: string }> = {
 
 const AGE_GROUP_KEYS = ['6_9', '10_13', '14_18'] as const;
 
+const DEFAULT_SETTINGS: Omit<ExamSettings, 'id' | 'age_group'> = {
+  total_questions: 18,
+  foundation_questions: 6,
+  intermediate_questions: 6,
+  advanced_questions: 6,
+  duration_minutes: 30,
+  allow_retake: true,
+  max_attempts: 2,
+  is_active: true,
+};
+
 export default function GeneralSettingsTab() {
   const { isRTL } = useLanguage();
   const { toast } = useToast();
   const [settings, setSettings] = useState<ExamSettings[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
-  const [initializing, setInitializing] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -55,9 +65,37 @@ export default function GeneralSettingsTab() {
       if (error) {
         console.error('Error fetching placement settings:', error);
         toast({ title: isRTL ? 'خطأ في تحميل الإعدادات' : 'Error loading settings', description: error.message, variant: 'destructive' });
+        setSettings([]);
+        return;
       }
 
-      setSettings((data ?? []) as ExamSettings[]);
+      const existing = (data ?? []) as ExamSettings[];
+
+      // Auto-create missing age groups
+      const existingGroups = new Set(existing.map(s => s.age_group));
+      const missing = AGE_GROUP_KEYS.filter(ag => !existingGroups.has(ag));
+
+      if (missing.length > 0) {
+        const payload = missing.map(age_group => ({
+          age_group,
+          ...DEFAULT_SETTINGS,
+          total_questions: DEFAULT_SETTINGS.foundation_questions + DEFAULT_SETTINGS.intermediate_questions + DEFAULT_SETTINGS.advanced_questions,
+        }));
+
+        const { data: inserted, error: insertErr } = await supabase
+          .from('placement_exam_settings')
+          .insert(payload as any)
+          .select('*');
+
+        if (insertErr) {
+          console.error('Error auto-creating settings:', insertErr);
+        } else if (inserted) {
+          existing.push(...(inserted as ExamSettings[]));
+        }
+      }
+
+      existing.sort((a, b) => a.age_group.localeCompare(b.age_group));
+      setSettings(existing);
     } catch (err) {
       console.error('Unexpected error:', err);
       toast({ title: isRTL ? 'خطأ غير متوقع' : 'Unexpected error', variant: 'destructive' });
@@ -66,62 +104,109 @@ export default function GeneralSettingsTab() {
     }
   };
 
-  const initializeDefaults = async () => {
-    setInitializing(true);
-    try {
-      const payload = AGE_GROUP_KEYS.map((age_group) => ({ age_group }));
-      const { data, error } = await supabase
-        .from('placement_exam_settings')
-        .insert(payload)
-        .select('*')
-        .order('age_group');
-
-      if (error) {
-        console.error('Error initializing placement settings:', error);
-        toast({
-          title: isRTL ? 'تعذر التهيئة' : 'Initialization failed',
-          description: error.message,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      setSettings((data ?? []) as ExamSettings[]);
-      toast({ title: isRTL ? 'تمت التهيئة بنجاح' : 'Defaults initialized successfully' });
-    } catch (err) {
-      console.error('Unexpected initialization error:', err);
-      toast({ title: isRTL ? 'تعذر التهيئة' : 'Initialization failed', variant: 'destructive' });
-    } finally {
-      setInitializing(false);
-    }
-  };
-
   const handleSave = async (s: ExamSettings) => {
     setSaving(s.age_group);
     const total = s.foundation_questions + s.intermediate_questions + s.advanced_questions;
 
     try {
-      const { error } = await supabase
-        .from('placement_exam_settings')
-        .update({
-          total_questions: total,
-          foundation_questions: s.foundation_questions,
-          intermediate_questions: s.intermediate_questions,
-          advanced_questions: s.advanced_questions,
-          duration_minutes: s.duration_minutes,
-          allow_retake: s.allow_retake,
-          max_attempts: s.max_attempts,
-          is_active: s.is_active,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', s.id);
+      const updatePayload = {
+        total_questions: total,
+        foundation_questions: s.foundation_questions,
+        intermediate_questions: s.intermediate_questions,
+        advanced_questions: s.advanced_questions,
+        duration_minutes: s.duration_minutes,
+        allow_retake: s.allow_retake,
+        max_attempts: s.max_attempts,
+        is_active: s.is_active,
+        updated_at: new Date().toISOString(),
+      };
 
-      if (error) {
-        toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
-      } else {
-        toast({ title: isRTL ? 'تم الحفظ' : 'Saved' });
-        fetchSettings();
+      // Try update first
+      const { data: updated, error: updateErr } = await supabase
+        .from('placement_exam_settings')
+        .update(updatePayload as any)
+        .eq('id', s.id)
+        .select('*');
+
+      if (updateErr) {
+        toast({
+          title: isRTL ? 'فشل الحفظ' : 'Save failed',
+          description: updateErr.message,
+          variant: 'destructive',
+        });
+        return;
       }
+
+      // If update returned no rows, try upsert
+      if (!updated || updated.length === 0) {
+        const { data: upserted, error: upsertErr } = await supabase
+          .from('placement_exam_settings')
+          .upsert({
+            age_group: s.age_group,
+            ...updatePayload,
+          } as any, { onConflict: 'age_group' })
+          .select('*');
+
+        if (upsertErr) {
+          toast({
+            title: isRTL ? 'فشل الحفظ' : 'Save failed',
+            description: upsertErr.message,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        if (!upserted || upserted.length === 0) {
+          toast({
+            title: isRTL ? 'فشل الحفظ' : 'Save failed',
+            description: isRTL ? 'لم يتم تحديث أي صف. تحقق من الصلاحيات.' : 'No rows updated. Check permissions.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
+      // Re-fetch to verify
+      const { data: verified, error: verifyErr } = await supabase
+        .from('placement_exam_settings')
+        .select('*')
+        .eq('age_group', s.age_group)
+        .maybeSingle();
+
+      if (verifyErr || !verified) {
+        toast({
+          title: isRTL ? 'تحذير' : 'Warning',
+          description: isRTL ? 'تم الحفظ لكن تعذر التحقق' : 'Saved but verification failed',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const v = verified as ExamSettings;
+      if (
+        v.foundation_questions !== s.foundation_questions ||
+        v.intermediate_questions !== s.intermediate_questions ||
+        v.advanced_questions !== s.advanced_questions ||
+        v.duration_minutes !== s.duration_minutes ||
+        v.is_active !== s.is_active
+      ) {
+        toast({
+          title: isRTL ? 'فشل التحقق' : 'Verification failed',
+          description: isRTL ? 'القيم المحفوظة لا تطابق المدخلات' : 'Saved values do not match input',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Reload all settings
+      await fetchSettings();
+
+      toast({
+        title: isRTL ? 'تم الحفظ والتحقق بنجاح' : 'Saved & verified',
+        description: isRTL
+          ? `${AGE_GROUP_LABELS[s.age_group]?.ar}: ${total} سؤال`
+          : `${AGE_GROUP_LABELS[s.age_group]?.en}: ${total} questions`,
+      });
     } finally {
       setSaving(null);
     }
@@ -137,17 +222,10 @@ export default function GeneralSettingsTab() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{isRTL ? 'لا توجد إعدادات منشورة' : 'No published settings found'}</CardTitle>
+          <CardTitle className="text-lg">{isRTL ? 'خطأ في تحميل الإعدادات' : 'Error loading settings'}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            {isRTL
-              ? 'يمكنك إنشاء الإعدادات الافتراضية لجميع الفئات العمرية من هنا.'
-              : 'You can initialize default settings for all age groups from here.'}
-          </p>
-          <Button onClick={initializeDefaults} disabled={initializing}>
-            {initializing ? (isRTL ? 'جارٍ التهيئة...' : 'Initializing...') : (isRTL ? 'تهيئة الإعدادات الافتراضية' : 'Initialize defaults')}
-          </Button>
+        <CardContent>
+          <Button onClick={fetchSettings}>{isRTL ? 'إعادة المحاولة' : 'Retry'}</Button>
         </CardContent>
       </Card>
     );

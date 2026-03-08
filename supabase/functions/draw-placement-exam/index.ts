@@ -22,7 +22,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-    // ===== AUTH: extract student_id from JWT =====
+    // ===== AUTH =====
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }),
@@ -39,7 +39,6 @@ serve(async (req) => {
     }
 
     const studentId = user.id
-
     const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false }
     })
@@ -61,32 +60,20 @@ serve(async (req) => {
       const closesAt = new Date(activeSchedule.closes_at)
 
       if (now < opensAt) {
-        return new Response(JSON.stringify({ 
-          error: 'Exam is not open yet',
-          opens_at: activeSchedule.opens_at,
-        }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        return new Response(JSON.stringify({ error: 'Exam is not open yet', opens_at: activeSchedule.opens_at }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
       if (now > closesAt) {
-        // Mark as expired
-        await adminClient
-          .from('placement_exam_schedules')
-          .update({ status: 'expired' })
-          .eq('id', activeSchedule.id)
-
+        await adminClient.from('placement_exam_schedules').update({ status: 'expired' }).eq('id', activeSchedule.id)
         return new Response(JSON.stringify({ error: 'Exam window has expired' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
-      // Update schedule status to 'open' if still 'scheduled'
       if (activeSchedule.status === 'scheduled') {
-        await adminClient
-          .from('placement_exam_schedules')
-          .update({ status: 'open' })
-          .eq('id', activeSchedule.id)
+        await adminClient.from('placement_exam_schedules').update({ status: 'open' }).eq('id', activeSchedule.id)
       }
     } else {
-      // No schedule found — check if there's an in_progress attempt (resume case)
       const { data: inProgressAttempt } = await adminClient
         .from('placement_exam_attempts')
         .select('id')
@@ -102,10 +89,7 @@ serve(async (req) => {
 
     // ===== RESOLVE AGE GROUP =====
     const { data: profile } = await adminClient
-      .from('profiles')
-      .select('age_group_id')
-      .eq('user_id', studentId)
-      .single()
+      .from('profiles').select('age_group_id').eq('user_id', studentId).single()
 
     if (!profile?.age_group_id) {
       return new Response(JSON.stringify({ error: 'Student has no age group assigned' }),
@@ -113,10 +97,7 @@ serve(async (req) => {
     }
 
     const { data: ageGroup } = await adminClient
-      .from('age_groups')
-      .select('min_age')
-      .eq('id', profile.age_group_id)
-      .single()
+      .from('age_groups').select('min_age').eq('id', profile.age_group_id).single()
 
     if (!ageGroup) {
       return new Response(JSON.stringify({ error: 'Age group not found' }),
@@ -137,7 +118,6 @@ serve(async (req) => {
       .maybeSingle()
 
     if (existingAttempt) {
-      // Fetch existing questions for resume
       const { data: existingQuestions } = await adminClient
         .from('placement_exam_attempt_questions')
         .select('question_id, order_index')
@@ -156,7 +136,6 @@ serve(async (req) => {
         .in('id', qIds)
 
       const bankMap = new Map((bankQs || []).map(q => [q.id, q]))
-
       const resumeQuestions = existingQuestions.map(eq => {
         const bq = bankMap.get(eq.question_id)
         return {
@@ -171,7 +150,6 @@ serve(async (req) => {
       })
 
       console.log(`Placement exam resumed: student=${studentId}, attempt=${existingAttempt.id}, questions=${resumeQuestions.length}`)
-
       return new Response(JSON.stringify({
         attempt_id: existingAttempt.id,
         age_group: existingAttempt.age_group,
@@ -192,20 +170,17 @@ serve(async (req) => {
     // ===== EXCLUDE PREVIOUSLY USED QUESTIONS =====
     let usedQuestionIds: number[] = []
     const { data: prevAttempts } = await adminClient
-      .from('placement_exam_attempts')
-      .select('id')
-      .eq('student_id', studentId)
+      .from('placement_exam_attempts').select('id').eq('student_id', studentId)
 
     if (prevAttempts && prevAttempts.length > 0) {
       const { data: usedQs } = await adminClient
         .from('placement_exam_attempt_questions')
         .select('question_id')
         .in('attempt_id', prevAttempts.map(a => a.id))
-
       if (usedQs) usedQuestionIds = usedQs.map(q => q.question_id)
     }
 
-    // ===== LOAD SETTINGS FROM DB (fallback to defaults) =====
+    // ===== LOAD SETTINGS =====
     const { data: dbSettings } = await adminClient
       .from('placement_exam_settings')
       .select('foundation_questions, intermediate_questions, advanced_questions, is_active, max_attempts')
@@ -232,43 +207,122 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
+    // ===== LOAD BLUEPRINT =====
+    const { data: blueprintRows } = await adminClient
+      .from('placement_skill_blueprint')
+      .select('*')
+      .eq('age_group', ageGroupCode)
+      .order('level')
+      .order('skill')
+
+    const hasBlueprint = blueprintRows && blueprintRows.length > 0
     const allQuestions: any[] = []
+    const usedIdsInExam = new Set<number>() // Prevent duplicate question_id across skills
 
-    for (const [level, count] of Object.entries(distribution)) {
-      const { data: available, error: qError } = await adminClient
-        .from('placement_question_bank')
-        .select('id, question_text_ar, options, skill, difficulty, code_snippet, image_url')
-        .eq('age_group', ageGroupCode)
-        .eq('level', level)
-        .eq('is_active', true)
-        .limit(200)
-
-      if (qError || !available) {
-        return new Response(JSON.stringify({ error: `Failed to load ${level} questions` }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    if (hasBlueprint) {
+      // ===== VALIDATE BLUEPRINT TOTALS MATCH SETTINGS =====
+      const bpTotals: Record<string, number> = {}
+      for (const bp of blueprintRows!) {
+        bpTotals[bp.level] = (bpTotals[bp.level] || 0) + bp.question_count
       }
 
-      // Filter out used, fallback to all if not enough
-      let filtered = available.filter(q => !usedQuestionIds.includes(q.id))
-      if (filtered.length < count) filtered = available
-
-      // Random shuffle and pick exact count
-      const shuffled = filtered.sort(() => Math.random() - 0.5)
-      const picked = shuffled.slice(0, count)
-
-      if (picked.length < count) {
-        return new Response(JSON.stringify({
-          error: `Not enough ${level} questions. Need ${count}, have ${picked.length}`,
-        }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      for (const [level, expectedCount] of Object.entries(distribution)) {
+        const bpTotal = bpTotals[level] || 0
+        if (bpTotal !== expectedCount) {
+          return new Response(JSON.stringify({
+            error: `Blueprint mismatch for level "${level}": blueprint total is ${bpTotal} but General Settings requires ${expectedCount}. Fix in Placement Settings before running exams.`,
+            level,
+            blueprint_total: bpTotal,
+            settings_total: expectedCount,
+          }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
       }
 
-      allQuestions.push(...picked.map(q => ({ ...q, level })))
+      // ===== DRAW SKILL-BY-SKILL =====
+      for (const bp of blueprintRows!) {
+        const { data: available, error: qError } = await adminClient
+          .from('placement_question_bank')
+          .select('id, question_text_ar, options, skill, difficulty, code_snippet, image_url')
+          .eq('age_group', ageGroupCode)
+          .eq('level', bp.level)
+          .eq('skill', bp.skill)
+          .eq('is_active', true)
+          .limit(200)
+
+        if (qError || !available) {
+          return new Response(JSON.stringify({
+            error: `Failed to load questions for skill "${bp.skill}" at level "${bp.level}"`,
+            age_group: ageGroupCode,
+            level: bp.level,
+            skill: bp.skill,
+          }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+
+        // Filter out used (previous attempts) and used in this exam
+        let filtered = available.filter(q => !usedQuestionIds.includes(q.id) && !usedIdsInExam.has(q.id))
+        if (filtered.length < bp.question_count) {
+          // Fallback to all available minus current exam duplicates only
+          filtered = available.filter(q => !usedIdsInExam.has(q.id))
+        }
+
+        if (filtered.length < bp.question_count) {
+          return new Response(JSON.stringify({
+            error: `Not enough questions for skill "${bp.skill}" at level "${bp.level}"`,
+            age_group: ageGroupCode,
+            level: bp.level,
+            skill: bp.skill,
+            required_count: bp.question_count,
+            available_count: filtered.length,
+          }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+
+        const shuffled = filtered.sort(() => Math.random() - 0.5)
+        const picked = shuffled.slice(0, bp.question_count)
+
+        for (const q of picked) {
+          usedIdsInExam.add(q.id)
+          allQuestions.push({ ...q, level: bp.level })
+        }
+      }
+    } else {
+      // ===== FALLBACK: RANDOM BY LEVEL (no blueprint) =====
+      for (const [level, count] of Object.entries(distribution)) {
+        const { data: available, error: qError } = await adminClient
+          .from('placement_question_bank')
+          .select('id, question_text_ar, options, skill, difficulty, code_snippet, image_url')
+          .eq('age_group', ageGroupCode)
+          .eq('level', level)
+          .eq('is_active', true)
+          .limit(200)
+
+        if (qError || !available) {
+          return new Response(JSON.stringify({ error: `Failed to load ${level} questions` }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+
+        let filtered = available.filter(q => !usedQuestionIds.includes(q.id) && !usedIdsInExam.has(q.id))
+        if (filtered.length < count) filtered = available.filter(q => !usedIdsInExam.has(q.id))
+
+        const shuffled = filtered.sort(() => Math.random() - 0.5)
+        const picked = shuffled.slice(0, count)
+
+        if (picked.length < count) {
+          return new Response(JSON.stringify({
+            error: `Not enough ${level} questions. Need ${count}, have ${picked.length}`,
+          }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        }
+
+        for (const q of picked) {
+          usedIdsInExam.add(q.id)
+          allQuestions.push({ ...q, level })
+        }
+      }
     }
 
     // Shuffle all questions together
     const shuffledAll = allQuestions.sort(() => Math.random() - 0.5)
 
-    // ===== CREATE ATTEMPT (service role — bypasses RLS) =====
+    // ===== CREATE ATTEMPT =====
     const { data: attempt, error: attemptError } = await adminClient
       .from('placement_exam_attempts')
       .insert({
@@ -303,7 +357,7 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    // ===== RETURN QUESTIONS WITHOUT correct_answer =====
+    // ===== RETURN QUESTIONS =====
     const safeQuestions = shuffledAll.map((q, idx) => ({
       order: idx + 1,
       question_id: q.id,
@@ -314,7 +368,7 @@ serve(async (req) => {
       image_url: q.image_url || null,
     }))
 
-    console.log(`Placement exam drawn: student=${studentId}, age=${ageGroupCode}, questions=${safeQuestions.length}, attempt=#${attemptNumber}`)
+    console.log(`Placement exam drawn: student=${studentId}, age=${ageGroupCode}, questions=${safeQuestions.length}, attempt=#${attemptNumber}, blueprint=${hasBlueprint}`)
 
     return new Response(JSON.stringify({
       attempt_id: attempt.id,
