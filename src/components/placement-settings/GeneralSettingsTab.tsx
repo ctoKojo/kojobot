@@ -30,14 +30,19 @@ const AGE_GROUP_LABELS: Record<string, { en: string; ar: string }> = {
   '14_18': { en: 'Teens (14-18)', ar: 'مراهقين (14-18)' },
 };
 
+const AGE_GROUP_KEYS = ['6_9', '10_13', '14_18'] as const;
+
 export default function GeneralSettingsTab() {
   const { isRTL } = useLanguage();
   const { toast } = useToast();
   const [settings, setSettings] = useState<ExamSettings[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [initializing, setInitializing] = useState(false);
 
-  useEffect(() => { fetchSettings(); }, []);
+  useEffect(() => {
+    fetchSettings();
+  }, []);
 
   const fetchSettings = async () => {
     setLoading(true);
@@ -46,49 +51,107 @@ export default function GeneralSettingsTab() {
         .from('placement_exam_settings')
         .select('*')
         .order('age_group');
+
       if (error) {
         console.error('Error fetching placement settings:', error);
         toast({ title: isRTL ? 'خطأ في تحميل الإعدادات' : 'Error loading settings', description: error.message, variant: 'destructive' });
       }
-      if (data) setSettings(data as any);
+
+      setSettings((data ?? []) as ExamSettings[]);
     } catch (err) {
       console.error('Unexpected error:', err);
+      toast({ title: isRTL ? 'خطأ غير متوقع' : 'Unexpected error', variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const initializeDefaults = async () => {
+    setInitializing(true);
+    try {
+      const payload = AGE_GROUP_KEYS.map((age_group) => ({ age_group }));
+      const { data, error } = await supabase
+        .from('placement_exam_settings')
+        .insert(payload)
+        .select('*')
+        .order('age_group');
+
+      if (error) {
+        console.error('Error initializing placement settings:', error);
+        toast({
+          title: isRTL ? 'تعذر التهيئة' : 'Initialization failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setSettings((data ?? []) as ExamSettings[]);
+      toast({ title: isRTL ? 'تمت التهيئة بنجاح' : 'Defaults initialized successfully' });
+    } catch (err) {
+      console.error('Unexpected initialization error:', err);
+      toast({ title: isRTL ? 'تعذر التهيئة' : 'Initialization failed', variant: 'destructive' });
+    } finally {
+      setInitializing(false);
+    }
   };
 
   const handleSave = async (s: ExamSettings) => {
     setSaving(s.age_group);
     const total = s.foundation_questions + s.intermediate_questions + s.advanced_questions;
-    const { error } = await supabase
-      .from('placement_exam_settings')
-      .update({
-        total_questions: total,
-        foundation_questions: s.foundation_questions,
-        intermediate_questions: s.intermediate_questions,
-        advanced_questions: s.advanced_questions,
-        duration_minutes: s.duration_minutes,
-        allow_retake: s.allow_retake,
-        max_attempts: s.max_attempts,
-        is_active: s.is_active,
-        updated_at: new Date().toISOString(),
-      } as any)
-      .eq('id', s.id);
-    
-    if (error) {
-      toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: isRTL ? 'تم الحفظ' : 'Saved' });
-      fetchSettings();
+
+    try {
+      const { error } = await supabase
+        .from('placement_exam_settings')
+        .update({
+          total_questions: total,
+          foundation_questions: s.foundation_questions,
+          intermediate_questions: s.intermediate_questions,
+          advanced_questions: s.advanced_questions,
+          duration_minutes: s.duration_minutes,
+          allow_retake: s.allow_retake,
+          max_attempts: s.max_attempts,
+          is_active: s.is_active,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', s.id);
+
+      if (error) {
+        toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: isRTL ? 'تم الحفظ' : 'Saved' });
+        fetchSettings();
+      }
+    } finally {
+      setSaving(null);
     }
-    setSaving(null);
   };
 
   const updateField = (idx: number, field: keyof ExamSettings, value: any) => {
-    setSettings(prev => prev.map((s, i) => i === idx ? { ...s, [field]: value } : s));
+    setSettings((prev) => prev.map((s, i) => (i === idx ? { ...s, [field]: value } : s)));
   };
 
-  if (loading) return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-48 w-full" />)}</div>;
+  if (loading) return <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-48 w-full" />)}</div>;
+
+  if (!settings.length) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">{isRTL ? 'لا توجد إعدادات منشورة' : 'No published settings found'}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {isRTL
+              ? 'يمكنك إنشاء الإعدادات الافتراضية لجميع الفئات العمرية من هنا.'
+              : 'You can initialize default settings for all age groups from here.'}
+          </p>
+          <Button onClick={initializeDefaults} disabled={initializing}>
+            {initializing ? (isRTL ? 'جارٍ التهيئة...' : 'Initializing...') : (isRTL ? 'تهيئة الإعدادات الافتراضية' : 'Initialize defaults')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="grid gap-6">
@@ -106,7 +169,7 @@ export default function GeneralSettingsTab() {
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Label className="text-sm">{isRTL ? 'مفعل' : 'Active'}</Label>
-                <Switch checked={s.is_active} onCheckedChange={v => updateField(idx, 'is_active', v)} />
+                <Switch checked={s.is_active} onCheckedChange={(v) => updateField(idx, 'is_active', v)} />
               </div>
             </CardHeader>
             <CardContent>
@@ -114,17 +177,17 @@ export default function GeneralSettingsTab() {
                 <div>
                   <Label>{isRTL ? 'أسئلة Foundation' : 'Foundation Qs'}</Label>
                   <Input type="number" min={0} value={s.foundation_questions}
-                    onChange={e => updateField(idx, 'foundation_questions', parseInt(e.target.value) || 0)} />
+                    onChange={(e) => updateField(idx, 'foundation_questions', parseInt(e.target.value) || 0)} />
                 </div>
                 <div>
                   <Label>{isRTL ? 'أسئلة Intermediate' : 'Intermediate Qs'}</Label>
                   <Input type="number" min={0} value={s.intermediate_questions}
-                    onChange={e => updateField(idx, 'intermediate_questions', parseInt(e.target.value) || 0)} />
+                    onChange={(e) => updateField(idx, 'intermediate_questions', parseInt(e.target.value) || 0)} />
                 </div>
                 <div>
                   <Label>{isRTL ? 'أسئلة Advanced' : 'Advanced Qs'}</Label>
                   <Input type="number" min={0} value={s.advanced_questions}
-                    onChange={e => updateField(idx, 'advanced_questions', parseInt(e.target.value) || 0)} />
+                    onChange={(e) => updateField(idx, 'advanced_questions', parseInt(e.target.value) || 0)} />
                 </div>
                 <div>
                   <Label>{isRTL ? 'الإجمالي' : 'Total'}</Label>
@@ -135,16 +198,16 @@ export default function GeneralSettingsTab() {
                 <div>
                   <Label>{isRTL ? 'المدة (دقائق)' : 'Duration (min)'}</Label>
                   <Input type="number" min={0} value={s.duration_minutes}
-                    onChange={e => updateField(idx, 'duration_minutes', parseInt(e.target.value) || 0)} />
+                    onChange={(e) => updateField(idx, 'duration_minutes', parseInt(e.target.value) || 0)} />
                   <p className="text-xs text-muted-foreground mt-1">{isRTL ? '0 = بدون حد' : '0 = no limit'}</p>
                 </div>
                 <div>
                   <Label>{isRTL ? 'أقصى محاولات' : 'Max Attempts'}</Label>
                   <Input type="number" min={1} value={s.max_attempts}
-                    onChange={e => updateField(idx, 'max_attempts', parseInt(e.target.value) || 1)} />
+                    onChange={(e) => updateField(idx, 'max_attempts', parseInt(e.target.value) || 1)} />
                 </div>
                 <div className="flex items-center gap-2 pt-6">
-                  <Switch checked={s.allow_retake} onCheckedChange={v => updateField(idx, 'allow_retake', v)} />
+                  <Switch checked={s.allow_retake} onCheckedChange={(v) => updateField(idx, 'allow_retake', v)} />
                   <Label>{isRTL ? 'السماح بالإعادة' : 'Allow Retake'}</Label>
                 </div>
               </div>

@@ -28,6 +28,8 @@ const AGE_LABELS: Record<string, { en: string; ar: string }> = {
   '14_18': { en: 'Teens (14-18)', ar: 'مراهقين (14-18)' },
 };
 
+const AGE_GROUP_KEYS = ['6_9', '10_13', '14_18'] as const;
+
 const FIELDS: { key: keyof PlacementRule; en: string; ar: string }[] = [
   { key: 'pass_threshold', en: 'Pass Threshold %', ar: 'حد النجاح %' },
   { key: 'foundation_min_for_intermediate', en: 'Foundation min for Intermediate', ar: 'حد Foundation للمستوى المتوسط' },
@@ -45,6 +47,7 @@ export default function PlacementRulesTab() {
   const [rules, setRules] = useState<PlacementRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [initializing, setInitializing] = useState(false);
 
   useEffect(() => { fetchRules(); }, []);
 
@@ -56,11 +59,43 @@ export default function PlacementRulesTab() {
         console.error('Error fetching placement rules:', error);
         toast({ title: isRTL ? 'خطأ في تحميل القواعد' : 'Error loading rules', description: error.message, variant: 'destructive' });
       }
-      if (data) setRules(data as any);
+      setRules((data ?? []) as PlacementRule[]);
     } catch (err) {
       console.error('Unexpected error:', err);
+      toast({ title: isRTL ? 'خطأ غير متوقع' : 'Unexpected error', variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const initializeDefaults = async () => {
+    setInitializing(true);
+    try {
+      const payload = AGE_GROUP_KEYS.map((age_group) => ({ age_group }));
+      const { data, error } = await supabase
+        .from('placement_rules')
+        .insert(payload)
+        .select('*')
+        .order('age_group');
+
+      if (error) {
+        console.error('Error initializing placement rules:', error);
+        toast({
+          title: isRTL ? 'تعذر التهيئة' : 'Initialization failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setRules((data ?? []) as PlacementRule[]);
+      toast({ title: isRTL ? 'تمت التهيئة بنجاح' : 'Defaults initialized successfully' });
+    } catch (err) {
+      console.error('Unexpected initialization error:', err);
+      toast({ title: isRTL ? 'تعذر التهيئة' : 'Initialization failed', variant: 'destructive' });
+    } finally {
+      setInitializing(false);
+    }
   };
 
   const handleSave = async (r: PlacementRule) => {
@@ -68,9 +103,9 @@ export default function PlacementRulesTab() {
     const { id, age_group, ...rest } = r;
     const { error } = await supabase
       .from('placement_rules')
-      .update({ ...rest, updated_at: new Date().toISOString() } as any)
+      .update({ ...rest, updated_at: new Date().toISOString() })
       .eq('id', id);
-    
+
     if (error) {
       toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
     } else {
@@ -80,10 +115,30 @@ export default function PlacementRulesTab() {
   };
 
   const updateField = (idx: number, field: keyof PlacementRule, value: number) => {
-    setRules(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
+    setRules((prev) => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
   };
 
-  if (loading) return <div className="space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-64 w-full" />)}</div>;
+  if (loading) return <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-64 w-full" />)}</div>;
+
+  if (!rules.length) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">{isRTL ? 'لا توجد قواعد تسكين منشورة' : 'No published placement rules found'}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {isRTL
+              ? 'يمكنك إنشاء القواعد الافتراضية لجميع الفئات العمرية من هنا.'
+              : 'You can initialize default rules for all age groups from here.'}
+          </p>
+          <Button onClick={initializeDefaults} disabled={initializing}>
+            {initializing ? (isRTL ? 'جارٍ التهيئة...' : 'Initializing...') : (isRTL ? 'تهيئة القواعد الافتراضية' : 'Initialize defaults')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="grid gap-6">
@@ -96,12 +151,12 @@ export default function PlacementRulesTab() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                {FIELDS.map(f => (
+                {FIELDS.map((f) => (
                   <div key={f.key}>
                     <Label className="text-xs">{isRTL ? f.ar : f.en}</Label>
                     <Input type="number" min={0} max={100} step={1}
                       value={r[f.key] as number}
-                      onChange={e => updateField(idx, f.key, parseFloat(e.target.value) || 0)} />
+                      onChange={(e) => updateField(idx, f.key, parseFloat(e.target.value) || 0)} />
                   </div>
                 ))}
               </div>
