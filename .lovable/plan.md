@@ -35,11 +35,21 @@
 
 ---
 
-## 🔲 Phase 2 Step 2: Edge Functions (قادم)
+## ✅ Phase 2 Step 2: Edge Functions (مكتمل)
 
-- `start-group`: ضبط `last_delivered_content_number = starting_session_number - 1`
-- `populate-completed-sessions`: تعيين `content_number`
-- `auto-complete-sessions`: يعتمد على trigger (لا تغيير كبير)
+### Files Modified:
+- `start-group/index.ts` — يضبط `last_delivered_content_number = starting_session_number - 1` + `owed_sessions_count = 0` + يعين `content_number` للـ completed sessions
+- `populate-completed-sessions/index.ts` — يعين `content_number` للسيشنات الناقصة + يفلتر `is_makeup = false`
+- `get-session-pdf-url/index.ts` — يستخدم `content_number` (مع fallback لـ `session_number`) لـ curriculum lookup
+
+### No Changes Needed:
+- `auto-complete-sessions` — التريجر `a_assign_content_on_complete` يتولى `content_number` assignment تلقائياً
+- `generate-sessions` — fallback function يتعامل مع session_number فقط
+- `reschedule-sessions` — scheduling فقط
+- `session-reminders` — notifications فقط
+- `generate-quiz-questions` — يستخدم curriculum_sessions.id مباشرة (لا session_number lookup)
+
+---
 
 ## 🔲 Phase 2 Step 3: Frontend (قادم)
 

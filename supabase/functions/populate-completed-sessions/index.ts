@@ -8,6 +8,7 @@ const corsHeaders = {
 interface CompletedSession {
   id: string
   session_number: number
+  content_number: number | null
   session_date: string
   session_time: string
   group_id: string
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
     // Get group info (including age_group_id for evaluations)
     const { data: group, error: groupError } = await supabase
       .from('groups')
-      .select('id, name, name_ar, instructor_id, age_group_id')
+      .select('id, name, name_ar, instructor_id, age_group_id, starting_session_number')
       .eq('id', group_id)
       .single()
 
@@ -68,9 +69,10 @@ Deno.serve(async (req) => {
     // Get all completed sessions for this group
     const { data: completedSessions, error: sessionsError } = await supabase
       .from('sessions')
-      .select('id, session_number, session_date, session_time, group_id')
+      .select('id, session_number, content_number, session_date, session_time, group_id')
       .eq('group_id', group_id)
       .eq('status', 'completed')
+      .eq('is_makeup', false)
       .order('session_number')
 
     if (sessionsError) {
@@ -150,7 +152,21 @@ Deno.serve(async (req) => {
     }
 
     for (const session of completedSessions as CompletedSession[]) {
-      console.log(`[Populate] Processing session #${session.session_number}`)
+      console.log(`[Populate] Processing session #${session.session_number} (content_number: ${session.content_number})`)
+
+      // Ensure content_number is set for completed sessions
+      if (session.content_number === null) {
+        const { error: cnError } = await supabase
+          .from('sessions')
+          .update({ content_number: session.session_number })
+          .eq('id', session.id)
+
+        if (cnError) {
+          console.error(`Failed to set content_number for session ${session.id}:`, cnError)
+        } else {
+          console.log(`[Populate] Set content_number=${session.session_number} for session ${session.id}`)
+        }
+      }
 
       const sessionDate = new Date(session.session_date)
       const dueDate = new Date(sessionDate)

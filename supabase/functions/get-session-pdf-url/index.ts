@@ -42,9 +42,10 @@ serve(async (req) => {
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // 1. Session + Group in one query (JOIN via foreign key)
+    // Use content_number for curriculum lookup (Phase 2 rule)
     const { data: session, error: sessionError } = await serviceClient
       .from("sessions")
-      .select("id, group_id, session_number, groups!inner(id, age_group_id, level_id)")
+      .select("id, group_id, session_number, content_number, groups!inner(id, age_group_id, level_id)")
       .eq("id", sessionId)
       .single();
 
@@ -54,8 +55,10 @@ serve(async (req) => {
       });
     }
 
-    if (!session.session_number) {
-      return new Response(JSON.stringify({ error: "Session has no session number" }), {
+    // Use content_number as the real curriculum reference; fallback to session_number for backward compatibility
+    const curriculumNumber = session.content_number ?? session.session_number;
+    if (!curriculumNumber) {
+      return new Response(JSON.stringify({ error: "Session has no content number" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -74,7 +77,7 @@ serve(async (req) => {
         .select("id, age_group_id, level_id")
         .eq("age_group_id", group.age_group_id)
         .eq("level_id", group.level_id)
-        .eq("session_number", session.session_number)
+        .eq("session_number", curriculumNumber)
         .eq("is_published", true)
         .eq("is_active", true)
         .single(),
