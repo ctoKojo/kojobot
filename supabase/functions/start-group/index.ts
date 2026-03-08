@@ -147,6 +147,8 @@ Deno.serve(async (req) => {
         status,
         session_number: i,
         level_id: group.level_id,
+        // Assign content_number for completed sessions (backfill)
+        ...(status === 'completed' ? { content_number: i } : {}),
       })
     }
 
@@ -163,12 +165,17 @@ Deno.serve(async (req) => {
     }
 
     // Update group: mark as started and set start_date + starting_session_number
+    // Set last_delivered_content_number for completed sessions backfill
+    const lastDeliveredContent = startingNum > 1 ? startingNum - 1 : 0
+
     const { error: updateError } = await adminSupabase
       .from('groups')
       .update({
         has_started: true,
         start_date: sessionStartDate.toISOString().split('T')[0],
         starting_session_number: startingNum,
+        last_delivered_content_number: lastDeliveredContent,
+        owed_sessions_count: 0,
       })
       .eq('id', group_id)
 
