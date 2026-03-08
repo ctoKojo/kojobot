@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw, ClipboardCheck } from 'lucide-react';
+import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw, ClipboardCheck, ChevronRight } from 'lucide-react';
 import { LevelPassedBanner } from '@/components/student/LevelPassedBanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -362,17 +362,18 @@ export function StudentDashboard() {
         </Card>
       )}
 
-      {/* Profile Summary */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4">
+      {/* Profile Summary - Gradient Cards */}
+      <div className="grid gap-4 sm:gap-5 grid-cols-2 lg:grid-cols-4">
         {/* Group Info */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-              {isRTL ? 'المجموعة' : 'My Group'}
-            </CardTitle>
-            <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+        <Card className="relative overflow-hidden border-0 shadow-md">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 opacity-[0.08] dark:opacity-[0.15]" />
+          <div className={`absolute top-0 ${isRTL ? 'left-0' : 'right-0'} w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 opacity-[0.12] dark:opacity-[0.2] rounded-full -translate-y-6 ${isRTL ? '-translate-x-6' : 'translate-x-6'}`} />
+          <CardHeader className="relative flex flex-row items-center justify-between pb-1 p-4 sm:p-5 sm:pb-1">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-sm">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+          <CardContent className="relative p-4 sm:p-5 pt-2 sm:pt-2">
             {stats.groupInfo ? (
               <>
                 <div className="text-sm sm:text-lg font-bold truncate">
@@ -381,7 +382,6 @@ export function StudentDashboard() {
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">
                   {stats.groupInfo.schedule_day} - <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={stats.groupInfo.schedule_time} isRTL={isRTL} />
                 </p>
-                {/* Session Link for Online Groups */}
                 {stats.groupInfo.attendance_mode === 'online' && stats.groupInfo.session_link && (() => {
                   const hasActiveSession = stats.upcomingSessions.some((s: any) => 
                     isSessionActiveCairo(s.session_date, s.session_time, s.duration_minutes)
@@ -408,17 +408,18 @@ export function StudentDashboard() {
         </Card>
 
         {/* Attendance */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-              {isRTL ? 'الحضور' : 'Attendance'}
-            </CardTitle>
-            <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+        <Card className="relative overflow-hidden border-0 shadow-md">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-emerald-600 opacity-[0.08] dark:opacity-[0.15]" />
+          <div className={`absolute top-0 ${isRTL ? 'left-0' : 'right-0'} w-20 h-20 bg-gradient-to-br from-emerald-500 to-emerald-600 opacity-[0.12] dark:opacity-[0.2] rounded-full -translate-y-6 ${isRTL ? '-translate-x-6' : 'translate-x-6'}`} />
+          <CardHeader className="relative flex flex-row items-center justify-between pb-1 p-4 sm:p-5 sm:pb-1">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-sm">
+              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-            <div className="text-2xl sm:text-3xl font-bold">{attendanceRate}%</div>
+          <CardContent className="relative p-4 sm:p-5 pt-2 sm:pt-2">
+            <div className="text-3xl sm:text-4xl font-bold tracking-tight">{attendanceRate}%</div>
             <Progress value={attendanceRate} className="mt-2 h-2" />
-            <p className="text-xs text-muted-foreground mt-1 hidden sm:block">
+            <p className="text-xs text-muted-foreground mt-1">
               {stats.attendanceStats.present} / {stats.attendanceStats.total} {isRTL ? 'سيشن' : 'sessions'}
             </p>
           </CardContent>
@@ -426,42 +427,43 @@ export function StudentDashboard() {
 
         {/* Warnings */}
         <Card 
-          className={`${stats.warnings > 0 ? 'border-warning' : ''} cursor-pointer hover:shadow-lg transition-shadow`}
+          className="relative overflow-hidden border-0 shadow-md cursor-pointer hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
           onClick={() => navigate('/my-warnings')}
         >
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-              {isRTL ? 'الإنذارات' : 'Warnings'}
-            </CardTitle>
-            <AlertTriangle className={`h-4 w-4 sm:h-5 sm:w-5 ${stats.warnings > 0 ? 'text-warning' : 'text-muted-foreground'}`} />
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-            <div className={`text-2xl sm:text-3xl font-bold ${stats.warnings > 0 ? 'text-warning' : ''}`}>
-              {loading ? '...' : stats.warnings}
+          <div className={`absolute inset-0 bg-gradient-to-br ${stats.warnings > 0 ? 'from-red-500 to-red-600' : 'from-amber-500 to-amber-600'} opacity-[0.08] dark:opacity-[0.15]`} />
+          <div className={`absolute top-0 ${isRTL ? 'left-0' : 'right-0'} w-20 h-20 bg-gradient-to-br ${stats.warnings > 0 ? 'from-red-500 to-red-600' : 'from-amber-500 to-amber-600'} opacity-[0.12] dark:opacity-[0.2] rounded-full -translate-y-6 ${isRTL ? '-translate-x-6' : 'translate-x-6'}`} />
+          <CardHeader className="relative flex flex-row items-center justify-between pb-1 p-4 sm:p-5 sm:pb-1">
+            <div className={`p-2 rounded-xl bg-gradient-to-br ${stats.warnings > 0 ? 'from-red-500 to-red-600' : 'from-amber-500 to-amber-600'} shadow-sm`}>
+              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
-            {stats.warnings > 0 && (
-              <p className="text-xs text-warning mt-1">
-                {isRTL ? 'اضغط للتفاصيل' : 'Click for details'}
-              </p>
-            )}
+            <ChevronRight className={`h-4 w-4 text-muted-foreground/50 ${isRTL ? 'rotate-180' : ''}`} />
+          </CardHeader>
+          <CardContent className="relative p-4 sm:p-5 pt-2 sm:pt-2">
+            <div className="text-3xl sm:text-4xl font-bold tracking-tight">
+              {loading ? <div className="h-9 w-16 bg-muted animate-pulse rounded" /> : stats.warnings}
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              {isRTL ? 'الإنذارات' : 'Warnings'}
+            </p>
           </CardContent>
         </Card>
 
         {/* Subscription */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-              {isRTL ? 'الاشتراك' : 'Subscription'}
-            </CardTitle>
-            <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+        <Card className="relative overflow-hidden border-0 shadow-md">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-purple-600 opacity-[0.08] dark:opacity-[0.15]" />
+          <div className={`absolute top-0 ${isRTL ? 'left-0' : 'right-0'} w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 opacity-[0.12] dark:opacity-[0.2] rounded-full -translate-y-6 ${isRTL ? '-translate-x-6' : 'translate-x-6'}`} />
+          <CardHeader className="relative flex flex-row items-center justify-between pb-1 p-4 sm:p-5 sm:pb-1">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-sm">
+              <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+            </div>
           </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+          <CardContent className="relative p-4 sm:p-5 pt-2 sm:pt-2">
             {stats.subscription ? (
               <>
-                <Badge variant="outline" className="bg-green-100 text-green-800 text-xs">
+                <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs">
                   {isRTL ? 'نشط' : 'Active'}
                 </Badge>
-                <p className="text-xs text-muted-foreground mt-1 hidden sm:block">
+                <p className="text-xs text-muted-foreground mt-1">
                   {isRTL ? 'ينتهي: ' : 'Expires: '}
                   {formatDate(stats.subscription.end_date)}
                 </p>
@@ -478,7 +480,7 @@ export function StudentDashboard() {
         </Card>
       </div>
 
-      {/* Curriculum Progress & Makeup Credits */}
+
       <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
         {/* Level Progress */}
         {stats.levelProgress && (

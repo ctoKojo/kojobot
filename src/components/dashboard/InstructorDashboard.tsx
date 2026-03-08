@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, Clock, Users, ClipboardList, FileQuestion, BarChart3, AlertTriangle } from 'lucide-react';
+import { Calendar, GraduationCap, Clock, Users, ClipboardList, FileQuestion, BarChart3, AlertTriangle, ChevronRight, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
@@ -145,16 +145,162 @@ export function InstructorDashboard() {
     }
   };
 
+  const statCards = [
+    {
+      title: isRTL ? 'مجموعاتي' : 'My Groups',
+      value: stats.groupCount,
+      icon: Calendar,
+      gradient: 'from-blue-500 to-blue-600',
+      onClick: () => navigate('/groups'),
+    },
+    {
+      title: isRTL ? 'إجمالي الطلاب' : 'Total Students',
+      value: stats.studentCount,
+      icon: GraduationCap,
+      gradient: 'from-emerald-500 to-emerald-600',
+    },
+    {
+      title: isRTL ? 'السيشنات القادمة' : 'Upcoming Sessions',
+      value: stats.upcomingSessions.length,
+      icon: Clock,
+      gradient: 'from-purple-500 to-purple-600',
+      onClick: () => navigate('/sessions'),
+    },
+    {
+      title: isRTL ? 'تسليمات بانتظار' : 'Pending Submissions',
+      value: stats.pendingSubmissions,
+      icon: ClipboardList,
+      gradient: 'from-amber-500 to-orange-500',
+      onClick: () => navigate('/assignments'),
+    },
+    {
+      title: isRTL ? 'الإنذارات النشطة' : 'Active Warnings',
+      value: stats.activeWarnings.length,
+      icon: AlertTriangle,
+      gradient: stats.activeWarnings.length > 0 ? 'from-red-500 to-red-600' : 'from-slate-400 to-slate-500',
+      onClick: () => navigate('/my-instructor-warnings'),
+    },
+  ];
+
+  // Build alerts
+  const alerts = [
+    stats.activeWarnings.length > 0 && {
+      icon: AlertTriangle,
+      title: isRTL ? 'إنذارات نشطة' : 'Active Warnings',
+      description: isRTL
+        ? `${stats.activeWarnings.length} إنذار نشط يتطلب انتباهك`
+        : `${stats.activeWarnings.length} active warnings require your attention`,
+      count: stats.activeWarnings.length,
+      variant: 'destructive' as const,
+      onClick: () => navigate('/my-instructor-warnings'),
+    },
+    stats.pendingSubmissions > 0 && {
+      icon: ClipboardList,
+      title: isRTL ? 'تسليمات بانتظار التصحيح' : 'Submissions Awaiting Grading',
+      description: isRTL
+        ? `${stats.pendingSubmissions} تسليم بانتظار التصحيح`
+        : `${stats.pendingSubmissions} submissions waiting to be graded`,
+      count: stats.pendingSubmissions,
+      variant: 'default' as const,
+      onClick: () => navigate('/assignments'),
+    },
+  ].filter(Boolean) as Array<{
+    icon: any;
+    title: string;
+    description: string;
+    count: number;
+    variant: 'destructive' | 'default' | 'secondary' | 'outline';
+    onClick?: () => void;
+  }>;
+
   return (
-    <div className="space-y-6">
-      {/* Warnings Alert */}
+    <div className="space-y-8">
+      {/* Stats Grid - Gradient Cards */}
+      <div className="grid gap-4 sm:gap-5 grid-cols-2 lg:grid-cols-5">
+        {statCards.map((stat) => (
+          <Card
+            key={stat.title}
+            className={`relative overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300 ${stat.onClick ? 'cursor-pointer hover:-translate-y-0.5' : ''}`}
+            onClick={stat.onClick}
+          >
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-[0.08] dark:opacity-[0.15]`} />
+            <div className={`absolute top-0 ${isRTL ? 'left-0' : 'right-0'} w-20 h-20 bg-gradient-to-br ${stat.gradient} opacity-[0.12] dark:opacity-[0.2] rounded-full -translate-y-6 ${isRTL ? '-translate-x-6' : 'translate-x-6'}`} />
+            
+            <CardHeader className="relative flex flex-row items-center justify-between pb-1 p-4 sm:p-5 sm:pb-1">
+              <div className={`p-2 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-sm`}>
+                <stat.icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+              {stat.onClick && (
+                <ChevronRight className={`h-4 w-4 text-muted-foreground/50 ${isRTL ? 'rotate-180' : ''}`} />
+              )}
+            </CardHeader>
+            <CardContent className="relative p-4 sm:p-5 pt-2 sm:pt-2">
+              <div className="text-3xl sm:text-4xl font-bold tracking-tight">
+                {loading ? (
+                  <div className="h-9 w-16 bg-muted animate-pulse rounded" />
+                ) : (
+                  stat.value
+                )}
+              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-1">
+                {stat.title}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Alerts Section */}
+      {alerts.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            {isRTL ? 'تنبيهات تحتاج انتباهك' : 'Needs Your Attention'}
+          </h2>
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
+            {alerts.map((alert, index) => (
+              <Card
+                key={index}
+                className={`group transition-all duration-200 hover:shadow-md ${alert.onClick ? 'cursor-pointer hover:-translate-y-0.5' : ''} ${
+                  alert.variant === 'destructive' 
+                    ? 'border-destructive/30 bg-destructive/5 dark:bg-destructive/10' 
+                    : 'border-border'
+                }`}
+                onClick={alert.onClick}
+              >
+                <CardContent className="flex items-center gap-4 p-4">
+                  <div className={`flex-shrink-0 p-2.5 rounded-xl ${
+                    alert.variant === 'destructive' 
+                      ? 'bg-destructive/10 text-destructive' 
+                      : 'bg-primary/10 text-primary'
+                  }`}>
+                    <alert.icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="font-semibold text-sm truncate">{alert.title}</p>
+                      <Badge variant={alert.variant} className="text-xs tabular-nums flex-shrink-0">
+                        {alert.count}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-1">{alert.description}</p>
+                  </div>
+                  {alert.onClick && (
+                    <ArrowRight className={`h-4 w-4 text-muted-foreground/40 group-hover:text-foreground/60 transition-colors flex-shrink-0 ${isRTL ? 'rotate-180' : ''}`} />
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Warning Details */}
       {stats.activeWarnings.length > 0 && (
-        <Card className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
+        <Card className="border-destructive/20">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
-              <AlertTriangle className="h-5 w-5" />
-              {isRTL ? 'إنذارات نشطة' : 'Active Warnings'}
-              <Badge variant="destructive">{stats.activeWarnings.length}</Badge>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              {isRTL ? 'تفاصيل الإنذارات' : 'Warning Details'}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -162,12 +308,12 @@ export function InstructorDashboard() {
               {stats.activeWarnings.slice(0, 3).map((warning) => (
                 <div 
                   key={warning.id} 
-                  className="flex items-center justify-between p-2 rounded-lg bg-red-100 dark:bg-red-900/30 text-sm"
+                  className="flex items-center justify-between p-3 rounded-lg bg-destructive/5 dark:bg-destructive/10 text-sm"
                 >
-                  <span className="text-red-800 dark:text-red-300">
+                  <span className="text-destructive dark:text-red-400">
                     {language === 'ar' ? warning.reason_ar : warning.reason}
                   </span>
-                  <Badge variant="outline" className="border-red-300 text-red-700 dark:border-red-700 dark:text-red-400">
+                  <Badge variant="outline" className="border-destructive/30 text-destructive">
                     {warning.warning_type === 'no_quiz' && (isRTL ? 'كويز' : 'Quiz')}
                     {warning.warning_type === 'no_assignment' && (isRTL ? 'واجب' : 'Assignment')}
                     {warning.warning_type === 'no_attendance' && (isRTL ? 'حضور' : 'Attendance')}
@@ -175,7 +321,7 @@ export function InstructorDashboard() {
                 </div>
               ))}
               {stats.activeWarnings.length > 3 && (
-                <p className="text-xs text-red-600 dark:text-red-400 text-center">
+                <p className="text-xs text-muted-foreground text-center pt-1">
                   {isRTL 
                     ? `+${stats.activeWarnings.length - 3} إنذارات أخرى` 
                     : `+${stats.activeWarnings.length - 3} more warnings`}
@@ -185,82 +331,6 @@ export function InstructorDashboard() {
           </CardContent>
         </Card>
       )}
-
-      {/* Stats Grid */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/groups')}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-              {isRTL ? 'مجموعاتي' : 'My Groups'}
-            </CardTitle>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-            <div className="text-2xl sm:text-3xl font-bold">{loading ? '...' : stats.groupCount}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
-              {isRTL ? 'إجمالي الطلاب' : 'Total Students'}
-            </CardTitle>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-              <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-            <div className="text-2xl sm:text-3xl font-bold">{loading ? '...' : stats.studentCount}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/sessions')}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground line-clamp-2">
-              {isRTL ? 'السيشنات القادمة' : 'Upcoming'}
-            </CardTitle>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
-              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-            <div className="text-2xl sm:text-3xl font-bold">{loading ? '...' : stats.upcomingSessions.length}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/assignments')}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground line-clamp-2">
-              {isRTL ? 'تسليمات بانتظار' : 'Pending Submissions'}
-            </CardTitle>
-            <div className="p-1.5 sm:p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-              <ClipboardList className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 dark:text-orange-400" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-            <div className="text-2xl sm:text-3xl font-bold">{loading ? '...' : stats.pendingSubmissions}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/my-instructor-warnings')}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-6 sm:pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground line-clamp-2">
-              {isRTL ? 'الإنذارات النشطة' : 'Active Warnings'}
-            </CardTitle>
-            <div className={`p-1.5 sm:p-2 rounded-lg ${stats.activeWarnings.length > 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
-              <AlertTriangle className={`h-4 w-4 sm:h-5 sm:w-5 ${stats.activeWarnings.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`} />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-            <div className={`text-2xl sm:text-3xl font-bold ${stats.activeWarnings.length > 0 ? 'text-red-600 dark:text-red-400' : ''}`}>
-              {loading ? '...' : stats.activeWarnings.length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
 
       {/* Today & Tomorrow Sessions */}
       <Card>
@@ -316,30 +386,41 @@ export function InstructorDashboard() {
       </Card>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/my-instructor-warnings')}>
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
-              {isRTL ? 'إنذاراتي' : 'My Warnings'}
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              {isRTL ? 'عرض وتتبع الإنذارات الصادرة' : 'View and track issued warnings'}
-            </CardDescription>
-          </CardHeader>
-        </Card>
+      <div className="space-y-3">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          {isRTL ? 'إجراءات سريعة' : 'Quick Actions'}
+        </h2>
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+          <Card 
+            className="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200" 
+            onClick={() => navigate('/my-instructor-warnings')}
+          >
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-red-500/10 to-red-600/10 flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">{isRTL ? 'إنذاراتي' : 'My Warnings'}</p>
+                <p className="text-xs text-muted-foreground">{isRTL ? 'عرض وتتبع الإنذارات الصادرة' : 'View and track issued warnings'}</p>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/instructor-schedule')}>
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              {isRTL ? 'جدولي' : 'My Schedule'}
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              {isRTL ? 'عرض جدول المواعيد والسيشنات' : 'View your schedule and sessions'}
-            </CardDescription>
-          </CardHeader>
-        </Card>
+          <Card 
+            className="cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200" 
+            onClick={() => navigate('/instructor-schedule')}
+          >
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/10 flex-shrink-0">
+                <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">{isRTL ? 'جدولي' : 'My Schedule'}</p>
+                <p className="text-xs text-muted-foreground">{isRTL ? 'عرض جدول المواعيد والسيشنات' : 'View your schedule and sessions'}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
