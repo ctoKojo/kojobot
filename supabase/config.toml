@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.grade-placement-exam]
 verify_jwt = false
+
+[functions.import-question-bank]
+verify_jwt = false
