@@ -176,11 +176,24 @@ Deno.serve(async (req) => {
       success_rate: 0,
     }));
 
-    // Step 1: Delete all existing
+    // Step 1: Delete dependent rows in placement_exam_attempt_questions
+    const { error: depDeleteError } = await adminClient
+      .from("placement_exam_attempt_questions")
+      .delete()
+      .gte("id", 0);
+
+    if (depDeleteError) {
+      return new Response(
+        JSON.stringify({ error: "Failed to delete dependent attempt questions", details: depDeleteError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Step 2: Delete all existing questions
     const { error: deleteError } = await adminClient
       .from("placement_question_bank")
       .delete()
-      .gte("id", 0); // delete all rows
+      .gte("id", 0);
 
     if (deleteError) {
       return new Response(
