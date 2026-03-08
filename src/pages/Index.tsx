@@ -254,7 +254,7 @@ interface IndexProps {
   lang?: 'ar' | 'en';
 }
 
-const SITE_URL = "https://kojobot.lovable.app";
+const SITE_URL = "https://kojobot.com";
 
 const Index = ({ lang: routeLang }: IndexProps) => {
   const { language: ctxLanguage, setLanguage, t, isRTL: ctxRTL } = useLanguage();

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://kojobot.lovable.app/sitemap.xml
+Sitemap: https://kojobot.com/sitemap.xml
