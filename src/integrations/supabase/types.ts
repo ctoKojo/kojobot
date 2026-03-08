@@ -1093,10 +1093,12 @@ export type Database = {
           id: string
           instructor_id: string | null
           is_active: boolean | null
+          last_delivered_content_number: number | null
           level_id: string | null
           level_status: string | null
           name: string
           name_ar: string
+          owed_sessions_count: number | null
           schedule_day: string
           schedule_time: string
           session_link: string | null
@@ -1115,10 +1117,12 @@ export type Database = {
           id?: string
           instructor_id?: string | null
           is_active?: boolean | null
+          last_delivered_content_number?: number | null
           level_id?: string | null
           level_status?: string | null
           name: string
           name_ar: string
+          owed_sessions_count?: number | null
           schedule_day: string
           schedule_time: string
           session_link?: string | null
@@ -1137,10 +1141,12 @@ export type Database = {
           id?: string
           instructor_id?: string | null
           is_active?: boolean | null
+          last_delivered_content_number?: number | null
           level_id?: string | null
           level_status?: string | null
           name?: string
           name_ar?: string
+          owed_sessions_count?: number | null
           schedule_day?: string
           schedule_time?: string
           session_link?: string | null
@@ -3455,6 +3461,7 @@ export type Database = {
       sessions: {
         Row: {
           attendance_mode: string | null
+          content_number: number | null
           created_at: string
           duration_minutes: number
           group_id: string
@@ -3474,6 +3481,7 @@ export type Database = {
         }
         Insert: {
           attendance_mode?: string | null
+          content_number?: number | null
           created_at?: string
           duration_minutes?: number
           group_id: string
@@ -3493,6 +3501,7 @@ export type Database = {
         }
         Update: {
           attendance_mode?: string | null
+          content_number?: number | null
           created_at?: string
           duration_minutes?: number
           group_id?: string
