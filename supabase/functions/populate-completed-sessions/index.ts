@@ -152,7 +152,21 @@ Deno.serve(async (req) => {
     }
 
     for (const session of completedSessions as CompletedSession[]) {
-      console.log(`[Populate] Processing session #${session.session_number}`)
+      console.log(`[Populate] Processing session #${session.session_number} (content_number: ${session.content_number})`)
+
+      // Ensure content_number is set for completed sessions
+      if (session.content_number === null) {
+        const { error: cnError } = await supabase
+          .from('sessions')
+          .update({ content_number: session.session_number })
+          .eq('id', session.id)
+
+        if (cnError) {
+          console.error(`Failed to set content_number for session ${session.id}:`, cnError)
+        } else {
+          console.log(`[Populate] Set content_number=${session.session_number} for session ${session.id}`)
+        }
+      }
 
       const sessionDate = new Date(session.session_date)
       const dueDate = new Date(sessionDate)
