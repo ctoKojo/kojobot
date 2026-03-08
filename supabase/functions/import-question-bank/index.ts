@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
     const { error: depDeleteError } = await adminClient
       .from("placement_exam_attempt_questions")
       .delete()
-      .gte("id", 0);
+      .gte("question_id", 0);
 
     if (depDeleteError) {
       return new Response(
