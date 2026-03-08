@@ -51,9 +51,15 @@
 
 ---
 
-## 🔲 Phase 2 Step 3: Frontend (قادم)
+## ✅ Phase 2 Step 3: Frontend (مكتمل)
 
-- `SessionDetails.tsx` — curriculum lookup بـ `content_number`
-- `MySessions.tsx` — نفس التعديل
-- `GroupDetails.tsx` — level progress بـ `last_delivered_content_number`
-- `Sessions.tsx` — عرض + sorting
+### Files Modified:
+- `SessionDetails.tsx` — curriculum lookup بـ `content_number` (مع fallback لـ `session_number`)
+- `MySessions.tsx` — نفس التعديل: curriculum key يعتمد على `content_number`
+- `GroupDetails.tsx` — level progress بـ `last_delivered_content_number` + `owed_sessions_count` + `expected_sessions_count`
+- `StudentDashboard.tsx` — level progress بـ `last_delivered_content_number` من الـ group
+
+### No Changes Needed:
+- `Sessions.tsx` — sorting بـ `session_number` للعرض فقط (صحيح كما هو)
+- `MakeupSessions.tsx` — `original_session_number` للعرض فقط (صحيح كما هو)
+- `WeeklyScheduleGrid.tsx` — لا يستخدم `session_number` أصلاً
