@@ -50,8 +50,16 @@ export default function PlacementRulesTab() {
 
   const fetchRules = async () => {
     setLoading(true);
-    const { data } = await supabase.from('placement_rules' as any).select('*').order('age_group');
-    if (data) setRules(data as any);
+    try {
+      const { data, error } = await supabase.from('placement_rules').select('*').order('age_group');
+      if (error) {
+        console.error('Error fetching placement rules:', error);
+        toast({ title: isRTL ? 'خطأ في تحميل القواعد' : 'Error loading rules', description: error.message, variant: 'destructive' });
+      }
+      if (data) setRules(data as any);
+    } catch (err) {
+      console.error('Unexpected error:', err);
+    }
     setLoading(false);
   };
 
@@ -59,7 +67,7 @@ export default function PlacementRulesTab() {
     setSaving(r.age_group);
     const { id, age_group, ...rest } = r;
     const { error } = await supabase
-      .from('placement_rules' as any)
+      .from('placement_rules')
       .update({ ...rest, updated_at: new Date().toISOString() } as any)
       .eq('id', id);
     

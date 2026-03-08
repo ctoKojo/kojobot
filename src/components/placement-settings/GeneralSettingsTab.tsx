@@ -41,11 +41,19 @@ export default function GeneralSettingsTab() {
 
   const fetchSettings = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('placement_exam_settings' as any)
-      .select('*')
-      .order('age_group');
-    if (data) setSettings(data as any);
+    try {
+      const { data, error } = await supabase
+        .from('placement_exam_settings')
+        .select('*')
+        .order('age_group');
+      if (error) {
+        console.error('Error fetching placement settings:', error);
+        toast({ title: isRTL ? 'خطأ في تحميل الإعدادات' : 'Error loading settings', description: error.message, variant: 'destructive' });
+      }
+      if (data) setSettings(data as any);
+    } catch (err) {
+      console.error('Unexpected error:', err);
+    }
     setLoading(false);
   };
 
@@ -53,7 +61,7 @@ export default function GeneralSettingsTab() {
     setSaving(s.age_group);
     const total = s.foundation_questions + s.intermediate_questions + s.advanced_questions;
     const { error } = await supabase
-      .from('placement_exam_settings' as any)
+      .from('placement_exam_settings')
       .update({
         total_questions: total,
         foundation_questions: s.foundation_questions,
