@@ -1,0 +1,6503 @@
+{
+  "metadata": {
+    "language": "ar",
+    "total_questions": 360,
+    "age_groups": [
+      "6_9",
+      "10_13",
+      "14_18"
+    ],
+    "distribution_by_age_group": {
+      "6_9": 120,
+      "10_13": 120,
+      "14_18": 120
+    },
+    "distribution_by_level": {
+      "foundation": 120,
+      "intermediate": 120,
+      "advanced": 120
+    }
+  },
+  "questions": [
+    {
+      "id": 1,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "البرنامج التالي\nmove forward\nmove forward\nماذا يحدث",
+      "options": {
+        "A": "يتحرك خطوتين",
+        "B": "يتحرك خطوة واحدة",
+        "C": "يدور مكانه",
+        "D": "لا يتحرك"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "لانه نفذ امر الحركة مرتين",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان لدينا\nrepeat 3 times\nclap\nكم مرة سيحدث clap",
+      "options": {
+        "A": "مرة",
+        "B": "مرتين",
+        "C": "ثلاث مرات",
+        "D": "أربع مرات"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "لان الامر يتكرر 3 مرات",
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "patterns",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اي شكل يكمل النمط\n🔴 🔵 🔴 🔵 🔴 ؟",
+      "options": {
+        "A": "🔴",
+        "B": "🔵",
+        "C": "🟢",
+        "D": "⚫"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "النمط يتبادل بين الاحمر والازرق",
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا قال البرنامج\nif raining\ntake umbrella\nمتى نأخذ المظلة",
+      "options": {
+        "A": "عندما تمطر",
+        "B": "عندما لا تمطر",
+        "C": "دائما",
+        "D": "ابدا"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الامر ينفذ فقط عند تحقق الشرط",
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اي من التالي يعتبر خطوة في برنامج",
+      "options": {
+        "A": "move",
+        "B": "tree",
+        "C": "sky",
+        "D": "chair"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "move امر يمكن تنفيذه في برنامج",
+      "is_active": true
+    },
+    {
+      "id": 6,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان البرنامج\nmove forward\nturn right\nmove forward\nماذا يحدث",
+      "options": {
+        "A": "يتحرك ثم يغير الاتجاه ثم يتحرك",
+        "B": "يتحرك مرتين في نفس الاتجاه",
+        "C": "يقف",
+        "D": "يدور فقط"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "البرنامج ينفذ الاوامر بالترتيب",
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان لدينا\nrepeat 2 times\njump\nكم مرة يقفز",
+      "options": {
+        "A": "مرة",
+        "B": "مرتين",
+        "C": "ثلاث مرات",
+        "D": "أربع مرات"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "لانه كرر القفز مرتين",
+      "is_active": true
+    },
+    {
+      "id": 8,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "patterns",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اي من التالي يمثل نمطا متكررا",
+      "options": {
+        "A": "🔺 🔺 🔺",
+        "B": "🔺 🔻 🔺 🔻",
+        "C": "🔺 🔺 🔻",
+        "D": "🔺 🔻 🔻"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الشكلين يتكرران بنفس الترتيب",
+      "is_active": true
+    },
+    {
+      "id": 9,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nscore = 5\nscore = score + 1\nما القيمة الجديدة",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "7"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "5 زائد 1 يساوي 6",
+      "is_active": true
+    },
+    {
+      "id": 10,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان البرنامج\nmove forward\nmove forward\nmove forward\nكم خطوة تحرك",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "تحرك ثلاث خطوات",
+      "is_active": true
+    },
+    {
+      "id": 11,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا قال البرنامج\nif hungry\neat\nمتى نأكل",
+      "options": {
+        "A": "عندما نجوع",
+        "B": "عندما نشبع",
+        "C": "دائما",
+        "D": "ابدا"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "نأكل عند تحقق شرط الجوع",
+      "is_active": true
+    },
+    {
+      "id": 12,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 4 times\nclap\nكم مرة ن clap",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "5"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "الامر clap تكرر 4 مرات",
+      "is_active": true
+    },
+    {
+      "id": 13,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "ما الخطوة الصحيحة لبداية برنامج",
+      "options": {
+        "A": "start",
+        "B": "banana",
+        "C": "table",
+        "D": "sun"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "start امر منطقي لبداية التنفيذ",
+      "is_active": true
+    },
+    {
+      "id": 14,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "patterns",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان النمط\n⭐ ⚪ ⭐ ⚪ ⭐ ؟\nما الشكل التالي",
+      "options": {
+        "A": "⭐",
+        "B": "⚪",
+        "C": "🔵",
+        "D": "🔺"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "النمط يتبادل بين النجمة والدائرة",
+      "is_active": true
+    },
+    {
+      "id": 15,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان البرنامج\nturn left\nmove forward\nماذا يحدث",
+      "options": {
+        "A": "يغير الاتجاه ثم يتحرك",
+        "B": "يتحرك ثم يغير الاتجاه",
+        "C": "يقف",
+        "D": "يدور فقط"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "التوجيه اولا ثم الحركة",
+      "is_active": true
+    },
+    {
+      "id": 16,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 5 times\njump\nكم مرة يقفز",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "يقفز 5 مرات",
+      "is_active": true
+    },
+    {
+      "id": 17,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nscore = 3\nscore = score + 2\nالقيمة الجديدة",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "7"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "3 زائد 2 يساوي 5",
+      "is_active": true
+    },
+    {
+      "id": 18,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان البرنامج\nmove\nturn\nmove\nكم مرة يتحرك",
+      "options": {
+        "A": "مرة",
+        "B": "مرتين",
+        "C": "ثلاث مرات",
+        "D": "أربع مرات"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "امر move ظهر مرتين",
+      "is_active": true
+    },
+    {
+      "id": 19,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif cold\nwear jacket\nمتى نرتدي الجاكيت",
+      "options": {
+        "A": "عندما يكون الجو باردا",
+        "B": "عندما يكون الجو حارا",
+        "C": "دائما",
+        "D": "ابدا"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "نرتدي الجاكيت عند البرد",
+      "is_active": true
+    },
+    {
+      "id": 20,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "debugging_basic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اي من التالي يعتبر خطأ في البرنامج",
+      "options": {
+        "A": "move move move",
+        "B": "move jump turn",
+        "C": "mov forward",
+        "D": "repeat jump"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "كلمة mov مكتوبة بشكل خاطئ",
+      "is_active": true
+    },
+    {
+      "id": 21,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "patterns",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اكمل النمط\n🟩 🟨 🟩 🟨 ؟",
+      "options": {
+        "A": "🟩",
+        "B": "🟦",
+        "C": "🟥",
+        "D": "⬛"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "النمط يتبادل بين الاخضر والاصفر",
+      "is_active": true
+    },
+    {
+      "id": 22,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان البرنامج\njump\nmove forward\nماذا يحدث اولا",
+      "options": {
+        "A": "يقفز",
+        "B": "يتحرك",
+        "C": "يلف يمينا",
+        "D": "لا شيء"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "البرنامج يبدأ باول امر",
+      "is_active": true
+    },
+    {
+      "id": 23,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اي من التالي يصلح اسما لعد النقاط",
+      "options": {
+        "A": "score",
+        "B": "jump",
+        "C": "if",
+        "D": "turn"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "score اسم مناسب لتخزين النقاط",
+      "is_active": true
+    },
+    {
+      "id": 24,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا قال البرنامج\nif sunny\nwear hat\nمتى نلبس القبعة",
+      "options": {
+        "A": "عندما تكون الشمس ساطعة",
+        "B": "عندما تمطر",
+        "C": "عندما ننام",
+        "D": "ابدا"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "القبعة ترتبط بالشمس",
+      "is_active": true
+    },
+    {
+      "id": 25,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 2 times\nmove forward\nكم خطوة سيتحرك",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الامر يتكرر مرتين",
+      "is_active": true
+    },
+    {
+      "id": 26,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "patterns",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "ما الشكل المختلف عن النمط\n🍎 🍌 🍎 🍌 🍎 ؟",
+      "options": {
+        "A": "🍎",
+        "B": "🍌",
+        "C": "🍇",
+        "D": "🍎"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "العنب ليس جزءا من النمط",
+      "is_active": true
+    },
+    {
+      "id": 27,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان البرنامج\nturn right\nturn left\nmove forward\nماذا يحدث في النهاية",
+      "options": {
+        "A": "يتحرك خطوة",
+        "B": "يقفز",
+        "C": "يرسم دائرة",
+        "D": "لا يبدأ"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "بعد الدورانين ينفذ الحركة",
+      "is_active": true
+    },
+    {
+      "id": 28,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nstars = 2\nstars = stars + 3\nكم عدد النجوم الان",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 زائد 3 يساوي 5",
+      "is_active": true
+    },
+    {
+      "id": 29,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif tired\nsleep\nماذا نفعل عندما لا نكون متعبين",
+      "options": {
+        "A": "ننام",
+        "B": "لا ننفذ امر sleep",
+        "C": "نقفز",
+        "D": "نكرر الامر"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الشرط لم يتحقق",
+      "is_active": true
+    },
+    {
+      "id": 30,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 3 times\nmove forward\nturn right\nكم مرة سيتحرك",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "5"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "يتحرك 3 مرات ثم يلف مرة واحدة في كل دورة",
+      "is_active": true
+    },
+    {
+      "id": 31,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "patterns",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اكمل النمط\n1 2 1 2 1 ؟",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الرقمان يتبادلان",
+      "is_active": true
+    },
+    {
+      "id": 32,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان البرنامج\nmove forward\nturn left\njump\nما الامر الثاني",
+      "options": {
+        "A": "move forward",
+        "B": "turn left",
+        "C": "jump",
+        "D": "start"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الامر الثاني هو turn left",
+      "is_active": true
+    },
+    {
+      "id": 33,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "debugging_basic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "البرنامج الصحيح ليتحرك خطوتين هو",
+      "options": {
+        "A": "movee forward ثم move forward",
+        "B": "move forward ثم move forward",
+        "C": "mov forward ثم turn",
+        "D": "jump ثم stop"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الامر move forward مكتوب صحيحا وظهر مرتين",
+      "is_active": true
+    },
+    {
+      "id": 34,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\ncoins = 4\ncoins = coins + 4\nما القيمة الجديدة",
+      "options": {
+        "A": "6",
+        "B": "7",
+        "C": "8",
+        "D": "9"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "4 زائد 4 يساوي 8",
+      "is_active": true
+    },
+    {
+      "id": 35,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif door_open\nenter\nمتى ندخل",
+      "options": {
+        "A": "عندما يكون الباب مفتوحا",
+        "B": "عندما يكون الباب مغلقا",
+        "C": "في كل وقت",
+        "D": "ابدا"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الدخول يحتاج تحقق الشرط",
+      "is_active": true
+    },
+    {
+      "id": 36,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 4 times\njump\nclap\nكم مرة يحدث jump",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "jump داخل الحلقة 4 مرات",
+      "is_active": true
+    },
+    {
+      "id": 37,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "patterns",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اي نمط صحيح",
+      "options": {
+        "A": "⬜ ⬛ ⬜ ⬛",
+        "B": "⬜ ⬜ ⬛ ⬛",
+        "C": "⬛ ⬛ ⬛ ⬛",
+        "D": "⬜ ⬛ ⬛ ⬜"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "النمط الاول يتكرر بانتظام",
+      "is_active": true
+    },
+    {
+      "id": 38,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان البرنامج\nstart\nmove forward\nstop\nما اخر امر",
+      "options": {
+        "A": "start",
+        "B": "move forward",
+        "C": "stop",
+        "D": "turn left"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "stop هو اخر امر",
+      "is_active": true
+    },
+    {
+      "id": 39,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\napples = 1\napples = apples + 2\napples = apples + 1\nكم عدد التفاح",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "5"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 زائد 2 زائد 1 يساوي 4",
+      "is_active": true
+    },
+    {
+      "id": 40,
+      "age_group": "6_9",
+      "level": "foundation",
+      "skill": "debugging_basic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اي سطر فيه مشكلة املائية",
+      "options": {
+        "A": "repeat 3 times",
+        "B": "turn left",
+        "C": "jmp",
+        "D": "move forward"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "jmp ليست كلمة الامر الصحيحة",
+      "is_active": true
+    },
+    {
+      "id": 41,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nscore = 2\nscore = score + 3\nscore = score + 1\nفما القيمة النهائية",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "7"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 ثم زائد 3 ثم زائد 1 يساوي 6",
+      "is_active": true
+    },
+    {
+      "id": 42,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان البرنامج\nmove forward\nturn right\nmove forward\njump\nما اخر امر",
+      "options": {
+        "A": "move forward",
+        "B": "turn right",
+        "C": "jump",
+        "D": "stop"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "jump هو الامر الاخير",
+      "is_active": true
+    },
+    {
+      "id": 43,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif score > 5\nwin\nوكان score = 7\nماذا يحدث",
+      "options": {
+        "A": "يفوز",
+        "B": "لا يفوز",
+        "C": "يقفز",
+        "D": "يعيد التشغيل"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "7 اكبر من 5",
+      "is_active": true
+    },
+    {
+      "id": 44,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 3 times\nmove forward\nturn right\nكم مرة سيلف يمينا",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "امر turn right داخل الحلقة 3 مرات",
+      "is_active": true
+    },
+    {
+      "id": 45,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "يريد الروبوت الوصول لقطعة حلوى امامه على بعد خطوتين اي برنامج افضل",
+      "options": {
+        "A": "jump ثم turn",
+        "B": "move forward ثم move forward",
+        "C": "turn left ثم stop",
+        "D": "clap ثم move"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "خطوتان اماميتان تكفيان",
+      "is_active": true
+    },
+    {
+      "id": 46,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "patterns",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اكمل النمط\n🟦 🟩 🟩 🟦 🟩 🟩 ؟",
+      "options": {
+        "A": "🟦",
+        "B": "🟩",
+        "C": "🟥",
+        "D": "⬜"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "النمط يتكرر كل ثلاث خانات",
+      "is_active": true
+    },
+    {
+      "id": 47,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "debugging_basic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان المطلوب التصفيق 3 مرات فاي برنامج ادق",
+      "options": {
+        "A": "clap",
+        "B": "repeat 3 times clap",
+        "C": "turn right",
+        "D": "if clap"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الحلقة تكرر clap ثلاث مرات",
+      "is_active": true
+    },
+    {
+      "id": 48,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif light_on\nread book\nوكان الضوء مطفأ ماذا يحدث",
+      "options": {
+        "A": "يقرأ الكتاب",
+        "B": "لا يقرأ الكتاب",
+        "C": "يقفز",
+        "D": "يلف"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الشرط لم يتحقق",
+      "is_active": true
+    },
+    {
+      "id": 49,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nstars = 5\nstars = stars - 2\nما القيمة الجديدة",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "5"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "5 ناقص 2 يساوي 3",
+      "is_active": true
+    },
+    {
+      "id": 50,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اي ترتيب صحيح لغسل اليدين",
+      "options": {
+        "A": "تجفيف ثم ماء ثم صابون",
+        "B": "ماء ثم صابون ثم فرك ثم شطف",
+        "C": "صابون ثم نوم",
+        "D": "شطف ثم ماء ثم صابون"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "هذا ترتيب منطقي للخطوات",
+      "is_active": true
+    },
+    {
+      "id": 51,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif coins == 4\nopen box\nوكان coins = 4\nماذا يحدث",
+      "options": {
+        "A": "يفتح الصندوق",
+        "B": "لا يفتح الصندوق",
+        "C": "يتحرك",
+        "D": "ينام"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "القيمة تساوي 4 بالضبط",
+      "is_active": true
+    },
+    {
+      "id": 52,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 2 times\njump\nclap\nكم مرة يحدث clap",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "clap داخل الحلقة مرتان",
+      "is_active": true
+    },
+    {
+      "id": 53,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "الارنب يريد الوصول للجزر على بعد 3 خطوات ثم يقفز مرة اي برنامج صحيح",
+      "options": {
+        "A": "move move jump",
+        "B": "move move move jump",
+        "C": "jump move move",
+        "D": "turn jump move"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "يحتاج 3 حركات ثم قفزة",
+      "is_active": true
+    },
+    {
+      "id": 54,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "patterns",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اكمل النمط\n2 4 2 4 2 ؟",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "5"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "النمط يتبادل بين 2 و 4",
+      "is_active": true
+    },
+    {
+      "id": 55,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "debugging_basic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اي برنامج فيه امر زائد لو المطلوب فقط خطوة واحدة",
+      "options": {
+        "A": "move forward",
+        "B": "move forward ثم clap",
+        "C": "start ثم move forward",
+        "D": "move forward ثم stop"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "التصفيق ليس مطلوبا",
+      "is_active": true
+    },
+    {
+      "id": 56,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 5 times\nclap\nكم مرة يحدث clap",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "7"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "يتكرر 5 مرات",
+      "is_active": true
+    },
+    {
+      "id": 57,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nx = 1\nx = x + 1\nx = x + 1\nفما القيمة النهائية",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 ثم 2 ثم 3",
+      "is_active": true
+    },
+    {
+      "id": 58,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "في برنامج لصنع ساندويتش ما الخطوة التي تسبق الاكل",
+      "options": {
+        "A": "وضع الحشوة",
+        "B": "النوم",
+        "C": "الاكل",
+        "D": "غسل الاسنان"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "لازم نضع الحشوة قبل الاكل",
+      "is_active": true
+    },
+    {
+      "id": 59,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif bag_ready\ngo to school\nوكانت الحقيبة غير جاهزة ماذا يحدث",
+      "options": {
+        "A": "يذهب للمدرسة",
+        "B": "لا يذهب للمدرسة",
+        "C": "يلعب",
+        "D": "يفتح التلفاز"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الشرط غير متحقق",
+      "is_active": true
+    },
+    {
+      "id": 60,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 3 times\nmove forward\nكم مرة ينفذ move forward",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "يتكرر 3 مرات",
+      "is_active": true
+    },
+    {
+      "id": 61,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "الطائر يريد ان يطير خطوتين ثم يلف يسارا اي برنامج صحيح",
+      "options": {
+        "A": "turn left ثم fly fly",
+        "B": "fly fly ثم turn left",
+        "C": "jump ثم turn",
+        "D": "turn right ثم fly"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "ينفذ الحركتين اولا ثم اللفة",
+      "is_active": true
+    },
+    {
+      "id": 62,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "patterns",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اي مجموعة تكمل النمط\n▲ ■ ▲ ■ ؟",
+      "options": {
+        "A": "▲",
+        "B": "■",
+        "C": "●",
+        "D": "◆"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "بعد المربع يعود للمثلث",
+      "is_active": true
+    },
+    {
+      "id": 63,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "debugging_basic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "المطلوب 4 قفزات لكن البرنامج كتب repeat 3 times jump ما الحل",
+      "options": {
+        "A": "نضيف قفزة واحدة",
+        "B": "نحذف jump",
+        "C": "نغير jump الى clap",
+        "D": "لا شيء"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "3 قفزات تحتاج قفزة اضافية لتصبح 4",
+      "is_active": true
+    },
+    {
+      "id": 64,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif water_hot\nwait\nمتى ننتظر",
+      "options": {
+        "A": "عندما يكون الماء ساخنا",
+        "B": "عندما يكون الماء باردا",
+        "C": "في كل مرة",
+        "D": "ابدا"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الانتظار مرتبط بسخونة الماء",
+      "is_active": true
+    },
+    {
+      "id": 65,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nballs = 6\nballs = balls - 1\nballs = balls - 2\nكم كرة بقيت",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "5"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "6 ناقص 1 ناقص 2 يساوي 3",
+      "is_active": true
+    },
+    {
+      "id": 66,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان البرنامج\nstart\njump\nmove\nstop\nما الامر الثالث",
+      "options": {
+        "A": "start",
+        "B": "jump",
+        "C": "move",
+        "D": "stop"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "الترتيب الثالث هو move",
+      "is_active": true
+    },
+    {
+      "id": 67,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif key_found\nopen door\nوكان المفتاح موجودا ماذا يحدث",
+      "options": {
+        "A": "يفتح الباب",
+        "B": "لا يفتح الباب",
+        "C": "يقفز",
+        "D": "يعيد العد"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "وجود المفتاح يحقق الشرط",
+      "is_active": true
+    },
+    {
+      "id": 68,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 2 times\nmove forward\nturn right\nكم امرا داخل الحلقة",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "يوجد امران داخل الحلقة",
+      "is_active": true
+    },
+    {
+      "id": 69,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "الطفل يريد قراءة كتاب بعد تشغيل الضوء ما الترتيب الصحيح",
+      "options": {
+        "A": "read ثم light on",
+        "B": "light on ثم read",
+        "C": "sleep ثم read",
+        "D": "read فقط"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "يجب تشغيل الضوء اولا",
+      "is_active": true
+    },
+    {
+      "id": 70,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "debugging_basic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "المطلوب الدوران لليسار لكن الكود كتب turn right ما نوع الخطأ",
+      "options": {
+        "A": "خطأ املائي",
+        "B": "امر غير مناسب",
+        "C": "لا يوجد خطأ",
+        "D": "خطأ في الاسم"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الامر صحيح كتابيا لكنه غير مناسب للمطلوب",
+      "is_active": true
+    },
+    {
+      "id": 71,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "patterns",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اكمل النمط\n1 1 2 1 1 2 1 ؟",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "النمط يتكرر 1 1 2",
+      "is_active": true
+    },
+    {
+      "id": 72,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\ncandies = 3\ncandies = candies + 2\ncandies = candies - 1\nكم حبة حلوى بقيت",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "3 زائد 2 ثم ناقص 1 يساوي 4",
+      "is_active": true
+    },
+    {
+      "id": 73,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "sequence",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اي برنامج يوصل الروبوت للنقطة التي امامه خطوة ثم يساره خطوة",
+      "options": {
+        "A": "turn left ثم move ثم move",
+        "B": "move ثم turn left ثم move",
+        "C": "move ثم move ثم turn left",
+        "D": "turn right ثم move"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "يتحرك اولا ثم يلف يسارا ثم يتحرك",
+      "is_active": true
+    },
+    {
+      "id": 74,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif stars >= 3\ngood\nوكان stars = 3\nماذا يحدث",
+      "options": {
+        "A": "تظهر good",
+        "B": "لا تظهر good",
+        "C": "يتوقف",
+        "D": "يتكرر"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "3 تحقق شرط اكبر او يساوي 3",
+      "is_active": true
+    },
+    {
+      "id": 75,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 3 times\njump\nmove\nكم مرة يحدث move",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "move داخل الحلقة 3 مرات",
+      "is_active": true
+    },
+    {
+      "id": 76,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "الروبوت يحتاج ان يتحرك خطوتين ثم يلتف يمينا ثم يتحرك خطوة اي برنامج صحيح",
+      "options": {
+        "A": "move move turn right move",
+        "B": "turn right move move move",
+        "C": "move turn right move",
+        "D": "jump move turn"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا يطابق المطلوب بدقة",
+      "is_active": true
+    },
+    {
+      "id": 77,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "debugging_basic",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "المطلوب 2 تصفيق ثم 1 قفزة والكود هو repeat 2 times clap jump ما المشكلة",
+      "options": {
+        "A": "لا توجد مشكلة",
+        "B": "القفزة ستتكرر مرتين ايضا",
+        "C": "التصفيق لن يعمل",
+        "D": "الحلقة قصيرة جدا"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "jump داخل الحلقة فيتكرر مرتين",
+      "is_active": true
+    },
+    {
+      "id": 78,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif hungry\neat\nelse drink\nوالطفل غير جائع ماذا يحدث",
+      "options": {
+        "A": "يأكل",
+        "B": "يشرب",
+        "C": "ينام",
+        "D": "يجري"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "عند عدم تحقق الشرط ينتقل الى else",
+      "is_active": true
+    },
+    {
+      "id": 79,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nx = 2\nx = x + x\nما القيمة الجديدة",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "6"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 زائد 2 يساوي 4",
+      "is_active": true
+    },
+    {
+      "id": 80,
+      "age_group": "6_9",
+      "level": "intermediate",
+      "skill": "patterns",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اكمل النمط\n🔴 🔴 🔵 🔴 🔴 🔵 ؟",
+      "options": {
+        "A": "🔴",
+        "B": "🔵",
+        "C": "🟢",
+        "D": "⚫"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "النمط يتكرر كل 3 اشكال",
+      "is_active": true
+    },
+    {
+      "id": 81,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nscore = 4\nscore = score + 3\nscore = score - 2\nفما القيمة النهائية",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "7"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "4 زائد 3 ناقص 2 يساوي 5",
+      "is_active": true
+    },
+    {
+      "id": 82,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اي ترتيب صحيح للاستعداد للنوم",
+      "options": {
+        "A": "اغلاق النور ثم تنظيف الاسنان ثم النوم",
+        "B": "تنظيف الاسنان ثم ارتداء البيجامة ثم النوم",
+        "C": "النوم ثم تنظيف الاسنان",
+        "D": "القفز ثم النوم"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "هذا ترتيب منطقي للخطوات",
+      "is_active": true
+    },
+    {
+      "id": 83,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif toy_box_full\nstop adding toys\nوكان الصندوق ممتلئا ماذا يحدث",
+      "options": {
+        "A": "نضيف لعبة اخرى",
+        "B": "نتوقف عن الاضافة",
+        "C": "نقلب الصندوق",
+        "D": "نقفز"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الشرط تحقق",
+      "is_active": true
+    },
+    {
+      "id": 84,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 4 times\nmove forward\nturn left\nكم مرة سيلف لليسار",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "5"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "امر turn left داخل الحلقة 4 مرات",
+      "is_active": true
+    },
+    {
+      "id": 85,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "debugging_basic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "المطلوب ان يتحرك 3 خطوات لكن الكود هو repeat 2 times move forward ما الحل",
+      "options": {
+        "A": "نضيف خطوة واحدة",
+        "B": "نحذف خطوة",
+        "C": "نغير move الى jump",
+        "D": "لا شيء"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "خطوتان لا تكفيان",
+      "is_active": true
+    },
+    {
+      "id": 86,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "القطة تريد الوصول للكرة على بعد خطوة ثم خطوة اخرى للاعلى اي برنامج انسب",
+      "options": {
+        "A": "move ثم move",
+        "B": "move ثم turn left ثم move",
+        "C": "turn right ثم move",
+        "D": "jump فقط"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "تحتاج حركة ثم تغيير اتجاه ثم حركة",
+      "is_active": true
+    },
+    {
+      "id": 87,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "patterns",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اكمل النمط\nA B C A B C A ؟",
+      "options": {
+        "A": "A",
+        "B": "B",
+        "C": "C",
+        "D": "D"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "بعد A يأتي B",
+      "is_active": true
+    },
+    {
+      "id": 88,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\ncoins = 10\ncoins = coins - 4\ncoins = coins + 1\nكم عملة تبقت",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "7",
+        "D": "8"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "10 ناقص 4 زائد 1 يساوي 7",
+      "is_active": true
+    },
+    {
+      "id": 89,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif answer_correct\nget star\nوكانت الاجابة صحيحة ماذا يحدث",
+      "options": {
+        "A": "لا شيء",
+        "B": "يحصل على نجمة",
+        "C": "يعيد السؤال",
+        "D": "يقفز"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الشرط تحقق",
+      "is_active": true
+    },
+    {
+      "id": 90,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 3 times\njump\nclap\nturn right\nكم مرة سيحدث turn right",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "داخل الحلقة 3 مرات",
+      "is_active": true
+    },
+    {
+      "id": 91,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "debugging_basic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "المطلوب الدوران يسارا 2 مرة لكن الكود هو turn left مرة واحدة ما المشكلة",
+      "options": {
+        "A": "لا مشكلة",
+        "B": "عدد اللفات اقل من المطلوب",
+        "C": "هناك خطأ املائي",
+        "D": "الحركة كثيرة"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "البرنامج لا يحقق المطلوب",
+      "is_active": true
+    },
+    {
+      "id": 92,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "الطفل يريد فتح الباب اذا وجد المفتاح والا يبحث عنه اي منطق مناسب",
+      "options": {
+        "A": "if key_found open door else search key",
+        "B": "repeat open door",
+        "C": "move ثم jump",
+        "D": "turn right"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا منطق شرط مناسب",
+      "is_active": true
+    },
+    {
+      "id": 93,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "patterns",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اكمل النمط\n2 3 2 3 2 3 ؟",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "5"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "النمط يتبادل بين 2 و 3",
+      "is_active": true
+    },
+    {
+      "id": 94,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nx = 3\ny = 2\nكم قيمة x + y",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "7"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "3 زائد 2 يساوي 5",
+      "is_active": true
+    },
+    {
+      "id": 95,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان البرنامج\nstart\nmove\nturn right\nmove\nstop\nما الامر الرابع",
+      "options": {
+        "A": "start",
+        "B": "move",
+        "C": "turn right",
+        "D": "move"
+      },
+      "correct_answer": "D",
+      "explanation_ar": "الامر الرابع هو move الثاني",
+      "is_active": true
+    },
+    {
+      "id": 96,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif battery_low\ncharge\nوكانت البطارية عالية ماذا يحدث",
+      "options": {
+        "A": "تشحن",
+        "B": "لا تشحن",
+        "C": "تطفئ الشاشة",
+        "D": "تقفز"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الشرط غير متحقق",
+      "is_active": true
+    },
+    {
+      "id": 97,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 2 times\nrepeat 2 times\nclap\nكم مرة يحدث clap",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "5"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "الحلقة الداخلية مرتين والخارجية مرتين فيصبح المجموع 4",
+      "is_active": true
+    },
+    {
+      "id": 98,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "debugging_basic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "المطلوب 3 قفزات و3 تصفيقات لكن الكود هو repeat 3 times jump ثم clap ما المشكلة",
+      "options": {
+        "A": "لا مشكلة",
+        "B": "التصفيق يحدث مرة واحدة فقط",
+        "C": "القفز يحدث مرة واحدة",
+        "D": "الكود سيتوقف"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "clap خارج الحلقة",
+      "is_active": true
+    },
+    {
+      "id": 99,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "الروبوت يريد جمع كرتين متتاليتين امامه على بعد خطوتين ما افضل برنامج",
+      "options": {
+        "A": "move move collect",
+        "B": "collect ثم move",
+        "C": "turn right ثم collect",
+        "D": "jump collect"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "يتحرك خطوتين ثم يجمع",
+      "is_active": true
+    },
+    {
+      "id": 100,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "patterns",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اي مجموعة تمثل نمطا ثلاثيا متكررا",
+      "options": {
+        "A": "🔺 🔵 ⭐ 🔺 🔵 ⭐",
+        "B": "🔺 🔺 🔵 🔵",
+        "C": "⭐ ⭐ ⭐",
+        "D": "🔵 🔺 🔵 🔺 ⭐"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "النمط الثلاثي يتكرر بالكامل",
+      "is_active": true
+    },
+    {
+      "id": 101,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "logic",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nscore = 1\nrepeat 3 times\nscore = score + 2\nفما القيمة النهائية",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "7",
+        "D": "8"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 ثم يضاف 2 ثلاث مرات فيصبح 7",
+      "is_active": true
+    },
+    {
+      "id": 102,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "sequence",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اي برنامج يجعل الروبوت يتحرك خطوة ثم يدور يمينا ثم يتحرك خطوتين",
+      "options": {
+        "A": "move ثم turn right ثم move ثم move",
+        "B": "turn right ثم move move move",
+        "C": "move move ثم turn right",
+        "D": "jump ثم move"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا يطابق الترتيب المطلوب",
+      "is_active": true
+    },
+    {
+      "id": 103,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif box_open\nput toy\nelse open box\nوكان الصندوق مغلقا ماذا يحدث",
+      "options": {
+        "A": "يضع اللعبة مباشرة",
+        "B": "يفتح الصندوق",
+        "C": "يخرج اللعبة",
+        "D": "لا شيء"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "ينفذ else عند عدم تحقق الشرط",
+      "is_active": true
+    },
+    {
+      "id": 104,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 3 times\nmove\nturn right\njump\nكم مرة سيقفز",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "jump داخل الحلقة 3 مرات",
+      "is_active": true
+    },
+    {
+      "id": 105,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "debugging_basic",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "المطلوب مربع باربع حركات واربع لفات والكود هو repeat 4 times move forward فقط ما الذي ينقص",
+      "options": {
+        "A": "jump",
+        "B": "turn right",
+        "C": "stop",
+        "D": "start"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "لا بد من اللف بعد كل حركة لرسم مربع",
+      "is_active": true
+    },
+    {
+      "id": 106,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "يريد الروبوت الوصول لهدف على شكل حرف L خطوة امامية ثم خطوة يمين ما البرنامج الصحيح",
+      "options": {
+        "A": "move ثم turn right ثم move",
+        "B": "turn right ثم move ثم move",
+        "C": "move move ثم turn right",
+        "D": "jump ثم move"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "يتحرك اولا ثم يغير الاتجاه",
+      "is_active": true
+    },
+    {
+      "id": 107,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "patterns",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اكمل النمط\n1 2 2 1 2 2 1 ؟",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "النمط المتكرر هو 1 2 2",
+      "is_active": true
+    },
+    {
+      "id": 108,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "logic",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\ncoins = 8\nrepeat 2 times\ncoins = coins - 3\nكم يتبقى",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "8 ناقص 3 ناقص 3 يساوي 2",
+      "is_active": true
+    },
+    {
+      "id": 109,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "sequence",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "لتحضير العصير ما الترتيب الانسب",
+      "options": {
+        "A": "شرب ثم سكب ثم خلط",
+        "B": "وضع الفاكهة ثم خلط ثم سكب",
+        "C": "سكب ثم خلط ثم وضع الفاكهة",
+        "D": "خلط ثم نوم"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "هذا ترتيب منطقي للعملية",
+      "is_active": true
+    },
+    {
+      "id": 110,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif stars > 4\nlevel up\nوكان stars = 4\nماذا يحدث",
+      "options": {
+        "A": "يرتفع المستوى",
+        "B": "لا يرتفع المستوى",
+        "C": "يعيد اللعبة",
+        "D": "يقفز"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "4 ليست اكبر من 4",
+      "is_active": true
+    },
+    {
+      "id": 111,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 2 times\nmove\nrepeat 2 times\nclap\nكم مرة يحدث clap",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "5"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "الحلقة الداخلية مرتان وتتكرر مع الخارجية مرتين فيصبح 4",
+      "is_active": true
+    },
+    {
+      "id": 112,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "debugging_basic",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "المطلوب التحرك 2 ثم اللف يسارا 2 ثم التحرك 2 لكن الكود كتب turn left مرة واحدة فقط ما النتيجة",
+      "options": {
+        "A": "لا يصل للمسار المطلوب",
+        "B": "سيصل صحيحا",
+        "C": "سيقفز",
+        "D": "لن يتحرك ابدا"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "عدد اللفات غير كاف",
+      "is_active": true
+    },
+    {
+      "id": 113,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا اردنا ان يختار الروبوت مظلة عند المطر ونظارة عند الشمس فما الاداة المناسبة",
+      "options": {
+        "A": "حلقة تكرار",
+        "B": "شرطان",
+        "C": "امر stop",
+        "D": "نمط"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "لاننا نحتاج قرارين حسب حالتين",
+      "is_active": true
+    },
+    {
+      "id": 114,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "patterns",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اكمل النمط\n🔵 🟡 🔵 🟢 🔵 🟡 🔵 ؟",
+      "options": {
+        "A": "🟡",
+        "B": "🟢",
+        "C": "🔴",
+        "D": "⚫"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "في هذا التسلسل الشكل التالي هو الاخضر",
+      "is_active": true
+    },
+    {
+      "id": 115,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "logic",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nx = 2\nrepeat 3 times\nx = x + x\nفما القيمة النهائية",
+      "options": {
+        "A": "8",
+        "B": "12",
+        "C": "16",
+        "D": "18"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 ثم 4 ثم 8 ثم 16",
+      "is_active": true
+    },
+    {
+      "id": 116,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "sequence",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اي برنامج يصنع مثلثا بسيطا من 3 حركات و3 لفات",
+      "options": {
+        "A": "repeat 3 times move turn",
+        "B": "repeat 2 times move turn",
+        "C": "move move move",
+        "D": "turn turn turn"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "المثلث يحتاج 3 اضلاع و3 لفات",
+      "is_active": true
+    },
+    {
+      "id": 117,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nif friend_here\nplay\nelse read\nوالصديق موجود ماذا يحدث",
+      "options": {
+        "A": "يقرأ",
+        "B": "يلعب",
+        "C": "ينام",
+        "D": "يقفز"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "عند تحقق الشرط ينفذ play",
+      "is_active": true
+    },
+    {
+      "id": 118,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان\nrepeat 3 times\nmove\nturn left\nmove\nكم مرة يحدث move",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "D",
+      "explanation_ar": "داخل كل دورة يوجد move مرتان ومع 3 دورات يصبح 6",
+      "is_active": true
+    },
+    {
+      "id": 119,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "debugging_basic",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "المطلوب ان ينتهي البرنامج بعد الحركة لكن الكود هو move ثم move ثم stop ما الخطأ",
+      "options": {
+        "A": "البرنامج طويل بخطوة حركة زائدة",
+        "B": "stop مكتوبة صح",
+        "C": "لا يوجد خطأ",
+        "D": "يجب حذف stop"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هناك حركة اضافية غير مطلوبة",
+      "is_active": true
+    },
+    {
+      "id": 120,
+      "age_group": "6_9",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "لجمع 4 نجوم متتالية امام الروبوت ما افضل فكرة",
+      "options": {
+        "A": "4 اوامر move منفصلة او حلقة 4 مرات",
+        "B": "امر واحد فقط",
+        "C": "شرط if فقط",
+        "D": "لفات متكررة بلا حركة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "التحرك 4 مرات هو المطلوب ويمكن اختصاره بحلقة",
+      "is_active": true
+    },
+    {
+      "id": 1,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "الكمبيوتر ينفذ أوامر البرنامج بأي ترتيب",
+      "options": {
+        "A": "عشوائي",
+        "B": "حسب ترتيب الأوامر",
+        "C": "حسب لون الشاشة",
+        "D": "حسب سرعة الإنترنت"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الكمبيوتر ينفذ الأوامر حسب ترتيبها في البرنامج",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان البرنامج\nmove forward\nmove forward\nturn right\nفماذا يحدث",
+      "options": {
+        "A": "يتحرك مرتين ثم يغير الاتجاه",
+        "B": "يتحرك مرة واحدة فقط",
+        "C": "يدور مكانه فقط",
+        "D": "لا يحدث شيء"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "ينفذ خطوتين للأمام ثم أمر الدوران لليمين",
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت قيمة x = 5 ثم كتبنا\nx = x + 2\nفما القيمة الجديدة",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "7",
+        "D": "8"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "5 + 2 = 7",
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "في البرمجة نستخدم if من أجل",
+      "options": {
+        "A": "تكرار الأوامر",
+        "B": "اتخاذ قرار",
+        "C": "حذف المتغير",
+        "D": "إيقاف الجهاز"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "if تستخدم لفحص شرط واتخاذ قرار",
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كتبنا\nrepeat 3 times\nprint hi\nفكم مرة ستظهر hi",
+      "options": {
+        "A": "مرة",
+        "B": "مرتين",
+        "C": "3 مرات",
+        "D": "4 مرات"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "الحلقة تكرر الأمر 3 مرات",
+      "is_active": true
+    },
+    {
+      "id": 6,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "أي من التالي اسم مناسب لمتغير يمثل عدد النقاط",
+      "options": {
+        "A": "score",
+        "B": "repeat",
+        "C": "if",
+        "D": "start"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "score اسم منطقي لتخزين عدد النقاط",
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان البرنامج\nturn left\nmove forward\nفماذا يحدث",
+      "options": {
+        "A": "يتحرك ثم يغير الاتجاه",
+        "B": "يغير الاتجاه ثم يتحرك",
+        "C": "يتوقف",
+        "D": "يحذف الأمر الأول"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "ينفذ الدوران أولا ثم الحركة",
+      "is_active": true
+    },
+    {
+      "id": 8,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت score = 10 ثم كتبنا\nscore = score + 5\nفما القيمة الجديدة",
+      "options": {
+        "A": "5",
+        "B": "10",
+        "C": "15",
+        "D": "20"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "10 + 5 = 15",
+      "is_active": true
+    },
+    {
+      "id": 9,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان x = 8 وكتبنا\nif x > 5\nprint big\nفماذا سيطبع",
+      "options": {
+        "A": "big",
+        "B": "small",
+        "C": "error",
+        "D": "nothing"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "لأن 8 أكبر من 5",
+      "is_active": true
+    },
+    {
+      "id": 10,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "أي كلمة تدل على التكرار في البرمجة",
+      "options": {
+        "A": "if",
+        "B": "repeat",
+        "C": "stop",
+        "D": "input"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "repeat تعني تكرار الأوامر",
+      "is_active": true
+    },
+    {
+      "id": 11,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "ما الهدف من المتغير في البرنامج",
+      "options": {
+        "A": "تخزين قيمة",
+        "B": "تلوين الشاشة",
+        "C": "إغلاق البرنامج",
+        "D": "تحريك الكائن"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "المتغير يستخدم لتخزين القيم",
+      "is_active": true
+    },
+    {
+      "id": 12,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان البرنامج\nmove forward\nturn right\nmove forward\nفكم مرة يتحرك الكائن",
+      "options": {
+        "A": "مرة",
+        "B": "مرتين",
+        "C": "3 مرات",
+        "D": "لا يتحرك"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "يوجد أمران للحركة",
+      "is_active": true
+    },
+    {
+      "id": 13,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 3 ثم\nx = x + 1\nx = x + 2\nفما القيمة النهائية",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "7"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "3 ثم 4 ثم 6",
+      "is_active": true
+    },
+    {
+      "id": 14,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان x = 4 وكتبنا\nif x > 5\nprint A\nelse\nprint B\nفما الناتج",
+      "options": {
+        "A": "A",
+        "B": "B",
+        "C": "A ثم B",
+        "D": "لا شيء"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "لأن الشرط غير صحيح فينفذ else",
+      "is_active": true
+    },
+    {
+      "id": 15,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 0 وكتبنا\nrepeat 4 times\nx = x + 1\nفما القيمة النهائية",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "D",
+      "explanation_ar": "تزيد 1 أربع مرات فيصبح 4",
+      "is_active": true
+    },
+    {
+      "id": 16,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "أي من التالي يعتبر خوارزمية",
+      "options": {
+        "A": "لون جميل للشاشة",
+        "B": "خطوات مرتبة لحل مشكلة",
+        "C": "اسم المتغير فقط",
+        "D": "زر تشغيل الجهاز"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الخوارزمية هي خطوات مرتبة لحل مشكلة",
+      "is_active": true
+    },
+    {
+      "id": 17,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "رتب الخطوات لصنع برنامج بسيط يطبع hello\n1 print hello\n2 start\n3 end",
+      "options": {
+        "A": "1 ثم 2 ثم 3",
+        "B": "2 ثم 1 ثم 3",
+        "C": "3 ثم 2 ثم 1",
+        "D": "2 ثم 3 ثم 1"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "أي برنامج يبدأ ثم ينفذ ثم ينتهي",
+      "is_active": true
+    },
+    {
+      "id": 18,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت lives = 2 ثم\nlives = lives + 3\nفما القيمة الجديدة",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 + 3 = 5",
+      "is_active": true
+    },
+    {
+      "id": 19,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان x = 10 وكتبنا\nif x < 5\nprint small\nelse\nprint big\nفما الناتج",
+      "options": {
+        "A": "small",
+        "B": "big",
+        "C": "error",
+        "D": "nothing"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "10 ليس أقل من 5 فينفذ else",
+      "is_active": true
+    },
+    {
+      "id": 20,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "كم مرة تنفذ الحلقة\nfor i from 1 to 4",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "مرة واحدة"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الأعداد 1 2 3 4 أي أربع مرات",
+      "is_active": true
+    },
+    {
+      "id": 21,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "ما فائدة debugging",
+      "options": {
+        "A": "إصلاح الأخطاء",
+        "B": "تكرار الأوامر",
+        "C": "رسم الصور فقط",
+        "D": "زيادة سرعة الإنترنت"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "debugging يعني تتبع الأخطاء وإصلاحها",
+      "is_active": true
+    },
+    {
+      "id": 22,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان البرنامج\nmove forward\nmove forward\nturn left\nmove forward\nفما الوصف الصحيح",
+      "options": {
+        "A": "يتحرك 3 مرات ويغير الاتجاه مرة",
+        "B": "يتحرك مرتين فقط",
+        "C": "يغير الاتجاه مرتين",
+        "D": "لا يحدث شيء"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "يوجد 3 أوامر حركة وأمر دوران واحد",
+      "is_active": true
+    },
+    {
+      "id": 23,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت coins = 7 ثم\ncoins = coins - 2\nفما القيمة الجديدة",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "9"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "7 - 2 = 5",
+      "is_active": true
+    },
+    {
+      "id": 24,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "أي نتيجة تجعل الشرط التالي صحيحا\nif score >= 6",
+      "options": {
+        "A": "5",
+        "B": "4",
+        "C": "6",
+        "D": "3"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "6 تحقق شرط أكبر من أو يساوي 6",
+      "is_active": true
+    },
+    {
+      "id": 25,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كتبنا\nrepeat 2 times\nmove forward\nturn right\nفكم مرة ينفذ turn right",
+      "options": {
+        "A": "مرة",
+        "B": "مرتين",
+        "C": "3 مرات",
+        "D": "لا ينفذ"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "كل ما داخل الحلقة يتكرر مرتين",
+      "is_active": true
+    },
+    {
+      "id": 26,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "أي من التالي أفضل سبب لاستخدام الحلقة",
+      "options": {
+        "A": "لتقليل تكرار كتابة نفس الأمر",
+        "B": "لتغيير لون النص فقط",
+        "C": "لحذف الشروط",
+        "D": "لمنع البرنامج من العمل"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الحلقات تقلل تكرار كتابة الأوامر",
+      "is_active": true
+    },
+    {
+      "id": 27,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان البرنامج\nstart\nmove forward\nturn right\nturn left\nmove forward\nفأيهما صحيح",
+      "options": {
+        "A": "الدورانان يلغي كل منهما الآخر ويتحرك مرتين",
+        "B": "يتحرك مرة واحدة فقط",
+        "C": "يدور يمينا فقط",
+        "D": "لا يمكن تحديده"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "بعد يمين ثم يسار يعود للاتجاه الأصلي ويوجد حركتان",
+      "is_active": true
+    },
+    {
+      "id": 28,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 2 ثم\nx = x + x\nفما القيمة الجديدة",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "6"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 + 2 = 4",
+      "is_active": true
+    },
+    {
+      "id": 29,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان age = 12 وكتبنا\nif age >= 10\nprint yes\nelse\nprint no\nفما الناتج",
+      "options": {
+        "A": "yes",
+        "B": "no",
+        "C": "yes no",
+        "D": "nothing"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "12 أكبر من أو يساوي 10",
+      "is_active": true
+    },
+    {
+      "id": 30,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 1 وكتبنا\nrepeat 3 times\nx = x + 2\nفما القيمة النهائية",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "7",
+        "D": "8"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 ثم 3 ثم 5 ثم 7",
+      "is_active": true
+    },
+    {
+      "id": 31,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "أي من التالي ليس أمرا برمجيا",
+      "options": {
+        "A": "move forward",
+        "B": "turn left",
+        "C": "banana",
+        "D": "repeat"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "banana ليست أمرا برمجيا",
+      "is_active": true
+    },
+    {
+      "id": 32,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان البرنامج\nmove forward\nturn left\nmove forward\nفماذا يحدث",
+      "options": {
+        "A": "يتحرك ثم يغير الاتجاه ثم يتحرك",
+        "B": "يتحرك مرتين في نفس الاتجاه",
+        "C": "يدور فقط",
+        "D": "يتوقف بعد أول خطوة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا هو ترتيب التنفيذ",
+      "is_active": true
+    },
+    {
+      "id": 33,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت energy = 9 ثم\nenergy = energy - 1\nفما القيمة الجديدة",
+      "options": {
+        "A": "7",
+        "B": "8",
+        "C": "9",
+        "D": "10"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "9 - 1 = 8",
+      "is_active": true
+    },
+    {
+      "id": 34,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان الشرط صحيحا في if فماذا يحدث",
+      "options": {
+        "A": "ينفذ الأوامر داخل if",
+        "B": "يحذف المتغيرات",
+        "C": "يعيد تشغيل الجهاز",
+        "D": "يتوقف البرنامج دائما"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "عندما يكون الشرط صحيحا تنفذ أوامر if",
+      "is_active": true
+    },
+    {
+      "id": 35,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كتبنا\nrepeat 5 times\njump\nفكم مرة يقفز",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "7"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الأمر يتكرر 5 مرات",
+      "is_active": true
+    },
+    {
+      "id": 36,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "ما الفرق الأساسي بين if و repeat",
+      "options": {
+        "A": "if للقرار و repeat للتكرار",
+        "B": "if للتكرار و repeat للقرار",
+        "C": "كلاهما للحذف",
+        "D": "لا يوجد فرق"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "if لفحص الشرط و repeat لتكرار الأوامر",
+      "is_active": true
+    },
+    {
+      "id": 37,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان البرنامج\nmove forward\nturn right\nturn right\nmove forward\nفما الصحيح",
+      "options": {
+        "A": "يتحرك مرتين وبعد دورتين يكون عكس الاتجاه الأول",
+        "B": "يتحرك مرة واحدة",
+        "C": "يتحرك 3 مرات",
+        "D": "لا يغير اتجاهه"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "دورتان يمين تعنيان الاتجاه المعاكس ويوجد حركتان",
+      "is_active": true
+    },
+    {
+      "id": 38,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 10 ثم\nx = x - 3\nx = x + 1\nفما القيمة النهائية",
+      "options": {
+        "A": "7",
+        "B": "8",
+        "C": "9",
+        "D": "10"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "10 - 3 = 7 ثم +1 = 8",
+      "is_active": true
+    },
+    {
+      "id": 39,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان score = 5 وكتبنا\nif score == 5\nprint win\nفما الناتج",
+      "options": {
+        "A": "lose",
+        "B": "win",
+        "C": "error",
+        "D": "nothing"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "لأن score يساوي 5",
+      "is_active": true
+    },
+    {
+      "id": 40,
+      "age_group": "10_13",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان count = 2 وكتبنا\nrepeat 3 times\ncount = count + 2\nفما القيمة النهائية",
+      "options": {
+        "A": "6",
+        "B": "7",
+        "C": "8",
+        "D": "10"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 ثم 4 ثم 6 ثم 8",
+      "is_active": true
+    },
+    {
+      "id": 41,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "أي من التالي أفضل وصف للمتغير",
+      "options": {
+        "A": "مكان لتخزين قيمة تتغير",
+        "B": "أمر دوران",
+        "C": "نوع من الحلقات فقط",
+        "D": "شاشة العرض"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "المتغير يخزن قيما يمكن تغييرها",
+      "is_active": true
+    },
+    {
+      "id": 42,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان البرنامج\nx = 1\nx = x + 2\nprint x\nفما الناتج",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "بعد إضافة 2 إلى 1 تصبح القيمة 3",
+      "is_active": true
+    },
+    {
+      "id": 43,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "variables",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت coins = 4 ثم\ncoins = coins + 4\nفما القيمة الجديدة",
+      "options": {
+        "A": "6",
+        "B": "7",
+        "C": "8",
+        "D": "9"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "4 + 4 = 8",
+      "is_active": true
+    },
+    {
+      "id": 44,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان x = 6 وكتبنا\nif x >= 6\nprint yes\nelse\nprint no\nفما الناتج",
+      "options": {
+        "A": "yes",
+        "B": "no",
+        "C": "error",
+        "D": "nothing"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "لأن 6 يحقق الشرط",
+      "is_active": true
+    },
+    {
+      "id": 45,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "كم مرة تنفذ الحلقة\nfor i from 2 to 5",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "القيم 2 و3 و4 و5 أي أربع مرات",
+      "is_active": true
+    },
+    {
+      "id": 46,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "debugging",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "أين الخطأ في هذا السطر\nscroe = 5\nprint score",
+      "options": {
+        "A": "لا يوجد خطأ",
+        "B": "اسم المتغير غير متطابق",
+        "C": "يجب استخدام repeat",
+        "D": "يجب حذف print"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "تم تعريف scroe ثم محاولة طباعة score",
+      "is_active": true
+    },
+    {
+      "id": 47,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا أردت عد 5 نجوم بسرعة فأفضل فكرة هي",
+      "options": {
+        "A": "استخدام repeat",
+        "B": "كتابة الأمر مرة واحدة فقط",
+        "C": "حذف النجوم",
+        "D": "إغلاق البرنامج"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الحلقة أنسب عند تكرار نفس الأمر",
+      "is_active": true
+    },
+    {
+      "id": 48,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "أي مما يلي يصف البرنامج الأفضل",
+      "options": {
+        "A": "برنامج واضح بأسماء متغيرات مفهومة",
+        "B": "برنامج بأسماء عشوائية جدا",
+        "C": "برنامج بدون ترتيب",
+        "D": "برنامج يكرر كل شيء يدويا"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "وضوح الأسماء والترتيب يحسن فهم البرنامج",
+      "is_active": true
+    },
+    {
+      "id": 49,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "ما ناتج البرنامج\nx = 2\nx = x * 3\nprint x",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "8",
+        "D": "9"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "2 × 3 = 6",
+      "is_active": true
+    },
+    {
+      "id": 50,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت lives = 10 ثم\nlives = lives - 4\nفما القيمة الجديدة",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "7"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "10 - 4 = 6",
+      "is_active": true
+    },
+    {
+      "id": 51,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان x = 3 وكتبنا\nif x > 5\nprint A\nelse\nprint B\nفما الناتج",
+      "options": {
+        "A": "A",
+        "B": "B",
+        "C": "AB",
+        "D": "لا شيء"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "3 ليس أكبر من 5",
+      "is_active": true
+    },
+    {
+      "id": 52,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 2 وكتبنا\nrepeat 4 times\nx = x + 1\nفما القيمة النهائية",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "7"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 ثم 3 ثم 4 ثم 5 ثم 6",
+      "is_active": true
+    },
+    {
+      "id": 53,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "debugging",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "ما الخطأ في الكود\nif x > 5\nprint big\nelsee\nprint small",
+      "options": {
+        "A": "لا يوجد خطأ",
+        "B": "كلمة elsee مكتوبة خطأ",
+        "C": "يجب حذف if",
+        "D": "يجب جعل x نصا"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الكلمة الصحيحة هي else",
+      "is_active": true
+    },
+    {
+      "id": 54,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "لإيجاد مجموع 3 و 4 و 5 أي خطوات صحيحة",
+      "options": {
+        "A": "3 + 4 = 7 ثم 7 + 5 = 12",
+        "B": "3 + 4 = 12",
+        "C": "4 + 5 = 20",
+        "D": "3 + 5 = 6"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "نجمع تدريجيا لنحصل على 12",
+      "is_active": true
+    },
+    {
+      "id": 55,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "أي من التالي مثال على شرط منطقي",
+      "options": {
+        "A": "x + 2",
+        "B": "x > 5",
+        "C": "repeat 3",
+        "D": "print hello"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الشرط يقارن بين قيمتين",
+      "is_active": true
+    },
+    {
+      "id": 56,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان البرنامج\nx = 5\nx = x - 2\nx = x + 4\nفما القيمة النهائية",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "7",
+        "D": "8"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "5 - 2 = 3 ثم +4 = 7",
+      "is_active": true
+    },
+    {
+      "id": 57,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت points = 1 ثم داخل حلقة 3 مرات كتبنا\npoints = points + 2\nفما القيمة النهائية",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "7",
+        "D": "8"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 ثم 3 ثم 5 ثم 7",
+      "is_active": true
+    },
+    {
+      "id": 58,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان score = 9 وكتبنا\nif score < 7\nprint low\nelse\nprint high\nفما الناتج",
+      "options": {
+        "A": "low",
+        "B": "high",
+        "C": "low high",
+        "D": "error"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "9 ليس أقل من 7",
+      "is_active": true
+    },
+    {
+      "id": 59,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كتبنا\nrepeat 2 times\nrepeat 3 times\nclap\nفكم مرة يحدث clap",
+      "options": {
+        "A": "3",
+        "B": "5",
+        "C": "6",
+        "D": "8"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 × 3 = 6",
+      "is_active": true
+    },
+    {
+      "id": 60,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "debugging",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "في الكود التالي\nx = 2\nif x = 2\nprint yes\nما المشكلة التعليمية هنا",
+      "options": {
+        "A": "المقارنة يجب أن تكون واضحة وليست إسنادا",
+        "B": "يجب حذف x",
+        "C": "يجب استخدام loop",
+        "D": "لا توجد مشكلة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "في كثير من اللغات المقارنة ليست بعلامة الإسناد الواحدة",
+      "is_active": true
+    },
+    {
+      "id": 61,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا تحرك روبوت 2 خطوة ثم 2 خطوة ثم 2 خطوة فكم خطوة إجمالا",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "8"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 + 2 + 2 = 6",
+      "is_active": true
+    },
+    {
+      "id": 62,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان الهدف تنفيذ أمر 10 مرات فأفضل اختيار هو",
+      "options": {
+        "A": "كتابة الأمر 10 مرات دائما",
+        "B": "استخدام حلقة",
+        "C": "استخدام if فقط",
+        "D": "حذف الأمر"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الحلقة أفضل للتكرار الكثير",
+      "is_active": true
+    },
+    {
+      "id": 63,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "sequence",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "ما ناتج البرنامج\nx = 1\nx = x + 2\nx = x * 3",
+      "options": {
+        "A": "6",
+        "B": "7",
+        "C": "9",
+        "D": "12"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 + 2 = 3 ثم 3 × 3 = 9",
+      "is_active": true
+    },
+    {
+      "id": 64,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "variables",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 4 و y = 3 فما ناتج x + y * 2",
+      "options": {
+        "A": "14",
+        "B": "10",
+        "C": "11",
+        "D": "8"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "3 × 2 = 6 ثم 4 + 6 = 10",
+      "is_active": true
+    },
+    {
+      "id": 65,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان age = 13 وكتبنا\nif age >= 10 and age <= 13\nprint group1\nفما الناتج",
+      "options": {
+        "A": "group1",
+        "B": "group2",
+        "C": "error",
+        "D": "nothing"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "13 تحقق الشرطين معا",
+      "is_active": true
+    },
+    {
+      "id": 66,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 1 وكتبنا\nrepeat 3 times\nx = x * 2\nفما القيمة النهائية",
+      "options": {
+        "A": "4",
+        "B": "6",
+        "C": "8",
+        "D": "16"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 ثم 2 ثم 4 ثم 8",
+      "is_active": true
+    },
+    {
+      "id": 67,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "debugging",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "في البرنامج التالي\ncount = 0\nrepeat 3 times\ncount = count + 1\nprint counnt\nما الخطأ",
+      "options": {
+        "A": "لا يوجد خطأ",
+        "B": "اسم المتغير في print مكتوب خطأ",
+        "C": "يجب أن يبدأ count ب1",
+        "D": "يجب حذف الحلقة"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "المتغير الصحيح count وليس counnt",
+      "is_active": true
+    },
+    {
+      "id": 68,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "لديك 12 قطعة وتريد توزيعها بالتساوي على 3 صناديق كم قطعة في كل صندوق",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "12 ÷ 3 = 4",
+      "is_active": true
+    },
+    {
+      "id": 69,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "أي من التالي يعبر عن مقارنة صحيحة",
+      "options": {
+        "A": "5 > 3",
+        "B": "5 +",
+        "C": "repeat x",
+        "D": "print ="
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذه مقارنة صحيحة بين رقمين",
+      "is_active": true
+    },
+    {
+      "id": 70,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "sequence",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان البرنامج\nprint A\nprint B\nprint C\nفما أول شيء يظهر",
+      "options": {
+        "A": "A",
+        "B": "B",
+        "C": "C",
+        "D": "ABC معا"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الطباعة تتبع ترتيب السطور",
+      "is_active": true
+    },
+    {
+      "id": 71,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "variables",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت temperature = 30 ثم\ntemperature = temperature - 5\nفما القيمة الجديدة",
+      "options": {
+        "A": "20",
+        "B": "25",
+        "C": "30",
+        "D": "35"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "30 - 5 = 25",
+      "is_active": true
+    },
+    {
+      "id": 72,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان x = 2 وكتبنا\nif x == 2\nprint yes\nفما الناتج",
+      "options": {
+        "A": "yes",
+        "B": "no",
+        "C": "2",
+        "D": "nothing"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "لأن x يساوي 2",
+      "is_active": true
+    },
+    {
+      "id": 73,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كتبنا\nfor i from 1 to 3\njump\nفكم مرة يقفز",
+      "options": {
+        "A": "مرة",
+        "B": "مرتين",
+        "C": "3 مرات",
+        "D": "4 مرات"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "من 1 إلى 3 يعني ثلاث مرات",
+      "is_active": true
+    },
+    {
+      "id": 74,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "debugging",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "أي سطر فيه خطأ كتابي واضح",
+      "options": {
+        "A": "print hello",
+        "B": "repeat 3 times",
+        "C": "movve forward",
+        "D": "if x > 2"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "الكلمة move مكتوبة movve",
+      "is_active": true
+    },
+    {
+      "id": 75,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان معك 8 عملات وأخذت 3 فكم يبقى",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "8 - 3 = 5",
+      "is_active": true
+    },
+    {
+      "id": 76,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "أي من التالي ليس متغيرا جيدا لعدد الأعمار",
+      "options": {
+        "A": "ageCount",
+        "B": "ages",
+        "C": "xkq",
+        "D": "studentAge"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "xkq غير واضح المعنى",
+      "is_active": true
+    },
+    {
+      "id": 77,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "sequence",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "ما ناتج البرنامج\nx = 10\nx = x / 2\nx = x + 1",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "7",
+        "D": "8"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "10 ÷ 2 = 5 ثم +1 = 6",
+      "is_active": true
+    },
+    {
+      "id": 78,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 3 ثم x = x * x فما القيمة الجديدة",
+      "options": {
+        "A": "6",
+        "B": "9",
+        "C": "12",
+        "D": "27"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "3 × 3 = 9",
+      "is_active": true
+    },
+    {
+      "id": 79,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان number = 7 وكتبنا\nif number % 2 == 0\nprint even\nelse\nprint odd\nفما الناتج",
+      "options": {
+        "A": "even",
+        "B": "odd",
+        "C": "7",
+        "D": "error"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "7 عدد فردي",
+      "is_active": true
+    },
+    {
+      "id": 80,
+      "age_group": "10_13",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان total = 0 وداخل حلقة 5 مرات كتبنا\ntotal = total + 2\nفما القيمة النهائية",
+      "options": {
+        "A": "5",
+        "B": "7",
+        "C": "10",
+        "D": "12"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 خمس مرات = 10",
+      "is_active": true
+    },
+    {
+      "id": 81,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "variables",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 5 و y = 2 فما ناتج x * y + 1",
+      "options": {
+        "A": "10",
+        "B": "11",
+        "C": "12",
+        "D": "15"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "5 × 2 = 10 ثم +1 = 11",
+      "is_active": true
+    },
+    {
+      "id": 82,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان x = 9 وكتبنا\nif x > 3 and x < 10\nprint ok\nفما الناتج",
+      "options": {
+        "A": "ok",
+        "B": "no",
+        "C": "error",
+        "D": "nothing"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "9 أكبر من 3 وأقل من 10",
+      "is_active": true
+    },
+    {
+      "id": 83,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 0 وكتبنا\nrepeat 5 times\nx = x + 3\nفما القيمة النهائية",
+      "options": {
+        "A": "8",
+        "B": "10",
+        "C": "15",
+        "D": "18"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "3 × 5 = 15",
+      "is_active": true
+    },
+    {
+      "id": 84,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "debugging",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "في الكود\nfor i from 1 to 3\nprin i\nما الخطأ",
+      "options": {
+        "A": "لا يوجد خطأ",
+        "B": "print مكتوبة خطأ",
+        "C": "يجب حذف i",
+        "D": "يجب استخدام if"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الكلمة الصحيحة print",
+      "is_active": true
+    },
+    {
+      "id": 85,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان معك 15 نقطة وفقدت 4 ثم ربحت 2 فكم يصبح المجموع",
+      "options": {
+        "A": "11",
+        "B": "12",
+        "C": "13",
+        "D": "14"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "15 - 4 + 2 = 13",
+      "is_active": true
+    },
+    {
+      "id": 86,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "algorithmic_thinking",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "أي وصف أفضل لخوارزمية البحث عن أكبر عدد",
+      "options": {
+        "A": "نفحص كل عدد ونحتفظ بالأكبر",
+        "B": "نختار أول عدد فقط دائما",
+        "C": "نجمع كل الأعداد",
+        "D": "نحذف القائمة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذه طريقة مرتبة للعثور على أكبر عدد",
+      "is_active": true
+    },
+    {
+      "id": 87,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "code_tracing",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "ما ناتج البرنامج\nx = 2\ny = 3\nprint x + y",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "23",
+        "D": "1"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "2 + 3 = 5",
+      "is_active": true
+    },
+    {
+      "id": 88,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان score = 8 وكتبنا\nif score >= 9\nprint A\nelif score >= 7\nprint B\nelse\nprint C\nفما الناتج",
+      "options": {
+        "A": "A",
+        "B": "B",
+        "C": "C",
+        "D": "AB"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "8 لا يحقق الشرط الأول ويحقق الثاني",
+      "is_active": true
+    },
+    {
+      "id": 89,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 1 وكتبنا\nfor i from 1 to 4\nx = x + i\nفما القيمة النهائية",
+      "options": {
+        "A": "9",
+        "B": "10",
+        "C": "11",
+        "D": "12"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 +1 +2 +3 +4 = 11",
+      "is_active": true
+    },
+    {
+      "id": 90,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "debugging",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "في الكود\nx = 5\nif x > 3\nprint big\nelse\nprint small\nما المشكلة الرئيسية",
+      "options": {
+        "A": "لا توجد مشكلة في الفكرة لكن يلزم تنسيق صحيح للبلوكات",
+        "B": "يجب حذف else",
+        "C": "يجب أن تكون x نصا",
+        "D": "يجب استخدام repeat"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الفكرة صحيحة لكن تحتاج صياغة سليمة في اللغة المستخدمة",
+      "is_active": true
+    },
+    {
+      "id": 91,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "روبوت يتحرك 4 خطوات ثم يرجع خطوتين ثم يتحرك 3 خطوات كم يبتعد عن البداية",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "4 - 2 + 3 = 5",
+      "is_active": true
+    },
+    {
+      "id": 92,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "algorithmic_thinking",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "لترتيب ثلاثة أعداد من الأصغر للأكبر نحتاج غالبا إلى",
+      "options": {
+        "A": "مقارنات بين الأعداد",
+        "B": "تغيير لون الشاشة",
+        "C": "إغلاق البرنامج",
+        "D": "حذف المتغيرات"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الترتيب يعتمد على المقارنة",
+      "is_active": true
+    },
+    {
+      "id": 93,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "code_tracing",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "ما ناتج البرنامج\ncount = 1\nrepeat 3 times\ncount = count * 2\nprint count",
+      "options": {
+        "A": "4",
+        "B": "6",
+        "C": "8",
+        "D": "16"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 ثم 2 ثم 4 ثم 8",
+      "is_active": true
+    },
+    {
+      "id": 94,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 10 و y = 4 فما ناتج x - y + 2",
+      "options": {
+        "A": "6",
+        "B": "7",
+        "C": "8",
+        "D": "10"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "10 - 4 = 6 ثم +2 = 8",
+      "is_active": true
+    },
+    {
+      "id": 95,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان age = 14 وكتبنا\nif age < 10\nprint kid\nelif age < 15\nprint teen\nelse\nprint adult\nفما الناتج",
+      "options": {
+        "A": "kid",
+        "B": "teen",
+        "C": "adult",
+        "D": "error"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "14 أقل من 15 بعد فشل الشرط الأول",
+      "is_active": true
+    },
+    {
+      "id": 96,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 2 وكتبنا\nrepeat 3 times\nx = x * 3\nفما القيمة النهائية",
+      "options": {
+        "A": "6",
+        "B": "18",
+        "C": "54",
+        "D": "27"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 ثم 6 ثم 18 ثم 54",
+      "is_active": true
+    },
+    {
+      "id": 97,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "debugging",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "في الكود\nsum = 0\nfor i from 1 to 3\nsum = sum + i\nprint smu\nما الخطأ",
+      "options": {
+        "A": "الطباعة تستخدم اسما خاطئا للمتغير",
+        "B": "يجب أن يبدأ sum ب1",
+        "C": "يجب حذف for",
+        "D": "لا يوجد خطأ"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "المتغير الصحيح sum وليس smu",
+      "is_active": true
+    },
+    {
+      "id": 98,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "إذا أردت حساب متوسط 6 و 8 و 10 فما الخطوة الصحيحة",
+      "options": {
+        "A": "نجمعها ثم نقسم على 3",
+        "B": "نضربها كلها",
+        "C": "نأخذ الأكبر فقط",
+        "D": "نقسم 10 على 6"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "المتوسط = مجموع القيم ÷ عددها",
+      "is_active": true
+    },
+    {
+      "id": 99,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "algorithmic_thinking",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "عند تصميم لعبة تحتاج التحقق من الفوز أو الخسارة في كل دور فأفضل بنية هي",
+      "options": {
+        "A": "شرط if",
+        "B": "متغير واحد فقط",
+        "C": "صورة الخلفية",
+        "D": "تعليق برمجي"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الشرط مناسب لفحص حالة الفوز أو الخسارة",
+      "is_active": true
+    },
+    {
+      "id": 100,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "code_tracing",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "ما ناتج البرنامج\nx = 3\ny = x + 2\nx = y * 2\nprint x",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "8",
+        "D": "10"
+      },
+      "correct_answer": "D",
+      "explanation_ar": "y = 5 ثم x = 10",
+      "is_active": true
+    },
+    {
+      "id": 101,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "variables",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 3 و y = 5 فما ناتج x + y * 2 - 1",
+      "options": {
+        "A": "12",
+        "B": "11",
+        "C": "10",
+        "D": "9"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "5 × 2 = 10 ثم +3 = 13 ثم -1 = 12",
+      "is_active": true
+    },
+    {
+      "id": 102,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان x = 4 و y = 7 وكتبنا\nif x < 5 and y > 6\nprint yes\nelse\nprint no\nفما الناتج",
+      "options": {
+        "A": "yes",
+        "B": "no",
+        "C": "error",
+        "D": "nothing"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الشرطان صحيحان",
+      "is_active": true
+    },
+    {
+      "id": 103,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت total = 1 وكتبنا\nfor i from 1 to 3\ntotal = total + total\nفما القيمة النهائية",
+      "options": {
+        "A": "4",
+        "B": "6",
+        "C": "8",
+        "D": "16"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 ثم 2 ثم 4 ثم 8",
+      "is_active": true
+    },
+    {
+      "id": 104,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "debugging",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "في الكود\nfor i from 1 to 5\nx = x + 1\nإذا لم نعرف x قبل الحلقة فالمشكلة هي",
+      "options": {
+        "A": "x غير مهيأ قبل الاستخدام",
+        "B": "يجب حذف i",
+        "C": "الحلقة طويلة جدا",
+        "D": "لا توجد مشكلة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "يجب إعطاء x قيمة ابتدائية",
+      "is_active": true
+    },
+    {
+      "id": 105,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "معك 24 بطاقة وتريد وضعها في صفوف متساوية من 6 بطاقات كم صفا ستحصل",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "24 ÷ 6 = 4",
+      "is_active": true
+    },
+    {
+      "id": 106,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "algorithmic_thinking",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "ما الفكرة الصحيحة لإيجاد عدد القيم الزوجية في قائمة",
+      "options": {
+        "A": "نفحص كل قيمة ونزيد العداد إذا كانت زوجية",
+        "B": "نختار أول قيمة فقط",
+        "C": "نجمع القيم كلها مباشرة",
+        "D": "نقلب ترتيب القائمة فقط"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذه خوارزمية عد صحيحة",
+      "is_active": true
+    },
+    {
+      "id": 107,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "code_tracing",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "ما ناتج البرنامج\nx = 0\nfor i from 1 to 4\nx = x + i\nprint x",
+      "options": {
+        "A": "8",
+        "B": "10",
+        "C": "12",
+        "D": "14"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "1 + 2 + 3 + 4 = 10",
+      "is_active": true
+    },
+    {
+      "id": 108,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "variables",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 2 و y = 4 ثم x = x + y و y = x - 1 فما قيمة y النهائية",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "7",
+        "D": "8"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "x تصبح 6 ثم y = 5",
+      "is_active": true
+    },
+    {
+      "id": 109,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان score = 6 وكتبنا\nif score > 8\nprint high\nelif score > 5\nprint mid\nelse\nprint low\nفما الناتج",
+      "options": {
+        "A": "high",
+        "B": "mid",
+        "C": "low",
+        "D": "nothing"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "6 لا يحقق الأول ويحقق الثاني",
+      "is_active": true
+    },
+    {
+      "id": 110,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت x = 5 وداخل حلقة 3 مرات كتبنا\nx = x - 1\nفما القيمة النهائية",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "5 ثم 4 ثم 3 ثم 2",
+      "is_active": true
+    },
+    {
+      "id": 111,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "debugging",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "في الكود\nrepeat 3 times\nprint hello\nprint bye\nأي وصف صحيح",
+      "options": {
+        "A": "bye سيطبع 3 مرات",
+        "B": "bye سيطبع مرة واحدة بعد انتهاء الحلقة",
+        "C": "لن يطبع hello",
+        "D": "الكود كله خطأ"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الموجود داخل الحلقة فقط هو hello",
+      "is_active": true
+    },
+    {
+      "id": 112,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "إذا استغرقت كل مرحلة 4 دقائق وهناك 5 مراحل فكم الوقت الكلي",
+      "options": {
+        "A": "16",
+        "B": "18",
+        "C": "20",
+        "D": "25"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "4 × 5 = 20",
+      "is_active": true
+    },
+    {
+      "id": 113,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "algorithmic_thinking",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "أي ترتيب أنسب لحل مسألة برمجية",
+      "options": {
+        "A": "فهم المشكلة ثم وضع خطوات ثم تجربة الحل",
+        "B": "كتابة أي كود فورا",
+        "C": "اختيار الإجابة الأكبر",
+        "D": "حذف المعطيات"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا ترتيب منطقي لحل المشكلات",
+      "is_active": true
+    },
+    {
+      "id": 114,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "code_tracing",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "ما ناتج البرنامج\nx = 1\ny = 2\nrepeat 2 times\nx = x + y\nprint x",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 ثم 3 ثم 5",
+      "is_active": true
+    },
+    {
+      "id": 115,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "variables",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كانت points = 12 ثم\npoints = points / 3\nفما القيمة الجديدة",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "12 ÷ 3 = 4",
+      "is_active": true
+    },
+    {
+      "id": 116,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان x = 11 وكتبنا\nif x <= 10\nprint small\nelse\nprint big\nفما الناتج",
+      "options": {
+        "A": "small",
+        "B": "big",
+        "C": "11",
+        "D": "error"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "11 أكبر من 10",
+      "is_active": true
+    },
+    {
+      "id": 117,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كتبنا\nrepeat 4 times\njump\nturn right\nفكم مرة ينفذ jump",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "مرة واحدة"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "jump داخل الحلقة 4 مرات",
+      "is_active": true
+    },
+    {
+      "id": 118,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "debugging",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "أي سطر أصح لزيادة المتغير count بمقدار 1",
+      "options": {
+        "A": "count = count + 1",
+        "B": "count + 1",
+        "C": "1 = count + count",
+        "D": "print count 1"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا هو شكل الإسناد الصحيح",
+      "is_active": true
+    },
+    {
+      "id": 119,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "إذا كان معك 9 تفاحات وأعطيت صديقك 2 ثم أخذت 1 أخرى فكم معك",
+      "options": {
+        "A": "6",
+        "B": "7",
+        "C": "8",
+        "D": "9"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "9 - 2 + 1 = 8",
+      "is_active": true
+    },
+    {
+      "id": 120,
+      "age_group": "10_13",
+      "level": "advanced",
+      "skill": "algorithmic_thinking",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "عند تكرار فحص عدة عناصر واحدة واحدة فنحن غالبا نستخدم",
+      "options": {
+        "A": "حلقة",
+        "B": "شرطا واحدا فقط",
+        "C": "صورة",
+        "D": "تعليقا"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الحلقة مناسبة لفحص عناصر متعددة",
+      "is_active": true
+    },
+    {
+      "id": 1,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 5 ثم نفذنا x = x + 3 فما قيمة x",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "8",
+        "D": "10"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "لان 5 + 3 = 8",
+      "is_active": true
+    },
+    {
+      "id": 2,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 12 ثم نفذنا x = x - 4 فما القيمة الجديدة",
+      "options": {
+        "A": "8",
+        "B": "10",
+        "C": "12",
+        "D": "16"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "لان 12 - 4 = 8",
+      "is_active": true
+    },
+    {
+      "id": 3,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان y = 2 ثم نفذنا y = y * 5 فما قيمة y",
+      "options": {
+        "A": "7",
+        "B": "10",
+        "C": "12",
+        "D": "15"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "لان 2 × 5 = 10",
+      "is_active": true
+    },
+    {
+      "id": 4,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اي مما يلي يصف المتغير بشكل صحيح",
+      "options": {
+        "A": "قيمة يمكن ان تتغير",
+        "B": "صورة ثابتة",
+        "C": "زر في الشاشة",
+        "D": "نوع من الحلقات"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "المتغير مكان نخزن فيه قيمة قابلة للتغيير",
+      "is_active": true
+    },
+    {
+      "id": 5,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان score = 7 ثم score = score + 1 فما الناتج",
+      "options": {
+        "A": "6",
+        "B": "7",
+        "C": "8",
+        "D": "9"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "لاننا زدنا 1 على 7",
+      "is_active": true
+    },
+    {
+      "id": 6,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان a = 4 و b = 3 فما ناتج a + b",
+      "options": {
+        "A": "7",
+        "B": "12",
+        "C": "1",
+        "D": "43"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "4 + 3 = 7",
+      "is_active": true
+    },
+    {
+      "id": 7,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان a = 9 و b = 2 فما ناتج a - b",
+      "options": {
+        "A": "11",
+        "B": "7",
+        "C": "18",
+        "D": "92"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "9 - 2 = 7",
+      "is_active": true
+    },
+    {
+      "id": 8,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 5 و y = 2 فما ناتج x * y",
+      "options": {
+        "A": "7",
+        "B": "10",
+        "C": "25",
+        "D": "3"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "5 × 2 = 10",
+      "is_active": true
+    },
+    {
+      "id": 9,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت قيمة x = 8 فماذا يحدث في الشرط if x > 5",
+      "options": {
+        "A": "الشرط صحيح",
+        "B": "الشرط خطأ",
+        "C": "يحدث خطأ",
+        "D": "لا يمكن التحديد"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "8 اكبر من 5",
+      "is_active": true
+    },
+    {
+      "id": 10,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت قيمة x = 3 فماذا يحدث في الشرط if x > 5",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "يتكرر",
+        "D": "يتوقف الجهاز"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "3 ليست اكبر من 5",
+      "is_active": true
+    },
+    {
+      "id": 11,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "في جملة if else متى ينفذ else",
+      "options": {
+        "A": "عندما يكون الشرط صحيحا",
+        "B": "عندما يكون الشرط خطأ",
+        "C": "في كل مرة",
+        "D": "داخل الحلقة فقط"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "else يعمل عند فشل الشرط",
+      "is_active": true
+    },
+    {
+      "id": 12,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 10 فماذا يحدث في if x == 10",
+      "options": {
+        "A": "الشرط صحيح",
+        "B": "الشرط خطأ",
+        "C": "يتحول x الى 0",
+        "D": "لا شيء"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "القيمة تساوي 10 فعلا",
+      "is_active": true
+    },
+    {
+      "id": 13,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "كم مرة تنفذ الحلقة for i from 1 to 4",
+      "options": {
+        "A": "3 مرات",
+        "B": "4 مرات",
+        "C": "5 مرات",
+        "D": "مرة واحدة"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "1 2 3 4 يعني 4 مرات",
+      "is_active": true
+    },
+    {
+      "id": 14,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "كم مرة تنفذ الحلقة repeat 6 times",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "7",
+        "D": "يعتمد على الشرط"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "مكتوب 6 مرات",
+      "is_active": true
+    },
+    {
+      "id": 15,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "ما الهدف الاساسي من الحلقة loop",
+      "options": {
+        "A": "تكرار الاوامر",
+        "B": "حذف المتغيرات",
+        "C": "تغيير لون الشاشة",
+        "D": "حفظ الملف فقط"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الحلقات تستخدم لتكرار التعليمات",
+      "is_active": true
+    },
+    {
+      "id": 16,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان count = 0 ثم repeat 3 times count = count + 1 فما النهاية",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "نضيف 1 ثلاث مرات",
+      "is_active": true
+    },
+    {
+      "id": 17,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 2 ثم repeat 4 times x = x + 2 فما قيمة x",
+      "options": {
+        "A": "6",
+        "B": "8",
+        "C": "10",
+        "D": "12"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 ثم نضيف 2 اربع مرات فيصبح 10",
+      "is_active": true
+    },
+    {
+      "id": 18,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان sum = 0 ثم for i from 1 to 3 sum = sum + i فما قيمة sum",
+      "options": {
+        "A": "3",
+        "B": "6",
+        "C": "9",
+        "D": "12"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "1 + 2 + 3 = 6",
+      "is_active": true
+    },
+    {
+      "id": 19,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "ما الترتيب الصحيح لتنفيذ اوامر البرنامج",
+      "options": {
+        "A": "من الاخير للاول دائما",
+        "B": "حسب ترتيب كتابتها",
+        "C": "حسب حجم الاوامر",
+        "D": "بشكل عشوائي"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "البرنامج ينفذ بالتسلسل ما لم توجد تحكمات تغير ذلك",
+      "is_active": true
+    },
+    {
+      "id": 20,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "debugging",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان الناتج المتوقع 15 لكن البرنامج اعطى 51 فما التفسير الاقرب",
+      "options": {
+        "A": "خطأ في ترتيب كتابة الرقمين او الطباعة",
+        "B": "الحلقة طويلة",
+        "C": "الشرط صحيح",
+        "D": "لا يوجد خطأ"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الفرق يوحي بخطأ في نوع العملية او الطباعة",
+      "is_active": true
+    },
+    {
+      "id": 21,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "debugging",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كتب الطالب المتغير scroe بدلا من score فهذه مشكلة من نوع",
+      "options": {
+        "A": "خطأ املائي في اسم المتغير",
+        "B": "حلقة لا نهائية",
+        "C": "شرط صحيح",
+        "D": "تنسيق الالوان"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "اختلاف الاسم يسبب خطأ",
+      "is_active": true
+    },
+    {
+      "id": 22,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان if age >= 12 والسن 12 فالنتيجة",
+      "options": {
+        "A": "الشرط صحيح",
+        "B": "الشرط خطأ",
+        "C": "يتوقف البرنامج",
+        "D": "لا يمكن التحديد"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "12 اكبر من او يساوي 12",
+      "is_active": true
+    },
+    {
+      "id": 23,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان if n < 0 والقيمة n = -1 فالنتيجة",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "خطأ نحوي",
+        "D": "حلقة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "-1 اقل من 0",
+      "is_active": true
+    },
+    {
+      "id": 24,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 5 ثم x = x * x فما قيمة x",
+      "options": {
+        "A": "10",
+        "B": "20",
+        "C": "25",
+        "D": "30"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "5 × 5 = 25",
+      "is_active": true
+    },
+    {
+      "id": 25,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت قيمة total = 20 ثم total = total / 4 فما النتيجة",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "10",
+        "D": "80"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "20 ÷ 4 = 5",
+      "is_active": true
+    },
+    {
+      "id": 26,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان a = 2 و b = 5 فما ناتج a + b * 2",
+      "options": {
+        "A": "14",
+        "B": "12",
+        "C": "9",
+        "D": "7"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "اولا 5 × 2 = 10 ثم +2 = 12",
+      "is_active": true
+    },
+    {
+      "id": 27,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 3 ثم if x != 5 فما النتيجة",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "يتكرر",
+        "D": "يتحول الى 5"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "3 لا يساوي 5",
+      "is_active": true
+    },
+    {
+      "id": 28,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "debugging",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت نتيجة برنامج لا تتغير مهما تغيرت المدخلات فاول ما تراجعه هو",
+      "options": {
+        "A": "ثبات قيمة المتغيرات او تجاهل المدخلات",
+        "B": "لون الصفحة",
+        "C": "اسم الملف",
+        "D": "حجم الخط"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "السبب غالبا في المنطق او المتغيرات",
+      "is_active": true
+    },
+    {
+      "id": 29,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 1 ثم for i from 1 to 3 x = x * 2 فما قيمة x",
+      "options": {
+        "A": "4",
+        "B": "6",
+        "C": "8",
+        "D": "16"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 ثم ×2 ثلاث مرات = 8",
+      "is_active": true
+    },
+    {
+      "id": 30,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "algorithmic_thinking",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان flag = true فما اقرب معنى",
+      "options": {
+        "A": "مؤشر او حالة منطقية",
+        "B": "رقم عشري",
+        "C": "صورة",
+        "D": "نوع حلقة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "flag غالبا يستخدم لحالة نعم او لا",
+      "is_active": true
+    },
+    {
+      "id": 31,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "algorithmic_thinking",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا اردت فحص 5 ارقام هل الانسب 5 اوامر if منفصلة دائما ام حلقة",
+      "options": {
+        "A": "حلقة في حالات التكرار المتشابه",
+        "B": "يفضل 5 if دائما",
+        "C": "لا يوجد فرق",
+        "D": "يفضل عدم استخدام شروط"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الحلقة انسب للتكرار",
+      "is_active": true
+    },
+    {
+      "id": 32,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "code_tracing",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 0 ثم x = x + 4 ثم x = x + 1 فما قيمة x",
+      "options": {
+        "A": "1",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "0 + 4 + 1 = 5",
+      "is_active": true
+    },
+    {
+      "id": 33,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "code_tracing",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "ما ناتج التنفيذ التالي x = 6 ثم x = x - 2 ثم x = x * 3",
+      "options": {
+        "A": "12",
+        "B": "18",
+        "C": "24",
+        "D": "30"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "(6 - 2) × 3 = 12",
+      "is_active": true
+    },
+    {
+      "id": 34,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "code_tracing",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان sum = 5 ثم sum = sum + 2 ثم sum = sum + 3 فما النهاية",
+      "options": {
+        "A": "8",
+        "B": "9",
+        "C": "10",
+        "D": "11"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "5 + 2 + 3 = 10",
+      "is_active": true
+    },
+    {
+      "id": 35,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت الحلقة تبدأ من 0 حتى 2 شامل فكم مرة تنفذ",
+      "options": {
+        "A": "مرتين",
+        "B": "3 مرات",
+        "C": "4 مرات",
+        "D": "مرة"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "0 1 2 يعني 3 مرات",
+      "is_active": true
+    },
+    {
+      "id": 36,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "problem_solving",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "ما الترتيب الافضل لحل مشكلة برمجية",
+      "options": {
+        "A": "فهم المشكلة ثم التخطيط ثم التنفيذ ثم الاختبار",
+        "B": "التنفيذ ثم فهم المشكلة",
+        "C": "الاختبار ثم الكتابة",
+        "D": "لا يوجد ترتيب"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا هو التسلسل المنطقي",
+      "is_active": true
+    },
+    {
+      "id": 37,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "problem_solving",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان برنامجك يحتاج قرارين مختلفين حسب قيمة العمر فاي بنية مناسبة",
+      "options": {
+        "A": "if else",
+        "B": "loop فقط",
+        "C": "متغير واحد فقط",
+        "D": "تعليق"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "if else مناسبة للقرار الثنائي",
+      "is_active": true
+    },
+    {
+      "id": 38,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا تكرر نفس السطر 10 مرات في الكود فما التحسين الافضل غالبا",
+      "options": {
+        "A": "استبداله بحلقة",
+        "B": "نسخه 10 مرات اضافية",
+        "C": "حذفه كله",
+        "D": "تغيير الاسماء فقط"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الحلقة تقلل التكرار",
+      "is_active": true
+    },
+    {
+      "id": 39,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 7 و y = 3 فما ناتج x % y",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "7 ÷ 3 والباقي 1",
+      "is_active": true
+    },
+    {
+      "id": 40,
+      "age_group": "14_18",
+      "level": "foundation",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان if mark >= 50 والدرجة 49 فالنتيجة",
+      "options": {
+        "A": "الشرط صحيح",
+        "B": "الشرط خطأ",
+        "C": "يحدث خطأ",
+        "D": "يتحول mark الى 50"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "49 اقل من 50",
+      "is_active": true
+    },
+    {
+      "id": 41,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 2 ثم repeat 5 times x = x + 3 فما قيمة x النهائية",
+      "options": {
+        "A": "12",
+        "B": "15",
+        "C": "17",
+        "D": "20"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 + 3 خمس مرات = 17",
+      "is_active": true
+    },
+    {
+      "id": 42,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان count = 1 ثم for i from 1 to 4 count = count * 2 فما النهاية",
+      "options": {
+        "A": "8",
+        "B": "12",
+        "C": "16",
+        "D": "32"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 × 2 × 2 × 2 × 2 = 16",
+      "is_active": true
+    },
+    {
+      "id": 43,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان sum = 0 ثم for i from 2 to 5 sum = sum + i فما قيمة sum",
+      "options": {
+        "A": "10",
+        "B": "12",
+        "C": "14",
+        "D": "16"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2 + 3 + 4 + 5 = 14",
+      "is_active": true
+    },
+    {
+      "id": 44,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 8 و y = 3 فما ناتج x / y في القسمة الحقيقية تقريبيا",
+      "options": {
+        "A": "2.6",
+        "B": "2.67",
+        "C": "2.75",
+        "D": "3"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "8 على 3 تساوي تقريبا 2.67",
+      "is_active": true
+    },
+    {
+      "id": 45,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 4 و y = 5 فما ناتج x + y * 2",
+      "options": {
+        "A": "18",
+        "B": "14",
+        "C": "13",
+        "D": "9"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "5 × 2 = 10 ثم +4 = 14",
+      "is_active": true
+    },
+    {
+      "id": 46,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 3 و y = 2 فما ناتج x ** y",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "8",
+        "D": "9"
+      },
+      "correct_answer": "D",
+      "explanation_ar": "3 اس 2 = 9",
+      "is_active": true
+    },
+    {
+      "id": 47,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت قيمة x = 7 فماذا يحدث في الشرط if x >= 7 and x < 10",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "جزء صحيح وجزء خطأ",
+        "D": "خطأ نحوي"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الشرطان متحققان",
+      "is_active": true
+    },
+    {
+      "id": 48,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت x = 11 فماذا يحدث في if x > 5 and x < 10",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "يتوقف",
+        "D": "لا يمكن التحديد"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الجزء الثاني غير متحقق",
+      "is_active": true
+    },
+    {
+      "id": 49,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت x = 4 فماذا يحدث في if x == 4 or x == 9",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "يتكرر",
+        "D": "حالة غير معروفة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "يكفي تحقق شرط واحد مع or",
+      "is_active": true
+    },
+    {
+      "id": 50,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "debugging",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "ما الفرق الاقرب بين = و ==",
+      "options": {
+        "A": "لا فرق",
+        "B": "الاول اسناد والثاني مقارنة",
+        "C": "الاول للحلقات والثاني للشروط",
+        "D": "الاول للصور والثاني للنصوص"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "هذا الاستخدام الشائع في لغات كثيرة",
+      "is_active": true
+    },
+    {
+      "id": 51,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "debugging",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كتب الطالب if x = 5 بدلا من if x == 5 فالمشكلة غالبا",
+      "options": {
+        "A": "خطأ منطقي او نحوي حسب اللغة",
+        "B": "مشكلة تصميم فقط",
+        "C": "لا توجد مشكلة",
+        "D": "خطأ في لون النص"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "استخدام عامل غير صحيح داخل المقارنة يسبب مشكلة",
+      "is_active": true
+    },
+    {
+      "id": 52,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "debugging",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا ظهر ناتج 0 دائما بعد قسمة اعداد صحيحة في برنامج قديم فما السبب المحتمل",
+      "options": {
+        "A": "نوع البيانات او طريقة القسمة",
+        "B": "زيادة الذاكرة",
+        "C": "الحلقة سريعة",
+        "D": "حجم الشاشة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "قد تكون قسمة صحيحة او تحويل نوع",
+      "is_active": true
+    },
+    {
+      "id": 53,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 1 ثم while x < 5 x = x + 1 فكم مرة تزداد x",
+      "options": {
+        "A": "3",
+        "B": "4",
+        "C": "5",
+        "D": "6"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "من 1 الى 5 تحتاج 4 زيادات",
+      "is_active": true
+    },
+    {
+      "id": 54,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان count = 0 ثم for i from 1 to 4 count = count + i فما النهاية",
+      "options": {
+        "A": "6",
+        "B": "8",
+        "C": "10",
+        "D": "12"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 + 2 + 3 + 4 = 10",
+      "is_active": true
+    },
+    {
+      "id": 55,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "code_tracing",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 10 ثم x = x / 2 ثم x = x + 4 فما القيمة",
+      "options": {
+        "A": "7",
+        "B": "8",
+        "C": "9",
+        "D": "10"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "10 ÷ 2 = 5 ثم +4 = 9",
+      "is_active": true
+    },
+    {
+      "id": 56,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "code_tracing",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 3 ثم x = x * 2 ثم x = x - 1 فما القيمة",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "7"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "3×2=6 ثم -1 = 5",
+      "is_active": true
+    },
+    {
+      "id": 57,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "code_tracing",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان n = 2 ثم repeat 3 times n = n * n فما القيمة النهائية",
+      "options": {
+        "A": "8",
+        "B": "16",
+        "C": "256",
+        "D": "512"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2→4→16→256",
+      "is_active": true
+    },
+    {
+      "id": 58,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "algorithmic_thinking",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان arr يحتوي 5 عناصر وكنت تريد فحصها كلها فاي فكرة افضل",
+      "options": {
+        "A": "حلقة تمر على كل عنصر",
+        "B": "شرط واحد فقط",
+        "C": "متغير جديد فقط",
+        "D": "طباعة العنصر الاول"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الفحص المتكرر يناسبه loop",
+      "is_active": true
+    },
+    {
+      "id": 59,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كنت تبحث عن اكبر قيمة بين 3 ارقام فاي خطوة منطقية اولا",
+      "options": {
+        "A": "افترض الاول اكبر ثم قارن بالباقي",
+        "B": "اجمعهم",
+        "C": "اطبعهم فقط",
+        "D": "احذف الاصغر مباشرة بدون مقارنة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذه بداية منطقية معروفة",
+      "is_active": true
+    },
+    {
+      "id": 60,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا اردت حساب مجموع 1 الى 100 فاي حل افضل برمجيا من كتابة 100 عملية جمع",
+      "options": {
+        "A": "استخدام حلقة",
+        "B": "نسخ 100 سطر",
+        "C": "استخدام تعليق",
+        "D": "استخدام صورة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الحلقة هي الحل الافضل للتكرار",
+      "is_active": true
+    },
+    {
+      "id": 61,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "debugging",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت نتيجة البرنامج اكبر من المتوقع بمقدار ثابت كل مرة فما السبب المحتمل",
+      "options": {
+        "A": "اضافة زائدة داخل الحلقة",
+        "B": "لون الخلفية",
+        "C": "اسم الملف",
+        "D": "تعليق ناقص"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "خطأ الزيادة المتكررة شائع",
+      "is_active": true
+    },
+    {
+      "id": 62,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 5 و y = 7 فما ناتج x < y and y < 10",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "لا يمكن التحديد",
+        "D": "يتحول x الى y"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "5 اقل من 7 و7 اقل من 10",
+      "is_active": true
+    },
+    {
+      "id": 63,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 9 و y = 9 فما ناتج x != y",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "9",
+        "D": "18"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "القيمتان متساويتان",
+      "is_active": true
+    },
+    {
+      "id": 64,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "code_tracing",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان total = 1 ثم for i from 1 to 3 total = total * (i + 1) فما النهاية",
+      "options": {
+        "A": "6",
+        "B": "12",
+        "C": "24",
+        "D": "48"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "×2 ثم ×3 ثم ×4 = 24",
+      "is_active": true
+    },
+    {
+      "id": 65,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت لديك 3 شروط متتالية لبعضها افضل بنية غالبا",
+      "options": {
+        "A": "if elif else",
+        "B": "حلقة فقط",
+        "C": "تعليق طويل",
+        "D": "متغير واحد فقط"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "ذلك ينظم الخيارات المتعددة",
+      "is_active": true
+    },
+    {
+      "id": 66,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان الطالب يريد التأكد من صحة البرنامج بعد كل تعديل فهذه ممارسة",
+      "options": {
+        "A": "اختبار تدريجي جيد",
+        "B": "غير ضرورية",
+        "C": "تبطئ التفكير دائما",
+        "D": "تستخدم فقط في التصميم"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الاختبار المستمر يحسن الجودة",
+      "is_active": true
+    },
+    {
+      "id": 67,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 14 و y = 4 فما ناتج x % y",
+      "options": {
+        "A": "1",
+        "B": "2",
+        "C": "3",
+        "D": "4"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "14 ÷ 4 والباقي 2",
+      "is_active": true
+    },
+    {
+      "id": 68,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان z = 3 ثم z = z + z + 1 فما قيمة z",
+      "options": {
+        "A": "6",
+        "B": "7",
+        "C": "8",
+        "D": "9"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "3 + 3 + 1 = 7",
+      "is_active": true
+    },
+    {
+      "id": 69,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 2 ثم x = x + 1 ثم x = x * 4 فما النتيجة",
+      "options": {
+        "A": "8",
+        "B": "10",
+        "C": "12",
+        "D": "16"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "(2+1)×4 = 12",
+      "is_active": true
+    },
+    {
+      "id": 70,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان a = 5 ثم b = a ثم a = 7 فما قيمة b",
+      "options": {
+        "A": "5",
+        "B": "7",
+        "C": "12",
+        "D": "لا يمكن التحديد"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "b اخذت القيمة قبل تغير a",
+      "is_active": true
+    },
+    {
+      "id": 71,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان الشرط if x > 3 or x < 0 والقيمة x = 1 فالنتيجة",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "خطأ نحوي",
+        "D": "يتكرر"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "1 ليست اكبر من 3 وليست اقل من 0",
+      "is_active": true
+    },
+    {
+      "id": 72,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "code_tracing",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت الحلقة for i from 3 to 6 فكم قيمة i في اخر دورة",
+      "options": {
+        "A": "5",
+        "B": "6",
+        "C": "7",
+        "D": "3"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "اخر قيمة داخل المدى هي 6",
+      "is_active": true
+    },
+    {
+      "id": 73,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان count = 10 ثم repeat 2 times count = count - 3 فما النهاية",
+      "options": {
+        "A": "1",
+        "B": "4",
+        "C": "7",
+        "D": "10"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "10 - 3 - 3 = 4",
+      "is_active": true
+    },
+    {
+      "id": 74,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "algorithmic_thinking",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا احتجت قرارا داخل حلقة لكل عنصر فاي تركيب صحيح",
+      "options": {
+        "A": "حلقة وبداخلها شرط",
+        "B": "شرط وبداخله صورة",
+        "C": "تعليق فقط",
+        "D": "متغير بلا استخدام"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا تركيب شائع وصحيح",
+      "is_active": true
+    },
+    {
+      "id": 75,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "algorithmic_thinking",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان الهدف عد العناصر الزوجية في قائمة ارقام فما المتغير الاضافي المناسب",
+      "options": {
+        "A": "عداد يبدأ بصفر",
+        "B": "صورة متحركة",
+        "C": "اسم ملف",
+        "D": "تعليق"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "نحتاج عدادا",
+      "is_active": true
+    },
+    {
+      "id": 76,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "debugging",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا نسي الطالب زيادة قيمة المتغير داخل while فقد يؤدي ذلك الى",
+      "options": {
+        "A": "حلقة لا نهائية",
+        "B": "نتيجة اسرع",
+        "C": "حل افضل",
+        "D": "تحسن في الذاكرة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "عدم تغيير الشرط قد يمنع توقف الحلقة",
+      "is_active": true
+    },
+    {
+      "id": 77,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 4 ثم if x > 2 then if x < 10 print ok فما الناتج",
+      "options": {
+        "A": "ok",
+        "B": "nothing",
+        "C": "error",
+        "D": "4"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الشرطان متحققان",
+      "is_active": true
+    },
+    {
+      "id": 78,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كنت تريد ايقاف البحث عند اول عنصر مطابق فاي فكرة مناسبة",
+      "options": {
+        "A": "استخدام شرط مع كسر الحلقة او return",
+        "B": "تكرار لا نهائي",
+        "C": "زيادة عدد العناصر",
+        "D": "طباعة كل شيء فقط"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "التوقف المبكر يوفر وقتا",
+      "is_active": true
+    },
+    {
+      "id": 79,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "code_tracing",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 1 ثم for i from 1 to 3 x = x + i فما النهاية",
+      "options": {
+        "A": "4",
+        "B": "6",
+        "C": "7",
+        "D": "8"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1+1+2+3 = 7",
+      "is_active": true
+    },
+    {
+      "id": 80,
+      "age_group": "14_18",
+      "level": "intermediate",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "ما افضل تفسير لوجود كود مكرر كثيرا",
+      "options": {
+        "A": "فرصة لاعادة الهيكلة باستخدام دالة او حلقة",
+        "B": "دليل جودة عالية دائما",
+        "C": "لا يحتاج تعديل",
+        "D": "يعني عدم وجود منطق"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "تقليل التكرار يحسن الصيانة",
+      "is_active": true
+    },
+    {
+      "id": 81,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "code_tracing",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 1 ثم for i from 1 to 4 x = x + i * 2 فما قيمة x",
+      "options": {
+        "A": "11",
+        "B": "16",
+        "C": "21",
+        "D": "25"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1 + 2 + 4 + 6 + 8 = 21",
+      "is_active": true
+    },
+    {
+      "id": 82,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "code_tracing",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان total = 0 ثم for i from 1 to 5 اذا كان i زوجيا اضف i والا اضف 1 فما total",
+      "options": {
+        "A": "7",
+        "B": "9",
+        "C": "11",
+        "D": "13"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "1+2+1+4+1 = 9",
+      "is_active": true
+    },
+    {
+      "id": 83,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "logic",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت x = 3 و y = 4 فما ناتج x * y + x ** 2",
+      "options": {
+        "A": "18",
+        "B": "21",
+        "C": "24",
+        "D": "27"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "3×4=12 و3^2=9 والمجموع 21",
+      "is_active": true
+    },
+    {
+      "id": 84,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان n = 15 فما نتيجة الشرط n % 3 == 0 and n % 5 == 0",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "خطأ نحوي",
+        "D": "غير معروف"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "15 يقبل القسمة على 3 و5",
+      "is_active": true
+    },
+    {
+      "id": 85,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت x = 14 فما نتيجة الشرط x % 2 == 0 and x > 20",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "14",
+        "D": "0"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "الجزء الثاني غير متحقق",
+      "is_active": true
+    },
+    {
+      "id": 86,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان count = 0 ثم for i from 1 to 6 اذا كان i % 2 == 0 count = count + i فما النهاية",
+      "options": {
+        "A": "6",
+        "B": "9",
+        "C": "12",
+        "D": "15"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2+4+6 = 12",
+      "is_active": true
+    },
+    {
+      "id": 87,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان product = 1 ثم for i from 1 to 4 product = product * i فما النهاية",
+      "options": {
+        "A": "10",
+        "B": "16",
+        "C": "24",
+        "D": "64"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1×2×3×4 = 24",
+      "is_active": true
+    },
+    {
+      "id": 88,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "debugging",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كتب الطالب شرطين مستقلين بدلا من if و elif فقد يظهر",
+      "options": {
+        "A": "تنفيذ فرعين بدلا من فرع واحد",
+        "B": "تحسن تلقائي",
+        "C": "لا فرق ابدا",
+        "D": "اختفاء المتغيرات"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الشرطان المستقلان قد يعملان معا",
+      "is_active": true
+    },
+    {
+      "id": 89,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "debugging",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت الدالة تستقبل رقما وترجع دائما الرقم نفسه فالمشكلة المحتملة انها",
+      "options": {
+        "A": "لا تطبق اي معالجة",
+        "B": "تحتوي على حلقات كثيرة",
+        "C": "تستخدم صورا",
+        "D": "تزيد الذاكرة"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الارجاع دون تغيير يعني لا توجد منطق معالجة",
+      "is_active": true
+    },
+    {
+      "id": 90,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "debugging",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا ظهر خطأ off by one في حلقة العد فالمشكلة تكون غالبا في",
+      "options": {
+        "A": "بداية او نهاية المدى",
+        "B": "لون المحرر",
+        "C": "نوع الملف",
+        "D": "اسم المشروع"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا هو السبب الاشهر",
+      "is_active": true
+    },
+    {
+      "id": 91,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "algorithmic_thinking",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان arr = [2 4 6 8] واحتجت مجموعها فاي منطق صحيح",
+      "options": {
+        "A": "ابدأ بصفر ومر على كل عنصر واضفه",
+        "B": "اطبع اخر عنصر فقط",
+        "C": "استخدم شرطا بلا حلقة",
+        "D": "احذف اول عنصر"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذه طريقة الجمع الصحيحة",
+      "is_active": true
+    },
+    {
+      "id": 92,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "algorithmic_thinking",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا اردت معرفة هل كل عناصر القائمة موجبة فافضل فكرة",
+      "options": {
+        "A": "افترض انها موجبة ثم ابحث عن عنصر يخالف",
+        "B": "اجمعها فقط",
+        "C": "اطبعها",
+        "D": "كرر اول عنصر"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذه استراتيجية تحقق فعالة",
+      "is_active": true
+    },
+    {
+      "id": 93,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "code_tracing",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 2 ثم x = x + 3 ثم x = x * 4 ثم x = x - 5 فما القيمة",
+      "options": {
+        "A": "10",
+        "B": "15",
+        "C": "17",
+        "D": "20"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "(2+3)=5 ثم ×4=20 ثم -5=15",
+      "is_active": true
+    },
+    {
+      "id": 94,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان a = 1 ثم for i from 1 to 3 a = a + a فما النهاية",
+      "options": {
+        "A": "4",
+        "B": "6",
+        "C": "8",
+        "D": "16"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "1→2→4→8",
+      "is_active": true
+    },
+    {
+      "id": 95,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "code_tracing",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان s = 0 ثم for i from 1 to 4 اذا كان i < 3 اضف i والا اضف 2 فما s",
+      "options": {
+        "A": "6",
+        "B": "7",
+        "C": "8",
+        "D": "9"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "1+2+2+2 = 7",
+      "is_active": true
+    },
+    {
+      "id": 96,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "debugging",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان الكود السابق اعطاك 6 بينما حسبته 7 فاي احتمال صحيح",
+      "options": {
+        "A": "خطأ في تتبع الشرط او الجمع",
+        "B": "الحاسوب مخطئ",
+        "C": "الشرط بلا معنى",
+        "D": "اسم المتغير طويل"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "يجب مراجعة التتبع خطوة بخطوة",
+      "is_active": true
+    },
+    {
+      "id": 97,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 5 فما ناتج not (x > 3)",
+      "options": {
+        "A": "True",
+        "B": "False",
+        "C": "5",
+        "D": "0"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "x>3 صحيح ثم not يجعلها False",
+      "is_active": true
+    },
+    {
+      "id": 98,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = -2 فما ناتج x < 0 or x > 10",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "غير معروف",
+        "D": "خطأ نحوي"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "الجزء الاول صحيح",
+      "is_active": true
+    },
+    {
+      "id": 99,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "algorithmic_thinking",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان counter = 0 ثم مررنا على 5 عناصر وزدناه فقط عند تحقق شرط لثلاثة عناصر فما النهاية",
+      "options": {
+        "A": "2",
+        "B": "3",
+        "C": "4",
+        "D": "5"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "يزداد ثلاث مرات",
+      "is_active": true
+    },
+    {
+      "id": 100,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان المطلوب ايجاد اصغر قيمة في قائمة ارقام فما انسب استراتيجية",
+      "options": {
+        "A": "ابدأ باول عنصر كاصغر ثم قارن بالباقي",
+        "B": "اجمع كل العناصر",
+        "C": "اختر عشوائيا",
+        "D": "رتب النصوص"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذه الطريقة القياسية",
+      "is_active": true
+    },
+    {
+      "id": 101,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان المطلوب التحقق من وجود عنصر معين في قائمة قصيرة فما خطوة منطقية",
+      "options": {
+        "A": "مر على العناصر حتى تجده او تنتهي",
+        "B": "اجمع العناصر",
+        "C": "ضاعف القائمة",
+        "D": "بدل العنصر الاول"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا بحث خطي بسيط",
+      "is_active": true
+    },
+    {
+      "id": 102,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان n = 5 ثم for i from 1 to n اطبع i فما اخر قيمة مطبوعة",
+      "options": {
+        "A": "4",
+        "B": "5",
+        "C": "6",
+        "D": "n"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "المدى ينتهي عند 5",
+      "is_active": true
+    },
+    {
+      "id": 103,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت x = 3 و y = 7 فما نتيجة x < y and not (y < 5)",
+      "options": {
+        "A": "صحيح",
+        "B": "خطأ",
+        "C": "لا يمكن التحديد",
+        "D": "3"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "x<y صحيح وy<5 خطأ وnot يجعله صحيح",
+      "is_active": true
+    },
+    {
+      "id": 104,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان score = 0 ثم لكل اجابة صحيحة اضف 2 ولدينا 4 اجابات صحيحة فما score",
+      "options": {
+        "A": "4",
+        "B": "6",
+        "C": "8",
+        "D": "10"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "4 × 2 = 8",
+      "is_active": true
+    },
+    {
+      "id": 105,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "code_tracing",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 2 ثم for i from 1 to 3 x = x + i ثم x = x * 2 فما القيمة النهائية",
+      "options": {
+        "A": "14",
+        "B": "16",
+        "C": "18",
+        "D": "20"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "2+1+2+3 = 8 ثم ×2 = 16",
+      "is_active": true
+    },
+    {
+      "id": 106,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "algorithmic_thinking",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كانت الحلقة تمر على index من 0 الى len-1 فالغرض",
+      "options": {
+        "A": "الوصول لكل العناصر دون تجاوز",
+        "B": "تجاهل اول عنصر",
+        "C": "الوصول لعنصر غير موجود",
+        "D": "تكرار عشوائي"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا الاستخدام المعتاد للفهارس",
+      "is_active": true
+    },
+    {
+      "id": 107,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "debugging",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا نسيت تصفير متغير sum قبل حلقة جديدة فقد يؤدي ذلك الى",
+      "options": {
+        "A": "تراكم نتائج سابقة بشكل خاطئ",
+        "B": "تسريع البرنامج",
+        "C": "تقليل الذاكرة",
+        "D": "لا اثر"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "يجب تهيئة المتغيرات عند الحاجة",
+      "is_active": true
+    },
+    {
+      "id": 108,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان المطلوب حساب متوسط 4 ارقام فاي خطوات صحيحة",
+      "options": {
+        "A": "اجمع الارقام ثم اقسم على 4",
+        "B": "اضرب اول رقمين فقط",
+        "C": "خذ اكبر رقم",
+        "D": "اقسم كل رقم على نفسه"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا تعريف المتوسط",
+      "is_active": true
+    },
+    {
+      "id": 109,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "loops",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 3 ثم while x < 20 x = x * 2 كم قيمة x عند التوقف",
+      "options": {
+        "A": "12",
+        "B": "16",
+        "C": "24",
+        "D": "32"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "3→6→12→24 ثم يتوقف",
+      "is_active": true
+    },
+    {
+      "id": 110,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "algorithmic_thinking",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان flag = false ثم اذا وجدنا عنصرا مطابقا نجعل flag = true فما هدف flag",
+      "options": {
+        "A": "تسجيل هل وجدنا العنصر ام لا",
+        "B": "جمع القيم",
+        "C": "حفظ النصوص",
+        "D": "تغيير الوقت"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا استخدام منطقي للعلامة",
+      "is_active": true
+    },
+    {
+      "id": 111,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 10 و y = 3 فما ناتج x // y في القسمة الصحيحة",
+      "options": {
+        "A": "3",
+        "B": "3.33",
+        "C": "4",
+        "D": "1"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "القسمة الصحيحة تعطي 3",
+      "is_active": true
+    },
+    {
+      "id": 112,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا احتجت عد الاعداد الفردية بين 1 و 10 فاي فكرة مناسبة",
+      "options": {
+        "A": "مر على الاعداد وافحص i % 2 != 0",
+        "B": "اجمع الاعداد كلها فقط",
+        "C": "استخدم صورة",
+        "D": "لا تستخدم شرطا"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "نستخدم باقي القسمة مع شرط",
+      "is_active": true
+    },
+    {
+      "id": 113,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "code_tracing",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 1 ثم for i from 1 to 4 اذا كان i زوجيا x = x + 2 والا x = x + 1 فما النهاية",
+      "options": {
+        "A": "6",
+        "B": "7",
+        "C": "8",
+        "D": "9"
+      },
+      "correct_answer": "B",
+      "explanation_ar": "1→2→4→5→7",
+      "is_active": true
+    },
+    {
+      "id": 114,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "debugging",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا ظهر ان اخر عنصر لا تتم معالجته في حلقة قائمة فالمشكلة غالبا",
+      "options": {
+        "A": "نهاية المدى غير شاملة كما تتوقع",
+        "B": "اسم المتغير قصير",
+        "C": "الذاكرة قليلة",
+        "D": "البرنامج سريع"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "مشكلة الحدود شائعة",
+      "is_active": true
+    },
+    {
+      "id": 115,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "logic",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان a = 2 ثم b = 3 ثم c = a + b * a فما c",
+      "options": {
+        "A": "8",
+        "B": "10",
+        "C": "12",
+        "D": "14"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "3×2=6 ثم +2 = 8",
+      "is_active": true
+    },
+    {
+      "id": 116,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "conditions",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان x = 5 ثم if x > 2 and x % 2 == 1 print ok فما الناتج",
+      "options": {
+        "A": "ok",
+        "B": "nothing",
+        "C": "error",
+        "D": "5"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "5 اكبر من 2 وفردي",
+      "is_active": true
+    },
+    {
+      "id": 117,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "algorithmic_thinking",
+      "difficulty": "easy",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان الهدف ترتيب خطوات الحل قبل كتابة الكود فهذه مهارة",
+      "options": {
+        "A": "algorithmic thinking",
+        "B": "graphic design",
+        "C": "typing speed",
+        "D": "file naming"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هي التفكير الخوارزمي",
+      "is_active": true
+    },
+    {
+      "id": 118,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "variables",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كنت تريد مقارنة نتيجتين واختيار الاكبر ثم استخدامه لاحقا فاي شيء مفيد",
+      "options": {
+        "A": "متغير يخزن القيمة الاكبر",
+        "B": "حذف القيمتين",
+        "C": "صورة",
+        "D": "تعليق"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "نحتاج حفظ النتيجة الوسيطة",
+      "is_active": true
+    },
+    {
+      "id": 119,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "code_tracing",
+      "difficulty": "hard",
+      "question_type": "mcq",
+      "question_text_ar": "اذا كان total = 2 ثم repeat 3 times total = total + total فما النهاية",
+      "options": {
+        "A": "8",
+        "B": "12",
+        "C": "16",
+        "D": "18"
+      },
+      "correct_answer": "C",
+      "explanation_ar": "2→4→8→16",
+      "is_active": true
+    },
+    {
+      "id": 120,
+      "age_group": "14_18",
+      "level": "advanced",
+      "skill": "problem_solving",
+      "difficulty": "medium",
+      "question_type": "mcq",
+      "question_text_ar": "اذا اردت تحسين كود طويل دون تغيير سلوكه فاول خطوة جيدة",
+      "options": {
+        "A": "فهم الناتج الحالي ثم التعديل تدريجيا مع اختبار",
+        "B": "حذفه كله مباشرة",
+        "C": "تغيير كل الاسماء مرة واحدة بلا اختبار",
+        "D": "اضافة الوان فقط"
+      },
+      "correct_answer": "A",
+      "explanation_ar": "هذا اسلم اسلوب للصيانة",
+      "is_active": true
+    }
+  ]
+}
