@@ -128,6 +128,7 @@ interface Session {
   group_id: string;
   is_makeup: boolean;
   makeup_session_id: string | null;
+  content_number: number | null;
 }
 
 interface Group {
@@ -441,8 +442,9 @@ export default function SessionDetails() {
         setInstructorProfile(instrProfile);
       }
 
-      // Fetch curriculum content
-      if (groupData?.age_group_id && groupData?.level_id && sessionData.session_number) {
+      // Fetch curriculum content — use content_number (real content ref), fallback to session_number
+      const curriculumNumber = sessionData.content_number ?? sessionData.session_number;
+      if (groupData?.age_group_id && groupData?.level_id && curriculumNumber) {
         setCurriculumLoading(true);
         try {
           let subType: string | null = null;
@@ -460,7 +462,7 @@ export default function SessionDetails() {
           const { data: currData } = await supabase.rpc('get_curriculum_with_access', {
             p_age_group_id: groupData.age_group_id,
             p_level_id: groupData.level_id,
-            p_session_number: sessionData.session_number,
+            p_session_number: curriculumNumber,
             p_subscription_type: subType,
             p_attendance_mode: attMode,
           });
