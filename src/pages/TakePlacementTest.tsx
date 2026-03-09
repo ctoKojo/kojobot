@@ -212,7 +212,8 @@ export default function TakePlacementTest() {
   );
 }
 
-// Inline navigation component to keep the page clean
+import { ArrowLeft, ArrowRight, Eye } from 'lucide-react';
+
 function PlacementExamNavigation({
   currentIndex,
   totalQuestions,
@@ -228,8 +229,6 @@ function PlacementExamNavigation({
   onNext: () => void;
   onReview: () => void;
 }) {
-  const { ArrowLeft, ArrowRight, Eye } = require('lucide-react');
-
   return (
     <div className="flex justify-between pb-6">
       <Button
