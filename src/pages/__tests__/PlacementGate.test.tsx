@@ -119,15 +119,20 @@ describe('PlacementGate', () => {
   });
 
   it('navigates to /placement-test when Start button clicked', async () => {
-    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
     const opensAt = new Date(Date.now() - 3600000).toISOString();
     const closesAt = new Date(Date.now() + 3600000).toISOString();
-    mockMaybeSingle.mockResolvedValueOnce({
-      data: {
-        id: 'sch-1', student_id: 'student-1', status: 'scheduled',
-        opens_at: opensAt, closes_at: closesAt, notes: null
-      },
-      error: null,
+    // Use implementation to handle multiple calls (interval may re-trigger)
+    let callCount = 0;
+    mockMaybeSingle.mockImplementation(() => {
+      callCount++;
+      if (callCount % 2 === 1) return Promise.resolve({ data: null, error: null });
+      return Promise.resolve({
+        data: {
+          id: 'sch-1', student_id: 'student-1', status: 'scheduled',
+          opens_at: opensAt, closes_at: closesAt, notes: null
+        },
+        error: null,
+      });
     });
 
     renderGate();
