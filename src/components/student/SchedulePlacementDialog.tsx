@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CalendarDays, Clock } from 'lucide-react';
+import { fromZonedTime } from 'date-fns-tz';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { APP_TIMEZONE } from '@/lib/constants';
 
 interface SchedulePlacementDialogProps {
   open: boolean;
