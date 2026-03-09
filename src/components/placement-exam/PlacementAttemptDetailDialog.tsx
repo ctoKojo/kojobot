@@ -318,7 +318,7 @@ export function PlacementAttemptDetailDialog({
               )}
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
