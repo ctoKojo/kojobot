@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { KojobotLogo } from '@/components/KojobotLogo';
 
-type PlacementStatus = 'loading' | 'not_scheduled' | 'scheduled' | 'open' | 'submitted' | 'no_schedule' | 'expired';
+type PlacementStatus = 'loading' | 'not_scheduled' | 'scheduled' | 'open' | 'submitted' | 'expired';
 
 export default function PlacementGate() {
   const { user, signOut } = useAuth();
@@ -21,45 +21,44 @@ export default function PlacementGate() {
   useEffect(() => {
     if (!user) return;
     fetchSchedule();
-    // Re-check every 30 seconds for auto-open
     const interval = setInterval(fetchSchedule, 30000);
     return () => clearInterval(interval);
   }, [user]);
 
   const fetchSchedule = async () => {
     try {
-      // Check if there's an active schedule
+      // 1. Check for submitted/in_progress attempt via student view
+      const { data: attempt } = await supabase
+        .from('placement_v2_student_view' as any)
+        .select('id, status')
+        .eq('student_id', user!.id)
+        .in('status', ['submitted', 'in_progress', 'reviewed'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const attemptStatus = (attempt as any)?.status;
+      if (attemptStatus === 'submitted' || attemptStatus === 'reviewed') {
+        setStatus('submitted');
+        return;
+      }
+      if (attemptStatus === 'in_progress') {
+        setStatus('open');
+        setSchedule(null);
+        return;
+      }
+
+      // 2. Check for active schedule
       const { data: scheduleData } = await supabase
-        .from('placement_exam_schedules' as any)
+        .from('placement_v2_schedules')
         .select('*')
         .eq('student_id', user!.id)
-        // Include 'expired' to recover from any previous incorrect status updates;
-        // actual availability is determined by opens_at/closes_at below.
         .in('status', ['scheduled', 'open', 'expired'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (!scheduleData) {
-      // Check if there's a submitted attempt awaiting review
-        const { data: attempt } = await supabase
-          .from('placement_exam_attempts' as any)
-          .select('id, status')
-          .eq('student_id', user!.id)
-          .in('status', ['submitted', 'in_progress'])
-          .maybeSingle();
-
-        const attemptStatus = (attempt as any)?.status;
-        if (attemptStatus === 'submitted') {
-          setStatus('submitted');
-          return;
-        }
-        if (attemptStatus === 'in_progress') {
-          setStatus('open');
-          setSchedule(null);
-          return;
-        }
-
         setStatus('not_scheduled');
         return;
       }
@@ -75,7 +74,6 @@ export default function PlacementGate() {
       } else if (now < opensAt) {
         setStatus('scheduled');
       } else {
-        // Expired - show distinct state with schedule details
         setStatus('expired');
       }
     } catch (err) {
@@ -197,15 +195,15 @@ export default function PlacementGate() {
                 <CheckCircle className="h-12 w-12 text-blue-600" />
               </div>
               <h2 className="text-xl font-bold">
-                {isRTL ? 'تم استلام امتحان تحديد المستوى' : 'Placement Exam Received'}
+                {isRTL ? 'تم استلام امتحان تحديد المستوى' : 'Placement Exam Submitted'}
               </h2>
               <p className="text-muted-foreground max-w-sm">
                 {isRTL
-                  ? 'تم استلام إجاباتك بنجاح. بانتظار المراجعة وتحديد المستوى المناسب. ستتواصل معك الإدارة قريباً.'
-                  : 'Your answers have been received. Awaiting review and level assignment. The administration will contact you soon.'}
+                  ? 'تم استلام إجاباتك بنجاح. بانتظار المراجعة واعتماد النتيجة من الإدارة.'
+                  : 'Your answers have been received successfully. Pending review and approval by administration.'}
               </p>
               <Badge variant="outline" className="text-sm px-4 py-1.5">
-                {isRTL ? 'بانتظار المراجعة' : 'Awaiting Review'}
+                {isRTL ? 'بانتظار الاعتماد' : 'Pending Approval'}
               </Badge>
             </>
           )}
@@ -222,17 +220,13 @@ export default function PlacementGate() {
               
               <div className="bg-muted/50 rounded-lg p-4 w-full space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  {isRTL ? 'الموعد السابق:' : 'Previous window:'}
+                  {isRTL ? 'وقت البداية:' : 'Opens at:'}
                 </p>
-                <p className="font-medium">
-                  {formatDateTime(schedule.opens_at)}
-                </p>
+                <p className="font-medium">{formatDateTime(schedule.opens_at)}</p>
                 <p className="text-sm text-muted-foreground">
-                  {isRTL ? 'إلى:' : 'to:'}
+                  {isRTL ? 'وقت النهاية:' : 'Closes at:'}
                 </p>
-                <p className="font-medium">
-                  {formatDateTime(schedule.closes_at)}
-                </p>
+                <p className="font-medium">{formatDateTime(schedule.closes_at)}</p>
               </div>
 
               <p className="text-muted-foreground max-w-sm">
@@ -248,7 +242,7 @@ export default function PlacementGate() {
           )}
 
           {/* Sign Out — always visible */}
-          {(status !== 'not_scheduled') && (
+          {status !== 'not_scheduled' && (
             <Button variant="outline" onClick={signOut} className="mt-2">
               <LogOut className="h-4 w-4 me-2" />
               {isRTL ? 'تسجيل الخروج' : 'Sign Out'}

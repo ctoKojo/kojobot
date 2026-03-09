@@ -1,5 +1,6 @@
 import { Clock, CheckCircle, Play, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { KojobotLogo } from '@/components/KojobotLogo';
 import type { ExamPhase } from '@/pages/TakePlacementTest';
 
@@ -67,8 +68,8 @@ export function PlacementExamStatus({ phase, errorMsg, isRTL, onStart, onBack, o
             </h2>
             <p className="text-muted-foreground max-w-md">
               {isRTL
-                ? 'سيتم سحب أسئلة عشوائية مناسبة لفئتك العمرية. أجب على جميع الأسئلة ثم اضغط تسليم.'
-                : 'Random questions will be drawn for your age group. Answer all questions then submit.'}
+                ? 'الامتحان مكون من 3 أقسام: القسم A (أساسيات الحاسب)، القسم B (أساسيات البرمجة)، القسم C (ميول المسار). أجب على جميع الأسئلة ثم اضغط تسليم.'
+                : 'The exam consists of 3 sections: Section A (Computer Basics), Section B (Programming Fundamentals), Section C (Track Inclination). Answer all questions then submit.'}
             </p>
             <Button size="lg" onClick={onStart}>
               <Play className="h-5 w-5 me-2" />
@@ -77,7 +78,7 @@ export function PlacementExamStatus({ phase, errorMsg, isRTL, onStart, onBack, o
           </>
         )}
 
-        {/* Submitted */}
+        {/* Submitted — No results shown */}
         {phase === 'submitted' && (
           <>
             <CheckCircle className="h-20 w-20 text-green-500" />
@@ -86,13 +87,21 @@ export function PlacementExamStatus({ phase, errorMsg, isRTL, onStart, onBack, o
             </h2>
             <p className="text-muted-foreground max-w-md">
               {isRTL
-                ? 'ستتواصل معك الإدارة بخصوص نتيجة الامتحان وتحديد المستوى المناسب لك.'
-                : 'The administration will contact you regarding your test results and appropriate level placement.'}
+                ? 'تم استلام إجاباتك بنجاح. بانتظار مراجعة واعتماد النتيجة من الإدارة.'
+                : 'Your answers have been received. Awaiting review and approval by administration.'}
             </p>
+            <Badge variant="outline" className="text-sm px-4 py-1.5">
+              {isRTL ? 'بانتظار الاعتماد' : 'Pending Approval'}
+            </Badge>
             <Button onClick={onBack}>
               {isRTL ? 'العودة' : 'Back'}
             </Button>
           </>
+        )}
+
+        {/* Submitting */}
+        {phase === 'submitting' && (
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
         )}
       </div>
     </div>
