@@ -84,6 +84,17 @@ export default function GeneralSettingsTab() {
 
   const handleSave = async () => {
     if (!settings) return;
+    // Validate section_c_question_count is even
+    if (settings.section_c_question_count % 2 !== 0) {
+      toast({
+        title: isRTL ? 'خطأ في التحقق' : 'Validation Error',
+        description: isRTL
+          ? 'عدد أسئلة القسم C يجب أن يكون عدداً زوجياً (نصف software + نصف hardware)'
+          : 'Section C question count must be even (half software + half hardware)',
+        variant: 'destructive',
+      });
+      return;
+    }
     setSaving(true);
     try {
       const { error } = await supabase

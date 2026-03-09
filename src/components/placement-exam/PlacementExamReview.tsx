@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CodeBlock } from '@/components/quiz/CodeBlock';
 import type { ExamQuestion, ExamPhase } from '@/pages/TakePlacementTest';
+import type { SectionInfo } from '@/components/placement-exam/PlacementExamHeader';
 
 interface PlacementExamReviewProps {
   questions: ExamQuestion[];
   answers: Record<string, string>;
+  sections: SectionInfo[];
   isRTL: boolean;
   phase: ExamPhase;
   onGoBack: () => void;
@@ -30,6 +32,7 @@ function getOptionLabel(question: ExamQuestion, answerKey: string): string {
 export function PlacementExamReview({
   questions,
   answers,
+  sections,
   isRTL,
   phase,
   onGoBack,
@@ -64,66 +67,72 @@ export function PlacementExamReview({
         </CardContent>
       </Card>
 
-      {/* Questions list */}
-      {questions.map((q, idx) => {
-        const qId = String(q.question_id);
-        const answered = answers[qId] !== undefined;
-        const selectedLabel = answered ? getOptionLabel(q, answers[qId]) : null;
-
+      {/* Questions grouped by section */}
+      {sections.map(section => {
+        const sectionQuestions = questions.slice(section.startIndex, section.endIndex);
         return (
-          <Card key={qId} className={!answered ? 'border-destructive/50' : ''}>
-            <CardContent className="pt-5 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-muted-foreground text-sm">
-                    {isRTL ? `س${idx + 1}` : `Q${idx + 1}`}
-                  </span>
-                  <Badge variant="outline" className="text-xs">{q.skill}</Badge>
-                </div>
-                {answered ? (
-                  <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive"
-                    onClick={() => onGoToQuestion(idx)}
-                  >
-                    {isRTL ? 'أجب' : 'Answer'}
-                  </Button>
-                )}
-              </div>
+          <div key={section.key} className="space-y-3">
+            <h3 className="text-lg font-bold border-b pb-2">
+              {isRTL ? section.labelAr : section.label}
+            </h3>
+            {sectionQuestions.map((q, sIdx) => {
+              const globalIdx = section.startIndex + sIdx;
+              const qId = String(q.question_id);
+              const answered = answers[qId] !== undefined;
+              const selectedLabel = answered ? getOptionLabel(q, answers[qId]) : null;
 
-              <p
-                className="text-sm leading-relaxed whitespace-pre-wrap"
-                style={{ unicodeBidi: 'plaintext' }}
-              >
-                {q.question_text_ar}
-              </p>
+              return (
+                <Card key={qId} className={!answered ? 'border-destructive/50' : ''}>
+                  <CardContent className="pt-5 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-muted-foreground text-sm">
+                          {isRTL ? `س${globalIdx + 1}` : `Q${globalIdx + 1}`}
+                        </span>
+                        <Badge variant="outline" className="text-xs">{q.skill}</Badge>
+                      </div>
+                      {answered ? (
+                        <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => onGoToQuestion(globalIdx)}
+                        >
+                          {isRTL ? 'أجب' : 'Answer'}
+                        </Button>
+                      )}
+                    </div>
 
-              {q.code_snippet && (
-                <CodeBlock code={q.code_snippet} className="text-xs" />
-              )}
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ unicodeBidi: 'plaintext' }}>
+                      {q.question_text_ar}
+                    </p>
 
-              {answered && selectedLabel && (
-                <div className="flex items-center gap-2 p-2.5 rounded-md bg-primary/5 border border-primary/20">
-                  <CheckCircle className="h-4 w-4 text-primary shrink-0" />
-                  <span className="text-sm font-medium" style={{ unicodeBidi: 'plaintext' }}>
-                    {selectedLabel}
-                  </span>
-                </div>
-              )}
+                    {q.code_snippet && <CodeBlock code={q.code_snippet} className="text-xs" />}
 
-              {!answered && (
-                <div className="flex items-center gap-2 p-2.5 rounded-md bg-destructive/5 border border-destructive/20">
-                  <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-                  <span className="text-sm text-destructive">
-                    {isRTL ? 'لم يتم الإجابة' : 'Not answered'}
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    {answered && selectedLabel && (
+                      <div className="flex items-center gap-2 p-2.5 rounded-md bg-primary/5 border border-primary/20">
+                        <CheckCircle className="h-4 w-4 text-primary shrink-0" />
+                        <span className="text-sm font-medium" style={{ unicodeBidi: 'plaintext' }}>
+                          {selectedLabel}
+                        </span>
+                      </div>
+                    )}
+
+                    {!answered && (
+                      <div className="flex items-center gap-2 p-2.5 rounded-md bg-destructive/5 border border-destructive/20">
+                        <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+                        <span className="text-sm text-destructive">
+                          {isRTL ? 'لم يتم الإجابة' : 'Not answered'}
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         );
       })}
 

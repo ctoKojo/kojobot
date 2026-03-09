@@ -37,8 +37,6 @@ export function SchedulePlacementDialog({
   const [endTime, setEndTime] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Default to Cairo "today" to prevent accidentally scheduling for yesterday
-  // when the scheduler is in a timezone behind Cairo.
   useEffect(() => {
     if (!open) return;
     setDate(prev => prev || getCairoToday());
@@ -54,8 +52,6 @@ export function SchedulePlacementDialog({
       return;
     }
 
-    // IMPORTANT: The selected date/time must be interpreted in Cairo timezone
-    // regardless of the scheduler's device timezone.
     const [y, m, d] = date.split('-').map(Number);
     const [sh, sm] = startTime.split(':').map(Number);
     const [eh, em] = endTime.split(':').map(Number);
@@ -72,14 +68,12 @@ export function SchedulePlacementDialog({
     const opensAt = fromZonedTime(new Date(y, m - 1, d, sh, sm, 0), APP_TIMEZONE);
     const closesAt = fromZonedTime(new Date(y, m - 1, d, eh, em, 0), APP_TIMEZONE);
 
-    // Get Cairo "now" for comparison - prevent scheduling in the past
-    const cairoNowStr = new Date().toLocaleString('en-US', { timeZone: APP_TIMEZONE });
     const nowUtc = new Date();
 
     if (opensAt <= nowUtc) {
       toast({
         title: isRTL ? 'وقت البداية في الماضي' : 'Start time is in the past',
-        description: isRTL ? 'لا يمكن جدولة امتحان يبدأ قبل الوقت الحالي' : 'Cannot schedule an exam that starts before the current time',
+        description: isRTL ? 'لا يمكن جدولة امتحان يبدأ قبل الوقت الحالي (بتوقيت القاهرة)' : 'Cannot schedule an exam that starts before the current time (Cairo time)',
         variant: 'destructive',
       });
       return;
@@ -96,16 +90,16 @@ export function SchedulePlacementDialog({
 
     setLoading(true);
     try {
-      // Cancel any existing active schedules
+      // Cancel any existing active v2 schedules
       await supabase
-        .from('placement_exam_schedules' as any)
-        .update({ status: 'cancelled' } as any)
+        .from('placement_v2_schedules')
+        .update({ status: 'expired' } as any)
         .eq('student_id', studentId)
         .in('status', ['scheduled', 'open']);
 
-      // Create new schedule
+      // Create new v2 schedule
       const { error } = await supabase
-        .from('placement_exam_schedules' as any)
+        .from('placement_v2_schedules')
         .insert({
           student_id: studentId,
           scheduled_by: user!.id,

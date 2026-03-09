@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, LogOut } from 'lucide-react';
+import { Play, LogOut, ArrowLeft, ArrowRight, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { KojobotLogo } from '@/components/KojobotLogo';
-import { PlacementExamHeader } from '@/components/placement-exam/PlacementExamHeader';
+import { PlacementExamHeader, type SectionInfo } from '@/components/placement-exam/PlacementExamHeader';
 import { PlacementExamQuestion } from '@/components/placement-exam/PlacementExamQuestion';
 import { PlacementExamReview } from '@/components/placement-exam/PlacementExamReview';
 import { PlacementExamStatus } from '@/components/placement-exam/PlacementExamStatus';
@@ -18,6 +18,8 @@ export interface ExamQuestion {
   question_text_ar: string;
   options: string[];
   skill: string;
+  section: string;
+  track_category: string | null;
   code_snippet: string | null;
   image_url: string | null;
 }
@@ -37,6 +39,28 @@ export default function TakePlacementTest() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Build sections from questions
+  const sections = useMemo((): SectionInfo[] => {
+    if (questions.length === 0) return [];
+    const sectionOrder = ['section_a', 'section_b', 'section_c'];
+    const result: SectionInfo[] = [];
+    let idx = 0;
+    for (const key of sectionOrder) {
+      const count = questions.filter(q => q.section === key).length;
+      if (count > 0) {
+        result.push({
+          key,
+          label: key === 'section_a' ? 'Section A — Level 0 Gate' : key === 'section_b' ? 'Section B — Level 1 Gate' : 'Section C — Track Inclination',
+          labelAr: key === 'section_a' ? 'القسم A — بوابة Level 0' : key === 'section_b' ? 'القسم B — بوابة Level 1' : 'القسم C — ميول المسار',
+          startIndex: idx,
+          endIndex: idx + count,
+        });
+        idx += count;
+      }
+    }
+    return result;
+  }, [questions]);
+
   useEffect(() => {
     if (!user) return;
     checkExistingAttempt();
@@ -44,13 +68,6 @@ export default function TakePlacementTest() {
 
   const checkExistingAttempt = async () => {
     try {
-      const { data } = await supabase
-        .from('placement_exam_student_view' as any)
-        .select('id, status')
-        .eq('student_id', user!.id)
-        .eq('status', 'in_progress')
-        .maybeSingle();
-
       setPhase('ready');
     } catch {
       setPhase('ready');
@@ -78,6 +95,7 @@ export default function TakePlacementTest() {
       }
 
       setAttemptId(data.attempt_id);
+      // Questions come sorted by section order from edge function
       setQuestions(data.questions || []);
       setAnswers({});
       setCurrentIndex(0);
@@ -112,6 +130,7 @@ export default function TakePlacementTest() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
+      // Don't show any results — just submitted
       setPhase('submitted');
       toast({ title: isRTL ? 'تم التسليم بنجاح' : 'Submitted successfully' });
     } catch (err: any) {
@@ -158,6 +177,7 @@ export default function TakePlacementTest() {
           <PlacementExamReview
             questions={questions}
             answers={answers}
+            sections={sections}
             isRTL={isRTL}
             phase={phase}
             onGoBack={() => setPhase('in_progress')}
@@ -185,6 +205,7 @@ export default function TakePlacementTest() {
             currentIndex={currentIndex}
             totalQuestions={questions.length}
             answeredCount={answeredCount}
+            sections={sections}
             isRTL={isRTL}
           />
 
@@ -212,8 +233,6 @@ export default function TakePlacementTest() {
   );
 }
 
-import { ArrowLeft, ArrowRight, Eye } from 'lucide-react';
-
 function PlacementExamNavigation({
   currentIndex,
   totalQuestions,
@@ -231,11 +250,7 @@ function PlacementExamNavigation({
 }) {
   return (
     <div className="flex justify-between pb-6">
-      <Button
-        variant="outline"
-        disabled={currentIndex === 0}
-        onClick={onPrev}
-      >
+      <Button variant="outline" disabled={currentIndex === 0} onClick={onPrev}>
         {isRTL ? <ArrowRight className="h-4 w-4 me-1" /> : <ArrowLeft className="h-4 w-4 me-1" />}
         {isRTL ? 'السابق' : 'Previous'}
       </Button>
@@ -246,10 +261,7 @@ function PlacementExamNavigation({
           {isRTL ? <ArrowLeft className="h-4 w-4 ms-1" /> : <ArrowRight className="h-4 w-4 ms-1" />}
         </Button>
       ) : (
-        <Button
-          onClick={onReview}
-          className="bg-green-600 hover:bg-green-700"
-        >
+        <Button onClick={onReview} className="bg-green-600 hover:bg-green-700">
           <Eye className="h-4 w-4 me-1" />
           {isRTL ? 'مراجعة وتسليم' : 'Review & Submit'}
         </Button>
