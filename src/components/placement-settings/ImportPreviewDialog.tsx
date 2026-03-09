@@ -9,8 +9,8 @@ interface ValidationResult {
   total: number;
   errors: string[];
   distribution?: {
-    by_age_group: Record<string, number>;
-    by_level: Record<string, number>;
+    by_section: Record<string, number>;
+    by_track_category: Record<string, number>;
   };
   skills?: string[];
 }
@@ -74,12 +74,12 @@ export default function ImportPreviewDialog({
               </div>
             </div>
 
-            {/* Distribution by Age Group */}
-            {validation.distribution?.by_age_group && (
+            {/* Distribution by Section */}
+            {validation.distribution?.by_section && (
               <div>
-                <div className="text-sm font-medium mb-2">{isRTL ? 'التوزيع حسب الفئة العمرية' : 'By Age Group'}</div>
+                <div className="text-sm font-medium mb-2">{isRTL ? 'التوزيع حسب القسم' : 'By Section'}</div>
                 <div className="flex flex-wrap gap-2">
-                  {Object.entries(validation.distribution.by_age_group).map(([key, count]) => (
+                  {Object.entries(validation.distribution.by_section).map(([key, count]) => (
                     <Badge key={key} variant="secondary" className="text-sm">
                       {key}: {count}
                     </Badge>
@@ -88,12 +88,12 @@ export default function ImportPreviewDialog({
               </div>
             )}
 
-            {/* Distribution by Level */}
-            {validation.distribution?.by_level && (
+            {/* Distribution by Track Category */}
+            {validation.distribution?.by_track_category && Object.keys(validation.distribution.by_track_category).length > 0 && (
               <div>
-                <div className="text-sm font-medium mb-2">{isRTL ? 'التوزيع حسب المستوى' : 'By Level'}</div>
+                <div className="text-sm font-medium mb-2">{isRTL ? 'التوزيع حسب فئة المسار' : 'By Track Category'}</div>
                 <div className="flex flex-wrap gap-2">
-                  {Object.entries(validation.distribution.by_level).map(([key, count]) => (
+                  {Object.entries(validation.distribution.by_track_category).map(([key, count]) => (
                     <Badge key={key} variant="outline" className="text-sm capitalize">
                       {key}: {count}
                     </Badge>
@@ -135,29 +135,16 @@ export default function ImportPreviewDialog({
               </div>
             )}
 
-            {/* Warning */}
-            {validation.valid && (
-              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 text-sm text-amber-800 dark:text-amber-300">
-                <AlertTriangle className="h-4 w-4 inline me-1" />
-                {isRTL
-                  ? 'تحذير: سيتم حذف جميع الأسئلة الحالية واستبدالها بالأسئلة الجديدة. هذا الإجراء لا يمكن التراجع عنه.'
-                  : 'Warning: All existing questions will be deleted and replaced. This action cannot be undone.'}
-              </div>
-            )}
-
             {/* Actions */}
             <div className="flex gap-2 justify-end pt-2">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={importing}>
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </Button>
-              <Button
-                onClick={onConfirmImport}
-                disabled={!validation.valid || importing}
-              >
+              <Button onClick={onConfirmImport} disabled={!validation.valid || importing}>
                 <Upload className="h-4 w-4 me-1" />
                 {importing
                   ? (isRTL ? 'جارٍ الاستيراد...' : 'Importing...')
-                  : (isRTL ? 'استبدال واستيراد' : 'Replace & Import')}
+                  : (isRTL ? 'استيراد' : 'Import')}
               </Button>
             </div>
           </div>
