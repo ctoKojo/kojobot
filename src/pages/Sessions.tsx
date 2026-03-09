@@ -494,6 +494,7 @@ export default function SessionsPage() {
       else if (timeFilter === 'tomorrow') matchesTime = isTomorrow(session.session_date);
       else if (timeFilter === 'week') matchesTime = isThisWeek(session.session_date);
       else if (timeFilter === 'upcoming') matchesTime = isUpcoming(session.session_date);
+      else if (timeFilter === 'overdue') matchesTime = isOverdue(session);
       
       return matchesSearch && matchesStatus && matchesTime;
     });
@@ -593,30 +594,28 @@ export default function SessionsPage() {
             { key: 'tomorrow', label: isRTL ? 'غداً' : 'Tomorrow' },
             { key: 'week', label: isRTL ? 'هذا الأسبوع' : 'This Week' },
             { key: 'upcoming', label: isRTL ? 'القادم' : 'Upcoming' },
+            ...(overdueSessions.length > 0 ? [{ key: 'overdue', label: isRTL ? 'متأخرة' : 'Overdue' }] : []),
           ].map(f => {
             const count = f.key === 'today' ? todaySessions.length
               : f.key === 'tomorrow' ? sessions.filter(s => isTomorrow(s.session_date)).length
+              : f.key === 'overdue' ? overdueSessions.length
               : 0;
             return (
               <Button
                 key={f.key}
-                variant={timeFilter === f.key ? 'default' : 'outline'}
+                variant={timeFilter === f.key ? (f.key === 'overdue' ? 'destructive' : 'default') : 'outline'}
                 size="sm"
                 onClick={() => setTimeFilter(f.key)}
+                className={f.key === 'overdue' && timeFilter !== 'overdue' ? 'border-destructive text-destructive hover:bg-destructive/10' : ''}
               >
+                {f.key === 'overdue' && <AlertTriangle className="h-3 w-3 me-1" />}
                 {f.label}
                 {count > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-xs">{count}</Badge>
+                  <Badge variant={f.key === 'overdue' ? 'destructive' : 'secondary'} className="ms-1 text-xs">{count}</Badge>
                 )}
               </Button>
             );
           })}
-          {overdueSessions.length > 0 && (
-            <Badge variant="destructive" className="self-center">
-              <AlertTriangle className="h-3 w-3 mr-1" />
-              {overdueSessions.length} {isRTL ? 'متأخرة' : 'overdue'}
-            </Badge>
-          )}
         </div>
 
         {/* Today's Sessions Bar */}
