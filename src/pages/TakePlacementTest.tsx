@@ -70,13 +70,23 @@ export default function TakePlacementTest() {
     try {
       const { data, error } = await supabase.functions.invoke('draw-placement-exam');
 
-      if (error) {
-        const body = typeof error === 'object' && 'message' in error ? error.message : String(error);
-        throw new Error(body);
-      }
-
+      // The edge function returns JSON error bodies — check data.error first (even on non-2xx)
       if (data?.error) {
         throw new Error(data.error);
+      }
+
+      if (error) {
+        // Try to extract message from the error context
+        const context = (error as any)?.context;
+        if (context) {
+          try {
+            const parsed = typeof context === 'string' ? JSON.parse(context) : await context?.json?.();
+            if (parsed?.error) throw new Error(parsed.error);
+          } catch (e2: any) {
+            if (e2?.message && !e2.message.includes('JSON')) throw e2;
+          }
+        }
+        throw new Error((error as any)?.message || 'Failed to start exam');
       }
 
       setAttemptId(data.attempt_id);
