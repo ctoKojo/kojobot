@@ -6,34 +6,26 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
-const DEFAULT_PASS_THRESHOLD = 60
-const DEFAULT_CONFIDENCE_MARGIN = 10
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-    // ===== AUTH: extract student_id from JWT =====
+    // ===== AUTH =====
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    if (!authHeader?.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401)
 
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     })
     const { data: { user }, error: userError } = await userClient.auth.getUser()
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    if (userError || !user) return json({ error: 'Unauthorized' }, 401)
 
     const studentId = user.id
 
@@ -42,76 +34,67 @@ serve(async (req) => {
     const { attempt_id, answers } = body
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!attempt_id || !uuidRegex.test(attempt_id)) {
-      return new Response(JSON.stringify({ error: 'Invalid attempt_id' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    if (!attempt_id || !uuidRegex.test(attempt_id)) return json({ error: 'Invalid attempt_id' }, 400)
 
     if (typeof answers !== 'object' || answers === null || Array.isArray(answers)) {
-      return new Response(JSON.stringify({ error: 'Answers must be a JSON object { question_id: "A"|"B"|"C"|"D" }' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return json({ error: 'Answers must be a JSON object { question_id: "A"|"B"|"C"|"D" }' }, 400)
     }
 
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
+    const admin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false }
     })
 
-    // ===== VERIFY ATTEMPT OWNERSHIP + STATUS =====
-    const { data: attempt, error: aError } = await adminClient
-      .from('placement_exam_attempts')
+    // ===== VERIFY ATTEMPT =====
+    const { data: attempt, error: aError } = await admin
+      .from('placement_v2_attempts')
       .select('*')
       .eq('id', attempt_id)
       .single()
 
-    if (aError || !attempt) {
-      return new Response(JSON.stringify({ error: 'Attempt not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    if (aError || !attempt) return json({ error: 'Attempt not found' }, 404)
+    if (attempt.student_id !== studentId) return json({ error: 'Not your exam' }, 403)
+    if (attempt.status !== 'in_progress') return json({ error: 'Exam is not in progress' }, 400)
 
-    if (attempt.student_id !== studentId) {
-      return new Response(JSON.stringify({ error: 'Not your exam' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    // ===== LOAD SETTINGS =====
+    const { data: settings } = await admin
+      .from('placement_v2_settings')
+      .select('pass_threshold_section_a, pass_threshold_section_b, track_margin')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle()
 
-    if (attempt.status !== 'in_progress') {
-      return new Response(JSON.stringify({ error: 'Exam is not in progress' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    if (!settings) return json({ error: 'Settings not configured' }, 500)
+
+    const passA = settings.pass_threshold_section_a
+    const passB = settings.pass_threshold_section_b
+    const trackMargin = settings.track_margin
 
     // ===== FETCH QUESTIONS =====
-    const { data: attemptQuestions, error: qError } = await adminClient
-      .from('placement_exam_attempt_questions')
-      .select('id, question_id, order_index')
+    const { data: attemptQuestions } = await admin
+      .from('placement_v2_attempt_questions')
+      .select('id, question_id, section, section_skill, order_index')
       .eq('attempt_id', attempt_id)
       .order('order_index')
 
-    if (qError || !attemptQuestions || attemptQuestions.length === 0) {
-      return new Response(JSON.stringify({ error: 'No questions found for this attempt' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    if (!attemptQuestions || attemptQuestions.length === 0) return json({ error: 'No questions found' }, 500)
 
     const questionIds = attemptQuestions.map(q => q.question_id)
-    const { data: bankQuestions } = await adminClient
-      .from('placement_question_bank')
-      .select('id, correct_answer, level, skill')
+    const { data: bankQuestions } = await admin
+      .from('placement_v2_questions')
+      .select('id, correct_answer, section, track_category')
       .in('id', questionIds)
 
-    if (!bankQuestions) {
-      return new Response(JSON.stringify({ error: 'Failed to load question bank' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
+    if (!bankQuestions) return json({ error: 'Failed to load question bank' }, 500)
 
     const bankMap = new Map(bankQuestions.map(q => [q.id, q]))
 
     // ===== GRADE =====
-    const levelScores: Record<string, { score: number; max: number }> = {
-      foundation: { score: 0, max: 0 },
-      intermediate: { score: 0, max: 0 },
-      advanced: { score: 0, max: 0 },
+    const scores = {
+      section_a: { score: 0, max: 0 },
+      section_b: { score: 0, max: 0 },
+      section_c_software: { score: 0, max: 0 },
+      section_c_hardware: { score: 0, max: 0 },
     }
-    const skillResults: Record<string, { correct: number; total: number }> = {}
-    let totalScore = 0
-    let maxScore = 0
 
     const questionUpdates: { id: string; student_answer: string | null; is_correct: boolean }[] = []
     const statsUpdates: { question_id: number; is_correct: boolean }[] = []
@@ -126,132 +109,134 @@ serve(async (req) => {
       questionUpdates.push({ id: aq.id, student_answer: studentAnswer, is_correct: isCorrect })
       statsUpdates.push({ question_id: aq.question_id, is_correct: isCorrect })
 
-      // Per-level scoring (1 point per question)
-      if (levelScores[bank.level]) {
-        levelScores[bank.level].max += 1
-        if (isCorrect) levelScores[bank.level].score += 1
+      if (aq.section === 'section_a') {
+        scores.section_a.max += 1
+        if (isCorrect) scores.section_a.score += 1
+      } else if (aq.section === 'section_b') {
+        scores.section_b.max += 1
+        if (isCorrect) scores.section_b.score += 1
+      } else if (aq.section === 'section_c') {
+        if (bank.track_category === 'software') {
+          scores.section_c_software.max += 1
+          if (isCorrect) scores.section_c_software.score += 1
+        } else if (bank.track_category === 'hardware') {
+          scores.section_c_hardware.max += 1
+          if (isCorrect) scores.section_c_hardware.score += 1
+        }
       }
-
-      totalScore += isCorrect ? 1 : 0
-      maxScore += 1
-
-      // Skill tracking
-      if (!skillResults[bank.skill]) skillResults[bank.skill] = { correct: 0, total: 0 }
-      skillResults[bank.skill].total += 1
-      if (isCorrect) skillResults[bank.skill].correct += 1
     }
 
     // ===== UPDATE ANSWERS =====
     for (const qu of questionUpdates) {
-      await adminClient
-        .from('placement_exam_attempt_questions')
+      await admin
+        .from('placement_v2_attempt_questions')
         .update({ student_answer: qu.student_answer, is_correct: qu.is_correct })
         .eq('id', qu.id)
     }
 
-    // ===== ATOMIC STATS UPDATE (usage_count + success_rate) =====
+    // ===== UPDATE QUESTION STATS =====
     for (const su of statsUpdates) {
-      await adminClient.rpc('update_question_stats', {
+      await admin.rpc('update_v2_question_stats', {
         p_question_id: su.question_id,
         p_is_correct: su.is_correct,
       })
     }
 
-    // ===== LOAD RULES FROM DB =====
-    const { data: dbRules } = await adminClient
-      .from('placement_rules')
-      .select('*')
-      .eq('age_group', attempt.age_group || '6_9')
-      .maybeSingle()
+    // ===== CALCULATE PERCENTAGES =====
+    const aPct = scores.section_a.max > 0 ? (scores.section_a.score / scores.section_a.max) * 100 : 0
+    const bPct = scores.section_b.max > 0 ? (scores.section_b.score / scores.section_b.max) * 100 : 0
+    const swPct = scores.section_c_software.max > 0 ? (scores.section_c_software.score / scores.section_c_software.max) * 100 : 0
+    const hwPct = scores.section_c_hardware.max > 0 ? (scores.section_c_hardware.score / scores.section_c_hardware.max) * 100 : 0
 
-    const PASS_THRESHOLD = dbRules?.pass_threshold ?? DEFAULT_PASS_THRESHOLD
-    const CONFIDENCE_MARGIN = dbRules?.confidence_margin ?? DEFAULT_CONFIDENCE_MARGIN
+    const sectionAPassed = aPct >= passA
+    const sectionBPassed = bPct >= passB
 
-    // ===== CALCULATE RESULTS =====
-    const foundationPct = levelScores.foundation.max > 0
-      ? (levelScores.foundation.score / levelScores.foundation.max) * 100 : 0
-    const intermediatePct = levelScores.intermediate.max > 0
-      ? (levelScores.intermediate.score / levelScores.intermediate.max) * 100 : 0
-    const advancedPct = levelScores.advanced.max > 0
-      ? (levelScores.advanced.score / levelScores.advanced.max) * 100 : 0
-    const overallPct = maxScore > 0 ? Math.round((totalScore / maxScore) * 10000) / 100 : 0
+    // ===== DETERMINE LEVEL USING level_order + track =====
+    let recommendedLevelId: string | null = null
+    let recommendedTrack: string | null = null
+    let needsManualReview = false
 
-    // Recommended level using DB rules
-    let recommendedLevel: string
-    const advMinAdv = dbRules?.advanced_min_for_advanced ?? PASS_THRESHOLD
-    const intMinAdv = dbRules?.intermediate_min_for_advanced ?? PASS_THRESHOLD
-    const fndMinAdv = dbRules?.foundation_min_for_advanced ?? PASS_THRESHOLD
-    const fndMinInt = dbRules?.foundation_min_for_intermediate ?? PASS_THRESHOLD
-    const intMinInt = dbRules?.intermediate_min_for_intermediate ?? 0
-
-    if (advancedPct >= advMinAdv && intermediatePct >= intMinAdv && foundationPct >= fndMinAdv) {
-      recommendedLevel = 'advanced'
-    } else if (intermediatePct >= (intMinInt || PASS_THRESHOLD) && foundationPct >= fndMinInt) {
-      recommendedLevel = 'intermediate'
+    if (!sectionAPassed) {
+      // Level 0
+      const { data: level0 } = await admin
+        .from('levels').select('id').eq('level_order', 0).eq('is_active', true).limit(1).maybeSingle()
+      recommendedLevelId = level0?.id || null
+    } else if (!sectionBPassed) {
+      // Level 1
+      const { data: level1 } = await admin
+        .from('levels').select('id').eq('level_order', 1).eq('is_active', true).limit(1).maybeSingle()
+      recommendedLevelId = level1?.id || null
     } else {
-      recommendedLevel = 'foundation'
+      // Level 2 — determine track
+      const trackDiff = Math.abs(swPct - hwPct)
+
+      if (trackDiff <= trackMargin) {
+        // Balanced
+        recommendedTrack = 'balanced'
+        recommendedLevelId = null
+        needsManualReview = true
+      } else if (swPct > hwPct) {
+        recommendedTrack = 'software'
+        const { data: lvl } = await admin
+          .from('levels').select('id').eq('level_order', 2).eq('track', 'software').eq('is_active', true).limit(1).maybeSingle()
+        recommendedLevelId = lvl?.id || null
+      } else {
+        recommendedTrack = 'hardware'
+        const { data: lvl } = await admin
+          .from('levels').select('id').eq('level_order', 2).eq('track', 'hardware').eq('is_active', true).limit(1).maybeSingle()
+        recommendedLevelId = lvl?.id || null
+      }
     }
 
-    // Confidence level
-    const inconsistent =
-      (advancedPct >= PASS_THRESHOLD && foundationPct < PASS_THRESHOLD) ||
-      (intermediatePct >= PASS_THRESHOLD && foundationPct < PASS_THRESHOLD)
+    // ===== CONFIDENCE — use DB function =====
+    const { data: confidenceResult } = await admin.rpc('compute_placement_v2_confidence', {
+      p_section_a_pct: aPct,
+      p_section_b_pct: bPct,
+      p_sw_pct: swPct,
+      p_hw_pct: hwPct,
+      p_pass_a: passA,
+      p_pass_b: passB,
+      p_track_margin: trackMargin,
+    })
 
-    const marginF = Math.abs(foundationPct - PASS_THRESHOLD)
-    const marginI = Math.abs(intermediatePct - PASS_THRESHOLD)
-    const marginA = Math.abs(advancedPct - PASS_THRESHOLD)
-    const minMargin = Math.min(marginF, marginI, marginA)
+    const confidenceLevel: string = confidenceResult || 'medium'
 
-    let confidenceLevel: string
-    if (inconsistent) confidenceLevel = 'low'
-    else if (minMargin <= CONFIDENCE_MARGIN) confidenceLevel = 'medium'
-    else confidenceLevel = 'high'
-
-    const manualReviewMargin = dbRules?.manual_review_margin ?? DEFAULT_CONFIDENCE_MARGIN
-    const needsManualReview = confidenceLevel !== 'high' || foundationPct < PASS_THRESHOLD || minMargin <= manualReviewMargin
-
-    // Weak skills (< 50% correct)
-    const weakSkills = Object.entries(skillResults)
-      .filter(([_, v]) => v.total > 0 && (v.correct / v.total) < 0.5)
-      .map(([skill, v]) => ({
-        skill,
-        correct: v.correct,
-        total: v.total,
-        rate: Math.round((v.correct / v.total) * 100),
-      }))
+    // If confidence is low, flag for review
+    if (confidenceLevel === 'low') needsManualReview = true
 
     // ===== UPDATE ATTEMPT =====
-    await adminClient
-      .from('placement_exam_attempts')
+    await admin
+      .from('placement_v2_attempts')
       .update({
         status: 'submitted',
         submitted_at: new Date().toISOString(),
-        foundation_score: levelScores.foundation.score,
-        foundation_max: levelScores.foundation.max,
-        intermediate_score: levelScores.intermediate.score,
-        intermediate_max: levelScores.intermediate.max,
-        advanced_score: levelScores.advanced.score,
-        advanced_max: levelScores.advanced.max,
-        total_score: totalScore,
-        max_score: maxScore,
-        percentage: overallPct,
-        recommended_level: recommendedLevel,
+        section_a_score: scores.section_a.score,
+        section_a_max: scores.section_a.max,
+        section_a_passed: sectionAPassed,
+        section_b_score: scores.section_b.score,
+        section_b_max: scores.section_b.max,
+        section_b_passed: sectionBPassed,
+        section_c_software_score: scores.section_c_software.score,
+        section_c_software_max: scores.section_c_software.max,
+        section_c_hardware_score: scores.section_c_hardware.score,
+        section_c_hardware_max: scores.section_c_hardware.max,
+        recommended_level_id: recommendedLevelId,
+        recommended_track: recommendedTrack,
         confidence_level: confidenceLevel,
         needs_manual_review: needsManualReview,
-        weak_skills: weakSkills,
       })
       .eq('id', attempt_id)
 
     // ===== MARK SCHEDULE AS COMPLETED =====
-    await adminClient
-      .from('placement_exam_schedules')
+    await admin
+      .from('placement_v2_schedules')
       .update({ status: 'completed', updated_at: new Date().toISOString() })
       .eq('student_id', studentId)
       .in('status', ['scheduled', 'open'])
 
     // ===== NOTIFY ADMINS =====
     try {
-      const { data: studentProfile } = await adminClient
+      const { data: studentProfile } = await admin
         .from('profiles')
         .select('full_name, full_name_ar')
         .eq('user_id', studentId)
@@ -260,14 +245,12 @@ serve(async (req) => {
       const studentName = studentProfile?.full_name || 'Student'
       const studentNameAr = studentProfile?.full_name_ar || 'طالب'
 
-      const { data: admins } = await adminClient
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin')
+      const { data: admins } = await admin
+        .from('user_roles').select('user_id').eq('role', 'admin')
 
       if (admins && admins.length > 0) {
-        const notifications = admins.map(admin => ({
-          user_id: admin.user_id,
+        const notifications = admins.map(a => ({
+          user_id: a.user_id,
           title: 'Placement Exam Submitted',
           title_ar: 'امتحان تحديد مستوى جديد',
           message: `${studentName} completed placement exam (Attempt #${attempt.attempt_number})`,
@@ -276,22 +259,18 @@ serve(async (req) => {
           category: 'placement_test',
           action_url: '/placement-test-review',
         }))
-
-        await adminClient.from('notifications').insert(notifications)
+        await admin.from('notifications').insert(notifications)
       }
     } catch (e) {
       console.error('Notification error:', e)
     }
 
-    console.log(`Placement exam graded: student=${studentId}, attempt=${attempt_id}, score=${totalScore}/${maxScore} (${overallPct}%), recommended=${recommendedLevel}, confidence=${confidenceLevel}`)
+    console.log(`Placement v2 graded: student=${studentId}, attempt=${attempt_id}, A=${scores.section_a.score}/${scores.section_a.max}, B=${scores.section_b.score}/${scores.section_b.max}, SW=${swPct}%, HW=${hwPct}%, track=${recommendedTrack}, confidence=${confidenceLevel}`)
 
-    // ===== RETURN ONLY CONFIRMATION — NO SCORES =====
-    return new Response(JSON.stringify({ submitted: true }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return json({ submitted: true })
 
   } catch (error) {
     console.error('grade-placement-exam error:', error)
-    return new Response(JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return json({ error: 'Internal server error' }, 500)
   }
 })
