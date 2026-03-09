@@ -85,10 +85,15 @@ export default function TakePlacementTest() {
       setCurrentIndex(0);
       setPhase('in_progress');
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to start exam');
+      const msg: string = err.message || 'Failed to start exam';
+      setErrorMsg(msg);
+      // If window expired or no schedule, go back to gate automatically after short delay
+      if (msg.includes('expired') || msg.includes('not open yet') || msg.includes('No placement exam scheduled')) {
+        setTimeout(() => navigate('/placement-gate'), 2500);
+      }
       setPhase('error');
     }
-  }, [isRTL]);
+  }, [isRTL, navigate]);
 
   const handleSubmit = useCallback(async () => {
     if (!attemptId || phase === 'submitting') return;
@@ -145,6 +150,7 @@ export default function TakePlacementTest() {
   }
 
   // Error
+  const isWindowError = errorMsg.includes('expired') || errorMsg.includes('not open yet') || errorMsg.includes('No placement exam scheduled');
   if (phase === 'error') {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -154,11 +160,29 @@ export default function TakePlacementTest() {
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4">
-          <p className="text-destructive text-lg font-medium text-center">{errorMsg}</p>
-          <Button onClick={() => navigate('/placement-gate')}>
-            {isRTL ? 'العودة' : 'Back'}
-          </Button>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-4 text-center max-w-md mx-auto">
+          {isWindowError ? (
+            <>
+              <div className="p-4 rounded-full bg-muted">
+                <Clock className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <h2 className="text-xl font-bold">
+                {isRTL ? 'انتهت نافذة الامتحان' : 'Exam Window Closed'}
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {isRTL
+                  ? 'انتهى الوقت المحدد للامتحان. يرجى التواصل مع الإدارة لتحديد موعد جديد. سيتم تحويلك تلقائياً...'
+                  : 'The exam window has closed. Please contact administration to schedule a new session. Redirecting...'}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-destructive text-lg font-medium">{errorMsg}</p>
+              <Button onClick={() => navigate('/placement-gate')}>
+                {isRTL ? 'العودة' : 'Back'}
+              </Button>
+            </>
+          )}
         </div>
       </div>
     );
