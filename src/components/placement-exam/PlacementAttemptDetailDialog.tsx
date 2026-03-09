@@ -134,12 +134,12 @@ export function PlacementAttemptDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>{isRTL ? 'تفاصيل الامتحان' : 'Exam Details'}</DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <div className="flex-1 overflow-y-auto -mx-6 px-6" style={{ maxHeight: 'calc(90vh - 120px)' }}>
           <div className="space-y-4 pb-4">
             {/* Level breakdown */}
             <div className="grid grid-cols-3 gap-3">
@@ -318,7 +318,7 @@ export function PlacementAttemptDetailDialog({
               )}
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
