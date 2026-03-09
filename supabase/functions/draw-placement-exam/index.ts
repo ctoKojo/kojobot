@@ -49,7 +49,8 @@ serve(async (req) => {
       .from('placement_exam_schedules')
       .select('id, opens_at, closes_at, status')
       .eq('student_id', studentId)
-      .in('status', ['scheduled', 'open'])
+      // Include 'expired' to recover if an old version of the function marked it incorrectly.
+      .in('status', ['scheduled', 'open', 'expired'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -87,7 +88,7 @@ serve(async (req) => {
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
-      if (activeSchedule.status === 'scheduled') {
+      if (activeSchedule.status !== 'open') {
         await adminClient.from('placement_exam_schedules').update({ status: 'open' }).eq('id', activeSchedule.id)
       }
     } else {
