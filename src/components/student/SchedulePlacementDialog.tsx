@@ -72,6 +72,19 @@ export function SchedulePlacementDialog({
     const opensAt = fromZonedTime(new Date(y, m - 1, d, sh, sm, 0), APP_TIMEZONE);
     const closesAt = fromZonedTime(new Date(y, m - 1, d, eh, em, 0), APP_TIMEZONE);
 
+    // Get Cairo "now" for comparison - prevent scheduling in the past
+    const cairoNowStr = new Date().toLocaleString('en-US', { timeZone: APP_TIMEZONE });
+    const nowUtc = new Date();
+
+    if (opensAt <= nowUtc) {
+      toast({
+        title: isRTL ? 'وقت البداية في الماضي' : 'Start time is in the past',
+        description: isRTL ? 'لا يمكن جدولة امتحان يبدأ قبل الوقت الحالي' : 'Cannot schedule an exam that starts before the current time',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (closesAt <= opensAt) {
       toast({
         title: isRTL ? 'خطأ في الوقت' : 'Invalid time',
