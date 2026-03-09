@@ -4553,69 +4553,54 @@ export type Database = {
       }
       placement_v2_student_view: {
         Row: {
-          approved_level_id: string | null
           attempt_number: number | null
-          confidence_level: string | null
           created_at: string | null
+          final_level_id: string | null
           id: string | null
           needs_manual_review: boolean | null
-          recommended_level_id: string | null
-          recommended_track: string | null
-          section_a_passed: boolean | null
-          section_b_passed: boolean | null
+          result_available: boolean | null
+          section_a_max: number | null
+          section_a_score: number | null
+          section_b_max: number | null
+          section_b_score: number | null
           started_at: string | null
           status: string | null
           student_id: string | null
           submitted_at: string | null
         }
         Insert: {
-          approved_level_id?: string | null
           attempt_number?: number | null
-          confidence_level?: string | null
           created_at?: string | null
+          final_level_id?: never
           id?: string | null
           needs_manual_review?: boolean | null
-          recommended_level_id?: string | null
-          recommended_track?: string | null
-          section_a_passed?: boolean | null
-          section_b_passed?: boolean | null
+          result_available?: never
+          section_a_max?: never
+          section_a_score?: never
+          section_b_max?: never
+          section_b_score?: never
           started_at?: string | null
           status?: string | null
           student_id?: string | null
           submitted_at?: string | null
         }
         Update: {
-          approved_level_id?: string | null
           attempt_number?: number | null
-          confidence_level?: string | null
           created_at?: string | null
+          final_level_id?: never
           id?: string | null
           needs_manual_review?: boolean | null
-          recommended_level_id?: string | null
-          recommended_track?: string | null
-          section_a_passed?: boolean | null
-          section_b_passed?: boolean | null
+          result_available?: never
+          section_a_max?: never
+          section_a_score?: never
+          section_b_max?: never
+          section_b_score?: never
           started_at?: string | null
           status?: string | null
           student_id?: string | null
           submitted_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "placement_v2_attempts_approved_level_id_fkey"
-            columns: ["approved_level_id"]
-            isOneToOne: false
-            referencedRelation: "levels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "placement_v2_attempts_recommended_level_id_fkey"
-            columns: ["recommended_level_id"]
-            isOneToOne: false
-            referencedRelation: "levels"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       quiz_questions_student_view: {
         Row: {
@@ -4830,6 +4815,18 @@ export type Database = {
       compute_level_grades_batch: {
         Args: { p_group_id: string }
         Returns: Json
+      }
+      compute_placement_v2_confidence: {
+        Args: {
+          p_hw_pct: number
+          p_pass_a: number
+          p_pass_b: number
+          p_section_a_pct: number
+          p_section_b_pct: number
+          p_sw_pct: number
+          p_track_margin: number
+        }
+        Returns: string
       }
       compute_quality_score: {
         Args: {
