@@ -385,14 +385,14 @@ export default function QuestionBankTab() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {colVis.text && <SortableTableHead sortKey="question_text_ar" currentSortKey={sortKey} sortDirection={sortDirection} onSort={handleSort}>{isRTL ? 'النص' : 'Text'}</SortableTableHead>}
-                  {colVis.section && <SortableTableHead sortKey="section" currentSortKey={sortKey} sortDirection={sortDirection} onSort={handleSort}>{isRTL ? 'القسم' : 'Section'}</SortableTableHead>}
-                  {colVis.skill && <SortableTableHead sortKey="skill" currentSortKey={sortKey} sortDirection={sortDirection} onSort={handleSort}>{isRTL ? 'المهارة' : 'Skill'}</SortableTableHead>}
-                  {colVis.difficulty && <SortableTableHead sortKey="difficulty" currentSortKey={sortKey} sortDirection={sortDirection} onSort={handleSort}>{isRTL ? 'الصعوبة' : 'Diff'}</SortableTableHead>}
-                  {colVis.review && <SortableTableHead sortKey="review_status" currentSortKey={sortKey} sortDirection={sortDirection} onSort={handleSort}>{isRTL ? 'المراجعة' : 'Review'}</SortableTableHead>}
+                  {colVis.text && <SortableTableHead sortKey="question_text_ar" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'النص' : 'Text'}</SortableTableHead>}
+                  {colVis.section && <SortableTableHead sortKey="section" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'القسم' : 'Section'}</SortableTableHead>}
+                  {colVis.skill && <SortableTableHead sortKey="skill" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'المهارة' : 'Skill'}</SortableTableHead>}
+                  {colVis.difficulty && <SortableTableHead sortKey="difficulty" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'الصعوبة' : 'Diff'}</SortableTableHead>}
+                  {colVis.review && <SortableTableHead sortKey="review_status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'المراجعة' : 'Review'}</SortableTableHead>}
                   {colVis.answer && <TableHead>{isRTL ? 'الإجابة' : 'Ans'}</TableHead>}
-                  {colVis.usage && <SortableTableHead sortKey="usage_count" currentSortKey={sortKey} sortDirection={sortDirection} onSort={handleSort}>{isRTL ? 'استخدام' : 'Used'}</SortableTableHead>}
-                  {colVis.rate && <SortableTableHead sortKey="success_rate" currentSortKey={sortKey} sortDirection={sortDirection} onSort={handleSort}>{isRTL ? 'نجاح' : 'Rate'}</SortableTableHead>}
+                  {colVis.usage && <SortableTableHead sortKey="usage_count" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'استخدام' : 'Used'}</SortableTableHead>}
+                  {colVis.rate && <SortableTableHead sortKey="success_rate" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'نجاح' : 'Rate'}</SortableTableHead>}
                   {colVis.status && <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>}
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
