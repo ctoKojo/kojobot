@@ -56,15 +56,12 @@ serve(async (req) => {
       .maybeSingle()
 
     // IMPORTANT: Always evaluate schedule windows in Cairo timezone.
-    // Schedules may be stored as ISO with timezone (preferred) or as local Cairo timestamps.
+    // placement_exam_schedules.* are timestamptz; depending on serializer they may appear with
+    // offsets like "+00", "+00:00", or "Z" — Luxon can parse all of these, so avoid regex.
     const CAIRO_TZ = 'Africa/Cairo'
-    const parseScheduleTs = (ts: string) => {
-      const hasExplicitTz = /Z$|[+-]\d{2}:\d{2}$/.test(ts)
-      const dt = hasExplicitTz
-        ? DateTime.fromISO(ts, { setZone: true })
-        : DateTime.fromISO(ts, { zone: CAIRO_TZ })
-      return dt.setZone(CAIRO_TZ)
-    }
+    const parseScheduleTs = (ts: string) =>
+      DateTime.fromISO(ts, { zone: CAIRO_TZ, setZone: true }).setZone(CAIRO_TZ)
+
 
     const now = DateTime.now().setZone(CAIRO_TZ)
 
