@@ -30,7 +30,7 @@ export default function TakePlacementTest() {
   const navigate = useNavigate();
   const { isRTL } = useLanguage();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
 
   const [phase, setPhase] = useState<ExamPhase>('loading');
   const [attemptId, setAttemptId] = useState<string | null>(null);
@@ -147,6 +147,9 @@ export default function TakePlacementTest() {
           <Button onClick={() => navigate('/dashboard')}>
             {isRTL ? 'العودة للرئيسية' : 'Back to Dashboard'}
           </Button>
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={signOut}>
+            {isRTL ? 'تسجيل الخروج' : 'Sign Out'}
+          </Button>
         </div>
       </DashboardLayout>
     );
@@ -172,6 +175,9 @@ export default function TakePlacementTest() {
             <Play className="h-5 w-5 me-2" />
             {isRTL ? 'ابدأ الامتحان' : 'Start Exam'}
           </Button>
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={signOut}>
+            {isRTL ? 'تسجيل الخروج' : 'Sign Out'}
+          </Button>
         </div>
       </DashboardLayout>
     );
@@ -193,6 +199,9 @@ export default function TakePlacementTest() {
           </p>
           <Button onClick={() => navigate('/placement-gate')}>
             {isRTL ? 'العودة' : 'Back'}
+          </Button>
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={signOut}>
+            {isRTL ? 'تسجيل الخروج' : 'Sign Out'}
           </Button>
         </div>
       </DashboardLayout>
