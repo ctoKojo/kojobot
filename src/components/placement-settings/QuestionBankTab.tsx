@@ -440,7 +440,9 @@ export default function QuestionBankTab() {
           currentPage={currentPage}
           totalPages={totalPages}
           pageSize={pageSize}
-          totalItems={totalCount}
+          totalCount={totalCount}
+          hasNextPage={currentPage < totalPages}
+          hasPreviousPage={currentPage > 1}
           onPageChange={setCurrentPage}
           onPageSizeChange={setPageSize}
         />
