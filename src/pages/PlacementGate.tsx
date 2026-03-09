@@ -209,6 +209,14 @@ export default function PlacementGate() {
               </Badge>
             </>
           )}
+
+          {/* Sign Out — always visible */}
+          {status !== 'not_scheduled' && (
+            <Button variant="outline" onClick={signOut} className="mt-2">
+              <LogOut className="h-4 w-4 me-2" />
+              {isRTL ? 'تسجيل الخروج' : 'Sign Out'}
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>
