@@ -85,10 +85,15 @@ export default function TakePlacementTest() {
       setCurrentIndex(0);
       setPhase('in_progress');
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to start exam');
+      const msg: string = err.message || 'Failed to start exam';
+      setErrorMsg(msg);
+      // If window expired or no schedule, go back to gate automatically after short delay
+      if (msg.includes('expired') || msg.includes('not open yet') || msg.includes('No placement exam scheduled')) {
+        setTimeout(() => navigate('/placement-gate'), 2500);
+      }
       setPhase('error');
     }
-  }, [isRTL]);
+  }, [isRTL, navigate]);
 
   const handleSubmit = useCallback(async () => {
     if (!attemptId || phase === 'submitting') return;
