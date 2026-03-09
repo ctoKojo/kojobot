@@ -46,8 +46,23 @@ export function SchedulePlacementDialog({
       return;
     }
 
-    const opensAt = new Date(`${date}T${startTime}:00`);
-    const closesAt = new Date(`${date}T${endTime}:00`);
+    // IMPORTANT: The selected date/time must be interpreted in Cairo timezone
+    // regardless of the scheduler's device timezone.
+    const [y, m, d] = date.split('-').map(Number);
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+
+    if ([y, m, d, sh, sm, eh, em].some(n => Number.isNaN(n))) {
+      toast({
+        title: isRTL ? 'خطأ في البيانات' : 'Invalid input',
+        description: isRTL ? 'تأكد من إدخال التاريخ والوقت بشكل صحيح' : 'Please ensure date and time are valid',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const opensAt = fromZonedTime(new Date(y, m - 1, d, sh, sm, 0), APP_TIMEZONE);
+    const closesAt = fromZonedTime(new Date(y, m - 1, d, eh, em, 0), APP_TIMEZONE);
 
     if (closesAt <= opensAt) {
       toast({
