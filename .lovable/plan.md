@@ -1,65 +1,75 @@
 
-# خطة فصل مفاهيم السيشنات: Delivery Slot vs Curriculum Content vs Owed Sessions
+
+## ملخص المشكلة
+
+الموعد المحدد للامتحان انتهى بالفعل. المشكلة ليست في الكود بل في البيانات — لكن هناك تحسينات مهمة مطلوبة لمنع تكرار هذه المشكلة.
 
 ---
 
-## ✅ Phase 1: Schema + Backfill (مكتمل)
+## الخطة
 
-- `groups.last_delivered_content_number` INTEGER DEFAULT 0
-- `groups.owed_sessions_count` INTEGER DEFAULT 0
-- `sessions.content_number` INTEGER (nullable)
-- Backfill: `content_number = session_number` لـ regular completed sessions فقط
-- `last_delivered_content_number = MAX(content_number)` لكل مجموعة
+### 1. منع جدولة مواعيد في الماضي (SchedulePlacementDialog)
+- إضافة validation يمنع حفظ موعد إذا كان `opensAt` قبل الوقت الحالي
+- إظهار toast خطأ واضح للمجدول
 
-## ✅ Phase 2 Step 1: Database Logic (مكتمل)
+### 2. إضافة حالة "Expired" في PlacementGate
+- حالة جديدة `expired` بدلاً من إظهار "لم يتم تحديد موعد"
+- عرض تفاصيل الموعد المنتهي (التاريخ والوقت)
+- رسالة واضحة للطالب للتواصل مع الإدارة لإعادة الجدولة
 
-### القواعد المعتمدة:
-1. `session_number` على makeup sessions يبقى للعرض و tracking فقط
-2. `content_number` هو المرجع الحقيقي للمحتوى
-3. `curriculum lookup` يعتمد على `content_number`
-4. `level progress` يعتمد على `last_delivered_content_number`
-5. **Level completion** = `last_delivered_content_number >= expected_sessions_count AND owed_sessions_count <= 0`
-6. **Cancelled** regular session → `session_number + 1` + `owed_sessions_count += 1`
-7. **Unique index** يمنع تكرار `session_number` لـ regular sessions فقط
-
-### Trigger Execution Order (AFTER UPDATE on sessions):
-1. `a_assign_content_on_complete` — يعيّن `content_number` + يحدث group counters (مع FOR UPDATE)
-2. `on_session_status_change` — يولّد السيشن التالية (cancelled → +1 + owed++)
-3. `trg_check_level_completion` — يتحقق من اكتمال المستوى (يقرأ الحالة المُحدّثة)
-
-### Functions Modified:
-- `assign_content_number_on_completion()` — **جديدة** — idempotency guard + FOR UPDATE + atomic group update
-- `auto_generate_next_session()` — **معدّلة** — cancelled يولّد +1 + owed++ + stop condition جديد
-- `check_students_level_completion()` — **معدّلة** — يستخدم القاعدة الجديدة بدل عد السيشنات
-- Unique Index — **معدّل** — بدون استثناء cancelled
+### 3. إصلاح حساب وقت Cairo في SchedulePlacementDialog
+- إضافة دالة `getCairoCurrent()` للحصول على الوقت الحالي بتوقيت Cairo
+- المقارنة تتم بتوقيت Cairo وليس توقيت المتصفح
 
 ---
 
-## ✅ Phase 2 Step 2: Edge Functions (مكتمل)
+## التفاصيل التقنية
 
-### Files Modified:
-- `start-group/index.ts` — يضبط `last_delivered_content_number = starting_session_number - 1` + `owed_sessions_count = 0` + يعين `content_number` للـ completed sessions
-- `populate-completed-sessions/index.ts` — يعين `content_number` للسيشنات الناقصة + يفلتر `is_makeup = false`
-- `get-session-pdf-url/index.ts` — يستخدم `content_number` (مع fallback لـ `session_number`) لـ curriculum lookup
+### SchedulePlacementDialog - منع الجدولة في الماضي:
+```typescript
+// Get Cairo "now" for comparison
+const cairoNow = new Date().toLocaleString('en-US', { timeZone: APP_TIMEZONE });
+const nowUtc = fromZonedTime(new Date(cairoNow), APP_TIMEZONE);
 
-### No Changes Needed:
-- `auto-complete-sessions` — التريجر `a_assign_content_on_complete` يتولى `content_number` assignment تلقائياً
-- `generate-sessions` — fallback function يتعامل مع session_number فقط
-- `reschedule-sessions` — scheduling فقط
-- `session-reminders` — notifications فقط
-- `generate-quiz-questions` — يستخدم curriculum_sessions.id مباشرة (لا session_number lookup)
+if (opensAt <= nowUtc) {
+  toast({
+    title: 'وقت البداية في الماضي',
+    description: 'لا يمكن جدولة امتحان يبدأ قبل الوقت الحالي',
+    variant: 'destructive',
+  });
+  return;
+}
+```
+
+### PlacementGate - حالة Expired:
+```typescript
+type PlacementStatus = '...' | 'expired';
+
+// في fetchSchedule:
+if (now > closesAt) {
+  setStatus('expired');  // بدلاً من 'not_scheduled'
+  setSchedule(scheduleData);
+}
+```
+
+```tsx
+{/* Expired State */}
+{status === 'expired' && schedule && (
+  <>
+    <ShieldAlert className="text-orange-500" />
+    <h2>انتهى موعد الامتحان</h2>
+    <p>الموعد السابق: {formatDateTime(schedule.opens_at)} - {formatDateTime(schedule.closes_at)}</p>
+    <p>يرجى التواصل مع الإدارة لتحديد موعد جديد</p>
+  </>
+)}
+```
 
 ---
 
-## ✅ Phase 2 Step 3: Frontend (مكتمل)
+## الملفات المتأثرة
 
-### Files Modified:
-- `SessionDetails.tsx` — curriculum lookup بـ `content_number` (مع fallback لـ `session_number`)
-- `MySessions.tsx` — نفس التعديل: curriculum key يعتمد على `content_number`
-- `GroupDetails.tsx` — level progress بـ `last_delivered_content_number` + `owed_sessions_count` + `expected_sessions_count`
-- `StudentDashboard.tsx` — level progress بـ `last_delivered_content_number` من الـ group
+| الملف | التغيير |
+|-------|---------|
+| `src/components/student/SchedulePlacementDialog.tsx` | منع الجدولة في الماضي |
+| `src/pages/PlacementGate.tsx` | إضافة حالة `expired` مع UI مميز |
 
-### No Changes Needed:
-- `Sessions.tsx` — sorting بـ `session_number` للعرض فقط (صحيح كما هو)
-- `MakeupSessions.tsx` — `original_session_number` للعرض فقط (صحيح كما هو)
-- `WeeklyScheduleGrid.tsx` — لا يستخدم `session_number` أصلاً
