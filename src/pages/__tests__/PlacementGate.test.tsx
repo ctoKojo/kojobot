@@ -20,19 +20,17 @@ vi.mock('@/contexts/LanguageContext', () => ({
 
 // Supabase mock
 const mockMaybeSingle = vi.fn();
-const mockChain = {
-  select: () => mockChain,
-  eq: () => mockChain,
-  in: () => mockChain,
-  order: () => mockChain,
-  limit: () => mockChain,
-  maybeSingle: () => mockMaybeSingle(),
-};
-const mockFrom = vi.fn(() => mockChain);
+const mockChain: any = {};
+mockChain.select = () => mockChain;
+mockChain.eq = () => mockChain;
+mockChain.in = () => mockChain;
+mockChain.order = () => mockChain;
+mockChain.limit = () => mockChain;
+mockChain.maybeSingle = () => mockMaybeSingle();
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: (table: string) => { mockFrom(table); return mockChain; },
+    from: () => mockChain,
     functions: { invoke: vi.fn() },
   },
 }));
