@@ -32,7 +32,7 @@ const mockFrom = vi.fn(() => mockChain);
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
-    from: (table: string) => mockFrom(table),
+    from: (table: string) => { mockFrom(table); return mockChain; },
     functions: { invoke: vi.fn() },
   },
 }));
