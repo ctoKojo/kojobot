@@ -5,29 +5,32 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { CheckCircle, XCircle, AlertTriangle, Minus } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Minus, ShieldAlert } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface PlacementAttempt {
+/* ── V2 Attempt shape ── */
+interface V2Attempt {
   id: string;
   student_id: string;
-  age_group: string;
   attempt_number: number;
   status: string;
-  total_score: number | null;
-  max_score: number | null;
-  percentage: number | null;
-  recommended_level: string | null;
+  section_a_score: number | null;
+  section_a_max: number | null;
+  section_a_passed: boolean | null;
+  section_b_score: number | null;
+  section_b_max: number | null;
+  section_b_passed: boolean | null;
+  section_c_software_score: number | null;
+  section_c_software_max: number | null;
+  section_c_hardware_score: number | null;
+  section_c_hardware_max: number | null;
+  recommended_track: string | null;
+  recommended_level_id: string | null;
+  approved_level_id: string | null;
   confidence_level: string | null;
-  needs_manual_review: boolean;
-  weak_skills: any;
-  foundation_score: number | null;
-  foundation_max: number | null;
-  intermediate_score: number | null;
-  intermediate_max: number | null;
-  advanced_score: number | null;
-  advanced_max: number | null;
+  needs_manual_review: boolean | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
 }
 
 interface Level {
@@ -35,27 +38,31 @@ interface Level {
   name: string;
   name_ar: string;
   level_order: number;
+  track: string | null;
 }
 
 interface AttemptQuestion {
+  id: string;
   question_id: number;
   order_index: number;
+  section: string;
+  section_skill: string;
   student_answer: string | null;
   is_correct: boolean | null;
+  // from placement_v2_questions join
   question_text_ar: string;
   options: Record<string, string>;
   correct_answer: string;
-  skill: string;
-  level: string;
+  track_category: string | null;
 }
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  attempt: PlacementAttempt | null;
+  attempt: V2Attempt | null;
   levels: Level[];
   isRTL: boolean;
-  onApproveLevel: (attempt: PlacementAttempt, levelId: string) => void;
+  onApproveLevel: (attempt: V2Attempt, levelId: string) => void;
   approving: boolean;
 }
 
@@ -76,46 +83,34 @@ export function PlacementAttemptDetailDialog({
   const fetchQuestions = async (attemptId: string) => {
     setLoadingQuestions(true);
     try {
-      // Fetch attempt questions
-      const { data: aqData } = await (supabase
-        .from('placement_exam_attempt_questions' as any)
-        .select('question_id, order_index, student_answer, is_correct')
-        .eq('attempt_id', attemptId) as any)
+      const { data: aqData } = await supabase
+        .from('placement_v2_attempt_questions')
+        .select('id, question_id, order_index, section, section_skill, student_answer, is_correct')
+        .eq('attempt_id', attemptId)
         .order('order_index');
 
-      if (!aqData || aqData.length === 0) {
-        setQuestions([]);
-        return;
-      }
+      if (!aqData || aqData.length === 0) { setQuestions([]); return; }
 
-      const questionIds = aqData.map((q: any) => q.question_id);
-
-      // Fetch question bank details
-      const { data: bankData } = await (supabase
-        .from('placement_question_bank' as any)
-        .select('id, question_text_ar, options, correct_answer, skill, level') as any)
+      const questionIds = aqData.map(q => q.question_id);
+      const { data: bankData } = await supabase
+        .from('placement_v2_questions')
+        .select('id, question_text_ar, options, correct_answer, track_category')
         .in('id', questionIds);
 
       const bankMap = new Map((bankData || []).map((q: any) => [q.id, q]));
 
-      const merged: AttemptQuestion[] = aqData.map((aq: any) => {
+      setQuestions(aqData.map((aq: any) => {
         const bank: any = bankMap.get(aq.question_id) || {};
         return {
-          question_id: aq.question_id,
-          order_index: aq.order_index,
-          student_answer: aq.student_answer,
-          is_correct: aq.is_correct,
+          ...aq,
           question_text_ar: bank.question_text_ar || '',
-          options: bank.options || {},
+          options: (typeof bank.options === 'object' ? bank.options : {}) as Record<string, string>,
           correct_answer: bank.correct_answer || '',
-          skill: bank.skill || '',
-          level: bank.level || '',
+          track_category: bank.track_category || null,
         };
-      });
-
-      setQuestions(merged);
+      }));
     } catch (err) {
-      console.error('Failed to fetch attempt questions:', err);
+      console.error('Failed to fetch v2 attempt questions:', err);
     } finally {
       setLoadingQuestions(false);
     }
@@ -123,13 +118,83 @@ export function PlacementAttemptDetailDialog({
 
   if (!attempt) return null;
 
-  const getLevelBadgeColor = (level: string) => {
-    switch (level) {
-      case 'foundation': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-      case 'intermediate': return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
-      case 'advanced': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
-      default: return '';
-    }
+  const pct = (s: number | null, m: number | null) => {
+    if (s == null || !m) return '—';
+    return `${s}/${m} (${Math.round((s / m) * 100)}%)`;
+  };
+
+  const isBalanced = attempt.recommended_track === 'balanced';
+  const isReviewed = attempt.status === 'reviewed';
+
+  // Group questions by section
+  const sectionA = questions.filter(q => q.section === 'section_a');
+  const sectionB = questions.filter(q => q.section === 'section_b');
+  const sectionC = questions.filter(q => q.section === 'section_c');
+
+  const renderQuestion = (q: AttemptQuestion, idx: number) => {
+    const opts = typeof q.options === 'object' ? q.options : {};
+    return (
+      <Card key={q.id} className={`border ${
+        q.is_correct === true ? 'border-green-200 dark:border-green-800'
+        : q.is_correct === false ? 'border-red-200 dark:border-red-800'
+        : 'border-muted'
+      }`}>
+        <CardContent className="pt-3 pb-3 space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs font-mono text-muted-foreground shrink-0">{idx + 1}.</span>
+              {q.is_correct === true ? <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                : q.is_correct === false ? <XCircle className="h-4 w-4 text-red-600 shrink-0" />
+                : <Minus className="h-4 w-4 text-muted-foreground shrink-0" />}
+              <p className="text-sm font-medium leading-relaxed" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>
+                {q.question_text_ar}
+              </p>
+            </div>
+            <Badge variant="outline" className="text-[10px] shrink-0">{q.section_skill}</Badge>
+          </div>
+
+          <div className="grid grid-cols-1 gap-1 ms-6">
+            {Object.entries(opts).map(([key, value]) => {
+              const isCorrect = key === q.correct_answer;
+              const isStudent = key === q.student_answer;
+              const isWrong = isStudent && !q.is_correct;
+              return (
+                <div key={key} dir="rtl" className={`text-xs px-2 py-1 rounded flex items-center gap-2 ${
+                  isCorrect ? 'bg-green-50 dark:bg-green-950/20 text-green-800 dark:text-green-300 font-medium'
+                  : isWrong ? 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 line-through'
+                  : 'text-muted-foreground'
+                }`}>
+                  <span className="font-mono text-[10px] shrink-0">{key}</span>
+                  <span style={{ unicodeBidi: 'plaintext' }}>{value as string}</span>
+                  {isCorrect && <CheckCircle className="h-3 w-3 text-green-600 shrink-0 ms-auto" />}
+                  {isWrong && <XCircle className="h-3 w-3 text-red-500 shrink-0 ms-auto" />}
+                </div>
+              );
+            })}
+          </div>
+
+          {q.track_category && (
+            <div className="ms-6">
+              <Badge variant="outline" className="text-[10px]">{q.track_category}</Badge>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderSectionBlock = (title: string, qs: AttemptQuestion[]) => {
+    if (qs.length === 0) return null;
+    const correct = qs.filter(q => q.is_correct).length;
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold text-sm">{title}</h4>
+          <Badge variant="outline">{correct}/{qs.length}</Badge>
+        </div>
+        <div className="space-y-2">{qs.map((q, i) => renderQuestion(q, i))}</div>
+      </div>
+    );
   };
 
   return (
@@ -141,179 +206,143 @@ export function PlacementAttemptDetailDialog({
 
         <div className="flex-1 overflow-y-auto -mx-6 px-6" style={{ maxHeight: 'calc(90vh - 120px)' }}>
           <div className="space-y-4 pb-4">
-            {/* Level breakdown */}
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: 'Foundation', score: attempt.foundation_score, max: attempt.foundation_max },
-                { label: 'Intermediate', score: attempt.intermediate_score, max: attempt.intermediate_max },
-                { label: 'Advanced', score: attempt.advanced_score, max: attempt.advanced_max },
-              ].map(item => (
-                <Card key={item.label}>
-                  <CardContent className="pt-4 text-center">
-                    <p className="text-xs text-muted-foreground">{item.label}</p>
-                    <p className="text-lg font-bold">{item.score}/{item.max}</p>
-                    <p className="text-xs">
-                      {item.max ? Math.round(((item.score || 0) / item.max) * 100) : 0}%
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
+            {/* Section scores */}
+            <div className="grid grid-cols-2 gap-3">
+              <Card>
+                <CardContent className="pt-4 text-center">
+                  <p className="text-xs text-muted-foreground">Section A</p>
+                  <p className={`text-lg font-bold ${attempt.section_a_passed ? 'text-green-600' : 'text-red-600'}`}>
+                    {pct(attempt.section_a_score, attempt.section_a_max)}
+                  </p>
+                  <Badge variant={attempt.section_a_passed ? 'default' : 'destructive'} className="text-xs mt-1">
+                    {attempt.section_a_passed ? (isRTL ? 'نجح' : 'Passed') : (isRTL ? 'رسب' : 'Failed')}
+                  </Badge>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4 text-center">
+                  <p className="text-xs text-muted-foreground">Section B</p>
+                  <p className={`text-lg font-bold ${attempt.section_b_passed ? 'text-green-600' : 'text-red-600'}`}>
+                    {pct(attempt.section_b_score, attempt.section_b_max)}
+                  </p>
+                  <Badge variant={attempt.section_b_passed ? 'default' : 'destructive'} className="text-xs mt-1">
+                    {attempt.section_b_passed ? (isRTL ? 'نجح' : 'Passed') : (isRTL ? 'رسب' : 'Failed')}
+                  </Badge>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Weak skills */}
-            {attempt.weak_skills && Array.isArray(attempt.weak_skills) && attempt.weak_skills.length > 0 && (
-              <div>
-                <p className="text-sm font-medium mb-2">{isRTL ? 'مهارات ضعيفة' : 'Weak Skills'}</p>
-                <div className="flex flex-wrap gap-2">
-                  {attempt.weak_skills.map((ws: any, i: number) => (
-                    <Badge key={i} variant="destructive">{ws.skill} ({ws.rate}%)</Badge>
-                  ))}
-                </div>
+            {/* Section C scores */}
+            {(attempt.section_c_software_max || attempt.section_c_hardware_max) && (
+              <div className="grid grid-cols-2 gap-3">
+                <Card>
+                  <CardContent className="pt-4 text-center">
+                    <p className="text-xs text-muted-foreground">Section C — Software</p>
+                    <p className="text-lg font-bold">{pct(attempt.section_c_software_score, attempt.section_c_software_max)}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4 text-center">
+                    <p className="text-xs text-muted-foreground">Section C — Hardware</p>
+                    <p className="text-lg font-bold">{pct(attempt.section_c_hardware_score, attempt.section_c_hardware_max)}</p>
+                  </CardContent>
+                </Card>
               </div>
             )}
 
-            {/* Recommended level */}
-            <div className="flex items-center justify-between p-3 rounded-lg border">
-              <span className="text-sm font-medium">{isRTL ? 'المستوى المقترح' : 'Recommended Level'}</span>
-              <Badge className="text-base">{attempt.recommended_level}</Badge>
+            {/* Track + Confidence */}
+            <div className="flex items-center gap-3 p-3 rounded-lg border">
+              <span className="text-sm text-muted-foreground">{isRTL ? 'المسار المقترح' : 'Recommended Track'}:</span>
+              <Badge variant={isBalanced ? 'destructive' : 'default'} className="capitalize">
+                {attempt.recommended_track || '—'}
+              </Badge>
+              <span className="text-sm text-muted-foreground ms-auto">{isRTL ? 'الثقة' : 'Confidence'}:</span>
+              {(() => {
+                const v: Record<string, 'default' | 'secondary' | 'destructive'> = { high: 'default', medium: 'secondary', low: 'destructive' };
+                return <Badge variant={v[attempt.confidence_level || ''] || 'secondary'} className="capitalize">{attempt.confidence_level || '—'}</Badge>;
+              })()}
             </div>
 
-            {attempt.needs_manual_review && (
+            {/* Balanced warning */}
+            {isBalanced && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200">
-                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
                 <span className="text-sm text-amber-800 dark:text-amber-300">
-                  {isRTL ? 'يحتاج مراجعة يدوية — الثقة منخفضة أو نتائج غير متسقة' : 'Needs manual review — low confidence or inconsistent results'}
+                  {isRTL
+                    ? 'النتائج متوازنة — لم يتم تحديد مسار تلقائياً. يرجى المراجعة اليدوية واختيار المستوى.'
+                    : 'Results are balanced — no track was auto-assigned. Please review manually and assign a level.'}
                 </span>
               </div>
             )}
 
-            {/* Approve with level selection */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium">{isRTL ? 'اعتماد المستوى' : 'Assign Level'}</p>
-              <div className="flex gap-2">
-                {attempt.recommended_level && (
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      const matchLevel = levels.find(l =>
-                        l.name.toLowerCase().includes(attempt.recommended_level!.toLowerCase())
-                      );
-                      if (matchLevel) onApproveLevel(attempt, matchLevel.id);
-                    }}
-                    disabled={approving}
-                  >
-                    <CheckCircle className="h-4 w-4 me-1" />
-                    {isRTL ? 'موافقة على المقترح' : 'Approve Recommended'}
-                  </Button>
-                )}
-                <Select onValueChange={val => onApproveLevel(attempt, val)} disabled={approving}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder={isRTL ? 'مستوى آخر' : 'Override'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {levels.map(l => (
-                      <SelectItem key={l.id} value={l.id}>
-                        {isRTL ? l.name_ar : l.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {attempt.needs_manual_review && !isBalanced && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200">
+                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                <span className="text-sm text-amber-800 dark:text-amber-300">
+                  {isRTL ? 'يحتاج مراجعة يدوية — مستوى ثقة منخفض أو نتائج غير متسقة' : 'Needs manual review — low confidence or inconsistent results'}
+                </span>
               </div>
-            </div>
+            )}
 
-            {/* Questions Preview */}
-            <div className="space-y-2 pt-2 border-t">
+            {/* Approval section */}
+            {!isReviewed ? (
+              <div className="space-y-2 p-3 rounded-lg border border-primary/30 bg-primary/5">
+                <p className="text-sm font-medium">{isRTL ? 'اعتماد المستوى' : 'Approve Level'}</p>
+                <div className="flex gap-2 flex-wrap">
+                  {attempt.recommended_level_id && (
+                    <Button
+                      size="sm"
+                      onClick={() => onApproveLevel(attempt, attempt.recommended_level_id!)}
+                      disabled={approving}
+                    >
+                      <CheckCircle className="h-4 w-4 me-1" />
+                      {isRTL ? 'موافقة على المقترح' : 'Approve Recommended'}
+                    </Button>
+                  )}
+                  <Select onValueChange={val => onApproveLevel(attempt, val)} disabled={approving}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder={isRTL ? 'اختر مستوى آخر' : 'Override level'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {levels.map(l => (
+                        <SelectItem key={l.id} value={l.id}>
+                          {isRTL ? l.name_ar : l.name} {l.track ? `(${l.track})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200">
+                <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                <span className="text-sm text-green-800 dark:text-green-300">
+                  {isRTL ? 'تم اعتماد المستوى' : 'Level approved'}
+                  {attempt.approved_level_id && (() => {
+                    const lvl = levels.find(l => l.id === attempt.approved_level_id);
+                    return lvl ? ` — ${isRTL ? lvl.name_ar : lvl.name}` : '';
+                  })()}
+                </span>
+              </div>
+            )}
+
+            {/* Questions grouped by section */}
+            <div className="space-y-4 pt-2 border-t">
               <p className="text-sm font-semibold">
                 {isRTL ? `الأسئلة والإجابات (${questions.length})` : `Questions & Answers (${questions.length})`}
               </p>
 
               {loadingQuestions ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}
-                </div>
+                <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}</div>
               ) : questions.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {isRTL ? 'لا توجد بيانات أسئلة' : 'No question data available'}
                 </p>
               ) : (
-                <div className="space-y-3">
-                  {questions.map((q, idx) => {
-                    const options = typeof q.options === 'object' ? q.options : {};
-                    const optionEntries = Object.entries(options);
-
-                    return (
-                      <Card key={q.question_id} className={`border ${
-                        q.is_correct === true
-                          ? 'border-green-200 dark:border-green-800'
-                          : q.is_correct === false
-                          ? 'border-red-200 dark:border-red-800'
-                          : 'border-muted'
-                      }`}>
-                        <CardContent className="pt-3 pb-3 space-y-2">
-                          {/* Question header */}
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-xs font-mono text-muted-foreground shrink-0">
-                                {q.order_index}.
-                              </span>
-                              {q.is_correct === true ? (
-                                <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-                              ) : q.is_correct === false ? (
-                                <XCircle className="h-4 w-4 text-red-600 shrink-0" />
-                              ) : (
-                                <Minus className="h-4 w-4 text-muted-foreground shrink-0" />
-                              )}
-                              <p className="text-sm font-medium leading-relaxed" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>
-                                {q.question_text_ar}
-                              </p>
-                            </div>
-                            <div className="flex gap-1 shrink-0">
-                              <Badge variant="outline" className={`text-[10px] ${getLevelBadgeColor(q.level)}`}>
-                                {q.level}
-                              </Badge>
-                            </div>
-                          </div>
-
-                          {/* Options */}
-                          <div className="grid grid-cols-1 gap-1 ms-6">
-                            {optionEntries.map(([key, value]) => {
-                              const isCorrectAnswer = key === q.correct_answer;
-                              const isStudentAnswer = key === q.student_answer;
-                              const isWrong = isStudentAnswer && !q.is_correct;
-
-                              return (
-                                <div
-                                  key={key}
-                                  dir="rtl"
-                                  className={`text-xs px-2 py-1 rounded flex items-center gap-2 ${
-                                    isCorrectAnswer
-                                      ? 'bg-green-50 dark:bg-green-950/20 text-green-800 dark:text-green-300 font-medium'
-                                      : isWrong
-                                      ? 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 line-through'
-                                      : 'text-muted-foreground'
-                                  }`}
-                                >
-                                  <span className="font-mono text-[10px] shrink-0">{key}</span>
-                                  <span style={{ unicodeBidi: 'plaintext' }}>{value as string}</span>
-                                  {isCorrectAnswer && (
-                                    <CheckCircle className="h-3 w-3 text-green-600 shrink-0 ms-auto" />
-                                  )}
-                                  {isWrong && (
-                                    <XCircle className="h-3 w-3 text-red-500 shrink-0 ms-auto" />
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* Skill tag */}
-                          <div className="ms-6">
-                            <span className="text-[10px] text-muted-foreground">{q.skill}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                <div className="space-y-6">
+                  {renderSectionBlock('Section A', sectionA)}
+                  {renderSectionBlock('Section B', sectionB)}
+                  {renderSectionBlock('Section C', sectionC)}
                 </div>
               )}
             </div>
