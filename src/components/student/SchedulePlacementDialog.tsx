@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CalendarDays, Clock } from 'lucide-react';
 import { fromZonedTime } from 'date-fns-tz';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { APP_TIMEZONE } from '@/lib/constants';
+import { getCairoToday } from '@/lib/timeUtils';
 
 interface SchedulePlacementDialogProps {
   open: boolean;
@@ -35,6 +36,13 @@ export function SchedulePlacementDialog({
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Default to Cairo "today" to prevent accidentally scheduling for yesterday
+  // when the scheduler is in a timezone behind Cairo.
+  useEffect(() => {
+    if (!open) return;
+    setDate(prev => prev || getCairoToday());
+  }, [open]);
 
   const handleSchedule = async () => {
     if (!date || !startTime || !endTime) {
@@ -131,8 +139,11 @@ export function SchedulePlacementDialog({
           </p>
 
           <div className="space-y-2">
-            <Label>{isRTL ? 'التاريخ' : 'Date'}</Label>
+            <Label>{isRTL ? 'التاريخ (بتوقيت القاهرة)' : 'Date (Cairo time)'}</Label>
             <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+            <p className="text-xs text-muted-foreground">
+              {isRTL ? 'كل المواعيد يتم حفظها وتطبيقها بتوقيت القاهرة' : 'All schedules are saved and enforced in Cairo time'}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
