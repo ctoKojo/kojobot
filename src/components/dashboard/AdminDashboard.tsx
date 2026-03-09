@@ -62,7 +62,7 @@ export function AdminDashboard() {
         supabase.from('makeup_sessions').select('id', { count: 'exact' }).eq('status', 'pending'),
         supabase.from('groups').select('id', { count: 'exact' }).eq('is_active', true).eq('status', 'frozen'),
         supabase.from('subscription_requests').select('id', { count: 'exact' }).eq('status', 'pending'),
-        supabase.from('placement_exam_attempts' as any).select('id', { count: 'exact' }).eq('status', 'submitted').eq('needs_manual_review', true),
+        supabase.from('placement_v2_attempts' as any).select('id', { count: 'exact' }).eq('status', 'submitted').eq('needs_manual_review', true),
         supabase.from('group_student_progress').select('id', { count: 'exact' }).eq('status', 'awaiting_exam'),
       ]);
 
