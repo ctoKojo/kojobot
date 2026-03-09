@@ -1,65 +1,105 @@
 
-# خطة فصل مفاهيم السيشنات: Delivery Slot vs Curriculum Content vs Owed Sessions
+# خطة إعادة بناء نظام Placement Exam V2
 
 ---
 
-## ✅ Phase 1: Schema + Backfill (مكتمل)
+## ✅ Phase 1: Database Schema (مكتمل)
 
-- `groups.last_delivered_content_number` INTEGER DEFAULT 0
-- `groups.owed_sessions_count` INTEGER DEFAULT 0
-- `sessions.content_number` INTEGER (nullable)
-- Backfill: `content_number = session_number` لـ regular completed sessions فقط
-- `last_delivered_content_number = MAX(content_number)` لكل مجموعة
+### الجداول الجديدة:
 
-## ✅ Phase 2 Step 1: Database Logic (مكتمل)
+| الجدول | الوصف |
+|--------|-------|
+| `placement_v2_settings` | إعدادات عامة (singleton) — thresholds + question counts |
+| `placement_v2_questions` | بنك أسئلة بـ sections (section_a, section_b, section_c) + review_status + is_archived |
+| `placement_v2_schedules` | جدولة امتحانات مع validation trigger (opens_at < closes_at, no past) |
+| `placement_v2_attempts` | محاولات بـ section scores + recommended_level_id → levels + confidence_level |
+| `placement_v2_attempt_questions` | أسئلة المحاولة مع section_skill |
+| `placement_v2_student_view` | View آمن (security_invoker) للطلاب |
 
-### القواعد المعتمدة:
-1. `session_number` على makeup sessions يبقى للعرض و tracking فقط
-2. `content_number` هو المرجع الحقيقي للمحتوى
-3. `curriculum lookup` يعتمد على `content_number`
-4. `level progress` يعتمد على `last_delivered_content_number`
-5. **Level completion** = `last_delivered_content_number >= expected_sessions_count AND owed_sessions_count <= 0`
-6. **Cancelled** regular session → `session_number + 1` + `owed_sessions_count += 1`
-7. **Unique index** يمنع تكرار `session_number` لـ regular sessions فقط
+### Level Mapping:
+- `level_order = 0` → Level 0 (id: `4c8f5b5e-...`)
+- `level_order = 1` → Level 1 (id: `5d2db847-...`)
+- `level_order = 2, track = 'software'` → Level 2 Software (id: `8bd4e5ca-...`)
+- `level_order = 2, track = 'hardware'` → Level 2 Hardware (id: `b598ef9b-...`)
 
-### Trigger Execution Order (AFTER UPDATE on sessions):
-1. `a_assign_content_on_complete` — يعيّن `content_number` + يحدث group counters (مع FOR UPDATE)
-2. `on_session_status_change` — يولّد السيشن التالية (cancelled → +1 + owed++)
-3. `trg_check_level_completion` — يتحقق من اكتمال المستوى (يقرأ الحالة المُحدّثة)
+### Confidence Logic:
+- `high`: فرق track scores > 30% أو section_a/b scores > 80%
+- `medium`: فرق track scores بين track_margin و 30%
+- `low`: فرق track scores < track_margin → balanced + needs_manual_review
 
-### Functions Modified:
-- `assign_content_number_on_completion()` — **جديدة** — idempotency guard + FOR UPDATE + atomic group update
-- `auto_generate_next_session()` — **معدّلة** — cancelled يولّد +1 + owed++ + stop condition جديد
-- `check_students_level_completion()` — **معدّلة** — يستخدم القاعدة الجديدة بدل عد السيشنات
-- Unique Index — **معدّل** — بدون استثناء cancelled
+### Balanced Logic:
+- `recommended_track = 'balanced'` → `recommended_level_id = NULL` + `needs_manual_review = true`
 
----
+### Functions:
+- `update_v2_question_stats()` — تحديث إحصائيات الأسئلة ذرياً
+- `validate_placement_v2_schedule()` — trigger للتحقق من صحة المواعيد
 
-## ✅ Phase 2 Step 2: Edge Functions (مكتمل)
-
-### Files Modified:
-- `start-group/index.ts` — يضبط `last_delivered_content_number = starting_session_number - 1` + `owed_sessions_count = 0` + يعين `content_number` للـ completed sessions
-- `populate-completed-sessions/index.ts` — يعين `content_number` للسيشنات الناقصة + يفلتر `is_makeup = false`
-- `get-session-pdf-url/index.ts` — يستخدم `content_number` (مع fallback لـ `session_number`) لـ curriculum lookup
-
-### No Changes Needed:
-- `auto-complete-sessions` — التريجر `a_assign_content_on_complete` يتولى `content_number` assignment تلقائياً
-- `generate-sessions` — fallback function يتعامل مع session_number فقط
-- `reschedule-sessions` — scheduling فقط
-- `session-reminders` — notifications فقط
-- `generate-quiz-questions` — يستخدم curriculum_sessions.id مباشرة (لا session_number lookup)
+### RLS Policies:
+- Admin: full access على كل الجداول
+- Reception: manage schedules
+- Students: read/insert/update own data فقط
 
 ---
 
-## ✅ Phase 2 Step 3: Frontend (مكتمل)
+## 🔲 Phase 2: Edge Functions
 
-### Files Modified:
-- `SessionDetails.tsx` — curriculum lookup بـ `content_number` (مع fallback لـ `session_number`)
-- `MySessions.tsx` — نفس التعديل: curriculum key يعتمد على `content_number`
-- `GroupDetails.tsx` — level progress بـ `last_delivered_content_number` + `owed_sessions_count` + `expected_sessions_count`
-- `StudentDashboard.tsx` — level progress بـ `last_delivered_content_number` من الـ group
+### مطلوب بناؤه:
+1. `draw-placement-exam` الجديد → سحب أسئلة حسب section counts من settings
+2. `grade-placement-exam` الجديد → منطق التسكين الجديد مع confidence logic
+3. `import-question-bank` الجديد → validation صارم على section + track_category + options
 
-### No Changes Needed:
-- `Sessions.tsx` — sorting بـ `session_number` للعرض فقط (صحيح كما هو)
-- `MakeupSessions.tsx` — `original_session_number` للعرض فقط (صحيح كما هو)
-- `WeeklyScheduleGrid.tsx` — لا يستخدم `session_number` أصلاً
+### مطلوب حذفه لاحقاً (بعد نجاح V2):
+- `grade-placement-test`
+- `expire-placement-tests`
+
+---
+
+## 🔲 Phase 3: Frontend — إعدادات الأدمن
+
+1. `PlacementTestSettings.tsx` → 3 tabs فقط: General, Question Bank, Review Queue
+2. `GeneralSettingsTab.tsx` → إعدادات singleton (thresholds + counts)
+3. `QuestionBankTab.tsx` → sections بدل foundation/intermediate/advanced
+4. `QuestionEditDialog.tsx` → sections + track_category + review_status
+5. `ImportPreviewDialog.tsx` → validation جديد
+
+---
+
+## 🔲 Phase 4: Frontend — تجربة الطالب
+
+1. `PlacementGate.tsx` → جدول placement_v2_schedules
+2. `TakePlacementTest.tsx` → 3 sections مع section headers
+3. `PlacementExamHeader.tsx` → section indicator
+4. `SchedulePlacementDialog.tsx` → جدول جديد
+
+---
+
+## 🔲 Phase 5: Frontend — مراجعة الأدمن
+
+1. `PlacementTestReview.tsx` → per-section scores + track recommendation
+2. `PlacementAttemptDetailDialog.tsx` → بريفيو per-section
+3. `ReviewQueueTab.tsx` → needs_manual_review filter
+
+---
+
+## 🔲 Phase 6: تنظيف (بعد نجاح V2)
+
+### حذف جداول قديمة:
+- `placement_question_bank`, `placement_exam_attempt_questions`, `placement_exam_attempts`
+- `placement_exam_schedules`, `placement_exam_settings`, `placement_skill_blueprint`
+- `placement_rules`, `placement_exam_student_view`
+- `placement_tests`, `placement_test_results`, `placement_question_levels`, `placement_quiz_config`
+
+### حذف Edge Functions قديمة:
+- `grade-placement-test`, `expire-placement-tests`
+
+### حذف/إعادة بناء ملفات Frontend:
+- `BlueprintTab.tsx`, `PlacementRulesTab.tsx` → حذف نهائي
+
+---
+
+## ملاحظات مهمة
+
+- النظام القديم يبقى حتى نجاح V2 واختباره
+- Question counts تُقرأ من settings وليست hardcoded
+- Level mapping عبر `level_order` و `track` من جدول `levels`
+- balanced → `recommended_level_id = NULL` + `needs_manual_review = true`

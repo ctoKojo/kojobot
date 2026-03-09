@@ -2691,6 +2691,317 @@ export type Database = {
           },
         ]
       }
+      placement_v2_attempt_questions: {
+        Row: {
+          attempt_id: string
+          created_at: string | null
+          id: string
+          is_correct: boolean | null
+          order_index: number
+          question_id: number
+          section: string
+          section_skill: string
+          student_answer: string | null
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string | null
+          id?: string
+          is_correct?: boolean | null
+          order_index: number
+          question_id: number
+          section: string
+          section_skill: string
+          student_answer?: string | null
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string | null
+          id?: string
+          is_correct?: boolean | null
+          order_index?: number
+          question_id?: number
+          section?: string
+          section_skill?: string
+          student_answer?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_v2_attempt_questions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "placement_v2_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_v2_attempt_questions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "placement_v2_student_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_v2_attempt_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "placement_v2_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      placement_v2_attempts: {
+        Row: {
+          approved_level_id: string | null
+          attempt_number: number
+          confidence_level: string | null
+          created_at: string | null
+          id: string
+          needs_manual_review: boolean | null
+          recommended_level_id: string | null
+          recommended_track: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          schedule_id: string | null
+          section_a_max: number | null
+          section_a_passed: boolean | null
+          section_a_score: number | null
+          section_b_max: number | null
+          section_b_passed: boolean | null
+          section_b_score: number | null
+          section_c_hardware_max: number | null
+          section_c_hardware_score: number | null
+          section_c_software_max: number | null
+          section_c_software_score: number | null
+          started_at: string | null
+          status: string
+          student_id: string
+          submitted_at: string | null
+        }
+        Insert: {
+          approved_level_id?: string | null
+          attempt_number?: number
+          confidence_level?: string | null
+          created_at?: string | null
+          id?: string
+          needs_manual_review?: boolean | null
+          recommended_level_id?: string | null
+          recommended_track?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          schedule_id?: string | null
+          section_a_max?: number | null
+          section_a_passed?: boolean | null
+          section_a_score?: number | null
+          section_b_max?: number | null
+          section_b_passed?: boolean | null
+          section_b_score?: number | null
+          section_c_hardware_max?: number | null
+          section_c_hardware_score?: number | null
+          section_c_software_max?: number | null
+          section_c_software_score?: number | null
+          started_at?: string | null
+          status?: string
+          student_id: string
+          submitted_at?: string | null
+        }
+        Update: {
+          approved_level_id?: string | null
+          attempt_number?: number
+          confidence_level?: string | null
+          created_at?: string | null
+          id?: string
+          needs_manual_review?: boolean | null
+          recommended_level_id?: string | null
+          recommended_track?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          schedule_id?: string | null
+          section_a_max?: number | null
+          section_a_passed?: boolean | null
+          section_a_score?: number | null
+          section_b_max?: number | null
+          section_b_passed?: boolean | null
+          section_b_score?: number | null
+          section_c_hardware_max?: number | null
+          section_c_hardware_score?: number | null
+          section_c_software_max?: number | null
+          section_c_software_score?: number | null
+          started_at?: string | null
+          status?: string
+          student_id?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_v2_attempts_approved_level_id_fkey"
+            columns: ["approved_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_v2_attempts_recommended_level_id_fkey"
+            columns: ["recommended_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_v2_attempts_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "placement_v2_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      placement_v2_questions: {
+        Row: {
+          code_snippet: string | null
+          correct_answer: string
+          created_at: string | null
+          difficulty: string
+          explanation_ar: string | null
+          id: number
+          image_url: string | null
+          is_active: boolean
+          is_archived: boolean
+          options: Json
+          question_text_ar: string
+          review_status: string
+          section: string
+          skill: string
+          success_rate: number
+          track_category: string | null
+          updated_at: string | null
+          usage_count: number
+        }
+        Insert: {
+          code_snippet?: string | null
+          correct_answer: string
+          created_at?: string | null
+          difficulty?: string
+          explanation_ar?: string | null
+          id?: number
+          image_url?: string | null
+          is_active?: boolean
+          is_archived?: boolean
+          options: Json
+          question_text_ar: string
+          review_status?: string
+          section: string
+          skill: string
+          success_rate?: number
+          track_category?: string | null
+          updated_at?: string | null
+          usage_count?: number
+        }
+        Update: {
+          code_snippet?: string | null
+          correct_answer?: string
+          created_at?: string | null
+          difficulty?: string
+          explanation_ar?: string | null
+          id?: number
+          image_url?: string | null
+          is_active?: boolean
+          is_archived?: boolean
+          options?: Json
+          question_text_ar?: string
+          review_status?: string
+          section?: string
+          skill?: string
+          success_rate?: number
+          track_category?: string | null
+          updated_at?: string | null
+          usage_count?: number
+        }
+        Relationships: []
+      }
+      placement_v2_schedules: {
+        Row: {
+          closes_at: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          opens_at: string
+          scheduled_by: string
+          status: string
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          closes_at: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          opens_at: string
+          scheduled_by: string
+          status?: string
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          closes_at?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          opens_at?: string
+          scheduled_by?: string
+          status?: string
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      placement_v2_settings: {
+        Row: {
+          allow_retake: boolean
+          created_at: string | null
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          max_attempts: number
+          pass_threshold_section_a: number
+          pass_threshold_section_b: number
+          section_a_question_count: number
+          section_b_question_count: number
+          section_c_question_count: number
+          track_margin: number
+          updated_at: string | null
+        }
+        Insert: {
+          allow_retake?: boolean
+          created_at?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          max_attempts?: number
+          pass_threshold_section_a?: number
+          pass_threshold_section_b?: number
+          section_a_question_count?: number
+          section_b_question_count?: number
+          section_c_question_count?: number
+          track_margin?: number
+          updated_at?: string | null
+        }
+        Update: {
+          allow_retake?: boolean
+          created_at?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          max_attempts?: number
+          pass_threshold_section_a?: number
+          pass_threshold_section_b?: number
+          section_a_question_count?: number
+          section_b_question_count?: number
+          section_c_question_count?: number
+          track_margin?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       pricing_plans: {
         Row: {
           attendance_mode: string
@@ -4240,6 +4551,72 @@ export type Database = {
           },
         ]
       }
+      placement_v2_student_view: {
+        Row: {
+          approved_level_id: string | null
+          attempt_number: number | null
+          confidence_level: string | null
+          created_at: string | null
+          id: string | null
+          needs_manual_review: boolean | null
+          recommended_level_id: string | null
+          recommended_track: string | null
+          section_a_passed: boolean | null
+          section_b_passed: boolean | null
+          started_at: string | null
+          status: string | null
+          student_id: string | null
+          submitted_at: string | null
+        }
+        Insert: {
+          approved_level_id?: string | null
+          attempt_number?: number | null
+          confidence_level?: string | null
+          created_at?: string | null
+          id?: string | null
+          needs_manual_review?: boolean | null
+          recommended_level_id?: string | null
+          recommended_track?: string | null
+          section_a_passed?: boolean | null
+          section_b_passed?: boolean | null
+          started_at?: string | null
+          status?: string | null
+          student_id?: string | null
+          submitted_at?: string | null
+        }
+        Update: {
+          approved_level_id?: string | null
+          attempt_number?: number | null
+          confidence_level?: string | null
+          created_at?: string | null
+          id?: string | null
+          needs_manual_review?: boolean | null
+          recommended_level_id?: string | null
+          recommended_track?: string | null
+          section_a_passed?: boolean | null
+          section_b_passed?: boolean | null
+          started_at?: string | null
+          status?: string | null
+          student_id?: string | null
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_v2_attempts_approved_level_id_fkey"
+            columns: ["approved_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_v2_attempts_recommended_level_id_fkey"
+            columns: ["recommended_level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_questions_student_view: {
         Row: {
           code_snippet: string | null
@@ -4654,6 +5031,10 @@ export type Database = {
         Returns: Json
       }
       update_question_stats: {
+        Args: { p_is_correct: boolean; p_question_id: number }
+        Returns: undefined
+      }
+      update_v2_question_stats: {
         Args: { p_is_correct: boolean; p_question_id: number }
         Returns: undefined
       }
