@@ -33,7 +33,9 @@ export default function PlacementGate() {
         .from('placement_exam_schedules' as any)
         .select('*')
         .eq('student_id', user!.id)
-        .in('status', ['scheduled', 'open'])
+        // Include 'expired' to recover from any previous incorrect status updates;
+        // actual availability is determined by opens_at/closes_at below.
+        .in('status', ['scheduled', 'open', 'expired'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();

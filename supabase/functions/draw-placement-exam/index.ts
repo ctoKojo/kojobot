@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.0'
+import { DateTime } from "https://esm.sh/luxon@3.5.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,16 +49,33 @@ serve(async (req) => {
       .from('placement_exam_schedules')
       .select('id, opens_at, closes_at, status')
       .eq('student_id', studentId)
-      .in('status', ['scheduled', 'open'])
+      // Include 'expired' to recover if an old version of the function marked it incorrectly.
+      .in('status', ['scheduled', 'open', 'expired'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    const now = new Date()
+    // IMPORTANT: Always evaluate schedule windows in Cairo timezone.
+    // Schedules may be stored as ISO with timezone (preferred) or as local Cairo timestamps.
+    const CAIRO_TZ = 'Africa/Cairo'
+    const parseScheduleTs = (ts: string) => {
+      const hasExplicitTz = /Z$|[+-]\d{2}:\d{2}$/.test(ts)
+      const dt = hasExplicitTz
+        ? DateTime.fromISO(ts, { setZone: true })
+        : DateTime.fromISO(ts, { zone: CAIRO_TZ })
+      return dt.setZone(CAIRO_TZ)
+    }
+
+    const now = DateTime.now().setZone(CAIRO_TZ)
 
     if (activeSchedule) {
-      const opensAt = new Date(activeSchedule.opens_at)
-      const closesAt = new Date(activeSchedule.closes_at)
+      const opensAt = parseScheduleTs(activeSchedule.opens_at)
+      const closesAt = parseScheduleTs(activeSchedule.closes_at)
+
+      if (!opensAt.isValid || !closesAt.isValid) {
+        return new Response(JSON.stringify({ error: 'Invalid exam schedule timestamps' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
 
       if (now < opensAt) {
         return new Response(JSON.stringify({ error: 'Exam is not open yet', opens_at: activeSchedule.opens_at }),
@@ -65,12 +83,12 @@ serve(async (req) => {
       }
 
       if (now > closesAt) {
-        await adminClient.from('placement_exam_schedules').update({ status: 'expired' }).eq('id', activeSchedule.id)
+        // Do NOT mutate schedule status here; expiration is handled by admin workflows.
         return new Response(JSON.stringify({ error: 'Exam window has expired' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
-      if (activeSchedule.status === 'scheduled') {
+      if (activeSchedule.status !== 'open') {
         await adminClient.from('placement_exam_schedules').update({ status: 'open' }).eq('id', activeSchedule.id)
       }
     } else {
