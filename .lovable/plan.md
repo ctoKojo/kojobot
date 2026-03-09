@@ -22,22 +22,39 @@
 - `level_order = 2, track = 'software'` → Level 2 Software (id: `8bd4e5ca-...`)
 - `level_order = 2, track = 'hardware'` → Level 2 Hardware (id: `b598ef9b-...`)
 
-### Confidence Logic:
-- `high`: فرق track scores > 30% أو section_a/b scores > 80%
-- `medium`: فرق track scores بين track_margin و 30%
-- `low`: فرق track scores < track_margin → balanced + needs_manual_review
+### Confidence Logic (compute_placement_v2_confidence):
+```
+margin_a = |section_a_pct - pass_threshold_a|
+margin_b = |section_b_pct - pass_threshold_b|
+track_diff = |sw_pct - hw_pct|
+
+LOW إذا:
+  - تناقض: نجح B لكن رسب A
+  - أي section قريب من الحد (≤ 5%)
+
+HIGH إذا:
+  - margin_a > 10% AND margin_b > 10%
+  - AND (لم يصل Section C، أو track_diff > 2 * track_margin)
+
+MEDIUM: كل ما عدا ذلك
+```
 
 ### Balanced Logic:
 - `recommended_track = 'balanced'` → `recommended_level_id = NULL` + `needs_manual_review = true`
 
 ### Functions:
 - `update_v2_question_stats()` — تحديث إحصائيات الأسئلة ذرياً
-- `validate_placement_v2_schedule()` — trigger للتحقق من صحة المواعيد
+- `validate_placement_v2_schedule()` — trigger (opens_at < closes_at, opens_at > now(), closes_at > now())
+- `compute_placement_v2_confidence()` — دالة IMMUTABLE لحساب confidence level
 
 ### RLS Policies:
 - Admin: full access على كل الجداول
 - Reception: manage schedules
-- Students: read/insert/update own data فقط
+- Students: **SELECT فقط** على attempts و attempt_questions (الإنشاء عبر Edge Function)
+
+### Constraints:
+- `idx_one_in_progress_per_student` — partial unique index يمنع أكثر من attempt واحدة in_progress لنفس الطالب
+- Student View تخفي النتيجة حتى يتم الاعتماد أو تكون needs_manual_review = false
 
 ---
 
