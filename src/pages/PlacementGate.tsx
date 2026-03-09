@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, CalendarDays, Play, CheckCircle, Loader2, ShieldAlert } from 'lucide-react';
+import { Clock, CalendarDays, Play, CheckCircle, Loader2, ShieldAlert, LogOut } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,7 @@ import { KojobotLogo } from '@/components/KojobotLogo';
 type PlacementStatus = 'loading' | 'not_scheduled' | 'scheduled' | 'open' | 'submitted' | 'no_schedule';
 
 export default function PlacementGate() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { isRTL } = useLanguage();
   const navigate = useNavigate();
   const [status, setStatus] = useState<PlacementStatus>('loading');
@@ -122,6 +122,10 @@ export default function PlacementGate() {
                   ? 'يرجى التواصل مع الإدارة لتحديد موعد امتحان تحديد المستوى. لن تتمكن من الوصول للمنصة قبل اجتياز الامتحان.'
                   : 'Please contact the administration to schedule your placement exam. You cannot access the platform until the exam is completed.'}
               </p>
+              <Button variant="outline" onClick={signOut} className="mt-2">
+                <LogOut className="h-4 w-4 me-2" />
+                {isRTL ? 'تسجيل الخروج' : 'Sign Out'}
+              </Button>
             </>
           )}
 
