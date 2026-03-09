@@ -69,6 +69,17 @@ serve(async (req) => {
       const opensAt = parseScheduleTs(activeSchedule.opens_at)
       const closesAt = parseScheduleTs(activeSchedule.closes_at)
 
+      console.log(JSON.stringify({
+        msg: 'placement_schedule_check',
+        studentId,
+        now: now.toISO(),
+        opens_raw: activeSchedule.opens_at,
+        closes_raw: activeSchedule.closes_at,
+        opens_cairo: opensAt.toISO(),
+        closes_cairo: closesAt.toISO(),
+        status: activeSchedule.status,
+      }))
+
       if (!opensAt.isValid || !closesAt.isValid) {
         return new Response(JSON.stringify({ error: 'Invalid exam schedule timestamps' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
