@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, Eye, ClipboardCheck, AlertTriangle } from 'lucide-react';
+import { Eye, ClipboardCheck, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PlacementAttemptDetailDialog } from '@/components/placement-exam/PlacementAttemptDetailDialog';
 
 interface PlacementAttempt {
   id: string;
@@ -93,14 +92,11 @@ export default function PlacementTestReview() {
   const handleApproveLevel = async (attempt: PlacementAttempt, levelId: string) => {
     setApproving(true);
     try {
-      // Update profile level_id
       const { error } = await supabase.from('profiles')
         .update({ level_id: levelId })
         .eq('user_id', attempt.student_id);
-
       if (error) throw error;
 
-      // Mark attempt as reviewed
       await (supabase.from('placement_exam_attempts' as any)
         .update({ status: 'reviewed' }) as any)
         .eq('id', attempt.id);
@@ -199,11 +195,9 @@ export default function PlacementTestReview() {
                         </TableCell>
                         <TableCell>{getConfidenceBadge(a.confidence_level)}</TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => { setSelectedAttempt(a); setDetailOpen(true); }}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => { setSelectedAttempt(a); setDetailOpen(true); }}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -215,98 +209,15 @@ export default function PlacementTestReview() {
         </Card>
       </div>
 
-      {/* Detail Dialog */}
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{isRTL ? 'تفاصيل الامتحان' : 'Exam Details'}</DialogTitle>
-          </DialogHeader>
-          {selectedAttempt && (
-            <div className="space-y-4">
-              {/* Level breakdown */}
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: 'Foundation', score: selectedAttempt.foundation_score, max: selectedAttempt.foundation_max },
-                  { label: 'Intermediate', score: selectedAttempt.intermediate_score, max: selectedAttempt.intermediate_max },
-                  { label: 'Advanced', score: selectedAttempt.advanced_score, max: selectedAttempt.advanced_max },
-                ].map(item => (
-                  <Card key={item.label}>
-                    <CardContent className="pt-4 text-center">
-                      <p className="text-xs text-muted-foreground">{item.label}</p>
-                      <p className="text-lg font-bold">{item.score}/{item.max}</p>
-                      <p className="text-xs">
-                        {item.max ? Math.round(((item.score || 0) / item.max) * 100) : 0}%
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Weak skills */}
-              {selectedAttempt.weak_skills && Array.isArray(selectedAttempt.weak_skills) && selectedAttempt.weak_skills.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium mb-2">{isRTL ? 'مهارات ضعيفة' : 'Weak Skills'}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedAttempt.weak_skills.map((ws: any, i: number) => (
-                      <Badge key={i} variant="destructive">{ws.skill} ({ws.rate}%)</Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Recommended level */}
-              <div className="flex items-center justify-between p-3 rounded-lg border">
-                <span className="text-sm font-medium">{isRTL ? 'المستوى المقترح' : 'Recommended Level'}</span>
-                <Badge className="text-base">{selectedAttempt.recommended_level}</Badge>
-              </div>
-
-              {selectedAttempt.needs_manual_review && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <span className="text-sm text-amber-800 dark:text-amber-300">
-                    {isRTL ? 'يحتاج مراجعة يدوية — الثقة منخفضة أو نتائج غير متسقة' : 'Needs manual review — low confidence or inconsistent results'}
-                  </span>
-                </div>
-              )}
-
-              {/* Approve with level selection */}
-              <div className="space-y-2">
-                <p className="text-sm font-medium">{isRTL ? 'اعتماد المستوى' : 'Assign Level'}</p>
-                <div className="flex gap-2">
-                  {selectedAttempt.recommended_level && (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        // Find matching level by name pattern
-                        const matchLevel = levels.find(l =>
-                          l.name.toLowerCase().includes(selectedAttempt.recommended_level!.toLowerCase())
-                        );
-                        if (matchLevel) handleApproveLevel(selectedAttempt, matchLevel.id);
-                      }}
-                      disabled={approving}
-                    >
-                      <CheckCircle className="h-4 w-4 me-1" />
-                      {isRTL ? 'موافقة على المقترح' : 'Approve Recommended'}
-                    </Button>
-                  )}
-                  <Select onValueChange={val => handleApproveLevel(selectedAttempt, val)} disabled={approving}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder={isRTL ? 'مستوى آخر' : 'Override'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {levels.map(l => (
-                        <SelectItem key={l.id} value={l.id}>
-                          {isRTL ? l.name_ar : l.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <PlacementAttemptDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        attempt={selectedAttempt}
+        levels={levels}
+        isRTL={isRTL}
+        onApproveLevel={handleApproveLevel}
+        approving={approving}
+      />
     </DashboardLayout>
   );
 }
