@@ -121,6 +121,7 @@ interface Level {
   id: string;
   name: string;
   name_ar: string;
+  level_order: number;
 }
 
 export default function StudentsPage() {
@@ -292,8 +293,9 @@ export default function StudentsPage() {
       // Fetch levels
       const { data: levelsData } = await supabase
         .from('levels')
-        .select('id, name, name_ar')
-        .eq('is_active', true);
+        .select('id, name, name_ar, level_order')
+        .eq('is_active', true)
+        .order('level_order');
       setLevels(levelsData || []);
 
       // Fetch pricing plans
@@ -948,21 +950,46 @@ export default function StudentsPage() {
               </div>
               <div className="grid gap-2">
                 <Label>{t.students.level}</Label>
-                <Select
-                  value={formData.level_id}
-                  onValueChange={(value) => setFormData({ ...formData, level_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={isRTL ? 'اختر المستوى' : 'Select level'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {levels.map((level) => (
-                      <SelectItem key={level.id} value={level.id}>
-                        {language === 'ar' ? level.name_ar : level.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {editingStudent ? (
+                  <Select
+                    value={formData.level_id}
+                    onValueChange={(value) => setFormData({ ...formData, level_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={isRTL ? 'اختر المستوى' : 'Select level'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {levels.map((level) => (
+                        <SelectItem key={level.id} value={level.id}>
+                          {language === 'ar' ? level.name_ar : level.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <>
+                    <Select
+                      value={formData.level_id}
+                      onValueChange={(value) => setFormData({ ...formData, level_id: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isRTL ? 'اختر المستوى' : 'Select level'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {levels.filter(l => l.level_order === 0).map((level) => (
+                          <SelectItem key={level.id} value={level.id}>
+                            {language === 'ar' ? level.name_ar : level.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {isRTL
+                        ? 'المستويات الأعلى تُحدد عبر امتحان تحديد المستوى فقط'
+                        : 'Higher levels are determined by the placement exam only'}
+                    </p>
+                  </>
+                )}
               </div>
               <div className="grid gap-2">
                 <Label>{isRTL ? 'نوع الاشتراك' : 'Subscription Type'} *</Label>
