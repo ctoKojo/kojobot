@@ -12,22 +12,22 @@ import { supabase } from '@/integrations/supabase/client';
 interface ReviewAttempt {
   id: string;
   student_id: string;
-  age_group: string;
   attempt_number: number;
   status: string;
-  total_score: number | null;
-  max_score: number | null;
-  percentage: number | null;
-  recommended_level: string | null;
+  section_a_score: number | null;
+  section_a_max: number | null;
+  section_a_passed: boolean | null;
+  section_b_score: number | null;
+  section_b_max: number | null;
+  section_b_passed: boolean | null;
+  section_c_software_score: number | null;
+  section_c_software_max: number | null;
+  section_c_hardware_score: number | null;
+  section_c_hardware_max: number | null;
+  recommended_track: string | null;
   confidence_level: string | null;
   needs_manual_review: boolean;
-  weak_skills: any;
-  foundation_score: number | null;
-  foundation_max: number | null;
-  intermediate_score: number | null;
-  intermediate_max: number | null;
-  advanced_score: number | null;
-  advanced_max: number | null;
+  recommended_level_id: string | null;
   submitted_at: string | null;
   student_name?: string;
 }
@@ -43,14 +43,13 @@ export default function ReviewQueueTab() {
   const fetchReviewQueue = async () => {
     setLoading(true);
     const { data } = await supabase
-      .from('placement_exam_attempts' as any)
+      .from('placement_v2_attempts')
       .select('*')
       .eq('needs_manual_review', true)
       .in('status', ['submitted'])
       .order('submitted_at', { ascending: false });
 
     if (data) {
-      // Fetch student names
       const studentIds = [...new Set((data as any[]).map(a => a.student_id))];
       const { data: profiles } = await supabase
         .from('profiles')
@@ -58,10 +57,10 @@ export default function ReviewQueueTab() {
         .in('user_id', studentIds);
 
       const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
-      
+
       setAttempts((data as any[]).map(a => ({
         ...a,
-        student_name: isRTL 
+        student_name: isRTL
           ? (profileMap.get(a.student_id)?.full_name_ar || profileMap.get(a.student_id)?.full_name || '-')
           : (profileMap.get(a.student_id)?.full_name || '-'),
       })));
@@ -72,14 +71,14 @@ export default function ReviewQueueTab() {
   const confidenceBadge = (level: string | null) => {
     if (!level) return null;
     const variants: Record<string, 'default' | 'secondary' | 'destructive'> = {
-      high: 'default', medium: 'secondary', low: 'destructive'
+      high: 'default', medium: 'secondary', low: 'destructive',
     };
-    return <Badge variant={variants[level] || 'secondary'}>{level}</Badge>;
+    return <Badge variant={variants[level] || 'secondary'} className="capitalize">{level}</Badge>;
   };
 
   const pct = (score: number | null, max: number | null) => {
-    if (!score || !max || max === 0) return '—';
-    return `${score}/${max} (${Math.round((score/max)*100)}%)`;
+    if (score == null || !max || max === 0) return '—';
+    return `${score}/${max} (${Math.round((score / max) * 100)}%)`;
   };
 
   if (loading) return <Skeleton className="h-64 w-full" />;
@@ -100,12 +99,11 @@ export default function ReviewQueueTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                  <TableHead>{isRTL ? 'الفئة' : 'Age'}</TableHead>
                   <TableHead>{isRTL ? 'المحاولة' : 'Attempt'}</TableHead>
-                  <TableHead>{isRTL ? 'الدرجة' : 'Score'}</TableHead>
-                  <TableHead>{isRTL ? 'المستوى المقترح' : 'Recommended'}</TableHead>
+                  <TableHead>{isRTL ? 'القسم A' : 'Sec A'}</TableHead>
+                  <TableHead>{isRTL ? 'القسم B' : 'Sec B'}</TableHead>
+                  <TableHead>{isRTL ? 'المسار المقترح' : 'Track'}</TableHead>
                   <TableHead>{isRTL ? 'الثقة' : 'Confidence'}</TableHead>
-                  <TableHead>{isRTL ? 'نقاط ضعف' : 'Weak Skills'}</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -113,24 +111,21 @@ export default function ReviewQueueTab() {
                 {attempts.map(a => (
                   <TableRow key={a.id}>
                     <TableCell className="font-medium">{a.student_name}</TableCell>
-                    <TableCell><Badge variant="outline">{a.age_group}</Badge></TableCell>
                     <TableCell>#{a.attempt_number}</TableCell>
-                    <TableCell>{a.percentage != null ? `${a.percentage}%` : '—'}</TableCell>
                     <TableCell>
-                      <Badge className="capitalize">{a.recommended_level || '—'}</Badge>
+                      <span className={a.section_a_passed ? 'text-green-600' : 'text-red-600'}>
+                        {pct(a.section_a_score, a.section_a_max)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className={a.section_b_passed ? 'text-green-600' : 'text-red-600'}>
+                        {pct(a.section_b_score, a.section_b_max)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">{a.recommended_track || '—'}</Badge>
                     </TableCell>
                     <TableCell>{confidenceBadge(a.confidence_level)}</TableCell>
-                    <TableCell>
-                      {Array.isArray(a.weak_skills) && a.weak_skills.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {a.weak_skills.slice(0, 3).map((ws: any, i: number) => (
-                            <Badge key={i} variant="destructive" className="text-xs">
-                              {ws.skill} ({ws.rate}%)
-                            </Badge>
-                          ))}
-                        </div>
-                      ) : '—'}
-                    </TableCell>
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => setSelectedAttempt(a)}>
                         <Eye className="h-4 w-4" />
@@ -157,48 +152,52 @@ export default function ReviewQueueTab() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="text-muted-foreground">{isRTL ? 'الطالب' : 'Student'}:</span> {selectedAttempt.student_name}</div>
-                <div><span className="text-muted-foreground">{isRTL ? 'الفئة' : 'Age'}:</span> {selectedAttempt.age_group}</div>
-                <div><span className="text-muted-foreground">{isRTL ? 'الدرجة' : 'Score'}:</span> {selectedAttempt.total_score}/{selectedAttempt.max_score}</div>
-                <div><span className="text-muted-foreground">{isRTL ? 'النسبة' : 'Percentage'}:</span> {selectedAttempt.percentage}%</div>
+                <div><span className="text-muted-foreground">{isRTL ? 'المحاولة' : 'Attempt'}:</span> #{selectedAttempt.attempt_number}</div>
               </div>
 
               <div className="space-y-2">
-                <h4 className="font-medium text-sm">{isRTL ? 'الدرجات حسب المستوى' : 'Scores by Level'}</h4>
-                <div className="grid grid-cols-3 gap-2 text-sm">
+                <h4 className="font-medium text-sm">{isRTL ? 'الدرجات حسب القسم' : 'Scores by Section'}</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
                   <Card className="p-3 text-center">
-                    <p className="text-xs text-muted-foreground">Foundation</p>
-                    <p className="font-bold">{pct(selectedAttempt.foundation_score, selectedAttempt.foundation_max)}</p>
+                    <p className="text-xs text-muted-foreground">Section A</p>
+                    <p className={`font-bold ${selectedAttempt.section_a_passed ? 'text-green-600' : 'text-red-600'}`}>
+                      {pct(selectedAttempt.section_a_score, selectedAttempt.section_a_max)}
+                    </p>
+                    <Badge variant={selectedAttempt.section_a_passed ? 'default' : 'destructive'} className="text-xs mt-1">
+                      {selectedAttempt.section_a_passed ? (isRTL ? 'نجح' : 'Passed') : (isRTL ? 'رسب' : 'Failed')}
+                    </Badge>
                   </Card>
                   <Card className="p-3 text-center">
-                    <p className="text-xs text-muted-foreground">Intermediate</p>
-                    <p className="font-bold">{pct(selectedAttempt.intermediate_score, selectedAttempt.intermediate_max)}</p>
-                  </Card>
-                  <Card className="p-3 text-center">
-                    <p className="text-xs text-muted-foreground">Advanced</p>
-                    <p className="font-bold">{pct(selectedAttempt.advanced_score, selectedAttempt.advanced_max)}</p>
+                    <p className="text-xs text-muted-foreground">Section B</p>
+                    <p className={`font-bold ${selectedAttempt.section_b_passed ? 'text-green-600' : 'text-red-600'}`}>
+                      {pct(selectedAttempt.section_b_score, selectedAttempt.section_b_max)}
+                    </p>
+                    <Badge variant={selectedAttempt.section_b_passed ? 'default' : 'destructive'} className="text-xs mt-1">
+                      {selectedAttempt.section_b_passed ? (isRTL ? 'نجح' : 'Passed') : (isRTL ? 'رسب' : 'Failed')}
+                    </Badge>
                   </Card>
                 </div>
+
+                {/* Section C details */}
+                {(selectedAttempt.section_c_software_max || selectedAttempt.section_c_hardware_max) && (
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <Card className="p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Section C — Software</p>
+                      <p className="font-bold">{pct(selectedAttempt.section_c_software_score, selectedAttempt.section_c_software_max)}</p>
+                    </Card>
+                    <Card className="p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Section C — Hardware</p>
+                      <p className="font-bold">{pct(selectedAttempt.section_c_hardware_score, selectedAttempt.section_c_hardware_max)}</p>
+                    </Card>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">{isRTL ? 'المستوى المقترح' : 'Recommended'}:</span>
-                <Badge className="capitalize">{selectedAttempt.recommended_level}</Badge>
+                <span className="text-sm text-muted-foreground">{isRTL ? 'المسار المقترح' : 'Track'}:</span>
+                <Badge className="capitalize">{selectedAttempt.recommended_track || '—'}</Badge>
                 {confidenceBadge(selectedAttempt.confidence_level)}
               </div>
-
-              {Array.isArray(selectedAttempt.weak_skills) && selectedAttempt.weak_skills.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm mb-2">{isRTL ? 'نقاط الضعف' : 'Weak Skills'}</h4>
-                  <div className="space-y-1">
-                    {selectedAttempt.weak_skills.map((ws: any, i: number) => (
-                      <div key={i} className="flex items-center justify-between text-sm bg-destructive/10 rounded px-3 py-1">
-                        <span className="capitalize">{ws.skill}</span>
-                        <span>{ws.correct}/{ws.total} ({ws.rate}%)</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               <Button variant="outline" className="w-full" onClick={() => {
                 window.open('/placement-test-review', '_blank');

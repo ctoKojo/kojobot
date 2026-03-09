@@ -23,43 +23,51 @@ import ImportPreviewDialog from './ImportPreviewDialog';
 
 interface Question {
   id: number;
-  age_group: string;
-  level: string;
+  section: string;
   skill: string;
+  track_category: string | null;
   difficulty: string;
-  question_type: string;
   question_text_ar: string;
   options: Record<string, string>;
   correct_answer: string;
   explanation_ar: string | null;
-  is_active: boolean;
-  usage_count: number;
-  success_rate: number;
   code_snippet: string | null;
   image_url: string | null;
+  is_active: boolean;
+  is_archived: boolean;
+  review_status: string;
+  usage_count: number;
+  success_rate: number;
 }
 
-const AGE_GROUPS = ['6_9', '10_13', '14_18'];
-const LEVELS = ['foundation', 'intermediate', 'advanced'];
-const SKILLS = [
-  'algorithmic_thinking', 'conditions', 'control_flow', 'data_structures',
-  'data_types', 'debugging', 'debugging_basic', 'events', 'functions',
-  'lists', 'logic', 'loops', 'oop', 'patterns', 'problem_solving',
-  'sequence', 'variables', 'web_basics',
-];
+const SECTIONS = ['section_a', 'section_b', 'section_c'];
 const DIFFICULTIES = ['easy', 'medium', 'hard'];
+const REVIEW_STATUSES = ['pending', 'approved', 'rejected', 'needs_revision'];
 
-const EMPTY_QUESTION: Partial<Question> = {
-  age_group: '6_9', level: 'foundation', skill: 'logic', difficulty: 'medium',
-  question_type: 'mcq', question_text_ar: '', correct_answer: 'A',
-  explanation_ar: '', code_snippet: '', image_url: '', is_active: true,
-  options: { A: '', B: '', C: '', D: '' },
+const SECTION_LABELS: Record<string, { en: string; ar: string }> = {
+  section_a: { en: 'Section A', ar: 'القسم A' },
+  section_b: { en: 'Section B', ar: 'القسم B' },
+  section_c: { en: 'Section C', ar: 'القسم C' },
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   hard: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+};
+
+const REVIEW_COLORS: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  needs_revision: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+};
+
+const EMPTY_QUESTION: Partial<Question> = {
+  section: 'section_a', skill: 'computer_basics', difficulty: 'medium',
+  question_text_ar: '', correct_answer: 'A', explanation_ar: '', code_snippet: '',
+  image_url: '', is_active: true, is_archived: false, review_status: 'pending',
+  track_category: null, options: { A: '', B: '', C: '', D: '' },
 };
 
 export default function QuestionBankTab() {
@@ -80,12 +88,11 @@ export default function QuestionBankTab() {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Filters & search
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [fAge, setFAge] = useState<string>('all');
-  const [fLevel, setFLevel] = useState<string>('all');
-  const [fSkill, setFSkill] = useState<string>('all');
+  const [fSection, setFSection] = useState<string>('all');
   const [fDifficulty, setFDifficulty] = useState<string>('all');
+  const [fReview, setFReview] = useState<string>('all');
   const [fStatus, setFStatus] = useState<string>('all');
 
   // Pagination & sort
@@ -96,10 +103,10 @@ export default function QuestionBankTab() {
   // Column visibility
   const [columns, setColumns] = useState<ColumnDef[]>([
     { key: 'text', label: isRTL ? 'النص' : 'Text', visible: true },
-    { key: 'age', label: isRTL ? 'الفئة' : 'Age', visible: true },
-    { key: 'level', label: isRTL ? 'المستوى' : 'Level', visible: true },
+    { key: 'section', label: isRTL ? 'القسم' : 'Section', visible: true },
     { key: 'skill', label: isRTL ? 'المهارة' : 'Skill', visible: true },
     { key: 'difficulty', label: isRTL ? 'الصعوبة' : 'Difficulty', visible: true },
+    { key: 'review', label: isRTL ? 'المراجعة' : 'Review', visible: true },
     { key: 'answer', label: isRTL ? 'الإجابة' : 'Answer', visible: true },
     { key: 'usage', label: isRTL ? 'الاستخدام' : 'Usage', visible: true },
     { key: 'rate', label: isRTL ? 'النجاح' : 'Rate', visible: true },
@@ -117,28 +124,25 @@ export default function QuestionBankTab() {
   };
 
   // Stats
-  const stats = useMemo((): StatItem[] => {
-    return [
-      { label: isRTL ? 'إجمالي الأسئلة' : 'Total Questions', value: totalCount, icon: Database, gradient: 'from-blue-500 to-blue-600' },
-      { label: isRTL ? 'مفعّلة' : 'Active', value: questions.filter(q => q.is_active).length > 0 ? totalCount : 0, icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600' },
-      { label: isRTL ? 'المهارات' : 'Skills', value: new Set(questions.map(q => q.skill)).size || SKILLS.length, icon: Layers, gradient: 'from-purple-500 to-purple-600' },
-      { label: isRTL ? 'متوسط النجاح' : 'Avg Success', value: questions.length ? `${Math.round(questions.reduce((s, q) => s + q.success_rate, 0) / questions.length * 100)}%` : '0%', icon: BarChart3, gradient: 'from-amber-500 to-amber-600' },
-    ];
-  }, [totalCount, questions, isRTL]);
+  const stats = useMemo((): StatItem[] => [
+    { label: isRTL ? 'إجمالي الأسئلة' : 'Total Questions', value: totalCount, icon: Database, gradient: 'from-blue-500 to-blue-600' },
+    { label: isRTL ? 'معتمدة' : 'Approved', value: questions.filter(q => q.review_status === 'approved').length, icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600' },
+    { label: isRTL ? 'المهارات' : 'Skills', value: new Set(questions.map(q => q.skill)).size, icon: Layers, gradient: 'from-purple-500 to-purple-600' },
+    { label: isRTL ? 'متوسط النجاح' : 'Avg Success', value: questions.length ? `${Math.round(questions.reduce((s, q) => s + q.success_rate, 0) / questions.length * 100)}%` : '0%', icon: BarChart3, gradient: 'from-amber-500 to-amber-600' },
+  ], [totalCount, questions, isRTL]);
 
   // Fetch
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
-    let query = supabase.from('placement_question_bank' as any).select('*', { count: 'exact' });
-    if (fAge !== 'all') query = query.eq('age_group', fAge);
-    if (fLevel !== 'all') query = query.eq('level', fLevel);
-    if (fSkill !== 'all') query = query.eq('skill', fSkill);
+    let query = supabase.from('placement_v2_questions').select('*', { count: 'exact' });
+    if (fSection !== 'all') query = query.eq('section', fSection);
     if (fDifficulty !== 'all') query = query.eq('difficulty', fDifficulty);
+    if (fReview !== 'all') query = query.eq('review_status', fReview);
     if (fStatus === 'active') query = query.eq('is_active', true);
     if (fStatus === 'inactive') query = query.eq('is_active', false);
+    if (fStatus === 'archived') query = query.eq('is_archived', true);
     if (searchQuery) query = query.ilike('question_text_ar', `%${searchQuery}%`);
 
-    // Sort
     const orderCol = sortKey || 'id';
     query = query.order(orderCol, { ascending: sortDirection === 'asc' });
 
@@ -149,10 +153,10 @@ export default function QuestionBankTab() {
     if (data) setQuestions(data as any);
     if (count !== null) setTotalCount(count);
     setLoading(false);
-  }, [fAge, fLevel, fSkill, fDifficulty, fStatus, searchQuery, currentPage, pageSize, sortKey, sortDirection]);
+  }, [fSection, fDifficulty, fReview, fStatus, searchQuery, currentPage, pageSize, sortKey, sortDirection]);
 
   useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
-  useEffect(() => { setCurrentPage(1); }, [fAge, fLevel, fSkill, fDifficulty, fStatus, searchQuery, pageSize]);
+  useEffect(() => { setCurrentPage(1); }, [fSection, fDifficulty, fReview, fStatus, searchQuery, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -164,18 +168,20 @@ export default function QuestionBankTab() {
     if (!editQ) return;
     setSaving(true);
     const payload = {
-      age_group: editQ.age_group, level: editQ.level, skill: editQ.skill,
-      difficulty: editQ.difficulty, question_type: editQ.question_type || 'mcq',
+      section: editQ.section, skill: editQ.skill, difficulty: editQ.difficulty,
+      track_category: editQ.section === 'section_c' ? (editQ.track_category || 'software') : null,
       question_text_ar: editQ.question_text_ar, options: editQ.options,
       correct_answer: editQ.correct_answer, explanation_ar: editQ.explanation_ar || null,
       code_snippet: editQ.code_snippet || null, image_url: editQ.image_url || null,
-      is_active: editQ.is_active ?? true, updated_at: new Date().toISOString(),
+      is_active: editQ.is_active ?? true, is_archived: editQ.is_archived ?? false,
+      review_status: editQ.review_status || 'pending',
+      updated_at: new Date().toISOString(),
     };
     let error;
     if (editQ.id) {
-      ({ error } = await supabase.from('placement_question_bank' as any).update(payload as any).eq('id', editQ.id));
+      ({ error } = await supabase.from('placement_v2_questions').update(payload as any).eq('id', editQ.id));
     } else {
-      ({ error } = await supabase.from('placement_question_bank' as any).insert(payload as any));
+      ({ error } = await supabase.from('placement_v2_questions').insert(payload as any));
     }
     if (error) {
       toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
@@ -189,12 +195,12 @@ export default function QuestionBankTab() {
 
   const handleDelete = async (id: number) => {
     if (!confirm(isRTL ? 'هل أنت متأكد من الحذف؟' : 'Are you sure you want to delete?')) return;
-    await supabase.from('placement_question_bank' as any).delete().eq('id', id);
+    await supabase.from('placement_v2_questions').delete().eq('id', id);
     fetchQuestions();
   };
 
   const toggleActive = async (q: Question) => {
-    await supabase.from('placement_question_bank' as any)
+    await supabase.from('placement_v2_questions')
       .update({ is_active: !q.is_active, updated_at: new Date().toISOString() } as any)
       .eq('id', q.id);
     fetchQuestions();
@@ -257,28 +263,14 @@ export default function QuestionBankTab() {
     }
   };
 
-  // Filter UI for toolbar
+  // Filter UI
   const filterUI = (
     <div className="flex flex-wrap gap-2">
-      <Select value={fAge} onValueChange={setFAge}>
-        <SelectTrigger className="w-28 h-8 text-xs"><SelectValue placeholder={isRTL ? 'الفئة' : 'Age'} /></SelectTrigger>
+      <Select value={fSection} onValueChange={setFSection}>
+        <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder={isRTL ? 'القسم' : 'Section'} /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">{isRTL ? 'كل الفئات' : 'All Ages'}</SelectItem>
-          {AGE_GROUPS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={fLevel} onValueChange={setFLevel}>
-        <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder={isRTL ? 'المستوى' : 'Level'} /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{isRTL ? 'كل المستويات' : 'All Levels'}</SelectItem>
-          {LEVELS.map(l => <SelectItem key={l} value={l} className="capitalize">{l}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={fSkill} onValueChange={setFSkill}>
-        <SelectTrigger className="w-36 h-8 text-xs"><SelectValue placeholder={isRTL ? 'المهارة' : 'Skill'} /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{isRTL ? 'كل المهارات' : 'All Skills'}</SelectItem>
-          {SKILLS.map(s => <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g, ' ')}</SelectItem>)}
+          <SelectItem value="all">{isRTL ? 'كل الأقسام' : 'All Sections'}</SelectItem>
+          {SECTIONS.map(s => <SelectItem key={s} value={s}>{isRTL ? SECTION_LABELS[s].ar : SECTION_LABELS[s].en}</SelectItem>)}
         </SelectContent>
       </Select>
       <Select value={fDifficulty} onValueChange={setFDifficulty}>
@@ -288,12 +280,20 @@ export default function QuestionBankTab() {
           {DIFFICULTIES.map(d => <SelectItem key={d} value={d} className="capitalize">{d}</SelectItem>)}
         </SelectContent>
       </Select>
+      <Select value={fReview} onValueChange={setFReview}>
+        <SelectTrigger className="w-32 h-8 text-xs"><SelectValue placeholder={isRTL ? 'المراجعة' : 'Review'} /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{isRTL ? 'الكل' : 'All'}</SelectItem>
+          {REVIEW_STATUSES.map(r => <SelectItem key={r} value={r} className="capitalize">{r.replace(/_/g, ' ')}</SelectItem>)}
+        </SelectContent>
+      </Select>
       <Select value={fStatus} onValueChange={setFStatus}>
         <SelectTrigger className="w-28 h-8 text-xs"><SelectValue placeholder={isRTL ? 'الحالة' : 'Status'} /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">{isRTL ? 'الكل' : 'All'}</SelectItem>
           <SelectItem value="active">{isRTL ? 'مفعل' : 'Active'}</SelectItem>
           <SelectItem value="inactive">{isRTL ? 'معطل' : 'Inactive'}</SelectItem>
+          <SelectItem value="archived">{isRTL ? 'مؤرشف' : 'Archived'}</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -301,10 +301,8 @@ export default function QuestionBankTab() {
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
       <StatsGrid stats={stats} columns={4} />
 
-      {/* Toolbar */}
       <TableToolbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -344,18 +342,11 @@ export default function QuestionBankTab() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm line-clamp-2 mb-2">{q.question_text_ar}</p>
                   <div className="flex flex-wrap gap-1.5">
-                    <Badge variant="outline" className="text-xs">{q.age_group}</Badge>
-                    <Badge variant="secondary" className="text-xs capitalize">{q.level}</Badge>
+                    <Badge variant="secondary" className="text-xs">{isRTL ? SECTION_LABELS[q.section]?.ar : SECTION_LABELS[q.section]?.en}</Badge>
                     <Badge variant="outline" className="text-xs capitalize">{q.skill.replace(/_/g, ' ')}</Badge>
                     <Badge className={cn('text-xs border-0', DIFFICULTY_COLORS[q.difficulty])}>{q.difficulty}</Badge>
-                    <Badge variant="outline" className="text-xs font-mono">{isRTL ? 'الإجابة' : 'Ans'}: {q.correct_answer}</Badge>
-                  </div>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                    <span>{isRTL ? 'استخدام' : 'Used'}: {q.usage_count}</span>
-                    <span>{isRTL ? 'نجاح' : 'Rate'}: {(q.success_rate * 100).toFixed(0)}%</span>
-                    <Badge variant={q.is_active ? 'default' : 'secondary'} className="text-xs">
-                      {q.is_active ? (isRTL ? 'مفعل' : 'Active') : (isRTL ? 'معطل' : 'Inactive')}
-                    </Badge>
+                    <Badge className={cn('text-xs border-0', REVIEW_COLORS[q.review_status])}>{q.review_status.replace(/_/g, ' ')}</Badge>
+                    {q.track_category && <Badge variant="outline" className="text-xs capitalize">{q.track_category}</Badge>}
                   </div>
                 </div>
                 <DropdownMenu>
@@ -372,7 +363,7 @@ export default function QuestionBankTab() {
                       {q.is_active ? <XCircle className="h-4 w-4 me-2" /> : <CheckCircle className="h-4 w-4 me-2" />}
                       {q.is_active ? (isRTL ? 'تعطيل' : 'Deactivate') : (isRTL ? 'تفعيل' : 'Activate')}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDelete(q.id)} className="text-destructive focus:text-destructive">
+                    <DropdownMenuItem onClick={() => handleDelete(q.id)} className="text-destructive">
                       <Trash2 className="h-4 w-4 me-2" />{isRTL ? 'حذف' : 'Delete'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -386,113 +377,98 @@ export default function QuestionBankTab() {
       {/* Desktop Table */}
       <Card className="hidden lg:block">
         <CardContent className="p-0">
-          <Table className="table-fixed">
-            <TableHeader>
-              <TableRow className="bg-muted/30">
-                <TableHead className="w-[4%]">ID</TableHead>
-                {colVis.text && <SortableTableHead sortKey="question_text_ar" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="w-[24%]">{isRTL ? 'النص' : 'Text'}</SortableTableHead>}
-                {colVis.age && <SortableTableHead sortKey="age_group" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="w-[8%]">{isRTL ? 'الفئة' : 'Age'}</SortableTableHead>}
-                {colVis.level && <SortableTableHead sortKey="level" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="w-[10%]">{isRTL ? 'المستوى' : 'Level'}</SortableTableHead>}
-                {colVis.skill && <SortableTableHead sortKey="skill" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="w-[12%]">{isRTL ? 'المهارة' : 'Skill'}</SortableTableHead>}
-                {colVis.difficulty && <SortableTableHead sortKey="difficulty" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="w-[8%]">{isRTL ? 'الصعوبة' : 'Diff'}</SortableTableHead>}
-                {colVis.answer && <TableHead className="w-[5%]">{isRTL ? 'الإجابة' : 'Ans'}</TableHead>}
-                {colVis.usage && <SortableTableHead sortKey="usage_count" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="w-[7%]">{isRTL ? 'استخدام' : 'Used'}</SortableTableHead>}
-                {colVis.rate && <SortableTableHead sortKey="success_rate" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort} className="w-[7%]">{isRTL ? 'نجاح' : 'Rate'}</SortableTableHead>}
-                {colVis.status && <TableHead className="w-[7%]">{isRTL ? 'الحالة' : 'Status'}</TableHead>}
-                <TableHead className="w-[5%]">{isRTL ? 'إجراء' : 'Actions'}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
-                  {isRTL ? 'جارٍ التحميل...' : 'Loading...'}
-                </TableCell></TableRow>
-              ) : questions.length === 0 ? (
-                <TableRow><TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
-                  {isRTL ? 'لا توجد أسئلة' : 'No questions found'}
-                </TableCell></TableRow>
-              ) : questions.map(q => (
-                <TableRow key={q.id} className="hover:bg-muted/50">
-                  <TableCell className="font-mono text-xs text-muted-foreground">{q.id}</TableCell>
-                  {colVis.text && (
-                    <TableCell className="max-w-0">
-                      <p className="truncate text-sm font-medium">{q.question_text_ar}</p>
-                    </TableCell>
-                  )}
-                  {colVis.age && (
-                    <TableCell><Badge variant="outline" className="text-xs">{q.age_group}</Badge></TableCell>
-                  )}
-                  {colVis.level && (
-                    <TableCell><span className="capitalize text-xs">{q.level}</span></TableCell>
-                  )}
-                  {colVis.skill && (
-                    <TableCell><span className="capitalize text-xs">{q.skill.replace(/_/g, ' ')}</span></TableCell>
-                  )}
-                  {colVis.difficulty && (
-                    <TableCell>
-                      <Badge className={cn('text-xs border-0', DIFFICULTY_COLORS[q.difficulty])}>{q.difficulty}</Badge>
-                    </TableCell>
-                  )}
-                  {colVis.answer && (
-                    <TableCell className="font-mono font-bold text-center">{q.correct_answer}</TableCell>
-                  )}
-                  {colVis.usage && (
-                    <TableCell className="text-center tabular-nums">{q.usage_count}</TableCell>
-                  )}
-                  {colVis.rate && (
-                    <TableCell className="text-center tabular-nums">{(q.success_rate * 100).toFixed(0)}%</TableCell>
-                  )}
-                  {colVis.status && (
-                    <TableCell>
-                      <Switch checked={q.is_active} onCheckedChange={() => toggleActive(q)} />
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                        <DropdownMenuItem onClick={() => openEdit(q)}>
-                          <Pencil className="h-4 w-4 me-2" />{isRTL ? 'تعديل' : 'Edit'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(q.id)} className="text-destructive focus:text-destructive">
-                          <Trash2 className="h-4 w-4 me-2" />{isRTL ? 'حذف' : 'Delete'}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          {loading ? (
+            <div className="p-8 text-center text-muted-foreground">{isRTL ? 'جارٍ التحميل...' : 'Loading...'}</div>
+          ) : questions.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">{isRTL ? 'لا توجد أسئلة' : 'No questions found'}</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {colVis.text && <SortableTableHead sortKey="question_text_ar" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'النص' : 'Text'}</SortableTableHead>}
+                  {colVis.section && <SortableTableHead sortKey="section" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'القسم' : 'Section'}</SortableTableHead>}
+                  {colVis.skill && <SortableTableHead sortKey="skill" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'المهارة' : 'Skill'}</SortableTableHead>}
+                  {colVis.difficulty && <SortableTableHead sortKey="difficulty" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'الصعوبة' : 'Diff'}</SortableTableHead>}
+                  {colVis.review && <SortableTableHead sortKey="review_status" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'المراجعة' : 'Review'}</SortableTableHead>}
+                  {colVis.answer && <TableHead>{isRTL ? 'الإجابة' : 'Ans'}</TableHead>}
+                  {colVis.usage && <SortableTableHead sortKey="usage_count" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'استخدام' : 'Used'}</SortableTableHead>}
+                  {colVis.rate && <SortableTableHead sortKey="success_rate" currentSort={sortKey} currentDirection={sortDirection} onSort={handleSort}>{isRTL ? 'نجاح' : 'Rate'}</SortableTableHead>}
+                  {colVis.status && <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>}
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <DataTablePagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            totalCount={totalCount}
-            hasNextPage={currentPage < totalPages}
-            hasPreviousPage={currentPage > 1}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
-          />
+              </TableHeader>
+              <TableBody>
+                {questions.map(q => (
+                  <TableRow key={q.id}>
+                    {colVis.text && <TableCell className="max-w-xs truncate text-sm">{q.question_text_ar}</TableCell>}
+                    {colVis.section && <TableCell><Badge variant="secondary" className="text-xs">{isRTL ? SECTION_LABELS[q.section]?.ar : SECTION_LABELS[q.section]?.en}</Badge></TableCell>}
+                    {colVis.skill && <TableCell className="text-xs capitalize">{q.skill.replace(/_/g, ' ')}</TableCell>}
+                    {colVis.difficulty && <TableCell><Badge className={cn('text-xs border-0', DIFFICULTY_COLORS[q.difficulty])}>{q.difficulty}</Badge></TableCell>}
+                    {colVis.review && <TableCell><Badge className={cn('text-xs border-0', REVIEW_COLORS[q.review_status])}>{q.review_status.replace(/_/g, ' ')}</Badge></TableCell>}
+                    {colVis.answer && <TableCell className="font-mono text-xs">{q.correct_answer}</TableCell>}
+                    {colVis.usage && <TableCell className="text-xs">{q.usage_count}</TableCell>}
+                    {colVis.rate && <TableCell className="text-xs">{(q.success_rate * 100).toFixed(0)}%</TableCell>}
+                    {colVis.status && <TableCell>
+                      <Switch checked={q.is_active} onCheckedChange={() => toggleActive(q)} />
+                    </TableCell>}
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
+                          <DropdownMenuItem onClick={() => openEdit(q)}>
+                            <Pencil className="h-4 w-4 me-2" />{isRTL ? 'تعديل' : 'Edit'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDelete(q.id)} className="text-destructive">
+                            <Trash2 className="h-4 w-4 me-2" />{isRTL ? 'حذف' : 'Delete'}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
+      {/* Pagination */}
+      {totalCount > pageSize && (
+        <DataTablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          hasNextPage={currentPage < totalPages}
+          hasPreviousPage={currentPage > 1}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      )}
+
       {/* Edit Dialog */}
       <QuestionEditDialog
-        open={dialogOpen} onOpenChange={setDialogOpen}
-        editQ={editQ} saving={saving}
-        onSave={handleSave} onUpdateField={updateEditField} onUpdateOption={updateOption}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        editQ={editQ}
+        saving={saving}
+        onSave={handleSave}
+        onUpdateField={updateEditField}
+        onUpdateOption={updateOption}
         isRTL={isRTL}
       />
 
-      {/* Import Preview */}
+      {/* Import Dialog */}
       <ImportPreviewDialog
         open={importPreviewOpen}
-        onOpenChange={(open) => { setImportPreviewOpen(open); if (!open) { setImportData(null); setImportValidation(null); } }}
-        validation={importValidation} validating={validating}
-        importing={importing} onConfirmImport={handleImportConfirm} isRTL={isRTL}
+        onOpenChange={setImportPreviewOpen}
+        validation={importValidation}
+        validating={validating}
+        importing={importing}
+        onConfirmImport={handleImportConfirm}
+        isRTL={isRTL}
       />
     </div>
   );

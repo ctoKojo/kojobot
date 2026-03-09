@@ -6,297 +6,241 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Save, CheckCircle2 } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-interface ExamSettings {
+interface V2Settings {
   id: string;
-  age_group: string;
-  total_questions: number;
-  foundation_questions: number;
-  intermediate_questions: number;
-  advanced_questions: number;
   duration_minutes: number;
+  pass_threshold_section_a: number;
+  pass_threshold_section_b: number;
+  track_margin: number;
+  section_a_question_count: number;
+  section_b_question_count: number;
+  section_c_question_count: number;
   allow_retake: boolean;
   max_attempts: number;
   is_active: boolean;
 }
 
-const AGE_GROUP_LABELS: Record<string, { en: string; ar: string }> = {
-  '6_9': { en: 'Kids (6-9)', ar: 'أطفال (6-9)' },
-  '10_13': { en: 'Juniors (10-13)', ar: 'ناشئين (10-13)' },
-  '14_18': { en: 'Teens (14-18)', ar: 'مراهقين (14-18)' },
-};
-
-const AGE_GROUP_KEYS = ['6_9', '10_13', '14_18'] as const;
-
-const DEFAULT_SETTINGS: Omit<ExamSettings, 'id' | 'age_group'> = {
-  total_questions: 18,
-  foundation_questions: 6,
-  intermediate_questions: 6,
-  advanced_questions: 6,
-  duration_minutes: 30,
-  allow_retake: true,
-  max_attempts: 2,
+const DEFAULT_SETTINGS: Omit<V2Settings, 'id'> = {
+  duration_minutes: 60,
+  pass_threshold_section_a: 60,
+  pass_threshold_section_b: 60,
+  track_margin: 15,
+  section_a_question_count: 20,
+  section_b_question_count: 20,
+  section_c_question_count: 10,
+  allow_retake: false,
+  max_attempts: 1,
   is_active: true,
 };
 
 export default function GeneralSettingsTab() {
   const { isRTL } = useLanguage();
   const { toast } = useToast();
-  const [settings, setSettings] = useState<ExamSettings[]>([]);
+  const [settings, setSettings] = useState<V2Settings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+  useEffect(() => { fetchSettings(); }, []);
 
   const fetchSettings = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('placement_exam_settings')
+        .from('placement_v2_settings')
         .select('*')
-        .order('age_group');
+        .limit(1)
+        .maybeSingle();
 
       if (error) {
-        console.error('Error fetching placement settings:', error);
-        toast({ title: isRTL ? 'خطأ في تحميل الإعدادات' : 'Error loading settings', description: error.message, variant: 'destructive' });
-        setSettings([]);
+        console.error('Error fetching v2 settings:', error);
+        toast({ title: isRTL ? 'خطأ في تحميل الإعدادات' : 'Error loading settings', variant: 'destructive' });
         return;
       }
 
-      const existing = (data ?? []) as ExamSettings[];
-
-      // Auto-create missing age groups
-      const existingGroups = new Set(existing.map(s => s.age_group));
-      const missing = AGE_GROUP_KEYS.filter(ag => !existingGroups.has(ag));
-
-      if (missing.length > 0) {
-        const payload = missing.map(age_group => ({
-          age_group,
-          ...DEFAULT_SETTINGS,
-          total_questions: DEFAULT_SETTINGS.foundation_questions + DEFAULT_SETTINGS.intermediate_questions + DEFAULT_SETTINGS.advanced_questions,
-        }));
-
-        const { data: inserted, error: insertErr } = await supabase
-          .from('placement_exam_settings')
-          .insert(payload as any)
-          .select('*');
-
-        if (insertErr) {
-          console.error('Error auto-creating settings:', insertErr);
-        } else if (inserted) {
-          existing.push(...(inserted as ExamSettings[]));
+      if (data) {
+        setSettings(data as any);
+      } else {
+        // Auto-create singleton
+        const { data: created, error: createErr } = await supabase
+          .from('placement_v2_settings')
+          .insert(DEFAULT_SETTINGS as any)
+          .select('*')
+          .single();
+        if (createErr) {
+          console.error('Error creating settings:', createErr);
+        } else {
+          setSettings(created as any);
         }
       }
-
-      existing.sort((a, b) => a.age_group.localeCompare(b.age_group));
-      setSettings(existing);
-    } catch (err) {
-      console.error('Unexpected error:', err);
-      toast({ title: isRTL ? 'خطأ غير متوقع' : 'Unexpected error', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSave = async (s: ExamSettings) => {
-    setSaving(s.age_group);
-    const total = s.foundation_questions + s.intermediate_questions + s.advanced_questions;
-
+  const handleSave = async () => {
+    if (!settings) return;
+    setSaving(true);
     try {
-      const updatePayload = {
-        total_questions: total,
-        foundation_questions: s.foundation_questions,
-        intermediate_questions: s.intermediate_questions,
-        advanced_questions: s.advanced_questions,
-        duration_minutes: s.duration_minutes,
-        allow_retake: s.allow_retake,
-        max_attempts: s.max_attempts,
-        is_active: s.is_active,
-        updated_at: new Date().toISOString(),
-      };
+      const { error } = await supabase
+        .from('placement_v2_settings')
+        .update({
+          duration_minutes: settings.duration_minutes,
+          pass_threshold_section_a: settings.pass_threshold_section_a,
+          pass_threshold_section_b: settings.pass_threshold_section_b,
+          track_margin: settings.track_margin,
+          section_a_question_count: settings.section_a_question_count,
+          section_b_question_count: settings.section_b_question_count,
+          section_c_question_count: settings.section_c_question_count,
+          allow_retake: settings.allow_retake,
+          max_attempts: settings.max_attempts,
+          is_active: settings.is_active,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', settings.id);
 
-      // Try update first
-      const { data: updated, error: updateErr } = await supabase
-        .from('placement_exam_settings')
-        .update(updatePayload as any)
-        .eq('id', s.id)
-        .select('*');
-
-      if (updateErr) {
-        toast({
-          title: isRTL ? 'فشل الحفظ' : 'Save failed',
-          description: updateErr.message,
-          variant: 'destructive',
-        });
+      if (error) {
+        toast({ title: isRTL ? 'فشل الحفظ' : 'Save failed', description: error.message, variant: 'destructive' });
         return;
       }
-
-      // If update returned no rows, try upsert
-      if (!updated || updated.length === 0) {
-        const { data: upserted, error: upsertErr } = await supabase
-          .from('placement_exam_settings')
-          .upsert({
-            age_group: s.age_group,
-            ...updatePayload,
-          } as any, { onConflict: 'age_group' })
-          .select('*');
-
-        if (upsertErr) {
-          toast({
-            title: isRTL ? 'فشل الحفظ' : 'Save failed',
-            description: upsertErr.message,
-            variant: 'destructive',
-          });
-          return;
-        }
-
-        if (!upserted || upserted.length === 0) {
-          toast({
-            title: isRTL ? 'فشل الحفظ' : 'Save failed',
-            description: isRTL ? 'لم يتم تحديث أي صف. تحقق من الصلاحيات.' : 'No rows updated. Check permissions.',
-            variant: 'destructive',
-          });
-          return;
-        }
-      }
-
-      // Re-fetch to verify
-      const { data: verified, error: verifyErr } = await supabase
-        .from('placement_exam_settings')
-        .select('*')
-        .eq('age_group', s.age_group)
-        .maybeSingle();
-
-      if (verifyErr || !verified) {
-        toast({
-          title: isRTL ? 'تحذير' : 'Warning',
-          description: isRTL ? 'تم الحفظ لكن تعذر التحقق' : 'Saved but verification failed',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const v = verified as ExamSettings;
-      if (
-        v.foundation_questions !== s.foundation_questions ||
-        v.intermediate_questions !== s.intermediate_questions ||
-        v.advanced_questions !== s.advanced_questions ||
-        v.duration_minutes !== s.duration_minutes ||
-        v.is_active !== s.is_active
-      ) {
-        toast({
-          title: isRTL ? 'فشل التحقق' : 'Verification failed',
-          description: isRTL ? 'القيم المحفوظة لا تطابق المدخلات' : 'Saved values do not match input',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Reload all settings
-      await fetchSettings();
-
-      toast({
-        title: isRTL ? 'تم الحفظ والتحقق بنجاح' : 'Saved & verified',
-        description: isRTL
-          ? `${AGE_GROUP_LABELS[s.age_group]?.ar}: ${total} سؤال`
-          : `${AGE_GROUP_LABELS[s.age_group]?.en}: ${total} questions`,
-      });
+      toast({ title: isRTL ? 'تم الحفظ بنجاح' : 'Saved successfully' });
     } finally {
-      setSaving(null);
+      setSaving(false);
     }
   };
 
-  const updateField = (idx: number, field: keyof ExamSettings, value: any) => {
-    setSettings((prev) => prev.map((s, i) => (i === idx ? { ...s, [field]: value } : s)));
+  const update = (field: keyof V2Settings, value: any) => {
+    setSettings(prev => prev ? { ...prev, [field]: value } : null);
   };
 
-  if (loading) return <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-48 w-full" />)}</div>;
+  if (loading) return <Skeleton className="h-64 w-full" />;
 
-  if (!settings.length) {
+  if (!settings) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{isRTL ? 'خطأ في تحميل الإعدادات' : 'Error loading settings'}</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="py-8 text-center">
+          <p className="text-muted-foreground mb-4">{isRTL ? 'خطأ في تحميل الإعدادات' : 'Error loading settings'}</p>
           <Button onClick={fetchSettings}>{isRTL ? 'إعادة المحاولة' : 'Retry'}</Button>
         </CardContent>
       </Card>
     );
   }
 
+  const totalQuestions = settings.section_a_question_count + settings.section_b_question_count + settings.section_c_question_count;
+
   return (
     <div className="grid gap-6">
-      {settings.map((s, idx) => {
-        const label = AGE_GROUP_LABELS[s.age_group];
-        const total = s.foundation_questions + s.intermediate_questions + s.advanced_questions;
-        return (
-          <Card key={s.id}>
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                {isRTL ? label?.ar : label?.en}
-                <Badge variant={s.is_active ? 'default' : 'secondary'}>
-                  {s.is_active ? (isRTL ? 'مفعل' : 'Active') : (isRTL ? 'معطل' : 'Inactive')}
-                </Badge>
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Label className="text-sm">{isRTL ? 'مفعل' : 'Active'}</Label>
-                <Switch checked={s.is_active} onCheckedChange={(v) => updateField(idx, 'is_active', v)} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <Label>{isRTL ? 'أسئلة Foundation' : 'Foundation Qs'}</Label>
-                  <Input type="number" min={0} value={s.foundation_questions}
-                    onChange={(e) => updateField(idx, 'foundation_questions', parseInt(e.target.value) || 0)} />
-                </div>
-                <div>
-                  <Label>{isRTL ? 'أسئلة Intermediate' : 'Intermediate Qs'}</Label>
-                  <Input type="number" min={0} value={s.intermediate_questions}
-                    onChange={(e) => updateField(idx, 'intermediate_questions', parseInt(e.target.value) || 0)} />
-                </div>
-                <div>
-                  <Label>{isRTL ? 'أسئلة Advanced' : 'Advanced Qs'}</Label>
-                  <Input type="number" min={0} value={s.advanced_questions}
-                    onChange={(e) => updateField(idx, 'advanced_questions', parseInt(e.target.value) || 0)} />
-                </div>
-                <div>
-                  <Label>{isRTL ? 'الإجمالي' : 'Total'}</Label>
-                  <Input readOnly value={total} className="bg-muted" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <Label>{isRTL ? 'المدة (دقائق)' : 'Duration (min)'}</Label>
-                  <Input type="number" min={0} value={s.duration_minutes}
-                    onChange={(e) => updateField(idx, 'duration_minutes', parseInt(e.target.value) || 0)} />
-                  <p className="text-xs text-muted-foreground mt-1">{isRTL ? '0 = بدون حد' : '0 = no limit'}</p>
-                </div>
-                <div>
-                  <Label>{isRTL ? 'أقصى محاولات' : 'Max Attempts'}</Label>
-                  <Input type="number" min={1} value={s.max_attempts}
-                    onChange={(e) => updateField(idx, 'max_attempts', parseInt(e.target.value) || 1)} />
-                </div>
-                <div className="flex items-center gap-2 pt-6">
-                  <Switch checked={s.allow_retake} onCheckedChange={(v) => updateField(idx, 'allow_retake', v)} />
-                  <Label>{isRTL ? 'السماح بالإعادة' : 'Allow Retake'}</Label>
-                </div>
-              </div>
-              <Button onClick={() => handleSave(s)} disabled={saving === s.age_group}>
-                <Save className="h-4 w-4 me-1" />
-                {saving === s.age_group ? (isRTL ? 'جارٍ الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}
-              </Button>
-            </CardContent>
-          </Card>
-        );
-      })}
+      {/* Status */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            {isRTL ? 'حالة الامتحان' : 'Exam Status'}
+            <Badge variant={settings.is_active ? 'default' : 'secondary'}>
+              {settings.is_active ? (isRTL ? 'مفعل' : 'Active') : (isRTL ? 'معطل' : 'Inactive')}
+            </Badge>
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Label className="text-sm">{isRTL ? 'مفعل' : 'Active'}</Label>
+            <Switch checked={settings.is_active} onCheckedChange={v => update('is_active', v)} />
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Question Counts */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">{isRTL ? 'عدد الأسئلة لكل قسم' : 'Questions Per Section'}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <Label>{isRTL ? 'القسم A (بوابة Level 0)' : 'Section A (Level 0 Gate)'}</Label>
+              <Input type="number" min={1} value={settings.section_a_question_count}
+                onChange={e => update('section_a_question_count', parseInt(e.target.value) || 1)} />
+            </div>
+            <div>
+              <Label>{isRTL ? 'القسم B (بوابة Level 1)' : 'Section B (Level 1 Gate)'}</Label>
+              <Input type="number" min={1} value={settings.section_b_question_count}
+                onChange={e => update('section_b_question_count', parseInt(e.target.value) || 1)} />
+            </div>
+            <div>
+              <Label>{isRTL ? 'القسم C (ميول المسار)' : 'Section C (Track Inclination)'}</Label>
+              <Input type="number" min={2} step={2} value={settings.section_c_question_count}
+                onChange={e => update('section_c_question_count', parseInt(e.target.value) || 2)} />
+              <p className="text-xs text-muted-foreground mt-1">{isRTL ? 'يجب أن يكون عدداً زوجياً (نصف SW + نصف HW)' : 'Must be even (half SW + half HW)'}</p>
+            </div>
+            <div>
+              <Label>{isRTL ? 'الإجمالي' : 'Total'}</Label>
+              <Input readOnly value={totalQuestions} className="bg-muted" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Thresholds */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">{isRTL ? 'حدود النجاح والتسكين' : 'Pass Thresholds & Placement'}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <Label>{isRTL ? 'حد نجاح القسم A (%)' : 'Section A Pass (%)'}</Label>
+              <Input type="number" min={0} max={100} value={settings.pass_threshold_section_a}
+                onChange={e => update('pass_threshold_section_a', parseInt(e.target.value) || 0)} />
+              <p className="text-xs text-muted-foreground mt-1">{isRTL ? 'أقل من هذا → Level 0' : 'Below this → Level 0'}</p>
+            </div>
+            <div>
+              <Label>{isRTL ? 'حد نجاح القسم B (%)' : 'Section B Pass (%)'}</Label>
+              <Input type="number" min={0} max={100} value={settings.pass_threshold_section_b}
+                onChange={e => update('pass_threshold_section_b', parseInt(e.target.value) || 0)} />
+              <p className="text-xs text-muted-foreground mt-1">{isRTL ? 'أقل من هذا → Level 1' : 'Below this → Level 1'}</p>
+            </div>
+            <div>
+              <Label>{isRTL ? 'هامش تحديد المسار (%)' : 'Track Margin (%)'}</Label>
+              <Input type="number" min={0} max={50} value={settings.track_margin}
+                onChange={e => update('track_margin', parseInt(e.target.value) || 0)} />
+              <p className="text-xs text-muted-foreground mt-1">{isRTL ? 'فرق أقل = balanced → مراجعة يدوية' : 'Below = balanced → manual review'}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Duration & Retake */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">{isRTL ? 'إعدادات أخرى' : 'Other Settings'}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <Label>{isRTL ? 'المدة (دقائق)' : 'Duration (min)'}</Label>
+              <Input type="number" min={0} value={settings.duration_minutes}
+                onChange={e => update('duration_minutes', parseInt(e.target.value) || 0)} />
+              <p className="text-xs text-muted-foreground mt-1">{isRTL ? '0 = بدون حد' : '0 = no limit'}</p>
+            </div>
+            <div>
+              <Label>{isRTL ? 'أقصى محاولات' : 'Max Attempts'}</Label>
+              <Input type="number" min={1} value={settings.max_attempts}
+                onChange={e => update('max_attempts', parseInt(e.target.value) || 1)} />
+            </div>
+            <div className="flex items-center gap-2 pt-6">
+              <Switch checked={settings.allow_retake} onCheckedChange={v => update('allow_retake', v)} />
+              <Label>{isRTL ? 'السماح بالإعادة' : 'Allow Retake'}</Label>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Save */}
+      <Button onClick={handleSave} disabled={saving} className="w-fit">
+        <Save className="h-4 w-4 me-1" />
+        {saving ? (isRTL ? 'جارٍ الحفظ...' : 'Saving...') : (isRTL ? 'حفظ الإعدادات' : 'Save Settings')}
+      </Button>
     </div>
   );
 }
