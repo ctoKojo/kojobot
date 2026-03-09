@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, CalendarDays, Play, CheckCircle, Loader2, ShieldAlert, LogOut } from 'lucide-react';
+import { Clock, CalendarDays, Play, CheckCircle, Loader2, ShieldAlert, LogOut, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { KojobotLogo } from '@/components/KojobotLogo';
 
-type PlacementStatus = 'loading' | 'not_scheduled' | 'scheduled' | 'open' | 'submitted' | 'no_schedule';
+type PlacementStatus = 'loading' | 'not_scheduled' | 'scheduled' | 'open' | 'submitted' | 'no_schedule' | 'expired';
 
 export default function PlacementGate() {
   const { user, signOut } = useAuth();
@@ -75,8 +75,8 @@ export default function PlacementGate() {
       } else if (now < opensAt) {
         setStatus('scheduled');
       } else {
-        // Expired
-        setStatus('not_scheduled');
+        // Expired - show distinct state with schedule details
+        setStatus('expired');
       }
     } catch (err) {
       console.error('PlacementGate error:', err);
@@ -210,8 +210,45 @@ export default function PlacementGate() {
             </>
           )}
 
+          {/* Expired — Schedule window passed */}
+          {status === 'expired' && schedule && (
+            <>
+              <div className="p-4 rounded-full bg-orange-500/10">
+                <AlertTriangle className="h-12 w-12 text-orange-500" />
+              </div>
+              <h2 className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                {isRTL ? 'انتهى موعد الامتحان' : 'Exam Window Expired'}
+              </h2>
+              
+              <div className="bg-muted/50 rounded-lg p-4 w-full space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  {isRTL ? 'الموعد السابق:' : 'Previous window:'}
+                </p>
+                <p className="font-medium">
+                  {formatDateTime(schedule.opens_at)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {isRTL ? 'إلى:' : 'to:'}
+                </p>
+                <p className="font-medium">
+                  {formatDateTime(schedule.closes_at)}
+                </p>
+              </div>
+
+              <p className="text-muted-foreground max-w-sm">
+                {isRTL
+                  ? 'انتهت نافذة الامتحان المحددة. يرجى التواصل مع الإدارة لتحديد موعد جديد.'
+                  : 'The scheduled exam window has passed. Please contact the administration to schedule a new appointment.'}
+              </p>
+              
+              <Badge variant="outline" className="text-sm px-4 py-1.5 border-orange-500/50 text-orange-600">
+                {isRTL ? 'يتطلب إعادة جدولة' : 'Requires Rescheduling'}
+              </Badge>
+            </>
+          )}
+
           {/* Sign Out — always visible */}
-          {status !== 'not_scheduled' && (
+          {(status !== 'not_scheduled') && (
             <Button variant="outline" onClick={signOut} className="mt-2">
               <LogOut className="h-4 w-4 me-2" />
               {isRTL ? 'تسجيل الخروج' : 'Sign Out'}
