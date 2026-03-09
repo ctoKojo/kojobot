@@ -99,7 +99,7 @@ export function PlacementAttemptDetailDialog({
       const bankMap = new Map((bankData || []).map((q: any) => [q.id, q]));
 
       const merged: AttemptQuestion[] = aqData.map((aq: any) => {
-        const bank = bankMap.get(aq.question_id) || {};
+        const bank: any = bankMap.get(aq.question_id) || {};
         return {
           question_id: aq.question_id,
           order_index: aq.order_index,
