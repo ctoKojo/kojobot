@@ -218,7 +218,7 @@ export default function PlacementGate() {
                 {isRTL ? 'انتهى موعد الامتحان' : 'Exam Window Expired'}
               </h2>
               
-              <div className="bg-muted/50 rounded-lg p-4 w-full space-y-2">
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 w-full space-y-2">
                 <p className="text-sm text-muted-foreground">
                   {isRTL ? 'وقت البداية:' : 'Opens at:'}
                 </p>
