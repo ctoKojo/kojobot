@@ -97,33 +97,33 @@ export default function PlacementGate() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0a0a1a 0%, #0d1033 40%, #1a0a2e 100%)' }}>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <Card className="w-full max-w-lg shadow-xl border-0">
-        <CardContent className="pt-8 pb-8 px-6 flex flex-col items-center text-center space-y-6">
+    <div className="dark min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #0a0a1a 0%, #0d1033 40%, #1a0a2e 100%)' }}>
+      <Card className="w-full max-w-lg shadow-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+        <CardContent className="pt-8 pb-8 px-6 flex flex-col items-center text-center space-y-6 text-white">
           <KojobotLogo size="lg" />
 
           {/* Not Scheduled */}
           {status === 'not_scheduled' && (
             <>
-              <div className="p-4 rounded-full bg-muted">
-                <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+              <div className="p-4 rounded-full bg-white/10">
+                <ShieldAlert className="h-12 w-12 text-white/50" />
               </div>
               <h2 className="text-xl font-bold">
                 {isRTL ? 'لم يتم تحديد موعد الامتحان بعد' : 'No Exam Scheduled Yet'}
               </h2>
-              <p className="text-muted-foreground max-w-sm">
+              <p className="text-white/60 max-w-sm">
                 {isRTL
                   ? 'يرجى التواصل مع الإدارة لتحديد موعد امتحان تحديد المستوى. لن تتمكن من الوصول للمنصة قبل اجتياز الامتحان.'
                   : 'Please contact the administration to schedule your placement exam. You cannot access the platform until the exam is completed.'}
               </p>
-              <Button variant="outline" onClick={signOut} className="mt-2">
+              <Button variant="outline" onClick={signOut} className="mt-2 border-white/20 text-white hover:bg-white/10">
                 <LogOut className="h-4 w-4 me-2" />
                 {isRTL ? 'تسجيل الخروج' : 'Sign Out'}
               </Button>
@@ -140,7 +140,7 @@ export default function PlacementGate() {
                 {isRTL ? 'موعد امتحان تحديد المستوى' : 'Placement Exam Scheduled'}
               </h2>
               
-              <div className="bg-muted/50 rounded-lg p-4 w-full space-y-3">
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 w-full space-y-3">
                 <div className="flex items-center justify-center gap-2">
                   <Clock className="h-5 w-5 text-primary" />
                   <span className="font-semibold text-lg">
@@ -148,11 +148,11 @@ export default function PlacementGate() {
                   </span>
                 </div>
                 {schedule.notes && (
-                  <p className="text-sm text-muted-foreground">{schedule.notes}</p>
+                  <p className="text-sm text-white/50">{schedule.notes}</p>
                 )}
               </div>
 
-              <Badge variant="secondary" className="text-sm px-4 py-1.5">
+              <Badge variant="secondary" className="text-sm px-4 py-1.5 bg-white/10 text-white/70 border-0">
                 {isRTL ? 'المنصة ستفتح بعد اجتياز الامتحان' : 'Platform will unlock after passing the exam'}
               </Badge>
             </>
@@ -167,13 +167,13 @@ export default function PlacementGate() {
               <h2 className="text-xl font-bold text-green-700 dark:text-green-400">
                 {isRTL ? 'الامتحان متاح الآن!' : 'Exam is Now Open!'}
               </h2>
-              <p className="text-muted-foreground max-w-sm">
+              <p className="text-white/60 max-w-sm">
                 {isRTL
                   ? 'يمكنك البدء في امتحان تحديد المستوى الآن. أجب على جميع الأسئلة ثم اضغط تسليم.'
                   : 'You can start your placement exam now. Answer all questions and submit when ready.'}
               </p>
               {schedule && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-white/50">
                   {isRTL ? 'ينتهي الموعد:' : 'Closes at:'} {formatDateTime(schedule.closes_at)}
                 </p>
               )}
@@ -197,12 +197,12 @@ export default function PlacementGate() {
               <h2 className="text-xl font-bold">
                 {isRTL ? 'تم استلام امتحان تحديد المستوى' : 'Placement Exam Submitted'}
               </h2>
-              <p className="text-muted-foreground max-w-sm">
+              <p className="text-white/60 max-w-sm">
                 {isRTL
                   ? 'تم استلام إجاباتك بنجاح. بانتظار المراجعة واعتماد النتيجة من الإدارة.'
                   : 'Your answers have been received successfully. Pending review and approval by administration.'}
               </p>
-              <Badge variant="outline" className="text-sm px-4 py-1.5">
+              <Badge variant="outline" className="text-sm px-4 py-1.5 border-white/20 text-white/70">
                 {isRTL ? 'بانتظار الاعتماد' : 'Pending Approval'}
               </Badge>
             </>
@@ -218,18 +218,18 @@ export default function PlacementGate() {
                 {isRTL ? 'انتهى موعد الامتحان' : 'Exam Window Expired'}
               </h2>
               
-              <div className="bg-muted/50 rounded-lg p-4 w-full space-y-2">
-                <p className="text-sm text-muted-foreground">
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 w-full space-y-2">
+                <p className="text-sm text-white/50">
                   {isRTL ? 'وقت البداية:' : 'Opens at:'}
                 </p>
                 <p className="font-medium">{formatDateTime(schedule.opens_at)}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-white/50">
                   {isRTL ? 'وقت النهاية:' : 'Closes at:'}
                 </p>
                 <p className="font-medium">{formatDateTime(schedule.closes_at)}</p>
               </div>
 
-              <p className="text-muted-foreground max-w-sm">
+              <p className="text-white/60 max-w-sm">
                 {isRTL
                   ? 'انتهت نافذة الامتحان المحددة. يرجى التواصل مع الإدارة لتحديد موعد جديد.'
                   : 'The scheduled exam window has passed. Please contact the administration to schedule a new appointment.'}
@@ -243,7 +243,7 @@ export default function PlacementGate() {
 
           {/* Sign Out — always visible */}
           {status !== 'not_scheduled' && (
-            <Button variant="outline" onClick={signOut} className="mt-2">
+            <Button variant="outline" onClick={signOut} className="mt-2 border-white/20 text-white hover:bg-white/10">
               <LogOut className="h-4 w-4 me-2" />
               {isRTL ? 'تسجيل الخروج' : 'Sign Out'}
             </Button>
