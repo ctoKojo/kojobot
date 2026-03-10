@@ -140,7 +140,7 @@ export default function PlacementGate() {
                 {isRTL ? 'موعد امتحان تحديد المستوى' : 'Placement Exam Scheduled'}
               </h2>
               
-              <div className="bg-muted/50 rounded-lg p-4 w-full space-y-3">
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 w-full space-y-3">
                 <div className="flex items-center justify-center gap-2">
                   <Clock className="h-5 w-5 text-primary" />
                   <span className="font-semibold text-lg">
