@@ -112,8 +112,8 @@ export default function PlacementGate() {
           {/* Not Scheduled */}
           {status === 'not_scheduled' && (
             <>
-              <div className="p-4 rounded-full bg-muted">
-                <ShieldAlert className="h-12 w-12 text-muted-foreground" />
+              <div className="p-4 rounded-full bg-white/10">
+                <ShieldAlert className="h-12 w-12 text-white/50" />
               </div>
               <h2 className="text-xl font-bold">
                 {isRTL ? 'لم يتم تحديد موعد الامتحان بعد' : 'No Exam Scheduled Yet'}
