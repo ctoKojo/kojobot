@@ -148,7 +148,7 @@ export default function PlacementGate() {
                   </span>
                 </div>
                 {schedule.notes && (
-                  <p className="text-sm text-muted-foreground">{schedule.notes}</p>
+                  <p className="text-sm text-white/50">{schedule.notes}</p>
                 )}
               </div>
 
