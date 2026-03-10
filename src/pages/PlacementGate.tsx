@@ -97,7 +97,7 @@ export default function PlacementGate() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0a0a1a 0%, #0d1033 40%, #1a0a2e 100%)' }}>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
