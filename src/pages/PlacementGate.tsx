@@ -118,7 +118,7 @@ export default function PlacementGate() {
               <h2 className="text-xl font-bold">
                 {isRTL ? 'لم يتم تحديد موعد الامتحان بعد' : 'No Exam Scheduled Yet'}
               </h2>
-              <p className="text-muted-foreground max-w-sm">
+              <p className="text-white/60 max-w-sm">
                 {isRTL
                   ? 'يرجى التواصل مع الإدارة لتحديد موعد امتحان تحديد المستوى. لن تتمكن من الوصول للمنصة قبل اجتياز الامتحان.'
                   : 'Please contact the administration to schedule your placement exam. You cannot access the platform until the exam is completed.'}
