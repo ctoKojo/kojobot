@@ -229,7 +229,7 @@ export default function PlacementGate() {
                 <p className="font-medium">{formatDateTime(schedule.closes_at)}</p>
               </div>
 
-              <p className="text-muted-foreground max-w-sm">
+              <p className="text-white/60 max-w-sm">
                 {isRTL
                   ? 'انتهت نافذة الامتحان المحددة. يرجى التواصل مع الإدارة لتحديد موعد جديد.'
                   : 'The scheduled exam window has passed. Please contact the administration to schedule a new appointment.'}
