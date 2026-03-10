@@ -152,7 +152,7 @@ export default function PlacementGate() {
                 )}
               </div>
 
-              <Badge variant="secondary" className="text-sm px-4 py-1.5">
+              <Badge variant="secondary" className="text-sm px-4 py-1.5 bg-white/10 text-white/70 border-0">
                 {isRTL ? 'المنصة ستفتح بعد اجتياز الامتحان' : 'Platform will unlock after passing the exam'}
               </Badge>
             </>
