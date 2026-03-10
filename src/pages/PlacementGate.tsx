@@ -197,7 +197,7 @@ export default function PlacementGate() {
               <h2 className="text-xl font-bold">
                 {isRTL ? 'تم استلام امتحان تحديد المستوى' : 'Placement Exam Submitted'}
               </h2>
-              <p className="text-muted-foreground max-w-sm">
+              <p className="text-white/60 max-w-sm">
                 {isRTL
                   ? 'تم استلام إجاباتك بنجاح. بانتظار المراجعة واعتماد النتيجة من الإدارة.'
                   : 'Your answers have been received successfully. Pending review and approval by administration.'}
