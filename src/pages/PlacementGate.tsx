@@ -167,7 +167,7 @@ export default function PlacementGate() {
               <h2 className="text-xl font-bold text-green-700 dark:text-green-400">
                 {isRTL ? 'الامتحان متاح الآن!' : 'Exam is Now Open!'}
               </h2>
-              <p className="text-muted-foreground max-w-sm">
+              <p className="text-white/60 max-w-sm">
                 {isRTL
                   ? 'يمكنك البدء في امتحان تحديد المستوى الآن. أجب على جميع الأسئلة ثم اضغط تسليم.'
                   : 'You can start your placement exam now. Answer all questions and submit when ready.'}
