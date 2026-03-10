@@ -1,0 +1,1640 @@
+[
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "ما الطريقة الصحيحة لإيقاف تشغيل الكمبيوتر؟",
+    "options": {
+      "A": "اختيار Shut Down من قائمة Start",
+      "B": "فصل الكهرباء مباشرة",
+      "C": "إغلاق الشاشة فقط",
+      "D": "إعادة تشغيل الشاشة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "وظيفة زر Caps Lock هي؟",
+    "options": {
+      "A": "كتابة الحروف الكبيرة بشكل مستمر",
+      "B": "حذف الحروف",
+      "C": "فتح برنامج",
+      "D": "تغيير نوع الملف"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "عند الضغط كليك يمين على ملف ماذا يظهر عادة؟",
+    "options": {
+      "A": "قائمة خيارات للملف",
+      "B": "نافذة الطباعة",
+      "C": "إغلاق البرنامج",
+      "D": "إعادة تشغيل الجهاز"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي يعتبر جهاز إدخال؟",
+    "options": {
+      "A": "الكيبورد",
+      "B": "الشاشة",
+      "C": "السماعة",
+      "D": "الطابعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي وسيلة تخزين بيانات؟",
+    "options": {
+      "A": "القرص الصلب",
+      "B": "الشاشة",
+      "C": "الماوس",
+      "D": "السماعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالمتغير Variable؟",
+    "options": {
+      "A": "مكان لتخزين قيمة يمكن تغييرها",
+      "B": "برنامج كامل",
+      "C": "تعليمة تكرار",
+      "D": "خطأ في الكود"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما وظيفة loop في البرمجة؟",
+    "options": {
+      "A": "تكرار مجموعة أوامر",
+      "B": "إيقاف البرنامج",
+      "C": "تعريف متغير",
+      "D": "حذف البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما معنى Input في البرنامج؟",
+    "options": {
+      "A": "البيانات التي يدخلها المستخدم",
+      "B": "النتيجة النهائية",
+      "C": "نوع المتغير",
+      "D": "لغة البرمجة"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالـ Algorithm؟",
+    "options": {
+      "A": "خطوات مرتبة لحل مشكلة",
+      "B": "برنامج جاهز",
+      "C": "لغة برمجة",
+      "D": "قاعدة بيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما الهدف من استخدام قاعدة البيانات؟",
+    "options": {
+      "A": "تنظيم وتخزين البيانات",
+      "B": "تشغيل الشاشة",
+      "C": "تشغيل الإنترنت",
+      "D": "تشغيل المعالج"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما وظيفة API غالبا؟",
+    "options": {
+      "A": "التواصل بين البرامج",
+      "B": "تشغيل الشاشة",
+      "C": "تخزين البيانات",
+      "D": "إدارة الملفات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "ما وظيفة المقاومة Resistor؟",
+    "options": {
+      "A": "تقليل التيار الكهربائي",
+      "B": "تخزين البيانات",
+      "C": "تشغيل الشاشة",
+      "D": "قياس الصوت"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "الـ Ultrasonic sensor يستخدم عادة في؟",
+    "options": {
+      "A": "قياس المسافة",
+      "B": "قياس الضوء",
+      "C": "إنتاج الصوت",
+      "D": "تخزين البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "ما الطريقة الصحيحة لإيقاف تشغيل الكمبيوتر؟ نسخة بنك 1",
+    "options": {
+      "A": "اختيار Shut Down من قائمة Start",
+      "B": "فصل الكهرباء مباشرة",
+      "C": "إغلاق الشاشة فقط",
+      "D": "إعادة تشغيل الشاشة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "وظيفة زر Caps Lock هي؟ نسخة بنك 1",
+    "options": {
+      "A": "كتابة الحروف الكبيرة بشكل مستمر",
+      "B": "حذف الحروف",
+      "C": "فتح برنامج",
+      "D": "تغيير نوع الملف"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "عند الضغط كليك يمين على ملف ماذا يظهر عادة؟ نسخة بنك 1",
+    "options": {
+      "A": "قائمة خيارات للملف",
+      "B": "نافذة الطباعة",
+      "C": "إغلاق البرنامج",
+      "D": "إعادة تشغيل الجهاز"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي يعتبر جهاز إدخال؟ نسخة بنك 1",
+    "options": {
+      "A": "الكيبورد",
+      "B": "الشاشة",
+      "C": "السماعة",
+      "D": "الطابعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي وسيلة تخزين بيانات؟ نسخة بنك 1",
+    "options": {
+      "A": "القرص الصلب",
+      "B": "الشاشة",
+      "C": "الماوس",
+      "D": "السماعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالمتغير Variable؟ نسخة بنك 1",
+    "options": {
+      "A": "مكان لتخزين قيمة يمكن تغييرها",
+      "B": "برنامج كامل",
+      "C": "تعليمة تكرار",
+      "D": "خطأ في الكود"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما وظيفة loop في البرمجة؟ نسخة بنك 1",
+    "options": {
+      "A": "تكرار مجموعة أوامر",
+      "B": "إيقاف البرنامج",
+      "C": "تعريف متغير",
+      "D": "حذف البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما معنى Input في البرنامج؟ نسخة بنك 1",
+    "options": {
+      "A": "البيانات التي يدخلها المستخدم",
+      "B": "النتيجة النهائية",
+      "C": "نوع المتغير",
+      "D": "لغة البرمجة"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالـ Algorithm؟ نسخة بنك 1",
+    "options": {
+      "A": "خطوات مرتبة لحل مشكلة",
+      "B": "برنامج جاهز",
+      "C": "لغة برمجة",
+      "D": "قاعدة بيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما الهدف من استخدام قاعدة البيانات؟ نسخة بنك 1",
+    "options": {
+      "A": "تنظيم وتخزين البيانات",
+      "B": "تشغيل الشاشة",
+      "C": "تشغيل الإنترنت",
+      "D": "تشغيل المعالج"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما وظيفة API غالبا؟ نسخة بنك 1",
+    "options": {
+      "A": "التواصل بين البرامج",
+      "B": "تشغيل الشاشة",
+      "C": "تخزين البيانات",
+      "D": "إدارة الملفات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "ما وظيفة المقاومة Resistor؟ نسخة بنك 1",
+    "options": {
+      "A": "تقليل التيار الكهربائي",
+      "B": "تخزين البيانات",
+      "C": "تشغيل الشاشة",
+      "D": "قياس الصوت"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "الـ Ultrasonic sensor يستخدم عادة في؟ نسخة بنك 1",
+    "options": {
+      "A": "قياس المسافة",
+      "B": "قياس الضوء",
+      "C": "إنتاج الصوت",
+      "D": "تخزين البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "ما الطريقة الصحيحة لإيقاف تشغيل الكمبيوتر؟ نسخة بنك 2",
+    "options": {
+      "A": "اختيار Shut Down من قائمة Start",
+      "B": "فصل الكهرباء مباشرة",
+      "C": "إغلاق الشاشة فقط",
+      "D": "إعادة تشغيل الشاشة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "وظيفة زر Caps Lock هي؟ نسخة بنك 2",
+    "options": {
+      "A": "كتابة الحروف الكبيرة بشكل مستمر",
+      "B": "حذف الحروف",
+      "C": "فتح برنامج",
+      "D": "تغيير نوع الملف"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "عند الضغط كليك يمين على ملف ماذا يظهر عادة؟ نسخة بنك 2",
+    "options": {
+      "A": "قائمة خيارات للملف",
+      "B": "نافذة الطباعة",
+      "C": "إغلاق البرنامج",
+      "D": "إعادة تشغيل الجهاز"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي يعتبر جهاز إدخال؟ نسخة بنك 2",
+    "options": {
+      "A": "الكيبورد",
+      "B": "الشاشة",
+      "C": "السماعة",
+      "D": "الطابعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي وسيلة تخزين بيانات؟ نسخة بنك 2",
+    "options": {
+      "A": "القرص الصلب",
+      "B": "الشاشة",
+      "C": "الماوس",
+      "D": "السماعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالمتغير Variable؟ نسخة بنك 2",
+    "options": {
+      "A": "مكان لتخزين قيمة يمكن تغييرها",
+      "B": "برنامج كامل",
+      "C": "تعليمة تكرار",
+      "D": "خطأ في الكود"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما وظيفة loop في البرمجة؟ نسخة بنك 2",
+    "options": {
+      "A": "تكرار مجموعة أوامر",
+      "B": "إيقاف البرنامج",
+      "C": "تعريف متغير",
+      "D": "حذف البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما معنى Input في البرنامج؟ نسخة بنك 2",
+    "options": {
+      "A": "البيانات التي يدخلها المستخدم",
+      "B": "النتيجة النهائية",
+      "C": "نوع المتغير",
+      "D": "لغة البرمجة"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالـ Algorithm؟ نسخة بنك 2",
+    "options": {
+      "A": "خطوات مرتبة لحل مشكلة",
+      "B": "برنامج جاهز",
+      "C": "لغة برمجة",
+      "D": "قاعدة بيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما الهدف من استخدام قاعدة البيانات؟ نسخة بنك 2",
+    "options": {
+      "A": "تنظيم وتخزين البيانات",
+      "B": "تشغيل الشاشة",
+      "C": "تشغيل الإنترنت",
+      "D": "تشغيل المعالج"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما وظيفة API غالبا؟ نسخة بنك 2",
+    "options": {
+      "A": "التواصل بين البرامج",
+      "B": "تشغيل الشاشة",
+      "C": "تخزين البيانات",
+      "D": "إدارة الملفات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "ما وظيفة المقاومة Resistor؟ نسخة بنك 2",
+    "options": {
+      "A": "تقليل التيار الكهربائي",
+      "B": "تخزين البيانات",
+      "C": "تشغيل الشاشة",
+      "D": "قياس الصوت"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "الـ Ultrasonic sensor يستخدم عادة في؟ نسخة بنك 2",
+    "options": {
+      "A": "قياس المسافة",
+      "B": "قياس الضوء",
+      "C": "إنتاج الصوت",
+      "D": "تخزين البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "ما الطريقة الصحيحة لإيقاف تشغيل الكمبيوتر؟ نسخة بنك 3",
+    "options": {
+      "A": "اختيار Shut Down من قائمة Start",
+      "B": "فصل الكهرباء مباشرة",
+      "C": "إغلاق الشاشة فقط",
+      "D": "إعادة تشغيل الشاشة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "وظيفة زر Caps Lock هي؟ نسخة بنك 3",
+    "options": {
+      "A": "كتابة الحروف الكبيرة بشكل مستمر",
+      "B": "حذف الحروف",
+      "C": "فتح برنامج",
+      "D": "تغيير نوع الملف"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "عند الضغط كليك يمين على ملف ماذا يظهر عادة؟ نسخة بنك 3",
+    "options": {
+      "A": "قائمة خيارات للملف",
+      "B": "نافذة الطباعة",
+      "C": "إغلاق البرنامج",
+      "D": "إعادة تشغيل الجهاز"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي يعتبر جهاز إدخال؟ نسخة بنك 3",
+    "options": {
+      "A": "الكيبورد",
+      "B": "الشاشة",
+      "C": "السماعة",
+      "D": "الطابعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي وسيلة تخزين بيانات؟ نسخة بنك 3",
+    "options": {
+      "A": "القرص الصلب",
+      "B": "الشاشة",
+      "C": "الماوس",
+      "D": "السماعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالمتغير Variable؟ نسخة بنك 3",
+    "options": {
+      "A": "مكان لتخزين قيمة يمكن تغييرها",
+      "B": "برنامج كامل",
+      "C": "تعليمة تكرار",
+      "D": "خطأ في الكود"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما وظيفة loop في البرمجة؟ نسخة بنك 3",
+    "options": {
+      "A": "تكرار مجموعة أوامر",
+      "B": "إيقاف البرنامج",
+      "C": "تعريف متغير",
+      "D": "حذف البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما معنى Input في البرنامج؟ نسخة بنك 3",
+    "options": {
+      "A": "البيانات التي يدخلها المستخدم",
+      "B": "النتيجة النهائية",
+      "C": "نوع المتغير",
+      "D": "لغة البرمجة"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالـ Algorithm؟ نسخة بنك 3",
+    "options": {
+      "A": "خطوات مرتبة لحل مشكلة",
+      "B": "برنامج جاهز",
+      "C": "لغة برمجة",
+      "D": "قاعدة بيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما الهدف من استخدام قاعدة البيانات؟ نسخة بنك 3",
+    "options": {
+      "A": "تنظيم وتخزين البيانات",
+      "B": "تشغيل الشاشة",
+      "C": "تشغيل الإنترنت",
+      "D": "تشغيل المعالج"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما وظيفة API غالبا؟ نسخة بنك 3",
+    "options": {
+      "A": "التواصل بين البرامج",
+      "B": "تشغيل الشاشة",
+      "C": "تخزين البيانات",
+      "D": "إدارة الملفات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "ما وظيفة المقاومة Resistor؟ نسخة بنك 3",
+    "options": {
+      "A": "تقليل التيار الكهربائي",
+      "B": "تخزين البيانات",
+      "C": "تشغيل الشاشة",
+      "D": "قياس الصوت"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "الـ Ultrasonic sensor يستخدم عادة في؟ نسخة بنك 3",
+    "options": {
+      "A": "قياس المسافة",
+      "B": "قياس الضوء",
+      "C": "إنتاج الصوت",
+      "D": "تخزين البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "ما الطريقة الصحيحة لإيقاف تشغيل الكمبيوتر؟ نسخة بنك 4",
+    "options": {
+      "A": "اختيار Shut Down من قائمة Start",
+      "B": "فصل الكهرباء مباشرة",
+      "C": "إغلاق الشاشة فقط",
+      "D": "إعادة تشغيل الشاشة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "وظيفة زر Caps Lock هي؟ نسخة بنك 4",
+    "options": {
+      "A": "كتابة الحروف الكبيرة بشكل مستمر",
+      "B": "حذف الحروف",
+      "C": "فتح برنامج",
+      "D": "تغيير نوع الملف"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "عند الضغط كليك يمين على ملف ماذا يظهر عادة؟ نسخة بنك 4",
+    "options": {
+      "A": "قائمة خيارات للملف",
+      "B": "نافذة الطباعة",
+      "C": "إغلاق البرنامج",
+      "D": "إعادة تشغيل الجهاز"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي يعتبر جهاز إدخال؟ نسخة بنك 4",
+    "options": {
+      "A": "الكيبورد",
+      "B": "الشاشة",
+      "C": "السماعة",
+      "D": "الطابعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي وسيلة تخزين بيانات؟ نسخة بنك 4",
+    "options": {
+      "A": "القرص الصلب",
+      "B": "الشاشة",
+      "C": "الماوس",
+      "D": "السماعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالمتغير Variable؟ نسخة بنك 4",
+    "options": {
+      "A": "مكان لتخزين قيمة يمكن تغييرها",
+      "B": "برنامج كامل",
+      "C": "تعليمة تكرار",
+      "D": "خطأ في الكود"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما وظيفة loop في البرمجة؟ نسخة بنك 4",
+    "options": {
+      "A": "تكرار مجموعة أوامر",
+      "B": "إيقاف البرنامج",
+      "C": "تعريف متغير",
+      "D": "حذف البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما معنى Input في البرنامج؟ نسخة بنك 4",
+    "options": {
+      "A": "البيانات التي يدخلها المستخدم",
+      "B": "النتيجة النهائية",
+      "C": "نوع المتغير",
+      "D": "لغة البرمجة"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالـ Algorithm؟ نسخة بنك 4",
+    "options": {
+      "A": "خطوات مرتبة لحل مشكلة",
+      "B": "برنامج جاهز",
+      "C": "لغة برمجة",
+      "D": "قاعدة بيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما الهدف من استخدام قاعدة البيانات؟ نسخة بنك 4",
+    "options": {
+      "A": "تنظيم وتخزين البيانات",
+      "B": "تشغيل الشاشة",
+      "C": "تشغيل الإنترنت",
+      "D": "تشغيل المعالج"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما وظيفة API غالبا؟ نسخة بنك 4",
+    "options": {
+      "A": "التواصل بين البرامج",
+      "B": "تشغيل الشاشة",
+      "C": "تخزين البيانات",
+      "D": "إدارة الملفات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "ما وظيفة المقاومة Resistor؟ نسخة بنك 4",
+    "options": {
+      "A": "تقليل التيار الكهربائي",
+      "B": "تخزين البيانات",
+      "C": "تشغيل الشاشة",
+      "D": "قياس الصوت"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "الـ Ultrasonic sensor يستخدم عادة في؟ نسخة بنك 4",
+    "options": {
+      "A": "قياس المسافة",
+      "B": "قياس الضوء",
+      "C": "إنتاج الصوت",
+      "D": "تخزين البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "ما الطريقة الصحيحة لإيقاف تشغيل الكمبيوتر؟ نسخة بنك 5",
+    "options": {
+      "A": "اختيار Shut Down من قائمة Start",
+      "B": "فصل الكهرباء مباشرة",
+      "C": "إغلاق الشاشة فقط",
+      "D": "إعادة تشغيل الشاشة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "وظيفة زر Caps Lock هي؟ نسخة بنك 5",
+    "options": {
+      "A": "كتابة الحروف الكبيرة بشكل مستمر",
+      "B": "حذف الحروف",
+      "C": "فتح برنامج",
+      "D": "تغيير نوع الملف"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "عند الضغط كليك يمين على ملف ماذا يظهر عادة؟ نسخة بنك 5",
+    "options": {
+      "A": "قائمة خيارات للملف",
+      "B": "نافذة الطباعة",
+      "C": "إغلاق البرنامج",
+      "D": "إعادة تشغيل الجهاز"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي يعتبر جهاز إدخال؟ نسخة بنك 5",
+    "options": {
+      "A": "الكيبورد",
+      "B": "الشاشة",
+      "C": "السماعة",
+      "D": "الطابعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي وسيلة تخزين بيانات؟ نسخة بنك 5",
+    "options": {
+      "A": "القرص الصلب",
+      "B": "الشاشة",
+      "C": "الماوس",
+      "D": "السماعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالمتغير Variable؟ نسخة بنك 5",
+    "options": {
+      "A": "مكان لتخزين قيمة يمكن تغييرها",
+      "B": "برنامج كامل",
+      "C": "تعليمة تكرار",
+      "D": "خطأ في الكود"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما وظيفة loop في البرمجة؟ نسخة بنك 5",
+    "options": {
+      "A": "تكرار مجموعة أوامر",
+      "B": "إيقاف البرنامج",
+      "C": "تعريف متغير",
+      "D": "حذف البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما معنى Input في البرنامج؟ نسخة بنك 5",
+    "options": {
+      "A": "البيانات التي يدخلها المستخدم",
+      "B": "النتيجة النهائية",
+      "C": "نوع المتغير",
+      "D": "لغة البرمجة"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالـ Algorithm؟ نسخة بنك 5",
+    "options": {
+      "A": "خطوات مرتبة لحل مشكلة",
+      "B": "برنامج جاهز",
+      "C": "لغة برمجة",
+      "D": "قاعدة بيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما الهدف من استخدام قاعدة البيانات؟ نسخة بنك 5",
+    "options": {
+      "A": "تنظيم وتخزين البيانات",
+      "B": "تشغيل الشاشة",
+      "C": "تشغيل الإنترنت",
+      "D": "تشغيل المعالج"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما وظيفة API غالبا؟ نسخة بنك 5",
+    "options": {
+      "A": "التواصل بين البرامج",
+      "B": "تشغيل الشاشة",
+      "C": "تخزين البيانات",
+      "D": "إدارة الملفات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "ما وظيفة المقاومة Resistor؟ نسخة بنك 5",
+    "options": {
+      "A": "تقليل التيار الكهربائي",
+      "B": "تخزين البيانات",
+      "C": "تشغيل الشاشة",
+      "D": "قياس الصوت"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "الـ Ultrasonic sensor يستخدم عادة في؟ نسخة بنك 5",
+    "options": {
+      "A": "قياس المسافة",
+      "B": "قياس الضوء",
+      "C": "إنتاج الصوت",
+      "D": "تخزين البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "ما الطريقة الصحيحة لإيقاف تشغيل الكمبيوتر؟ نسخة بنك 6",
+    "options": {
+      "A": "اختيار Shut Down من قائمة Start",
+      "B": "فصل الكهرباء مباشرة",
+      "C": "إغلاق الشاشة فقط",
+      "D": "إعادة تشغيل الشاشة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "وظيفة زر Caps Lock هي؟ نسخة بنك 6",
+    "options": {
+      "A": "كتابة الحروف الكبيرة بشكل مستمر",
+      "B": "حذف الحروف",
+      "C": "فتح برنامج",
+      "D": "تغيير نوع الملف"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "عند الضغط كليك يمين على ملف ماذا يظهر عادة؟ نسخة بنك 6",
+    "options": {
+      "A": "قائمة خيارات للملف",
+      "B": "نافذة الطباعة",
+      "C": "إغلاق البرنامج",
+      "D": "إعادة تشغيل الجهاز"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي يعتبر جهاز إدخال؟ نسخة بنك 6",
+    "options": {
+      "A": "الكيبورد",
+      "B": "الشاشة",
+      "C": "السماعة",
+      "D": "الطابعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي وسيلة تخزين بيانات؟ نسخة بنك 6",
+    "options": {
+      "A": "القرص الصلب",
+      "B": "الشاشة",
+      "C": "الماوس",
+      "D": "السماعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالمتغير Variable؟ نسخة بنك 6",
+    "options": {
+      "A": "مكان لتخزين قيمة يمكن تغييرها",
+      "B": "برنامج كامل",
+      "C": "تعليمة تكرار",
+      "D": "خطأ في الكود"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما وظيفة loop في البرمجة؟ نسخة بنك 6",
+    "options": {
+      "A": "تكرار مجموعة أوامر",
+      "B": "إيقاف البرنامج",
+      "C": "تعريف متغير",
+      "D": "حذف البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما معنى Input في البرنامج؟ نسخة بنك 6",
+    "options": {
+      "A": "البيانات التي يدخلها المستخدم",
+      "B": "النتيجة النهائية",
+      "C": "نوع المتغير",
+      "D": "لغة البرمجة"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالـ Algorithm؟ نسخة بنك 6",
+    "options": {
+      "A": "خطوات مرتبة لحل مشكلة",
+      "B": "برنامج جاهز",
+      "C": "لغة برمجة",
+      "D": "قاعدة بيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما الهدف من استخدام قاعدة البيانات؟ نسخة بنك 6",
+    "options": {
+      "A": "تنظيم وتخزين البيانات",
+      "B": "تشغيل الشاشة",
+      "C": "تشغيل الإنترنت",
+      "D": "تشغيل المعالج"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما وظيفة API غالبا؟ نسخة بنك 6",
+    "options": {
+      "A": "التواصل بين البرامج",
+      "B": "تشغيل الشاشة",
+      "C": "تخزين البيانات",
+      "D": "إدارة الملفات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "ما وظيفة المقاومة Resistor؟ نسخة بنك 6",
+    "options": {
+      "A": "تقليل التيار الكهربائي",
+      "B": "تخزين البيانات",
+      "C": "تشغيل الشاشة",
+      "D": "قياس الصوت"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "الـ Ultrasonic sensor يستخدم عادة في؟ نسخة بنك 6",
+    "options": {
+      "A": "قياس المسافة",
+      "B": "قياس الضوء",
+      "C": "إنتاج الصوت",
+      "D": "تخزين البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "ما الطريقة الصحيحة لإيقاف تشغيل الكمبيوتر؟ نسخة بنك 7",
+    "options": {
+      "A": "اختيار Shut Down من قائمة Start",
+      "B": "فصل الكهرباء مباشرة",
+      "C": "إغلاق الشاشة فقط",
+      "D": "إعادة تشغيل الشاشة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "وظيفة زر Caps Lock هي؟ نسخة بنك 7",
+    "options": {
+      "A": "كتابة الحروف الكبيرة بشكل مستمر",
+      "B": "حذف الحروف",
+      "C": "فتح برنامج",
+      "D": "تغيير نوع الملف"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "عند الضغط كليك يمين على ملف ماذا يظهر عادة؟ نسخة بنك 7",
+    "options": {
+      "A": "قائمة خيارات للملف",
+      "B": "نافذة الطباعة",
+      "C": "إغلاق البرنامج",
+      "D": "إعادة تشغيل الجهاز"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي يعتبر جهاز إدخال؟ نسخة بنك 7",
+    "options": {
+      "A": "الكيبورد",
+      "B": "الشاشة",
+      "C": "السماعة",
+      "D": "الطابعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي وسيلة تخزين بيانات؟ نسخة بنك 7",
+    "options": {
+      "A": "القرص الصلب",
+      "B": "الشاشة",
+      "C": "الماوس",
+      "D": "السماعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالمتغير Variable؟ نسخة بنك 7",
+    "options": {
+      "A": "مكان لتخزين قيمة يمكن تغييرها",
+      "B": "برنامج كامل",
+      "C": "تعليمة تكرار",
+      "D": "خطأ في الكود"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما وظيفة loop في البرمجة؟ نسخة بنك 7",
+    "options": {
+      "A": "تكرار مجموعة أوامر",
+      "B": "إيقاف البرنامج",
+      "C": "تعريف متغير",
+      "D": "حذف البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما معنى Input في البرنامج؟ نسخة بنك 7",
+    "options": {
+      "A": "البيانات التي يدخلها المستخدم",
+      "B": "النتيجة النهائية",
+      "C": "نوع المتغير",
+      "D": "لغة البرمجة"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالـ Algorithm؟ نسخة بنك 7",
+    "options": {
+      "A": "خطوات مرتبة لحل مشكلة",
+      "B": "برنامج جاهز",
+      "C": "لغة برمجة",
+      "D": "قاعدة بيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما الهدف من استخدام قاعدة البيانات؟ نسخة بنك 7",
+    "options": {
+      "A": "تنظيم وتخزين البيانات",
+      "B": "تشغيل الشاشة",
+      "C": "تشغيل الإنترنت",
+      "D": "تشغيل المعالج"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما وظيفة API غالبا؟ نسخة بنك 7",
+    "options": {
+      "A": "التواصل بين البرامج",
+      "B": "تشغيل الشاشة",
+      "C": "تخزين البيانات",
+      "D": "إدارة الملفات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "ما وظيفة المقاومة Resistor؟ نسخة بنك 7",
+    "options": {
+      "A": "تقليل التيار الكهربائي",
+      "B": "تخزين البيانات",
+      "C": "تشغيل الشاشة",
+      "D": "قياس الصوت"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "الـ Ultrasonic sensor يستخدم عادة في؟ نسخة بنك 7",
+    "options": {
+      "A": "قياس المسافة",
+      "B": "قياس الضوء",
+      "C": "إنتاج الصوت",
+      "D": "تخزين البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "ما الطريقة الصحيحة لإيقاف تشغيل الكمبيوتر؟ نسخة بنك 8",
+    "options": {
+      "A": "اختيار Shut Down من قائمة Start",
+      "B": "فصل الكهرباء مباشرة",
+      "C": "إغلاق الشاشة فقط",
+      "D": "إعادة تشغيل الشاشة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "وظيفة زر Caps Lock هي؟ نسخة بنك 8",
+    "options": {
+      "A": "كتابة الحروف الكبيرة بشكل مستمر",
+      "B": "حذف الحروف",
+      "C": "فتح برنامج",
+      "D": "تغيير نوع الملف"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "عند الضغط كليك يمين على ملف ماذا يظهر عادة؟ نسخة بنك 8",
+    "options": {
+      "A": "قائمة خيارات للملف",
+      "B": "نافذة الطباعة",
+      "C": "إغلاق البرنامج",
+      "D": "إعادة تشغيل الجهاز"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي يعتبر جهاز إدخال؟ نسخة بنك 8",
+    "options": {
+      "A": "الكيبورد",
+      "B": "الشاشة",
+      "C": "السماعة",
+      "D": "الطابعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_a",
+    "skill": "computer_basics",
+    "question_text_ar": "أي من التالي وسيلة تخزين بيانات؟ نسخة بنك 8",
+    "options": {
+      "A": "القرص الصلب",
+      "B": "الشاشة",
+      "C": "الماوس",
+      "D": "السماعة"
+    },
+    "correct_answer": "A",
+    "difficulty": "easy",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالمتغير Variable؟ نسخة بنك 8",
+    "options": {
+      "A": "مكان لتخزين قيمة يمكن تغييرها",
+      "B": "برنامج كامل",
+      "C": "تعليمة تكرار",
+      "D": "خطأ في الكود"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما وظيفة loop في البرمجة؟ نسخة بنك 8",
+    "options": {
+      "A": "تكرار مجموعة أوامر",
+      "B": "إيقاف البرنامج",
+      "C": "تعريف متغير",
+      "D": "حذف البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما معنى Input في البرنامج؟ نسخة بنك 8",
+    "options": {
+      "A": "البيانات التي يدخلها المستخدم",
+      "B": "النتيجة النهائية",
+      "C": "نوع المتغير",
+      "D": "لغة البرمجة"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_b",
+    "skill": "programming_basics",
+    "question_text_ar": "ما المقصود بالـ Algorithm؟ نسخة بنك 8",
+    "options": {
+      "A": "خطوات مرتبة لحل مشكلة",
+      "B": "برنامج جاهز",
+      "C": "لغة برمجة",
+      "D": "قاعدة بيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": null
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما الهدف من استخدام قاعدة البيانات؟ نسخة بنك 8",
+    "options": {
+      "A": "تنظيم وتخزين البيانات",
+      "B": "تشغيل الشاشة",
+      "C": "تشغيل الإنترنت",
+      "D": "تشغيل المعالج"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "software_concepts",
+    "question_text_ar": "ما وظيفة API غالبا؟ نسخة بنك 8",
+    "options": {
+      "A": "التواصل بين البرامج",
+      "B": "تشغيل الشاشة",
+      "C": "تخزين البيانات",
+      "D": "إدارة الملفات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "software"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "ما وظيفة المقاومة Resistor؟ نسخة بنك 8",
+    "options": {
+      "A": "تقليل التيار الكهربائي",
+      "B": "تخزين البيانات",
+      "C": "تشغيل الشاشة",
+      "D": "قياس الصوت"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  },
+  {
+    "section": "section_c",
+    "skill": "electronics_basics",
+    "question_text_ar": "الـ Ultrasonic sensor يستخدم عادة في؟ نسخة بنك 8",
+    "options": {
+      "A": "قياس المسافة",
+      "B": "قياس الضوء",
+      "C": "إنتاج الصوت",
+      "D": "تخزين البيانات"
+    },
+    "correct_answer": "A",
+    "difficulty": "medium",
+    "track_category": "hardware"
+  }
+]
