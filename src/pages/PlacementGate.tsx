@@ -123,7 +123,7 @@ export default function PlacementGate() {
                   ? 'يرجى التواصل مع الإدارة لتحديد موعد امتحان تحديد المستوى. لن تتمكن من الوصول للمنصة قبل اجتياز الامتحان.'
                   : 'Please contact the administration to schedule your placement exam. You cannot access the platform until the exam is completed.'}
               </p>
-              <Button variant="outline" onClick={signOut} className="mt-2">
+              <Button variant="outline" onClick={signOut} className="mt-2 border-white/20 text-white hover:bg-white/10">
                 <LogOut className="h-4 w-4 me-2" />
                 {isRTL ? 'تسجيل الخروج' : 'Sign Out'}
               </Button>
