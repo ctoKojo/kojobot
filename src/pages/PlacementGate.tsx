@@ -223,7 +223,7 @@ export default function PlacementGate() {
                   {isRTL ? 'وقت البداية:' : 'Opens at:'}
                 </p>
                 <p className="font-medium">{formatDateTime(schedule.opens_at)}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-white/50">
                   {isRTL ? 'وقت النهاية:' : 'Closes at:'}
                 </p>
                 <p className="font-medium">{formatDateTime(schedule.closes_at)}</p>
