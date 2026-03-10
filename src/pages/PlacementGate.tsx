@@ -202,7 +202,7 @@ export default function PlacementGate() {
                   ? 'تم استلام إجاباتك بنجاح. بانتظار المراجعة واعتماد النتيجة من الإدارة.'
                   : 'Your answers have been received successfully. Pending review and approval by administration.'}
               </p>
-              <Badge variant="outline" className="text-sm px-4 py-1.5">
+              <Badge variant="outline" className="text-sm px-4 py-1.5 border-white/20 text-white/70">
                 {isRTL ? 'بانتظار الاعتماد' : 'Pending Approval'}
               </Badge>
             </>
