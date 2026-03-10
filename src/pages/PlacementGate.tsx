@@ -104,9 +104,9 @@ export default function PlacementGate() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <Card className="w-full max-w-lg shadow-xl border-0">
-        <CardContent className="pt-8 pb-8 px-6 flex flex-col items-center text-center space-y-6">
+    <div className="dark min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #0a0a1a 0%, #0d1033 40%, #1a0a2e 100%)' }}>
+      <Card className="w-full max-w-lg shadow-2xl border border-white/10 bg-white/5 backdrop-blur-xl">
+        <CardContent className="pt-8 pb-8 px-6 flex flex-col items-center text-center space-y-6 text-white">
           <KojobotLogo size="lg" />
 
           {/* Not Scheduled */}
