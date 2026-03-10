@@ -243,7 +243,7 @@ export default function PlacementGate() {
 
           {/* Sign Out — always visible */}
           {status !== 'not_scheduled' && (
-            <Button variant="outline" onClick={signOut} className="mt-2">
+            <Button variant="outline" onClick={signOut} className="mt-2 border-white/20 text-white hover:bg-white/10">
               <LogOut className="h-4 w-4 me-2" />
               {isRTL ? 'تسجيل الخروج' : 'Sign Out'}
             </Button>
