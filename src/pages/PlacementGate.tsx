@@ -173,7 +173,7 @@ export default function PlacementGate() {
                   : 'You can start your placement exam now. Answer all questions and submit when ready.'}
               </p>
               {schedule && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-white/50">
                   {isRTL ? 'ينتهي الموعد:' : 'Closes at:'} {formatDateTime(schedule.closes_at)}
                 </p>
               )}
