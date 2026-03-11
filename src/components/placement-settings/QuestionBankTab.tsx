@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Pencil, Trash2, Upload, MoreHorizontal, Database, CheckCircle, XCircle, BarChart3, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, MoreHorizontal, Database, CheckCircle, XCircle, BarChart3, Layers, CheckCheck } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
