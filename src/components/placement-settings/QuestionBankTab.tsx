@@ -327,6 +327,12 @@ export default function QuestionBankTab() {
         filters={filterUI}
         actions={
           <div className="flex gap-2">
+            {pendingCount > 0 && (
+              <Button variant="outline" size="sm" className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30" onClick={handleBulkApprove}>
+                <CheckCheck className="h-4 w-4 me-1" />
+                {isRTL ? `اعتماد الكل (${pendingCount})` : `Approve All (${pendingCount})`}
+              </Button>
+            )}
             <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileSelect} />
             <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-4 w-4 me-1" />
