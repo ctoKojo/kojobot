@@ -206,6 +206,21 @@ export default function QuestionBankTab() {
     fetchQuestions();
   };
 
+  const pendingCount = questions.filter(q => q.review_status === 'pending').length;
+
+  const handleBulkApprove = async () => {
+    if (!confirm(isRTL ? 'هل تريد اعتماد جميع الأسئلة المعلقة؟' : 'Approve all pending questions?')) return;
+    const { error } = await supabase.from('placement_v2_questions')
+      .update({ review_status: 'approved', updated_at: new Date().toISOString() } as any)
+      .eq('review_status', 'pending');
+    if (error) {
+      toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: isRTL ? 'تم اعتماد جميع الأسئلة المعلقة' : 'All pending questions approved' });
+      fetchQuestions();
+    }
+  };
+
   const updateEditField = (field: string, value: any) => {
     setEditQ(prev => prev ? { ...prev, [field]: value } : null);
   };
