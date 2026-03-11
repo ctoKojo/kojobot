@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Pencil, Trash2, Upload, MoreHorizontal, Database, CheckCircle, XCircle, BarChart3, Layers } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, MoreHorizontal, Database, CheckCircle, XCircle, BarChart3, Layers, CheckCheck } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -206,6 +206,21 @@ export default function QuestionBankTab() {
     fetchQuestions();
   };
 
+  const pendingCount = questions.filter(q => q.review_status === 'pending').length;
+
+  const handleBulkApprove = async () => {
+    if (!confirm(isRTL ? 'هل تريد اعتماد جميع الأسئلة المعلقة؟' : 'Approve all pending questions?')) return;
+    const { error } = await supabase.from('placement_v2_questions')
+      .update({ review_status: 'approved', updated_at: new Date().toISOString() } as any)
+      .eq('review_status', 'pending');
+    if (error) {
+      toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: isRTL ? 'تم اعتماد جميع الأسئلة المعلقة' : 'All pending questions approved' });
+      fetchQuestions();
+    }
+  };
+
   const updateEditField = (field: string, value: any) => {
     setEditQ(prev => prev ? { ...prev, [field]: value } : null);
   };
@@ -312,6 +327,12 @@ export default function QuestionBankTab() {
         filters={filterUI}
         actions={
           <div className="flex gap-2">
+            {pendingCount > 0 && (
+              <Button variant="outline" size="sm" className="text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/30" onClick={handleBulkApprove}>
+                <CheckCheck className="h-4 w-4 me-1" />
+                {isRTL ? `اعتماد الكل (${pendingCount})` : `Approve All (${pendingCount})`}
+              </Button>
+            )}
             <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileSelect} />
             <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
               <Upload className="h-4 w-4 me-1" />
