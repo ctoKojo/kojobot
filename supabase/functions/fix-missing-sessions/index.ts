@@ -18,29 +18,34 @@ Deno.serve(async (req) => {
 
     const fixes: any[] = [];
 
-    // Find all cancelled sessions that don't have a next session
+    // Find all cancelled non-makeup sessions using raw filter
     const { data: cancelled, error: cErr } = await supabase
       .from("sessions")
-      .select("id, group_id, session_number, session_date, session_time, level_id, is_makeup, status")
+      .select("id, group_id, session_number, session_date, session_time, level_id")
       .eq("status", "cancelled")
-      .eq("is_makeup", false);
+      .or("is_makeup.eq.false,is_makeup.is.null");
 
-    if (cErr) throw cErr;
+    if (cErr) throw new Error("fetch cancelled: " + cErr.message);
+
+    fixes.push({ debug: "found_cancelled", count: cancelled?.length || 0 });
 
     for (const s of cancelled || []) {
+      if (!s.session_number) continue;
       const nextNum = s.session_number + 1;
 
-      // Check if next session exists (non-cancelled, non-makeup)
+      // Check if next non-cancelled, non-makeup session exists
       const { data: existing } = await supabase
         .from("sessions")
         .select("id")
         .eq("group_id", s.group_id)
         .eq("session_number", nextNum)
-        .eq("is_makeup", false)
+        .or("is_makeup.eq.false,is_makeup.is.null")
         .neq("status", "cancelled")
         .limit(1);
 
-      if (existing && existing.length > 0) continue;
+      if (existing && existing.length > 0) {
+        continue;
+      }
 
       // Get group info
       const { data: group } = await supabase
@@ -49,7 +54,10 @@ Deno.serve(async (req) => {
         .eq("id", s.group_id)
         .single();
 
-      if (!group || !group.is_active) continue;
+      if (!group || !group.is_active) {
+        fixes.push({ skipped: s.group_id, reason: "inactive" });
+        continue;
+      }
 
       // Calculate next date
       const dayMap: Record<string, number> = {
@@ -57,19 +65,7 @@ Deno.serve(async (req) => {
         Thursday: 4, Friday: 5, Saturday: 6,
       };
 
-      // Find last regular session date
-      const { data: lastSessions } = await supabase
-        .from("sessions")
-        .select("session_date")
-        .eq("group_id", s.group_id)
-        .eq("is_makeup", false)
-        .not("session_number", "is", null)
-        .in("status", ["scheduled", "completed", "cancelled"])
-        .order("session_date", { ascending: false })
-        .limit(1);
-
-      const lastDate = lastSessions?.[0]?.session_date || s.session_date;
-      const lastDateObj = new Date(lastDate + "T00:00:00Z");
+      const lastDateObj = new Date(s.session_date + "T00:00:00Z");
       const targetDow = dayMap[group.schedule_day] ?? lastDateObj.getUTCDay();
       const currentDow = lastDateObj.getUTCDay();
       let daysAhead = (targetDow - currentDow + 7) % 7;
@@ -90,6 +86,7 @@ Deno.serve(async (req) => {
           status: "scheduled",
           session_number: nextNum,
           level_id: group.level_id,
+          is_makeup: false,
         })
         .select("id, session_number, session_date")
         .single();
@@ -107,16 +104,17 @@ Deno.serve(async (req) => {
 
       fixes.push({
         group_id: s.group_id,
-        cancelled_session: s.session_number,
+        cancelled_session_number: s.session_number,
         new_session: inserted,
+        new_date: nextDateStr,
       });
     }
 
-    return new Response(JSON.stringify({ fixes, count: fixes.length }), {
+    return new Response(JSON.stringify({ fixes, total_fixes: fixes.filter((f: any) => f.new_session).length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
