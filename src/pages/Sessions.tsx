@@ -102,6 +102,7 @@ export default function SessionsPage() {
   const [makeupDialogOpen, setMakeupDialogOpen] = useState(false);
   const [pendingCancelSession, setPendingCancelSession] = useState<Session | null>(null);
   const [creatingMakeup, setCreatingMakeup] = useState(false);
+  const [repairing, setRepairing] = useState(false);
   
   // Online mode dialog
   const [onlineDialogOpen, setOnlineDialogOpen] = useState(false);
