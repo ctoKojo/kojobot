@@ -193,6 +193,7 @@ export default function SessionsPage() {
     }
   };
 
+  const handleEdit = (session: Session) => {
     setEditingSession(session);
     setFormData({
       topic: session.topic || '',
