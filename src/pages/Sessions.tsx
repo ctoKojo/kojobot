@@ -578,14 +578,25 @@ export default function SessionsPage() {
           icon={Calendar}
           gradient="from-indigo-500 to-purple-600"
           actions={role === 'admin' ? (
-            <Button 
-              className="kojo-gradient" 
-              onClick={generateSessions}
-              disabled={generating}
-            >
-              <RefreshCw className={`h-4 w-4 me-2 ${generating ? 'animate-spin' : ''}`} />
-              {isRTL ? 'توليد السيشنات' : 'Generate Sessions'}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={repairOrphanedSessions}
+                disabled={repairing}
+                size="sm"
+              >
+                <Wrench className={`h-4 w-4 me-2 ${repairing ? 'animate-spin' : ''}`} />
+                {isRTL ? 'إصلاح سيشنات مفقودة' : 'Repair Missing'}
+              </Button>
+              <Button 
+                className="kojo-gradient" 
+                onClick={generateSessions}
+                disabled={generating}
+              >
+                <RefreshCw className={`h-4 w-4 me-2 ${generating ? 'animate-spin' : ''}`} />
+                {isRTL ? 'توليد السيشنات' : 'Generate Sessions'}
+              </Button>
+            </div>
           ) : undefined}
         />
         <div className="flex flex-col sm:flex-row gap-3">
