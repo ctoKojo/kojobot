@@ -16,34 +16,37 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const fixes: any[] = [];
+    const log: any[] = [];
 
-    // Find all cancelled non-makeup sessions using raw filter
+    // Find all cancelled non-makeup sessions
     const { data: cancelled, error: cErr } = await supabase
       .from("sessions")
-      .select("id, group_id, session_number, session_date, session_time, level_id")
+      .select("id, group_id, session_number, session_date, session_time, level_id, is_makeup")
       .eq("status", "cancelled")
       .or("is_makeup.eq.false,is_makeup.is.null");
 
     if (cErr) throw new Error("fetch cancelled: " + cErr.message);
 
-    fixes.push({ debug: "found_cancelled", count: cancelled?.length || 0 });
+    log.push({ step: "found_cancelled", count: cancelled?.length, ids: cancelled?.map(s => ({ id: s.id, num: s.session_number, group: s.group_id })) });
 
     for (const s of cancelled || []) {
-      if (!s.session_number) continue;
+      if (!s.session_number) { log.push({ skip: s.id, reason: "no session_number" }); continue; }
       const nextNum = s.session_number + 1;
 
-      // Check if next non-cancelled, non-makeup session exists
-      const { data: existing } = await supabase
+      // Check ALL sessions with nextNum for this group
+      const { data: allNext, error: anErr } = await supabase
         .from("sessions")
-        .select("id")
+        .select("id, session_number, status, is_makeup")
         .eq("group_id", s.group_id)
-        .eq("session_number", nextNum)
-        .or("is_makeup.eq.false,is_makeup.is.null")
-        .neq("status", "cancelled")
-        .limit(1);
+        .eq("session_number", nextNum);
 
-      if (existing && existing.length > 0) {
+      log.push({ step: "check_next", group: s.group_id, nextNum, allNext, error: anErr?.message });
+
+      // Filter: only non-makeup, non-cancelled
+      const validNext = (allNext || []).filter(x => !x.is_makeup && x.status !== 'cancelled');
+
+      if (validNext.length > 0) {
+        log.push({ skip: s.id, reason: "next_exists", validNext });
         continue;
       }
 
@@ -54,10 +57,8 @@ Deno.serve(async (req) => {
         .eq("id", s.group_id)
         .single();
 
-      if (!group || !group.is_active) {
-        fixes.push({ skipped: s.group_id, reason: "inactive" });
-        continue;
-      }
+      if (!group) { log.push({ skip: s.id, reason: "group_not_found" }); continue; }
+      if (!group.is_active) { log.push({ skip: s.id, reason: "group_inactive" }); continue; }
 
       // Calculate next date
       const dayMap: Record<string, number> = {
@@ -75,7 +76,8 @@ Deno.serve(async (req) => {
       nextDate.setUTCDate(nextDate.getUTCDate() + daysAhead);
       const nextDateStr = nextDate.toISOString().split("T")[0];
 
-      // Insert the missing session
+      log.push({ step: "inserting", group: s.group_id, nextNum, nextDateStr });
+
       const { data: inserted, error: iErr } = await supabase
         .from("sessions")
         .insert({
@@ -92,29 +94,23 @@ Deno.serve(async (req) => {
         .single();
 
       if (iErr) {
-        fixes.push({ group_id: s.group_id, error: iErr.message });
+        log.push({ step: "insert_error", group: s.group_id, error: iErr.message, code: iErr.code });
         continue;
       }
 
-      // Update owed_sessions_count
       await supabase
         .from("groups")
         .update({ owed_sessions_count: (group.owed_sessions_count || 0) + 1 })
         .eq("id", s.group_id);
 
-      fixes.push({
-        group_id: s.group_id,
-        cancelled_session_number: s.session_number,
-        new_session: inserted,
-        new_date: nextDateStr,
-      });
+      log.push({ step: "fixed", group: s.group_id, new_session: inserted });
     }
 
-    return new Response(JSON.stringify({ fixes, total_fixes: fixes.filter((f: any) => f.new_session).length }), {
+    return new Response(JSON.stringify({ log }, null, 2), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message, stack: err.stack }), {
+    return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
