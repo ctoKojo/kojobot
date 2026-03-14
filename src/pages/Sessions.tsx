@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users, ChevronDown, FolderOpen, Snowflake, Eye, AlertTriangle, Video, Globe } from 'lucide-react';
+import { Search, MoreHorizontal, Pencil, Trash2, Calendar, Clock, RefreshCw, CheckCircle, Users, ChevronDown, FolderOpen, Snowflake, Eye, AlertTriangle, Video, Globe, Wrench } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -102,6 +102,7 @@ export default function SessionsPage() {
   const [makeupDialogOpen, setMakeupDialogOpen] = useState(false);
   const [pendingCancelSession, setPendingCancelSession] = useState<Session | null>(null);
   const [creatingMakeup, setCreatingMakeup] = useState(false);
+  const [repairing, setRepairing] = useState(false);
   
   // Online mode dialog
   const [onlineDialogOpen, setOnlineDialogOpen] = useState(false);
@@ -165,6 +166,30 @@ export default function SessionsPage() {
       });
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const repairOrphanedSessions = async () => {
+    setRepairing(true);
+    try {
+      const { data, error } = await supabase.rpc('repair_orphaned_sessions');
+      if (error) throw error;
+      const result = data as any;
+      toast({
+        title: isRTL ? 'تم الإصلاح' : 'Repair Complete',
+        description: isRTL
+          ? `تم إصلاح ${result?.fixed || 0} سيشن مفقودة`
+          : `Fixed ${result?.fixed || 0} orphaned sessions`,
+      });
+      if (result?.fixed > 0) fetchData();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: error.message,
+      });
+    } finally {
+      setRepairing(false);
     }
   };
 
@@ -553,14 +578,25 @@ export default function SessionsPage() {
           icon={Calendar}
           gradient="from-indigo-500 to-purple-600"
           actions={role === 'admin' ? (
-            <Button 
-              className="kojo-gradient" 
-              onClick={generateSessions}
-              disabled={generating}
-            >
-              <RefreshCw className={`h-4 w-4 me-2 ${generating ? 'animate-spin' : ''}`} />
-              {isRTL ? 'توليد السيشنات' : 'Generate Sessions'}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={repairOrphanedSessions}
+                disabled={repairing}
+                size="sm"
+              >
+                <Wrench className={`h-4 w-4 me-2 ${repairing ? 'animate-spin' : ''}`} />
+                {isRTL ? 'إصلاح سيشنات مفقودة' : 'Repair Missing'}
+              </Button>
+              <Button 
+                className="kojo-gradient" 
+                onClick={generateSessions}
+                disabled={generating}
+              >
+                <RefreshCw className={`h-4 w-4 me-2 ${generating ? 'animate-spin' : ''}`} />
+                {isRTL ? 'توليد السيشنات' : 'Generate Sessions'}
+              </Button>
+            </div>
           ) : undefined}
         />
         <div className="flex flex-col sm:flex-row gap-3">

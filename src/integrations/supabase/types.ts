@@ -4363,6 +4363,7 @@ export type Database = {
         Args: { p_employee_id: string; p_month: string }
         Returns: undefined
       }
+      repair_orphaned_sessions: { Args: never; Returns: Json }
       save_attendance: {
         Args: { p_group_id: string; p_records: Json; p_session_id: string }
         Returns: Json
