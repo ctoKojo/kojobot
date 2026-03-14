@@ -169,7 +169,30 @@ export default function SessionsPage() {
     }
   };
 
-  const handleEdit = (session: Session) => {
+  const repairOrphanedSessions = async () => {
+    setRepairing(true);
+    try {
+      const { data, error } = await supabase.rpc('repair_orphaned_sessions');
+      if (error) throw error;
+      const result = data as any;
+      toast({
+        title: isRTL ? 'تم الإصلاح' : 'Repair Complete',
+        description: isRTL
+          ? `تم إصلاح ${result?.fixed || 0} سيشن مفقودة`
+          : `Fixed ${result?.fixed || 0} orphaned sessions`,
+      });
+      if (result?.fixed > 0) fetchData();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: error.message,
+      });
+    } finally {
+      setRepairing(false);
+    }
+  };
+
     setEditingSession(session);
     setFormData({
       topic: session.topic || '',
