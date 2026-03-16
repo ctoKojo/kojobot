@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { getCairoToday } from '@/lib/timeUtils';
 import { AdminAnalytics } from './AdminAnalytics';
+import { ClosureBanner } from '@/components/shared/ClosureBanner';
 
 interface AdminStats {
   totalStudents: number;
@@ -28,7 +29,7 @@ interface AdminStats {
 
 export function AdminDashboard() {
   const { user } = useAuth();
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, language } = useLanguage();
   const navigate = useNavigate();
   const [stats, setStats] = useState<AdminStats>({
     totalStudents: 0,
@@ -271,6 +272,9 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Academy Closure Banner */}
+      {user && <ClosureBanner role="admin" userId={user.id} isRTL={isRTL} language={language} />}
+
       {/* Stats Grid - Gradient Cards */}
       <div className="grid gap-4 sm:gap-5 grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat) => (

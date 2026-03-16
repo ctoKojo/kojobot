@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatDate } from '@/lib/timeUtils';
 import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { isSessionActiveCairo } from '@/lib/sessionTimeGuard';
+import { ClosureBanner } from '@/components/shared/ClosureBanner';
 
 interface GroupInfo {
   id: string;
@@ -330,6 +331,9 @@ export function StudentDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* Academy Closure Banner */}
+      {user && <ClosureBanner role="student" userId={user.id} isRTL={isRTL} language={language} />}
 
       {/* Level Passed - Track Selection Banner */}
       {user && <LevelPassedBanner studentId={user.id} onUpgraded={fetchStats} />}

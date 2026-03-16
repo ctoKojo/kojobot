@@ -14,6 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      academy_closure_groups: {
+        Row: {
+          closure_id: string
+          group_id: string
+          id: string
+        }
+        Insert: {
+          closure_id: string
+          group_id: string
+          id?: string
+        }
+        Update: {
+          closure_id?: string
+          group_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_closure_groups_closure_id_fkey"
+            columns: ["closure_id"]
+            isOneToOne: false
+            referencedRelation: "academy_closures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_closure_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academy_closures: {
+        Row: {
+          affects_all_groups: boolean
+          created_at: string
+          created_by: string
+          end_date: string
+          id: string
+          reason: string | null
+          reason_ar: string | null
+          start_date: string
+        }
+        Insert: {
+          affects_all_groups?: boolean
+          created_at?: string
+          created_by: string
+          end_date: string
+          id?: string
+          reason?: string | null
+          reason_ar?: string | null
+          start_date: string
+        }
+        Update: {
+          affects_all_groups?: boolean
+          created_at?: string
+          created_by?: string
+          end_date?: string
+          id?: string
+          reason?: string | null
+          reason_ar?: string | null
+          start_date?: string
+        }
+        Relationships: []
+      }
       achievements: {
         Row: {
           condition_type: string
@@ -3073,6 +3139,75 @@ export type Database = {
         }
         Relationships: []
       }
+      session_cancellation_logs: {
+        Row: {
+          cancelled_at: string
+          cancelled_by: string | null
+          closure_id: string
+          id: string
+          notification_sent: boolean
+          notification_sent_at: string | null
+          replacement_session_id: string | null
+          session_id: string
+        }
+        Insert: {
+          cancelled_at?: string
+          cancelled_by?: string | null
+          closure_id: string
+          id?: string
+          notification_sent?: boolean
+          notification_sent_at?: string | null
+          replacement_session_id?: string | null
+          session_id: string
+        }
+        Update: {
+          cancelled_at?: string
+          cancelled_by?: string | null
+          closure_id?: string
+          id?: string
+          notification_sent?: boolean
+          notification_sent_at?: string | null
+          replacement_session_id?: string | null
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_cancellation_logs_closure_id_fkey"
+            columns: ["closure_id"]
+            isOneToOne: false
+            referencedRelation: "academy_closures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_cancellation_logs_replacement_session_id_fkey"
+            columns: ["replacement_session_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "session_cancellation_logs_replacement_session_id_fkey"
+            columns: ["replacement_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_cancellation_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "session_cancellation_logs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_evaluations: {
         Row: {
           assignment_max_score: number | null
@@ -3199,6 +3334,7 @@ export type Database = {
       sessions: {
         Row: {
           attendance_mode: string | null
+          cancellation_reason: string | null
           content_number: number | null
           created_at: string
           duration_minutes: number
@@ -3219,6 +3355,7 @@ export type Database = {
         }
         Insert: {
           attendance_mode?: string | null
+          cancellation_reason?: string | null
           content_number?: number | null
           created_at?: string
           duration_minutes?: number
@@ -3239,6 +3376,7 @@ export type Database = {
         }
         Update: {
           attendance_mode?: string | null
+          cancellation_reason?: string | null
           content_number?: number | null
           created_at?: string
           duration_minutes?: number

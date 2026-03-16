@@ -11,6 +11,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertTriangle, Plus, Trash2, Save, Clock, Loader2, Bell, Key, CheckCircle, BookOpen, Globe } from 'lucide-react';
+import { AcademyClosuresSettings } from '@/components/settings/AcademyClosuresSettings';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,7 +42,7 @@ interface WarningSettings {
 }
 
 export default function SettingsPage() {
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, language } = useLanguage();
   const { role, user } = useAuth();
   const [warningTypes, setWarningTypes] = useState<WarningType[]>(systemWarningTypes);
   const [newTypeEn, setNewTypeEn] = useState('');
@@ -315,6 +316,9 @@ export default function SettingsPage() {
 
         {/* Content Access Permissions - Admin Only */}
         {role === 'admin' && <ContentAccessSettings isRTL={isRTL} />}
+
+        {/* Academy Closures - Admin Only */}
+        {role === 'admin' && <AcademyClosuresSettings isRTL={isRTL} language={language} />}
 
         {/* Push Notifications - Admin Only */}
         {role === 'admin' && <PushNotificationSettings isRTL={isRTL} />}
