@@ -65,9 +65,21 @@ interface Session {
   status: string;
   notes: string | null;
   session_number: number | null;
+  content_number: number | null;
   is_makeup: boolean;
   makeup_session_id: string | null;
 }
+
+// Helper: display content_number as primary, session_number as secondary when different
+const getSessionLabel = (session: { content_number: number | null; session_number: number | null }, isRTL: boolean) => {
+  const content = session.content_number ?? session.session_number;
+  const internal = session.session_number;
+  const showInternal = internal !== null && content !== null && internal !== content;
+  if (isRTL) {
+    return showInternal ? `محتوى ${content} (#${internal})` : `سيشن ${content}`;
+  }
+  return showInternal ? `Content ${content} (#${internal})` : `#${content}`;
+};
 
 interface Group {
   id: string;
