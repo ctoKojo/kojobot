@@ -316,7 +316,7 @@ export default function MySessions() {
                   <CardTitle className="text-base mt-2">
                     {s.curriculum
                       ? (language === 'ar' ? s.curriculum.title_ar : s.curriculum.title)
-                      : (isRTL ? `سيشن ${s.session_number}` : `Session ${s.session_number}`)}
+                      : (isRTL ? `سيشن ${s.content_number}` : `Session ${s.content_number}`)}
                   </CardTitle>
                   {s.curriculum?.description && (
                     <CardDescription className="text-xs line-clamp-2">
