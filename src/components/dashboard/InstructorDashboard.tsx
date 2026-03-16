@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { getCairoToday } from '@/lib/timeUtils';
 import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
+import { ClosureBanner } from '@/components/shared/ClosureBanner';
 
 interface InstructorWarning {
   id: string;
