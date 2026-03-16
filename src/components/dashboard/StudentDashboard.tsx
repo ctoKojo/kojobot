@@ -332,6 +332,9 @@ export function StudentDashboard() {
         </Card>
       )}
 
+      {/* Academy Closure Banner */}
+      {user && <ClosureBanner role="student" userId={user.id} isRTL={isRTL} language={language} />}
+
       {/* Level Passed - Track Selection Banner */}
       {user && <LevelPassedBanner studentId={user.id} onUpgraded={fetchStats} />}
 
