@@ -317,6 +317,9 @@ export default function SettingsPage() {
         {/* Content Access Permissions - Admin Only */}
         {role === 'admin' && <ContentAccessSettings isRTL={isRTL} />}
 
+        {/* Academy Closures - Admin Only */}
+        {role === 'admin' && <AcademyClosuresSettings isRTL={isRTL} language={language} />}
+
         {/* Push Notifications - Admin Only */}
         {role === 'admin' && <PushNotificationSettings isRTL={isRTL} />}
 
