@@ -930,9 +930,9 @@ export default function SessionsPage() {
                             <div className="flex items-start justify-between gap-2">
                               <div className="space-y-1.5 min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <Badge variant="outline" className="font-mono text-xs">
-                                    {isRTL ? `سيشن ${session.session_number}` : `#${session.session_number}`}
-                                  </Badge>
+                                    <Badge variant="outline" className="font-mono text-xs">
+                                      {getSessionLabel(session, isRTL)}
+                                    </Badge>
                                   {getStatusBadge(session.status)}
                                   {session.is_makeup && (
                                     <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 text-xs">
