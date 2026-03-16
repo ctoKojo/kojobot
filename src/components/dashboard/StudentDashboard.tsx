@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatDate } from '@/lib/timeUtils';
 import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { isSessionActiveCairo } from '@/lib/sessionTimeGuard';
+import { ClosureBanner } from '@/components/shared/ClosureBanner';
 
 interface GroupInfo {
   id: string;
