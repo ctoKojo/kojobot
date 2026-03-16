@@ -216,6 +216,9 @@ export function InstructorDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Academy Closure Banner */}
+      {user && <ClosureBanner role="instructor" userId={user.id} isRTL={isRTL} language={language} />}
+
       {/* Stats Grid - Gradient Cards */}
       <div className="grid gap-4 sm:gap-5 grid-cols-2 lg:grid-cols-5">
         {statCards.map((stat) => (

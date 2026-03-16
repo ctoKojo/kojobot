@@ -42,7 +42,7 @@ interface WarningSettings {
 }
 
 export default function SettingsPage() {
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, language } = useLanguage();
   const { role, user } = useAuth();
   const [warningTypes, setWarningTypes] = useState<WarningType[]>(systemWarningTypes);
   const [newTypeEn, setNewTypeEn] = useState('');
