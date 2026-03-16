@@ -303,7 +303,7 @@ export default function MySessions() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary" className="text-xs">
-                        {isRTL ? `سيشن ${s.session_number}` : `Session ${s.session_number}`}
+                        {isRTL ? `سيشن ${s.content_number}` : `Session ${s.content_number}`}
                       </Badge>
                       {s.compensation_status === 'compensated' && (
                         <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-xs">
