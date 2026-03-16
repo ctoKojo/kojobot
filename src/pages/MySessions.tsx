@@ -25,6 +25,7 @@ import { PdfDownloadButton } from '@/components/PdfDownloadButton';
 interface AttendedSession {
   id: string;
   session_number: number | null;
+  content_number: number | null;
   session_date: string;
   session_time: string;
   status: string;
@@ -182,6 +183,7 @@ export default function MySessions() {
         return {
           id: s.id,
           session_number: s.session_number,
+          content_number: s.content_number ?? s.session_number,
           session_date: s.session_date,
           session_time: s.session_time,
           status: s.status,
@@ -301,7 +303,7 @@ export default function MySessions() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary" className="text-xs">
-                        {isRTL ? `سيشن ${s.session_number}` : `Session ${s.session_number}`}
+                        {isRTL ? `سيشن ${s.content_number}` : `Session ${s.content_number}`}
                       </Badge>
                       {s.compensation_status === 'compensated' && (
                         <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 text-xs">
@@ -314,7 +316,7 @@ export default function MySessions() {
                   <CardTitle className="text-base mt-2">
                     {s.curriculum
                       ? (language === 'ar' ? s.curriculum.title_ar : s.curriculum.title)
-                      : (isRTL ? `سيشن ${s.session_number}` : `Session ${s.session_number}`)}
+                      : (isRTL ? `سيشن ${s.content_number}` : `Session ${s.content_number}`)}
                   </CardTitle>
                   {s.curriculum?.description && (
                     <CardDescription className="text-xs line-clamp-2">
