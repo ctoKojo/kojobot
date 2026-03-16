@@ -183,6 +183,7 @@ export default function MySessions() {
         return {
           id: s.id,
           session_number: s.session_number,
+          content_number: s.content_number ?? s.session_number,
           session_date: s.session_date,
           session_time: s.session_time,
           status: s.status,
