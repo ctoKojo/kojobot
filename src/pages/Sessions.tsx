@@ -279,11 +279,11 @@ export default function SessionsPage() {
 
           if (groupStudents && groupStudents.length > 0) {
             const notifications = groupStudents.map(gs => ({
-              user_id: gs.student_id,
+270:               user_id: gs.student_id,
               title: 'Session Rescheduled',
               title_ar: 'تم تغيير موعد السيشن',
-              message: `Session ${editingSession.session_number} for "${groupData.name}" has been moved to ${formData.session_date} at ${formData.session_time}`,
-              message_ar: `سيشن ${editingSession.session_number} لمجموعة "${groupData.name_ar}" تم نقلها إلى ${formData.session_date} الساعة ${formData.session_time}`,
+              message: `Content ${editingSession.content_number ?? editingSession.session_number} for "${groupData.name}" has been moved to ${formData.session_date} at ${formData.session_time}`,
+              message_ar: `محتوى ${editingSession.content_number ?? editingSession.session_number} لمجموعة "${groupData.name_ar}" تم نقلها إلى ${formData.session_date} الساعة ${formData.session_time}`,
               type: 'warning',
               category: 'session',
               action_url: `/session/${editingSession.id}`,
