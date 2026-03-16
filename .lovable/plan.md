@@ -1,3 +1,4 @@
+
 # خطة إعادة بناء نظام Placement Exam V2
 
 ---
@@ -54,30 +55,6 @@ MEDIUM: كل ما عدا ذلك
 ### Constraints:
 - `idx_one_in_progress_per_student` — partial unique index يمنع أكثر من attempt واحدة in_progress لنفس الطالب
 - Student View تخفي النتيجة حتى يتم الاعتماد أو تكون needs_manual_review = false
-
----
-
-## ✅ إصلاح فصل content_number عن session_number (مكتمل)
-
-### التغييرات المنفذة:
-
-#### 1. تريجر `auto_generate_next_session` (Migration)
-- عند `academy_closure`: السيشن البديلة ترث `content_number` من الملغية
-- عند `completed` أو إلغاء عادي: `content_number` يتقدم +1
-- حماية: لا يتم إنشاء سيشن بمحتوى يتجاوز `expected_sessions_count` (ما عدا owed)
-
-#### 2. Edge Functions
-- `start-group`: يضع `content_number = session_number` لكل سيشن عند البدء
-- `generate-sessions`: يحسب `content_number` من أعلى completed content_number + 1
-
-#### 3. الواجهات
-- `Sessions.tsx`: يعرض `content_number` كرقم رئيسي، `session_number` ثانوي عند الاختلاف
-- `GroupDetails.tsx`: نفس المنطق في تاب الحضور وتاب الجلسات
-- `SessionDetails.tsx`: العنوان يعرض `content_number`
-- `EditSessionDialog.tsx`: العنوان يعرض `session_number`
-
-### بقي: إصلاح Live Data
-راجع السكربتات أسفل هذا الملف.
 
 ---
 

@@ -116,21 +116,6 @@ Deno.serve(async (req) => {
         .eq('id', group.id)
         .single()
 
-      // Determine content_number: use last completed session's content_number + 1
-      const { data: lastCompletedContent } = await adminSupabase
-        .from('sessions')
-        .select('content_number')
-        .eq('group_id', group.id)
-        .eq('status', 'completed')
-        .not('content_number', 'is', null)
-        .order('content_number', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      const nextContentNum = lastCompletedContent?.content_number
-        ? lastCompletedContent.content_number + 1
-        : nextNum
-
       const { error: insertError } = await adminSupabase
         .from('sessions')
         .insert({
@@ -141,7 +126,6 @@ Deno.serve(async (req) => {
           status: 'scheduled',
           session_number: nextNum,
           level_id: groupFull?.level_id || null,
-          content_number: nextContentNum,
         })
 
       if (insertError) {

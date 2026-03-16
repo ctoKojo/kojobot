@@ -8,7 +8,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { getCairoToday } from '@/lib/timeUtils';
 import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
-import { ClosureBanner } from '@/components/shared/ClosureBanner';
 
 interface InstructorWarning {
   id: string;
@@ -216,9 +215,6 @@ export function InstructorDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Academy Closure Banner */}
-      {user && <ClosureBanner role="instructor" userId={user.id} isRTL={isRTL} language={language} />}
-
       {/* Stats Grid - Gradient Cards */}
       <div className="grid gap-4 sm:gap-5 grid-cols-2 lg:grid-cols-5">
         {statCards.map((stat) => (

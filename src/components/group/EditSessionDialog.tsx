@@ -148,7 +148,7 @@ export function EditSessionDialog({ session, groupId, durationMinutes, onUpdated
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {isRTL ? `تعديل محتوى ${session.session_number}` : `Edit Session ${session.session_number}`}
+            {isRTL ? `تعديل سيشن ${session.session_number}` : `Edit Session ${session.session_number}`}
           </DialogTitle>
           <DialogDescription>
             {isRTL ? 'تعديل تاريخ ووقت وحالة الجلسة' : 'Edit session date, time, and status'}
