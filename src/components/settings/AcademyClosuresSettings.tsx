@@ -498,10 +498,10 @@ export function AcademyClosuresSettings({ isRTL, language }: { isRTL: boolean; l
 
       {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-lg" dir={isRTL ? 'rtl' : 'ltr'}>
           <DialogHeader>
-            <DialogTitle>{isRTL ? 'معاينة تأثير الإجازة' : 'Closure Impact Preview'}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-start">{isRTL ? 'معاينة تأثير الإجازة' : 'Closure Impact Preview'}</DialogTitle>
+            <DialogDescription className="text-start">
               {previewData && previewData.sessionCount > 0
                 ? (isRTL
                   ? `يوجد ${previewData.sessionCount} سيشن scheduled تخص ${previewData.groupCount} مجموعة و ${previewData.instructorCount} مدرب و ${previewData.studentCount} طالب. سيتم إلغاؤها وإنشاء سيشنات بديلة تلقائياً.`
@@ -509,20 +509,20 @@ export function AcademyClosuresSettings({ isRTL, language }: { isRTL: boolean; l
                 : (isRTL ? 'لا توجد سيشنات متأثرة في هذه الفترة' : 'No sessions affected in this period')}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            {previewData && previewData.sessionCount > 0 && (
-              <Button onClick={cancelSessionsAndCreate} disabled={executing} variant="destructive">
-                {executing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <AlertTriangle className="h-4 w-4 mr-2" />}
-                {isRTL ? 'إلغاء السيشنات وإنشاء بدائل' : 'Cancel Sessions & Create Replacements'}
-              </Button>
-            )}
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 pt-2">
+            <Button onClick={() => setPreviewOpen(false)} variant="ghost" className="sm:me-auto">
+              {isRTL ? 'إلغاء' : 'Cancel'}
+            </Button>
             <Button onClick={createClosureOnly} variant="outline">
               {isRTL ? 'تسجيل الإجازة فقط' : 'Register Closure Only'}
             </Button>
-            <Button onClick={() => setPreviewOpen(false)} variant="ghost">
-              {isRTL ? 'إلغاء' : 'Cancel'}
-            </Button>
-          </DialogFooter>
+            {previewData && previewData.sessionCount > 0 && (
+              <Button onClick={cancelSessionsAndCreate} disabled={executing} variant="destructive">
+                {executing ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+                {isRTL ? 'إلغاء السيشنات وإنشاء بدائل' : 'Cancel & Replace'}
+              </Button>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
