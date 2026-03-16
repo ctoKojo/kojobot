@@ -25,6 +25,7 @@ import { PdfDownloadButton } from '@/components/PdfDownloadButton';
 interface AttendedSession {
   id: string;
   session_number: number | null;
+  content_number: number | null;
   session_date: string;
   session_time: string;
   status: string;
