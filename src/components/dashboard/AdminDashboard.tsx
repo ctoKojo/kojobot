@@ -29,7 +29,7 @@ interface AdminStats {
 
 export function AdminDashboard() {
   const { user } = useAuth();
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, language } = useLanguage();
   const navigate = useNavigate();
   const [stats, setStats] = useState<AdminStats>({
     totalStudents: 0,
