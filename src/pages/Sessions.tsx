@@ -1041,7 +1041,7 @@ export default function SessionsPage() {
                               >
                                 <TableCell>
                                   <Badge variant="outline" className="font-mono">
-                                    {isRTL ? `سيشن ${session.session_number}` : `Session ${session.session_number}`}
+                                    {getSessionLabel(session, isRTL)}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
