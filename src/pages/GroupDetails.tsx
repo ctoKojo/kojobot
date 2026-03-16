@@ -697,10 +697,13 @@ export default function GroupDetails() {
                     </TableHeader>
                     <TableBody>
                       {sessionsWithAttendance.map((session) => (
-                        <TableRow key={session.id}>
+                         <TableRow key={session.id}>
                           <TableCell>
                             <Badge variant="outline" className="min-w-[80px] justify-center">
-                              {isRTL ? `سيشن ${session.session_number || '-'}` : `Session ${session.session_number || '-'}`}
+                              {isRTL ? `محتوى ${session.content_number ?? session.session_number ?? '-'}` : `Content ${session.content_number ?? session.session_number ?? '-'}`}
+                              {session.session_number !== null && session.content_number !== null && session.session_number !== session.content_number && (
+                                <span className="text-muted-foreground text-[10px] ml-1">(#{session.session_number})</span>
+                              )}
                             </Badge>
                           </TableCell>
                           <TableCell>
