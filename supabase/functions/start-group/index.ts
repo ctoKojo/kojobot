@@ -147,8 +147,7 @@ Deno.serve(async (req) => {
         status,
         session_number: i,
         level_id: group.level_id,
-        // Assign content_number for completed sessions (backfill)
-        ...(status === 'completed' ? { content_number: i } : {}),
+        content_number: i,
       })
     }
 
