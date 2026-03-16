@@ -59,6 +59,7 @@ interface SessionWithAttendance {
   topic: string | null;
   topic_ar: string | null;
   session_number: number | null;
+  content_number: number | null;
   duration_minutes: number;
   presentCount: number;
   absentCount: number;
