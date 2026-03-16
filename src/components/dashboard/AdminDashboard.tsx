@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { getCairoToday } from '@/lib/timeUtils';
 import { AdminAnalytics } from './AdminAnalytics';
+import { ClosureBanner } from '@/components/shared/ClosureBanner';
 
 interface AdminStats {
   totalStudents: number;
