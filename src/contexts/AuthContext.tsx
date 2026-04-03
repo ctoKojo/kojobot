@@ -28,20 +28,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  const fetchUserRole = async (userId: string) => {
+  const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
     try {
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching user role:', error);
         return null;
       }
 
-      return data?.role as AppRole | null;
+      return (data?.role as AppRole) ?? null;
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
       return null;
@@ -49,53 +49,64 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   useEffect(() => {
+    let isMounted = true;
+    let roleFetchInProgress = false;
+
+    const handleSession = async (session: Session | null, isInitial: boolean) => {
+      if (!isMounted) return;
+
+      if (session?.user) {
+        setSession(session);
+        setUser(session.user);
+
+        // Prevent duplicate role fetches
+        if (roleFetchInProgress) return;
+        roleFetchInProgress = true;
+
+        const fetchedRole = await fetchUserRole(session.user.id);
+        roleFetchInProgress = false;
+
+        if (!isMounted) return;
+        setRole(fetchedRole);
+      } else if (isInitial) {
+        // Only clear state on initial load or explicit sign-out
+        setSession(null);
+        setUser(null);
+        setRole(null);
+      }
+
+      if (!initialLoadComplete && isMounted) {
+        setLoading(false);
+        setInitialLoadComplete(true);
+      }
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Only fetch role if user exists, defer with setTimeout to avoid deadlock
-        if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id).then((fetchedRole) => {
-              setRole(fetchedRole);
-              // Only set loading false on initial load
-              if (!initialLoadComplete) {
-                setLoading(false);
-                setInitialLoadComplete(true);
-              }
-            });
-          }, 0);
-        } else {
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
           setRole(null);
-          // Only set loading false on initial load
           if (!initialLoadComplete) {
             setLoading(false);
             setInitialLoadComplete(true);
           }
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          handleSession(session, false);
         }
       }
     );
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserRole(session.user.id).then((fetchedRole) => {
-          setRole(fetchedRole);
-          setLoading(false);
-          setInitialLoadComplete(true);
-        });
-      } else {
-        setLoading(false);
-        setInitialLoadComplete(true);
-      }
+      handleSession(session, true);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
