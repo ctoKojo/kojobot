@@ -26,7 +26,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
     try {
@@ -49,77 +48,70 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   useEffect(() => {
-    let isMounted = true;
-    let roleFetchInProgress = false;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
 
-    const handleSession = async (session: Session | null, isInitial: boolean) => {
-      if (!isMounted) return;
-
-      if (session?.user) {
-        setSession(session);
-        setUser(session.user);
-
-        // Prevent duplicate role fetches
-        if (roleFetchInProgress) return;
-        roleFetchInProgress = true;
-
-        const fetchedRole = await fetchUserRole(session.user.id);
-        roleFetchInProgress = false;
-
-        if (!isMounted) return;
-        setRole(fetchedRole);
-      } else if (isInitial) {
-        // Only clear state on initial load or explicit sign-out
-        setSession(null);
-        setUser(null);
+      if (!nextSession?.user) {
         setRole(null);
+        setLoading(false);
+      }
+    });
+
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
+
+      if (!initialSession?.user) {
+        setRole(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRole = async () => {
+      if (!user?.id) {
+        if (isMounted) {
+          setRole(null);
+          setLoading(false);
+        }
+        return;
       }
 
-      if (!initialLoadComplete && isMounted) {
-        setLoading(false);
-        setInitialLoadComplete(true);
-      }
+      setLoading(true);
+      const fetchedRole = await fetchUserRole(user.id);
+
+      if (!isMounted) return;
+      setRole(fetchedRole);
+      setLoading(false);
     };
 
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          setSession(null);
-          setUser(null);
-          setRole(null);
-          if (!initialLoadComplete) {
-            setLoading(false);
-            setInitialLoadComplete(true);
-          }
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          handleSession(session, false);
-        }
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      handleSession(session, true);
-    });
+    loadRole();
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
     };
-  }, []);
+  }, [user?.id]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    
-    if (!error) {
+
+    if (!error && data.session?.user) {
+      setSession(data.session);
+      setUser(data.session.user);
+
       // Log successful login
       setTimeout(() => logLogin(), 100);
     }
-    
+
     return { error };
   };
 
@@ -129,6 +121,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null);
     setSession(null);
     setRole(null);
+    setLoading(false);
   };
 
   const value: AuthContextType = {
