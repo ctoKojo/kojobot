@@ -159,7 +159,11 @@ export default function TakeQuiz() {
   };
 
   const handleAnswerChange = (questionId: string, answer: string) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: answer }));
+    setAnswers((prev) => {
+      const updated = { ...prev, [questionId]: answer };
+      answersRef.current = updated;
+      return updated;
+    });
   };
 
   const handleSubmit = async () => {
