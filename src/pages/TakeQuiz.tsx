@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatDateTime } from '@/lib/timeUtils';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
@@ -55,6 +55,8 @@ export default function TakeQuiz() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const answersRef = useRef<Record<string, string>>({});
+  const handleSubmitRef = useRef<() => void>(() => {});
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -73,7 +75,7 @@ export default function TakeQuiz() {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            handleSubmit();
+            handleSubmitRef.current();
             return 0;
           }
           return prev - 1;
@@ -158,12 +160,19 @@ export default function TakeQuiz() {
   };
 
   const handleAnswerChange = (questionId: string, answer: string) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: answer }));
+    setAnswers((prev) => {
+      const updated = { ...prev, [questionId]: answer };
+      answersRef.current = updated;
+      return updated;
+    });
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!user || !assignment || submitting) return;
     setSubmitting(true);
+
+    // Always use ref to get the latest answers (avoids stale closure in timer)
+    const currentAnswers = answersRef.current;
 
     try {
       // Log quiz start if first submission
@@ -176,7 +185,7 @@ export default function TakeQuiz() {
       const { data, error } = await supabase.functions.invoke('grade-quiz', {
         body: {
           quiz_assignment_id: assignment.id,
-          answers: answers
+          answers: currentAnswers
         }
       });
 
@@ -218,7 +227,12 @@ export default function TakeQuiz() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [user, assignment, submitting, toast, t, isRTL]);
+
+  // Keep handleSubmitRef up to date
+  useEffect(() => {
+    handleSubmitRef.current = handleSubmit;
+  }, [handleSubmit]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
