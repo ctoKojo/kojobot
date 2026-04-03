@@ -119,85 +119,19 @@ Deno.serve(async (req) => {
 
     const startingNum = starting_session_number || 1
 
-    // Generate sessions only up to starting_session_number (not all 12)
-    const sessions = []
-    for (let i = 1; i <= startingNum; i++) {
-      let sessionDate: Date
-      let status: string
+    // Create only ONE scheduled session at startingNum — no fake history
+    const dateStr = sessionStartDate.toISOString().split('T')[0]
 
-      if (i < startingNum) {
-        // Past sessions: calculate backwards
-        const weeksBack = startingNum - i
-        sessionDate = new Date(sessionStartDate)
-        sessionDate.setDate(sessionDate.getDate() - weeksBack * 7)
-        status = 'completed'
-      } else {
-        // The starting session itself
-        sessionDate = new Date(sessionStartDate)
-        status = 'scheduled'
-      }
-
-      const dateStr = sessionDate.toISOString().split('T')[0]
-
-      sessions.push({
-        group_id: group.id,
-        session_date: dateStr,
-        session_time: group.schedule_time,
-        duration_minutes: group.duration_minutes,
-        status,
-        session_number: i,
-        level_id: group.level_id,
-        // Assign content_number for completed sessions (backfill)
-        ...(status === 'completed' ? { content_number: i } : {}),
-      })
-    }
-
-    // Insert sessions
-    const { error: insertError } = await adminSupabase
-      .from('sessions')
-      .insert(sessions)
-
-    if (insertError) {
-      console.error('Error inserting sessions:', insertError)
-      return new Response(JSON.stringify({ error: 'Failed to create sessions' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // Update group: mark as started and set start_date + starting_session_number
-    // Set last_delivered_content_number for completed sessions backfill
-    const lastDeliveredContent = startingNum > 1 ? startingNum - 1 : 0
-
-    const { error: updateError } = await adminSupabase
-      .from('groups')
-      .update({
-        has_started: true,
-        start_date: sessionStartDate.toISOString().split('T')[0],
-        starting_session_number: startingNum,
-        last_delivered_content_number: lastDeliveredContent,
-        owed_sessions_count: 0,
-      })
-      .eq('id', group_id)
-
-    if (updateError) {
-      console.error('Error updating group:', updateError)
-    }
-
-    // If existing group with completed sessions, populate them
-    if (startingNum > 1) {
-      try {
-        await fetch(`${supabaseUrl}/functions/v1/populate-completed-sessions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${serviceRoleKey}`,
-          },
-          body: JSON.stringify({ group_id }),
-        })
-      } catch (e) {
-        console.error('Failed to populate completed sessions:', e)
-      }
-    }
+    const sessions = [{
+      group_id: group.id,
+      session_date: dateStr,
+      session_time: group.schedule_time,
+      duration_minutes: group.duration_minutes,
+      status: 'scheduled',
+      session_number: startingNum,
+      level_id: group.level_id,
+      content_number: startingNum,
+    }]
 
     // Auto-assign subscription dates for all students in the group
     try {
