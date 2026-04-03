@@ -166,9 +166,12 @@ export default function TakeQuiz() {
     });
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!user || !assignment || submitting) return;
     setSubmitting(true);
+
+    // Always use ref to get the latest answers (avoids stale closure in timer)
+    const currentAnswers = answersRef.current;
 
     try {
       // Log quiz start if first submission
@@ -181,7 +184,7 @@ export default function TakeQuiz() {
       const { data, error } = await supabase.functions.invoke('grade-quiz', {
         body: {
           quiz_assignment_id: assignment.id,
-          answers: answers
+          answers: currentAnswers
         }
       });
 
