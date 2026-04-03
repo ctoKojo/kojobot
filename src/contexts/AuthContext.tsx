@@ -28,20 +28,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  const fetchUserRole = async (userId: string) => {
+  const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
     try {
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching user role:', error);
         return null;
       }
 
-      return data?.role as AppRole | null;
+      return (data?.role as AppRole) ?? null;
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
       return null;
