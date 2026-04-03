@@ -69,13 +69,18 @@ export default function TakeQuiz() {
     if (assignmentId) fetchQuizData();
   }, [assignmentId]);
 
+  // Keep handleSubmitRef up to date
+  useEffect(() => {
+    handleSubmitRef.current = handleSubmit;
+  }, [handleSubmit]);
+
   useEffect(() => {
     if (timeLeft > 0 && !submitted) {
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            handleSubmit();
+            handleSubmitRef.current();
             return 0;
           }
           return prev - 1;
