@@ -229,7 +229,11 @@ export default function TakeQuiz() {
     }
   }, [user, assignment, submitting, toast, t, isRTL]);
 
-  const formatTime = (seconds: number) => {
+  // Keep handleSubmitRef up to date
+  useEffect(() => {
+    handleSubmitRef.current = handleSubmit;
+  }, [handleSubmit]);
+
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
