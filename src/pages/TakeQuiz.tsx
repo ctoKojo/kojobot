@@ -226,7 +226,7 @@ export default function TakeQuiz() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [user, assignment, submitting, toast, t, isRTL]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
