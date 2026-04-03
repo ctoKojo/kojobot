@@ -133,6 +133,36 @@ Deno.serve(async (req) => {
       content_number: startingNum,
     }]
 
+    // Insert sessions
+    const { error: insertError } = await adminSupabase
+      .from('sessions')
+      .insert(sessions)
+
+    if (insertError) {
+      console.error('Error inserting sessions:', insertError)
+      return new Response(JSON.stringify({ error: 'Failed to create sessions' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Update group: mark as started
+    const lastDeliveredContent = startingNum > 1 ? startingNum - 1 : 0
+
+    const { error: updateError } = await adminSupabase
+      .from('groups')
+      .update({
+        has_started: true,
+        start_date: sessionStartDate.toISOString().split('T')[0],
+        starting_session_number: startingNum,
+        last_delivered_content_number: lastDeliveredContent,
+        owed_sessions_count: 0,
+      })
+      .eq('id', group_id)
+
+    if (updateError) {
+      console.error('Error updating group:', updateError)
+    }
+
     // Auto-assign subscription dates for all students in the group
     try {
       const { data: bulkResult, error: bulkError } = await adminSupabase
