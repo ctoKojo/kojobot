@@ -191,10 +191,8 @@ export default function GroupDetails() {
   // Level Progress calculations — uses last_delivered_content_number from group
   const getLevelProgress = () => {
     const group = data?.group;
-    const delivered = group?.last_delivered_content_number ?? 0;
-    const startingNum = group?.starting_session_number ?? 1;
+    const completed = group?.last_delivered_content_number ?? 0;
     const total = group?.levels?.expected_sessions_count ?? DEFAULT_SESSIONS_PER_LEVEL;
-    const completed = Math.max(0, delivered - (startingNum - 1));
     const remaining = Math.max(0, total - completed);
     const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
     const owedSessions = group?.owed_sessions_count ?? 0;
@@ -202,10 +200,10 @@ export default function GroupDetails() {
     return {
       completed,
       total,
-      currentMax: delivered,
+      currentMax: completed,
       remaining,
       percentage,
-      isComplete: delivered >= (startingNum - 1 + total) && owedSessions <= 0,
+      isComplete: completed >= total && owedSessions <= 0,
       owedSessions,
     };
   };
