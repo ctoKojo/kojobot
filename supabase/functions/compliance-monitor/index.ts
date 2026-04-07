@@ -35,7 +35,7 @@ serve(async (req) => {
   const isCronAuth = cronSecret && token === cronSecret;
 
   if (!isServiceRole && !isCronAuth) {
-    console.warn('[Compliance Monitor] Unauthorized access attempt');
+    console.log('[Compliance Monitor] Request rejected: not service role or cron');
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

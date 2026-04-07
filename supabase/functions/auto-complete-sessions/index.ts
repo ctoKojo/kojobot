@@ -139,14 +139,16 @@ Deno.serve(async (req) => {
       completedCount++;
     }
 
-    // Batch update
-    if (completedIds.length > 0) {
+    // Sequential update — one at a time to ensure triggers process consistent snapshots
+    for (const id of completedIds) {
       const { error: updateError } = await supabase
         .from("sessions")
         .update({ status: "completed" })
-        .in("id", completedIds);
+        .eq("id", id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error(`Failed to complete session ${id}:`, updateError.message);
+      }
     }
 
     return new Response(

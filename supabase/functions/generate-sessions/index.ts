@@ -84,7 +84,34 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle()
 
-      if (!lastCompleted || !lastCompleted.session_number || lastCompleted.session_number >= 12) {
+      if (!lastCompleted || !lastCompleted.session_number) {
+        skippedCount++
+        continue
+      }
+
+      // Boundary check: don't generate if curriculum is complete
+      const { data: groupCounters } = await adminSupabase
+        .from('groups')
+        .select('last_delivered_content_number, owed_sessions_count, level_id')
+        .eq('id', group.id)
+        .single()
+
+      const { data: levelInfo } = await adminSupabase
+        .from('levels')
+        .select('expected_sessions_count')
+        .eq('id', groupCounters?.level_id || '')
+        .maybeSingle()
+
+      const expected = levelInfo?.expected_sessions_count ?? 12
+      const delivered = groupCounters?.last_delivered_content_number ?? 0
+      const owed = groupCounters?.owed_sessions_count ?? 0
+
+      if (delivered >= expected && owed <= 0) {
+        skippedCount++
+        continue
+      }
+
+      if (lastCompleted.session_number >= (expected + owed + 5)) {
         skippedCount++
         continue
       }
