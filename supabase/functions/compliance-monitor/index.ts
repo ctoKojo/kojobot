@@ -91,10 +91,13 @@ serve(async (req) => {
     // EXISTING Section 1: Check for sessions without quiz
     // ========================================
     try {
+      // Only scan sessions from the last 60 days to avoid re-processing old history
+      const sixtyDaysAgo = getCairoDatePlusDays(-60);
       const { data: sessionsWithoutQuiz, error: quizError } = await supabase
         .from('sessions')
         .select(`id, session_date, session_time, session_number, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number)`)
-        .eq('status', 'completed');
+        .eq('status', 'completed')
+        .gte('session_date', sixtyDaysAgo);
 
       if (quizError) {
         results.errors.push(`Quiz check error: ${quizError.message}`);
