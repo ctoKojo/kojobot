@@ -1,55 +1,122 @@
 
-
-## خطة إصلاح نظام البدء من منتصف المستوى (Mid-Level Start) — النسخة النهائية
-
-### المشكلة
-`start-group` ينشئ سيشنات وهمية (1 إلى N-1) و`populate-completed-sessions` يملأها ببيانات مزيفة (حضور 100%، درجات 100%). هذا يكسر كل الـ metrics.
+# خطة إعادة بناء نظام Placement Exam V2
 
 ---
 
-### المرحلة 1: تعديل `start-group/index.ts`
+## ✅ Phase 1: Database Schema (مكتمل)
 
-- الـ loop يبدأ من `startingNum` مباشرة — سيشن واحدة فقط بحالة `scheduled`
-- حذف استدعاء `populate-completed-sessions` بالكامل
-- حذف استدعاء `assign_subscription_dates_bulk` (أو إبقاؤه لو مطلوب للاشتراكات)
-- تحديث `last_delivered_content_number = startingNum - 1`
-- `owed_sessions_count = 0`
+### الجداول الجديدة:
 
-### المرحلة 2: حذف `populate-completed-sessions`
+| الجدول | الوصف |
+|--------|-------|
+| `placement_v2_settings` | إعدادات عامة (singleton) — thresholds + question counts |
+| `placement_v2_questions` | بنك أسئلة بـ sections (section_a, section_b, section_c) + review_status + is_archived |
+| `placement_v2_schedules` | جدولة امتحانات مع validation trigger (opens_at < closes_at, no past) |
+| `placement_v2_attempts` | محاولات بـ section scores + recommended_level_id → levels + confidence_level |
+| `placement_v2_attempt_questions` | أسئلة المحاولة مع section_skill |
+| `placement_v2_student_view` | View آمن (security_invoker) للطلاب |
 
-- حذف محتوى `supabase/functions/populate-completed-sessions/index.ts` بالكامل واستبداله بـ return success فقط (أو حذف الملف)
+### Level Mapping:
+- `level_order = 0` → Level 0 (id: `4c8f5b5e-...`)
+- `level_order = 1` → Level 1 (id: `5d2db847-...`)
+- `level_order = 2, track = 'software'` → Level 2 Software (id: `8bd4e5ca-...`)
+- `level_order = 2, track = 'hardware'` → Level 2 Hardware (id: `b598ef9b-...`)
 
-### المرحلة 3: تنظيف البيانات — Migration
-
-**تحديد السيشنات الوهمية**: لكل مجموعة `starting_session_number > 1`:
+### Confidence Logic (compute_placement_v2_confidence):
 ```
-WHERE group_id = X AND content_number < starting_session_number AND status = 'completed'
+margin_a = |section_a_pct - pass_threshold_a|
+margin_b = |section_b_pct - pass_threshold_b|
+track_diff = |sw_pct - hw_pct|
+
+LOW إذا:
+  - تناقض: نجح B لكن رسب A
+  - أي section قريب من الحد (≤ 5%)
+
+HIGH إذا:
+  - margin_a > 10% AND margin_b > 10%
+  - AND (لم يصل Section C، أو track_diff > 2 * track_margin)
+
+MEDIUM: كل ما عدا ذلك
 ```
-الاعتماد على `content_number` فقط كمعيار — أدق من الاعتماد على `status`.
 
-**ترتيب الحذف** (لتجنب FK constraint errors):
-1. `session_evaluations` WHERE session_id IN (backfilled sessions)
-2. `assignment_submissions` WHERE assignment_id IN (backfilled assignments)
-3. `assignments` WHERE session_id IN (backfilled sessions)
-4. `quiz_submissions` WHERE quiz_assignment_id IN (backfilled quiz_assignments)
-5. `quiz_assignments` WHERE session_id IN (backfilled sessions)
-6. `quizzes` WHERE session_id IN (backfilled sessions)
-7. `attendance` WHERE session_id IN (backfilled sessions)
-8. `sessions` (السيشنات الوهمية نفسها)
+### Balanced Logic:
+- `recommended_track = 'balanced'` → `recommended_level_id = NULL` + `needs_manual_review = true`
 
-**تصحيح groups**: `last_delivered_content_number = starting_session_number - 1`
+### Functions:
+- `update_v2_question_stats()` — تحديث إحصائيات الأسئلة ذرياً
+- `validate_placement_v2_schedule()` — trigger (opens_at < closes_at, opens_at > now(), closes_at > now())
+- `compute_placement_v2_confidence()` — دالة IMMUTABLE لحساب confidence level
 
-### مراجعة إضافية: scheduling logic
+### RLS Policies:
+- Admin: full access على كل الجداول
+- Reception: manage schedules
+- Students: **SELECT فقط** على attempts و attempt_questions (الإنشاء عبر Edge Function)
 
-- التأكد إن `auto_generate_next_session` trigger يعتمد على `content_number` مش `COUNT(sessions)` — لأن بعد حذف السيشنات 1-5 أي logic بيعتمد على العدد هيبوظ
-- مراجعة `session_number` assignment في الـ trigger
+### Constraints:
+- `idx_one_in_progress_per_student` — partial unique index يمنع أكثر من attempt واحدة in_progress لنفس الطالب
+- Student View تخفي النتيجة حتى يتم الاعتماد أو تكون needs_manual_review = false
 
-### الملفات المتأثرة
+---
 
-| ملف | تعديل |
-|---|---|
-| `supabase/functions/start-group/index.ts` | Loop من startingNum فقط، حذف populate call |
-| `supabase/functions/populate-completed-sessions/index.ts` | حذف/تفريغ |
-| Migration جديد | حذف بيانات وهمية + تصحيح groups |
-| مراجعة trigger `auto_generate_next_session` | التأكد من اعتماده على content_number |
+## 🔲 Phase 2: Edge Functions
 
+### مطلوب بناؤه:
+1. `draw-placement-exam` الجديد → سحب أسئلة حسب section counts من settings
+2. `grade-placement-exam` الجديد → منطق التسكين الجديد مع confidence logic
+3. `import-question-bank` الجديد → validation صارم على section + track_category + options
+
+### مطلوب حذفه لاحقاً (بعد نجاح V2):
+- `grade-placement-test`
+- `expire-placement-tests`
+
+---
+
+## 🔲 Phase 3: Frontend — إعدادات الأدمن
+
+1. `PlacementTestSettings.tsx` → 3 tabs فقط: General, Question Bank, Review Queue
+2. `GeneralSettingsTab.tsx` → إعدادات singleton (thresholds + counts)
+3. `QuestionBankTab.tsx` → sections بدل foundation/intermediate/advanced
+4. `QuestionEditDialog.tsx` → sections + track_category + review_status
+5. `ImportPreviewDialog.tsx` → validation جديد
+
+---
+
+## 🔲 Phase 4: Frontend — تجربة الطالب
+
+1. `PlacementGate.tsx` → جدول placement_v2_schedules
+2. `TakePlacementTest.tsx` → 3 sections مع section headers
+3. `PlacementExamHeader.tsx` → section indicator
+4. `SchedulePlacementDialog.tsx` → جدول جديد
+
+---
+
+## 🔲 Phase 5: Frontend — مراجعة الأدمن
+
+1. `PlacementTestReview.tsx` → per-section scores + track recommendation
+2. `PlacementAttemptDetailDialog.tsx` → بريفيو per-section
+3. `ReviewQueueTab.tsx` → needs_manual_review filter
+
+---
+
+## 🔲 Phase 6: تنظيف (بعد نجاح V2)
+
+### حذف جداول قديمة:
+- `placement_question_bank`, `placement_exam_attempt_questions`, `placement_exam_attempts`
+- `placement_exam_schedules`, `placement_exam_settings`, `placement_skill_blueprint`
+- `placement_rules`, `placement_exam_student_view`
+- `placement_tests`, `placement_test_results`, `placement_question_levels`, `placement_quiz_config`
+
+### حذف Edge Functions قديمة:
+- `grade-placement-test`, `expire-placement-tests`
+
+### حذف/إعادة بناء ملفات Frontend:
+- `BlueprintTab.tsx`, `PlacementRulesTab.tsx` → حذف نهائي
+
+---
+
+## ملاحظات مهمة
+
+- النظام القديم يبقى حتى نجاح V2 واختباره
+- Question counts تُقرأ من settings وليست hardcoded
+- Level mapping عبر `level_order` و `track` من جدول `levels`
+- balanced → `recommended_level_id = NULL` + `needs_manual_review = true`
