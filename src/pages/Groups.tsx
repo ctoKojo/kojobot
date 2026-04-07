@@ -255,7 +255,7 @@ export default function GroupsPage() {
       const [groupsRes, ageGroupsRes, levelsRes, instructorRolesRes, studentRolesRes, groupStudentsRes, sessionsRes] = await Promise.all([
         supabase.from('groups').select('*').order('name'),
         supabase.from('age_groups').select('id, name, name_ar').eq('is_active', true),
-        supabase.from('levels').select('id, name, name_ar').eq('is_active', true),
+        supabase.from('levels').select('id, name, name_ar, expected_sessions_count').eq('is_active', true),
         supabase.from('user_roles').select('user_id').eq('role', 'instructor'),
         supabase.from('user_roles').select('user_id').eq('role', 'student'),
         supabase.from('group_students').select('group_id').eq('is_active', true),
