@@ -85,12 +85,15 @@ serve(async (req) => {
           continue;
         }
 
+        // Use event.created_at to determine the correct month for the deduction
+        const eventMonth = event.created_at ? event.created_at.substring(0, 7) + '-01' : fallbackMonth;
+
         // Apply deduction via salary_events
         const { error: salaryError } = await supabase
           .from('salary_events')
           .insert({
             employee_id: event.instructor_id,
-            month: currentMonth,
+            month: eventMonth,
             event_type: 'warning_deduction',
             amount: amount,
             description: `Warning deduction: ${warningType} (severity: ${details?.severity || 'minor'})`,
