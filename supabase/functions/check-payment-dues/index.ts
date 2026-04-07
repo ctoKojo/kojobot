@@ -74,8 +74,29 @@ Deno.serve(async (req) => {
       .gt('remaining_amount', 0);
 
     let suspendedCount = 0;
+    let skippedCount = 0;
 
     for (const sub of overdueSubs || []) {
+      // Idempotency: check if a suspension notification was already sent today
+      const { data: existingNotif } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', sub.student_id)
+        .eq('category', 'payment')
+        .eq('title', 'Account Suspended')
+        .gte('created_at', `${today}T00:00:00`)
+        .limit(1);
+
+      if (existingNotif && existingNotif.length > 0) {
+        skippedCount++;
+        // Still suspend the account even if notification was already sent
+        await supabase
+          .from('subscriptions')
+          .update({ is_suspended: true })
+          .eq('id', sub.id);
+        continue;
+      }
+
       await supabase
         .from('subscriptions')
         .update({ is_suspended: true })
@@ -130,7 +151,23 @@ Deno.serve(async (req) => {
       .gte('next_payment_date', today)
       .lte('next_payment_date', warningDate);
 
+    let warningsSent = 0;
+
     for (const sub of upcomingSubs || []) {
+      // Idempotency: check if a payment-due-soon notification already exists today
+      const { data: existingWarning } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', sub.student_id)
+        .eq('category', 'payment')
+        .eq('title', 'Payment Due Soon')
+        .gte('created_at', `${today}T00:00:00`)
+        .limit(1);
+
+      if (existingWarning && existingWarning.length > 0) {
+        continue; // Already notified today
+      }
+
       await supabase.from('notifications').insert({
         user_id: sub.student_id,
         title: 'Payment Due Soon',
@@ -140,12 +177,14 @@ Deno.serve(async (req) => {
         type: 'info',
         category: 'payment',
       });
+      warningsSent++;
     }
 
     return new Response(JSON.stringify({ 
       success: true, 
-      suspended: suspendedCount, 
-      warnings_sent: upcomingSubs?.length || 0 
+      suspended: suspendedCount,
+      skipped_duplicate: skippedCount,
+      warnings_sent: warningsSent,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
