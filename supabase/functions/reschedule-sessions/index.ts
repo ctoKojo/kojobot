@@ -121,9 +121,10 @@ Deno.serve(async (req) => {
     let updatedCount = 0
     const changedSessions: { session_number: number, old_date: string, new_date: string }[] = []
 
-    // Update each session
-    for (const session of (futureSessions as Session[] || [])) {
-      const weekOffset = (session.session_number - 1) * 7
+    // Update each session — use sequential index for date calc (not session_number)
+    for (let i = 0; i < (futureSessions as Session[] || []).length; i++) {
+      const session = (futureSessions as Session[])[i]
+      const weekOffset = i * 7
       const newDate = new Date(startDate)
       newDate.setDate(newDate.getDate() + weekOffset)
       const newDateStr = newDate.toISOString().split('T')[0]
