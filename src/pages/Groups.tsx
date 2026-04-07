@@ -252,19 +252,20 @@ export default function GroupsPage() {
 
   const fetchData = async () => {
     try {
-      const [groupsRes, ageGroupsRes, levelsRes, instructorRolesRes, studentRolesRes, groupStudentsRes, sessionsRes] = await Promise.all([
+      const [groupsRes, ageGroupsRes, levelsRes, instructorRolesRes, studentRolesRes, groupStudentsRes] = await Promise.all([
         supabase.from('groups').select('*').order('name'),
         supabase.from('age_groups').select('id, name, name_ar').eq('is_active', true),
-        supabase.from('levels').select('id, name, name_ar').eq('is_active', true),
+        supabase.from('levels').select('id, name, name_ar, expected_sessions_count').eq('is_active', true),
         supabase.from('user_roles').select('user_id').eq('role', 'instructor'),
         supabase.from('user_roles').select('user_id').eq('role', 'student'),
         supabase.from('group_students').select('group_id').eq('is_active', true),
-        supabase.from('sessions').select('group_id, session_number, status'),
       ]);
 
-      setGroups((groupsRes.data || []) as Group[]);
+      const allGroups = (groupsRes.data || []) as Group[];
+      const allLevels = levelsRes.data || [];
+      setGroups(allGroups);
       setAgeGroups(ageGroupsRes.data || []);
-      setLevels(levelsRes.data || []);
+      setLevels(allLevels);
 
       // Calculate student counts per group
       const counts: GroupStudentCount = {};
@@ -273,15 +274,17 @@ export default function GroupsPage() {
       });
       setGroupStudentCounts(counts);
 
-      // Calculate session progress per group
+      // Calculate session progress per group based on content delivery
+      const levelMap: Record<string, number> = {};
+      allLevels.forEach((lv: any) => { levelMap[lv.id] = lv.expected_sessions_count ?? 12; });
+
       const sessionProgress: { [groupId: string]: { completed: number; total: number } } = {};
-      (sessionsRes.data || []).forEach((session: any) => {
-        if (!sessionProgress[session.group_id]) {
-          sessionProgress[session.group_id] = { completed: 0, total: 12 };
-        }
-        if (session.status === 'completed') {
-          sessionProgress[session.group_id].completed++;
-        }
+      allGroups.forEach((group: any) => {
+        const total = group.level_id ? (levelMap[group.level_id] ?? 12) : 12;
+        const delivered = group.last_delivered_content_number ?? 0;
+        const startingNum = group.starting_session_number ?? 1;
+        const completed = Math.max(0, delivered - (startingNum - 1));
+        sessionProgress[group.id] = { completed, total };
       });
       setGroupSessionProgress(sessionProgress);
 
