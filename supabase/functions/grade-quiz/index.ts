@@ -79,7 +79,7 @@ serve(async (req) => {
     }
 
     const answerKeys = Object.keys(answers)
-    if (answerKeys.length === 0 || answerKeys.length > 200) {
+    if (answerKeys.length > 200) {
       return new Response(
         JSON.stringify({ error: 'Invalid number of answers' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
