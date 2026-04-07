@@ -252,7 +252,7 @@ export default function GroupsPage() {
 
   const fetchData = async () => {
     try {
-      const [groupsRes, ageGroupsRes, levelsRes, instructorRolesRes, studentRolesRes, groupStudentsRes, sessionsRes] = await Promise.all([
+      const [groupsRes, ageGroupsRes, levelsRes, instructorRolesRes, studentRolesRes, groupStudentsRes] = await Promise.all([
         supabase.from('groups').select('*').order('name'),
         supabase.from('age_groups').select('id, name, name_ar').eq('is_active', true),
         supabase.from('levels').select('id, name, name_ar, expected_sessions_count').eq('is_active', true),
