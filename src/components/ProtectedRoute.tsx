@@ -67,8 +67,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     }
   }, [user, role]);
 
-  // Wait for initial auth loading to complete
-  if (loading) {
+  if (loading && !user) {
     return <LoadingScreen />;
   }
 

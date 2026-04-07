@@ -26,21 +26,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
+  const fetchUserRole = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .maybeSingle();
+        .single();
 
       if (error) {
         console.error('Error fetching user role:', error);
         return null;
       }
 
-      return (data?.role as AppRole) ?? null;
+      return data?.role as AppRole | null;
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
       return null;
@@ -48,70 +49,66 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-
-      if (!nextSession?.user) {
-        setRole(null);
-        setLoading(false);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Only fetch role if user exists, defer with setTimeout to avoid deadlock
+        if (session?.user) {
+          setTimeout(() => {
+            fetchUserRole(session.user.id).then((fetchedRole) => {
+              setRole(fetchedRole);
+              // Only set loading false on initial load
+              if (!initialLoadComplete) {
+                setLoading(false);
+                setInitialLoadComplete(true);
+              }
+            });
+          }, 0);
+        } else {
+          setRole(null);
+          // Only set loading false on initial load
+          if (!initialLoadComplete) {
+            setLoading(false);
+            setInitialLoadComplete(true);
+          }
+        }
       }
-    });
+    );
 
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
-
-      if (!initialSession?.user) {
-        setRole(null);
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchUserRole(session.user.id).then((fetchedRole) => {
+          setRole(fetchedRole);
+          setLoading(false);
+          setInitialLoadComplete(true);
+        });
+      } else {
         setLoading(false);
+        setInitialLoadComplete(true);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadRole = async () => {
-      if (!user?.id) {
-        if (isMounted) {
-          setRole(null);
-          setLoading(false);
-        }
-        return;
-      }
-
-      setLoading(true);
-      const fetchedRole = await fetchUserRole(user.id);
-
-      if (!isMounted) return;
-      setRole(fetchedRole);
-      setLoading(false);
-    };
-
-    loadRole();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user?.id]);
-
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-
-    if (!error && data.session?.user) {
-      setSession(data.session);
-      setUser(data.session.user);
-
+    
+    if (!error) {
       // Log successful login
       setTimeout(() => logLogin(), 100);
     }
-
+    
     return { error };
   };
 
@@ -121,7 +118,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null);
     setSession(null);
     setRole(null);
-    setLoading(false);
   };
 
   const value: AuthContextType = {
