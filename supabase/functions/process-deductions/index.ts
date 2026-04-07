@@ -32,7 +32,8 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const now = new Date();
-    const currentMonth = now.toISOString().substring(0, 7) + '-01';
+    // Default month for fallback; actual month derived from event.created_at below
+    const fallbackMonth = now.toISOString().substring(0, 7) + '-01';
 
     const results = { processed: 0, skipped: 0, errors: [] as string[] };
 
