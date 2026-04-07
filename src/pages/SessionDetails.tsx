@@ -1134,7 +1134,7 @@ export default function SessionDetails() {
   }
 
   return (
-    <DashboardLayout title={isRTL ? `سيشن ${session.session_number}` : `Session ${session.session_number}`}>
+    <DashboardLayout title={isRTL ? `محتوى ${session.content_number ?? session.session_number}` : `Content ${session.content_number ?? session.session_number}`}>
       <div className="space-y-6">
         {/* Cancelled Session Banner */}
         {session.status === 'cancelled' && (

@@ -65,9 +65,21 @@ interface Session {
   status: string;
   notes: string | null;
   session_number: number | null;
+  content_number: number | null;
   is_makeup: boolean;
   makeup_session_id: string | null;
 }
+
+// Helper: display content_number as primary, session_number as secondary when different
+const getSessionLabel = (session: { content_number: number | null; session_number: number | null }, isRTL: boolean) => {
+  const content = session.content_number ?? session.session_number;
+  const internal = session.session_number;
+  const showInternal = internal !== null && content !== null && internal !== content;
+  if (isRTL) {
+    return showInternal ? `محتوى ${content} (#${internal})` : `سيشن ${content}`;
+  }
+  return showInternal ? `Content ${content} (#${internal})` : `#${content}`;
+};
 
 interface Group {
   id: string;
@@ -267,11 +279,11 @@ export default function SessionsPage() {
 
           if (groupStudents && groupStudents.length > 0) {
             const notifications = groupStudents.map(gs => ({
-              user_id: gs.student_id,
+user_id: gs.student_id,
               title: 'Session Rescheduled',
               title_ar: 'تم تغيير موعد السيشن',
-              message: `Session ${editingSession.session_number} for "${groupData.name}" has been moved to ${formData.session_date} at ${formData.session_time}`,
-              message_ar: `سيشن ${editingSession.session_number} لمجموعة "${groupData.name_ar}" تم نقلها إلى ${formData.session_date} الساعة ${formData.session_time}`,
+              message: `Content ${editingSession.content_number ?? editingSession.session_number} for "${groupData.name}" has been moved to ${formData.session_date} at ${formData.session_time}`,
+              message_ar: `محتوى ${editingSession.content_number ?? editingSession.session_number} لمجموعة "${groupData.name_ar}" تم نقلها إلى ${formData.session_date} الساعة ${formData.session_time}`,
               type: 'warning',
               category: 'session',
               action_url: `/session/${editingSession.id}`,
@@ -918,9 +930,9 @@ export default function SessionsPage() {
                             <div className="flex items-start justify-between gap-2">
                               <div className="space-y-1.5 min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <Badge variant="outline" className="font-mono text-xs">
-                                    {isRTL ? `سيشن ${session.session_number}` : `#${session.session_number}`}
-                                  </Badge>
+                                    <Badge variant="outline" className="font-mono text-xs">
+                                      {getSessionLabel(session, isRTL)}
+                                    </Badge>
                                   {getStatusBadge(session.status)}
                                   {session.is_makeup && (
                                     <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 text-xs">
@@ -1029,7 +1041,7 @@ export default function SessionsPage() {
                               >
                                 <TableCell>
                                   <Badge variant="outline" className="font-mono">
-                                    {isRTL ? `سيشن ${session.session_number}` : `Session ${session.session_number}`}
+                                    {getSessionLabel(session, isRTL)}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
