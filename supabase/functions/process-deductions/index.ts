@@ -32,7 +32,8 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const now = new Date();
-    const currentMonth = now.toISOString().substring(0, 7) + '-01';
+    // Default month for fallback; actual month derived from event.created_at below
+    const fallbackMonth = now.toISOString().substring(0, 7) + '-01';
 
     const results = { processed: 0, skipped: 0, errors: [] as string[] };
 
@@ -84,12 +85,15 @@ serve(async (req) => {
           continue;
         }
 
+        // Use event.created_at to determine the correct month for the deduction
+        const eventMonth = event.created_at ? event.created_at.substring(0, 7) + '-01' : fallbackMonth;
+
         // Apply deduction via salary_events
         const { error: salaryError } = await supabase
           .from('salary_events')
           .insert({
             employee_id: event.instructor_id,
-            month: currentMonth,
+            month: eventMonth,
             event_type: 'warning_deduction',
             amount: amount,
             description: `Warning deduction: ${warningType} (severity: ${details?.severity || 'minor'})`,
@@ -131,7 +135,7 @@ serve(async (req) => {
           .from('salary_month_snapshots')
           .select('net_amount')
           .eq('employee_id', event.instructor_id)
-          .eq('month', currentMonth)
+          .eq('month', eventMonth)
           .maybeSingle();
 
         await supabase.from('notifications').insert({

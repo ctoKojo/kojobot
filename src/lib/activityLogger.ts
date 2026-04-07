@@ -29,6 +29,7 @@ export type EntityType =
   | 'assignment_submission'
   | 'attendance' 
   | 'subscription' 
+  | 'payment'
   | 'age_group' 
   | 'level' 
   | 'notification'
@@ -103,6 +104,15 @@ export const logActivate = (entityType: EntityType, entityId?: string, details?:
 
 export const logDeactivate = (entityType: EntityType, entityId?: string, details?: Record<string, any>) =>
   logActivity({ action: 'deactivate', entityType, entityId, details });
+
+export const logPayment = (entityId?: string, details?: Record<string, any>) =>
+  logActivity({ action: 'create', entityType: 'payment', entityId, details });
+
+export const logSubscription = (action: ActionType, entityId?: string, details?: Record<string, any>) =>
+  logActivity({ action, entityType: 'subscription', entityId, details });
+
+export const logWarning = (entityType: 'warning' = 'warning', entityId?: string, details?: Record<string, any>) =>
+  logActivity({ action: 'create', entityType, entityId, details });
 
 export const logLogin = () =>
   logActivity({ action: 'login', entityType: 'user' });

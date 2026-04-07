@@ -75,6 +75,9 @@ serve(async (req) => {
       );
     }
 
+    // For instructors, restrict to their own group students only
+    const isInstructor = roleData.role === 'instructor';
+
     // Use service role client to insert notifications
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -129,8 +132,33 @@ serve(async (req) => {
 
     const notifications: any[] = [];
 
+    // Helper: check if instructor owns a group
+    const instructorOwnsGroup = async (groupId: string): Promise<boolean> => {
+      if (!isInstructor) return true;
+      const { data } = await serviceClient
+        .from('groups').select('id').eq('id', groupId).eq('instructor_id', user.id).maybeSingle();
+      return !!data;
+    };
+
+    // Helper: check if user is in instructor's groups
+    const instructorOwnsStudent = async (studentId: string): Promise<boolean> => {
+      if (!isInstructor) return true;
+      const { data } = await serviceClient
+        .from('group_students')
+        .select('group_id, groups!inner(instructor_id)')
+        .eq('student_id', studentId)
+        .eq('is_active', true);
+      return (data || []).some((gs: any) => gs.groups?.instructor_id === user.id);
+    };
+
     if (payload.user_id) {
-      // Single user notification
+      // Instructor scope check for single user notification
+      if (isInstructor && !(await instructorOwnsStudent(payload.user_id))) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: You can only notify students in your groups' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       notifications.push({
         user_id: payload.user_id,
         title: payload.title,
@@ -142,7 +170,14 @@ serve(async (req) => {
         action_url: payload.action_url,
       });
     } else if (payload.group_id) {
-      // Group notification - get all students in the group
+      // Instructor scope check for group notification
+      if (isInstructor && !(await instructorOwnsGroup(payload.group_id))) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: You can only notify your own groups' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const { data: students, error: studentsError } = await serviceClient
         .from('group_students')
         .select('student_id')

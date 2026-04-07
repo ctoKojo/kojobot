@@ -4501,6 +4501,19 @@ export type Database = {
         Args: { p_employee_id: string; p_month: string }
         Returns: undefined
       }
+      record_payment_atomic: {
+        Args: {
+          p_amount: number
+          p_notes?: string
+          p_payment_date: string
+          p_payment_method: string
+          p_payment_type?: string
+          p_recorded_by?: string
+          p_student_id: string
+          p_subscription_id: string
+        }
+        Returns: Json
+      }
       repair_orphaned_sessions: { Args: never; Returns: Json }
       save_attendance: {
         Args: { p_group_id: string; p_records: Json; p_session_id: string }

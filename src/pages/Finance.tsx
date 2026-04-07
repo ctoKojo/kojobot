@@ -160,43 +160,33 @@ export default function Finance() {
   const handleRecordPayment = async () => {
     if (!selectedSub || paymentAmount <= 0) return;
 
-    // Insert payment
-    await supabase.from('payments').insert({
-      subscription_id: selectedSub.id,
-      student_id: selectedSub.student_id,
-      amount: paymentAmount,
-      payment_date: paymentDate,
-      payment_method: paymentMethod,
-      payment_type: 'regular',
-      notes: paymentNotes,
-      recorded_by: user?.id,
-    } as any);
-
-    // Update subscription (remaining_amount is a generated column, only update paid_amount)
-    const newPaid = Number(selectedSub.paid_amount) + paymentAmount;
-    const newRemaining = Number(selectedSub.total_amount) - newPaid;
-    
-    let nextPaymentDate = selectedSub.next_payment_date;
-    if (selectedSub.payment_type === 'installment' && selectedSub.installment_amount > 0) {
-      const installmentsCovered = Math.floor(paymentAmount / selectedSub.installment_amount);
-      if (installmentsCovered >= 1 && selectedSub.next_payment_date) {
-        const currentNPD = new Date(selectedSub.next_payment_date);
-        nextPaymentDate = new Date(currentNPD.getTime() + installmentsCovered * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      }
-      // Partial payment (less than 1 installment): don't move next_payment_date
-    }
-    if (newRemaining <= 0) nextPaymentDate = null;
-
     const wasSuspended = selectedSub.is_suspended;
 
-    await supabase.from('subscriptions').update({
-      paid_amount: newPaid,
-      next_payment_date: nextPaymentDate,
-      is_suspended: false,
-    }).eq('id', selectedSub.id);
+    // Use atomic RPC to prevent double payments from concurrent admins
+    const { data: result, error } = await supabase.rpc('record_payment_atomic', {
+      p_subscription_id: selectedSub.id,
+      p_student_id: selectedSub.student_id,
+      p_amount: paymentAmount,
+      p_payment_method: paymentMethod,
+      p_payment_date: paymentDate,
+      p_payment_type: 'regular',
+      p_notes: paymentNotes || null,
+      p_recorded_by: user?.id || null,
+    });
+
+    if (error) {
+      toast({ title: isRTL ? 'خطأ في تسجيل الدفعة' : 'Payment recording error', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    const res = result as any;
+    if (res?.error) {
+      toast({ title: isRTL ? 'خطأ' : 'Error', description: res.error, variant: 'destructive' });
+      return;
+    }
 
     // Send notifications
-    await notificationService.notifyPaymentRecorded(selectedSub.student_id, paymentAmount, Math.max(0, newRemaining));
+    await notificationService.notifyPaymentRecorded(selectedSub.student_id, paymentAmount, Math.max(0, res.new_remaining));
     if (wasSuspended) {
       await notificationService.notifyAccountReactivated(selectedSub.student_id);
     }
