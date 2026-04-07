@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -12,12 +12,24 @@ interface ProtectedRouteProps {
 // Routes students can access even without level_id (placement flow only)
 const STUDENT_ALLOWED_WITHOUT_LEVEL = ['/placement-gate', '/placement-test', '/account-suspended', '/profile'];
 
+// Module-level cache shared across all ProtectedRoute instances
+const statusCache: {
+  userId: string | null;
+  isSuspended: boolean;
+  isTerminated: boolean;
+  hasLevel: boolean;
+  fetchedAt: number;
+} = { userId: null, isSuspended: false, isTerminated: false, hasLevel: true, fetchedAt: 0 };
+
+const CACHE_TTL_MS = 60_000; // 1 minute
+
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, role, loading } = useAuth();
   const location = useLocation();
   const [isSuspended, setIsSuspended] = useState<boolean | null>(null);
   const [isTerminated, setIsTerminated] = useState<boolean | null>(null);
   const [hasLevel, setHasLevel] = useState<boolean | null>(null);
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
     if (!user) {
@@ -27,7 +39,19 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       return;
     }
 
-    // Check termination for employees (instructor/reception)
+    // Use cache if same user and within TTL
+    const now = Date.now();
+    if (statusCache.userId === user.id && now - statusCache.fetchedAt < CACHE_TTL_MS) {
+      setIsSuspended(statusCache.isSuspended);
+      setIsTerminated(statusCache.isTerminated);
+      setHasLevel(statusCache.hasLevel);
+      return;
+    }
+
+    // Prevent duplicate concurrent fetches
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+
     if (role === 'instructor' || role === 'reception') {
       supabase
         .from('profiles')
@@ -35,12 +59,18 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
         .eq('user_id', user.id)
         .maybeSingle()
         .then(({ data }) => {
-          setIsTerminated(data?.employment_status === 'terminated');
+          const terminated = data?.employment_status === 'terminated';
+          statusCache.userId = user.id;
+          statusCache.isSuspended = false;
+          statusCache.isTerminated = terminated;
+          statusCache.hasLevel = true;
+          statusCache.fetchedAt = Date.now();
+          setIsTerminated(terminated);
+          setIsSuspended(false);
+          setHasLevel(true);
+          fetchingRef.current = false;
         });
-      setIsSuspended(false);
-      setHasLevel(true);
     } else if (role === 'student') {
-      // Check suspension + level_id
       Promise.all([
         supabase
           .from('subscriptions')
@@ -56,14 +86,28 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
           .eq('user_id', user.id)
           .maybeSingle(),
       ]).then(([subRes, profileRes]) => {
-        setIsSuspended(subRes.data?.is_suspended ?? false);
-        setHasLevel(!!profileRes.data?.level_id);
+        const suspended = subRes.data?.is_suspended ?? false;
+        const level = !!profileRes.data?.level_id;
+        statusCache.userId = user.id;
+        statusCache.isSuspended = suspended;
+        statusCache.isTerminated = false;
+        statusCache.hasLevel = level;
+        statusCache.fetchedAt = Date.now();
+        setIsSuspended(suspended);
+        setIsTerminated(false);
+        setHasLevel(level);
+        fetchingRef.current = false;
       });
-      setIsTerminated(false);
     } else {
+      statusCache.userId = user.id;
+      statusCache.isSuspended = false;
+      statusCache.isTerminated = false;
+      statusCache.hasLevel = true;
+      statusCache.fetchedAt = Date.now();
       setIsSuspended(false);
       setIsTerminated(false);
       setHasLevel(true);
+      fetchingRef.current = false;
     }
   }, [user, role]);
 
@@ -79,17 +123,14 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Check termination for employees
   if ((role === 'instructor' || role === 'reception') && isTerminated === true) {
     return <Navigate to="/account-terminated" replace />;
   }
 
-  // Check suspension for students
   if (role === 'student' && isSuspended === true) {
     return <Navigate to="/account-suspended" replace />;
   }
 
-  // Enforce level_id for students — block ALL routes except placement flow
   if (role === 'student' && hasLevel === false) {
     const isAllowed = STUDENT_ALLOWED_WITHOUT_LEVEL.some(path => location.pathname.startsWith(path));
     if (!isAllowed) {
