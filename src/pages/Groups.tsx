@@ -281,9 +281,7 @@ export default function GroupsPage() {
       const sessionProgress: { [groupId: string]: { completed: number; total: number } } = {};
       allGroups.forEach((group: any) => {
         const total = group.level_id ? (levelMap[group.level_id] ?? 12) : 12;
-        const delivered = group.last_delivered_content_number ?? 0;
-        const startingNum = group.starting_session_number ?? 1;
-        const completed = Math.max(0, delivered - (startingNum - 1));
+        const completed = group.last_delivered_content_number ?? 0;
         sessionProgress[group.id] = { completed, total };
       });
       setGroupSessionProgress(sessionProgress);

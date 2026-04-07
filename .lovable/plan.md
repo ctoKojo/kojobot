@@ -57,27 +57,43 @@ MEDIUM: كل ما عدا ذلك
 
 ---
 
-## ✅ إصلاح فصل content_number عن session_number (مكتمل)
+## ✅ إصلاح فصل content_number عن session_number (مكتمل — V2 Production Safe)
 
 ### التغييرات المنفذة:
 
-#### 1. تريجر `auto_generate_next_session` (Migration)
-- عند `academy_closure`: السيشن البديلة ترث `content_number` من الملغية
-- عند `completed` أو إلغاء عادي: `content_number` يتقدم +1
-- حماية: لا يتم إنشاء سيشن بمحتوى يتجاوز `expected_sessions_count` (ما عدا owed)
+#### 1. تريجر `assign_content_number_on_completion` (أُعيد بناؤه)
+- يستخدم `pg_advisory_xact_lock` لمنع race conditions
+- content يتقدم **فقط** لو فيه attendance present
+- completed بدون حضور → نفس content اللي قبلها
+- idempotency check قبل أي تغيير
 
-#### 2. Edge Functions
+#### 2. تريجر `auto_generate_next_session` (أُعيد بناؤه)
+- يستخدم `pg_advisory_xact_lock` بدل table lock
+- يحسب session_number من `MAX(session_number) + 1` بعد الـ lock
+- idempotency check صريح + `ON CONFLICT DO NOTHING`
+- يقرأ counters من groups بعد ما assign_content يحدثها
+
+#### 3. إصلاح البيانات التاريخية (migration)
+- حذف duplicate session_numbers
+- إعادة بناء content_number بناءً على attendance حقيقي (مع fallback لـ backfill)
+- reset `starting_session_number = 1` لكل الجروبات
+- إعادة حساب `last_delivered_content_number` و `owed_sessions_count`
+- cap عند `expected_sessions_count`
+
+#### 4. Constraints
+- `UNIQUE INDEX (group_id, session_number) WHERE is_makeup IS NOT TRUE`
+
+#### 5. Frontend
+- `Groups.tsx` و `GroupDetails.tsx`: يعتمدان على `last_delivered_content_number` مباشرة بدون حسابات
+
+#### 6. Edge Functions
 - `start-group`: يضع `content_number = session_number` لكل سيشن عند البدء
 - `generate-sessions`: يحسب `content_number` من أعلى completed content_number + 1
 
-#### 3. الواجهات
-- `Sessions.tsx`: يعرض `content_number` كرقم رئيسي، `session_number` ثانوي عند الاختلاف
-- `GroupDetails.tsx`: نفس المنطق في تاب الحضور وتاب الجلسات
+#### 7. الواجهات
+- `Sessions.tsx`: يعرض `content_number` كرقم رئيسي
+- `GroupDetails.tsx`: progress = `last_delivered_content_number` مباشرة
 - `SessionDetails.tsx`: العنوان يعرض `content_number`
-- `EditSessionDialog.tsx`: العنوان يعرض `session_number`
-
-### بقي: إصلاح Live Data
-راجع السكربتات أسفل هذا الملف.
 
 ---
 
