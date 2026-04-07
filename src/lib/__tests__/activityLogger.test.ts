@@ -47,7 +47,7 @@ describe('activityLogger', () => {
   });
 
   it('logPayment passes correct entity_type', async () => {
-    await logPayment('create', 'pay-123', { amount: 1000 });
+    await logPayment('pay-123', { amount: 1000 });
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         entity_type: 'payment',
@@ -69,7 +69,7 @@ describe('activityLogger', () => {
   });
 
   it('logWarning passes correct entity_type', async () => {
-    await logWarning('create', 'warn-123', { severity: 'medium' });
+    await logWarning('warning', 'warn-123', { severity: 'medium' });
     expect(mockInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         entity_type: 'warning',
