@@ -29,6 +29,7 @@ export type EntityType =
   | 'assignment_submission'
   | 'attendance' 
   | 'subscription' 
+  | 'payment'
   | 'age_group' 
   | 'level' 
   | 'notification'
