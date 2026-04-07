@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
 
     let completedCount = 0;
     let warningCount = 0;
+    let skippedWarnings = 0;
     const completedIds: string[] = [];
 
     for (const session of sessions || []) {
@@ -67,7 +68,6 @@ Deno.serve(async (req) => {
       const hasAttendance = (attendanceRes.data?.length || 0) > 0;
       const hasQuiz = (quizRes.data?.length || 0) > 0;
       const hasAssignment = (assignmentRes.data?.length || 0) > 0;
-      const allActionsComplete = hasAttendance && hasQuiz && hasAssignment;
 
       // Get instructor for this session's group
       const { data: groupData } = await supabase
@@ -77,10 +77,19 @@ Deno.serve(async (req) => {
         .single();
 
       if (groupData?.instructor_id) {
-        // Issue separate warnings for each missing action to match deduction rules
+        // Idempotency: check if warnings already exist for this session
+        const { data: existingWarnings } = await supabase
+          .from("instructor_warnings")
+          .select("warning_type")
+          .eq("session_id", session.id)
+          .eq("instructor_id", groupData.instructor_id);
+
+        const existingTypes = new Set((existingWarnings || []).map(w => w.warning_type));
+
+        // Issue separate warnings for each missing action (skip if already exists)
         const warningsToInsert = [];
 
-        if (!hasAttendance) {
+        if (!hasAttendance && !existingTypes.has("no_attendance")) {
           warningsToInsert.push({
             instructor_id: groupData.instructor_id,
             warning_type: "no_attendance",
@@ -93,7 +102,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        if (!hasQuiz) {
+        if (!hasQuiz && !existingTypes.has("no_quiz")) {
           warningsToInsert.push({
             instructor_id: groupData.instructor_id,
             warning_type: "no_quiz",
@@ -106,7 +115,7 @@ Deno.serve(async (req) => {
           });
         }
 
-        if (!hasAssignment) {
+        if (!hasAssignment && !existingTypes.has("no_assignment")) {
           warningsToInsert.push({
             instructor_id: groupData.instructor_id,
             warning_type: "no_assignment",
@@ -118,6 +127,9 @@ Deno.serve(async (req) => {
             reference_id: session.id,
           });
         }
+
+        const skipped = (existingWarnings?.length || 0);
+        if (skipped > 0) skippedWarnings += skipped;
 
         if (warningsToInsert.length > 0) {
           await supabase.from("instructor_warnings").insert(warningsToInsert);
@@ -156,6 +168,7 @@ Deno.serve(async (req) => {
         success: true,
         completed: completedCount,
         warnings_issued: warningCount,
+        skipped_duplicate_warnings: skippedWarnings,
         timestamp: new Date().toISOString(),
         cairoTime: `${cairo.today} ${cairo.timeHHMMSS}`,
       }),
