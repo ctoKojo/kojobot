@@ -11,10 +11,43 @@ interface NotificationData {
   action_url?: string;
 }
 
+/**
+ * Check if a similar notification was already sent today to prevent duplicates.
+ * Matches on user_id + category + action_url within the last 24 hours.
+ */
+async function isDuplicate(data: NotificationData): Promise<boolean> {
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const query = supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', data.user_id)
+      .eq('category', data.category || 'general')
+      .gte('created_at', since);
+
+    if (data.action_url) {
+      query.eq('action_url', data.action_url);
+    }
+
+    const { count } = await query;
+    return (count ?? 0) > 0;
+  } catch {
+    // If dedup check fails, allow the notification through
+    return false;
+  }
+}
+
 export const notificationService = {
-  // Create a single notification
+  // Create a single notification with dedup
   async create(data: NotificationData) {
     try {
+      // Skip dedup for payment/success notifications (they're always unique amounts)
+      const skipDedup = data.category === 'payment' && (data.type === 'success' || data.type === 'info');
+      if (!skipDedup && await isDuplicate(data)) {
+        console.log('Skipped duplicate notification:', data.category, data.user_id);
+        return true;
+      }
+
       const { error } = await supabase.from('notifications').insert({
         user_id: data.user_id,
         title: data.title,
@@ -145,7 +178,6 @@ export const notificationService = {
   // Bulk notify group students
   async notifyGroupStudents(groupId: string, title: string, titleAr: string, message: string, messageAr: string, type: 'info' | 'success' | 'warning' | 'error' = 'info', category: string = 'general') {
     try {
-      // Get all students in the group
       const { data: students, error } = await supabase
         .from('group_students')
         .select('student_id')
@@ -155,7 +187,6 @@ export const notificationService = {
       if (error) throw error;
       if (!students || students.length === 0) return true;
 
-      // Create notifications for all students
       const notifications = students.map(s => ({
         user_id: s.student_id,
         title,
@@ -211,7 +242,7 @@ export const notificationService = {
     });
   },
 
-  // Notify when payment is recorded
+  // Notify when payment is recorded (skip dedup — unique amounts)
   async notifyPaymentRecorded(studentId: string, amount: number, remaining: number) {
     return this.create({
       user_id: studentId,

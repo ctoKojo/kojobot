@@ -135,7 +135,7 @@ serve(async (req) => {
           .from('salary_month_snapshots')
           .select('net_amount')
           .eq('employee_id', event.instructor_id)
-          .eq('month', currentMonth)
+          .eq('month', eventMonth)
           .maybeSingle();
 
         await supabase.from('notifications').insert({

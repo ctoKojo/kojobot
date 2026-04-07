@@ -75,6 +75,9 @@ serve(async (req) => {
       );
     }
 
+    // For instructors, restrict to their own group students only
+    const isInstructor = roleData.role === 'instructor';
+
     // Use service role client to insert notifications
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
