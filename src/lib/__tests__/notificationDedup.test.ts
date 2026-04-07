@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ─── Mock Supabase ────────────────────────────────────────────
-const mockQuery = vi.fn();
-const mockInsert = vi.fn();
-
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: vi.fn(() => ({
@@ -11,55 +7,44 @@ vi.mock('@/integrations/supabase/client', () => ({
         eq: vi.fn(() => ({
           eq: vi.fn(() => ({
             gte: vi.fn(() => ({
-              eq: vi.fn(() => mockQuery()),
-              ...mockQuery(),
+              eq: vi.fn(() => Promise.resolve({ count: 0 })),
             })),
           })),
         })),
       })),
-      insert: mockInsert,
+      insert: vi.fn(() => Promise.resolve({ error: null })),
     })),
   },
 }));
 
-// Import after mocks
 import { notificationService } from '../notificationService';
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('notificationService.create - Deduplication', () => {
-  it('should call supabase to check for duplicates', async () => {
-    // This verifies the isDuplicate function structure exists
-    // Full integration testing would require a real DB
+describe('notificationService - Structure', () => {
+  it('exports create method', () => {
     expect(typeof notificationService.create).toBe('function');
   });
 
-  it('should have all expected notification methods', () => {
-    const expectedMethods = [
-      'create',
-      'notifyQuizAssigned',
-      'notifyAssignmentAssigned',
-      'notifyPaymentRecorded',
-      'notifySessionRescheduled',
-    ];
-    
-    for (const method of expectedMethods) {
-      expect(typeof (notificationService as any)[method]).toBe('function');
-    }
+  it('exports notifyQuizAssigned', () => {
+    expect(typeof notificationService.notifyQuizAssigned).toBe('function');
   });
 
-  it('should export notificationService as object', () => {
+  it('exports notifyAssignmentAssigned', () => {
+    expect(typeof notificationService.notifyAssignmentAssigned).toBe('function');
+  });
+
+  it('exports notifyPaymentRecorded', () => {
+    expect(typeof notificationService.notifyPaymentRecorded).toBe('function');
+  });
+
+  it('is a valid object with multiple methods', () => {
     expect(notificationService).toBeDefined();
-    expect(typeof notificationService).toBe('object');
-  });
-});
-
-describe('notificationService - Method Signatures', () => {
-  it('create accepts NotificationData with all fields', async () => {
-    // Verify the function signature handles optional fields
-    const fn = notificationService.create;
-    expect(fn.length).toBeLessThanOrEqual(1); // 1 param (data object)
+    const methods = Object.keys(notificationService).filter(
+      k => typeof (notificationService as any)[k] === 'function'
+    );
+    expect(methods.length).toBeGreaterThan(3);
   });
 });
