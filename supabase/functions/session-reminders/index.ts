@@ -99,9 +99,10 @@ Deno.serve(async (req) => {
       // Part 2: sessions tomorrow from 00:00:00 to endTime (exclusive)
       const { data: tomorrowSessions, error: e2 } = await supabase
         .from('sessions')
-        .select(`id, group_id, session_date, session_time, groups (name, name_ar, instructor_id)`)
+        .select(`id, group_id, session_date, session_time, groups!inner(name, name_ar, instructor_id, status)`)
         .eq('session_date', window.endDate)
         .eq('status', 'scheduled')
+        .neq('groups.status', 'frozen')
         .lt('session_time', window.endTime)
 
       if (e2) throw e2
