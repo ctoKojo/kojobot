@@ -54,6 +54,7 @@ export default function SubmitAssignment() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isFrozen, setIsFrozen] = useState(false);
 
   useEffect(() => {
     if (assignmentId) fetchAssignmentData();
