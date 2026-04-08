@@ -112,9 +112,10 @@ Deno.serve(async (req) => {
       // AC-3: Normal window — gte startTime, lt endTime (exclusive end)
       const { data: sessions, error: sessionsError } = await supabase
         .from('sessions')
-        .select(`id, group_id, session_date, session_time, groups (name, name_ar, instructor_id)`)
+        .select(`id, group_id, session_date, session_time, groups!inner(name, name_ar, instructor_id, status)`)
         .eq('session_date', window.startDate)
         .eq('status', 'scheduled')
+        .neq('groups.status', 'frozen')
         .gte('session_time', window.startTime)
         .lt('session_time', window.endTime)
 
