@@ -250,7 +250,7 @@ export default function SubmitAssignment() {
   const isOverdue = assignment ? new Date(assignment.due_date) < new Date() : false;
   const isGraded = submission?.status === 'graded';
   const isRevisionRequested = submission?.status === 'revision_requested';
-  const canSubmit = !isGraded || isRevisionRequested;
+  const canSubmit = (!isGraded || isRevisionRequested) && !isFrozen;
 
   const getFileIcon = (type: string | null) => {
     if (!type) return <FileText className="w-8 h-8" />;

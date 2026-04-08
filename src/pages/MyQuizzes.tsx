@@ -181,6 +181,22 @@ export default function MyQuizzes() {
           </div>
         </div>
 
+        {/* Frozen Group Alert */}
+        {isFrozen && (
+          <Card className="border-sky-300 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-800">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Snowflake className="w-5 h-5 text-sky-600 flex-shrink-0" />
+                <p className="text-sm text-sky-700 dark:text-sky-400">
+                  {isRTL 
+                    ? 'مجموعتك مجمدة حالياً — لن تستلم كويزات جديدة. الكويزات السابقة متاحة للمراجعة.'
+                    : 'Your group is frozen — no new quizzes will be assigned. Previous quizzes are available for review.'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Pending Quizzes */}
         <div>
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">

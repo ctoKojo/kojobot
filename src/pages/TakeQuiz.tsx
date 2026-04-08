@@ -295,6 +295,39 @@ export default function TakeQuiz() {
     );
   }
 
+  // Show message if group is frozen
+  if (quizStatus === 'frozen') {
+    return (
+      <DashboardLayout title={isRTL ? 'حل الكويز' : 'Take Quiz'}>
+        <Card className="max-w-md mx-auto">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-20 h-20 rounded-full bg-sky-100 flex items-center justify-center">
+              <AlertTriangle className="w-10 h-10 text-sky-600" />
+            </div>
+            <CardTitle className="mt-4">
+              {isRTL ? 'المجموعة مجمدة' : 'Group is Frozen'}
+            </CardTitle>
+            <CardDescription>
+              {language === 'ar' ? assignment?.quizzes?.title_ar : assignment?.quizzes?.title}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="p-4 rounded-lg bg-sky-50 text-center">
+              <p className="text-sm text-sky-700">
+                {isRTL 
+                  ? 'مجموعتك مجمدة حالياً ولا يمكنك حل كويزات جديدة. تواصل مع الإدارة لمزيد من المعلومات.'
+                  : 'Your group is currently frozen and you cannot take new quizzes. Contact administration for more information.'}
+              </p>
+            </div>
+            <Button className="w-full" variant="outline" onClick={() => navigate('/my-quizzes')}>
+              {isRTL ? 'العودة لقائمة الكويزات' : 'Back to My Quizzes'}
+            </Button>
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
   // Show message if quiz time has expired
   if (quizStatus === 'expired') {
     return (
