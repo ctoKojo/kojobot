@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { formatDateTime } from '@/lib/timeUtils';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, FileText, Image, Video, X, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, Image, Video, X, CheckCircle, Clock, AlertTriangle, Snowflake } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
