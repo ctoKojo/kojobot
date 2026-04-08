@@ -688,6 +688,7 @@ export function StudentDashboard() {
           </CardContent>
         </Card>
       </div>
+      )}
 
       {/* Quick Actions */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
