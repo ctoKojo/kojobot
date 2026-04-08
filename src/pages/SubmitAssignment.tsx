@@ -396,6 +396,22 @@ export default function SubmitAssignment() {
           </Card>
         )}
 
+        {/* Frozen Group Alert */}
+        {isFrozen && !submission && (
+          <Card className="border-sky-300 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-800">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Snowflake className="w-5 h-5 text-sky-600 flex-shrink-0" />
+                <p className="text-sm text-sky-700 dark:text-sky-400">
+                  {isRTL 
+                    ? 'مجموعتك مجمدة حالياً — لا يمكنك تسليم واجبات جديدة.'
+                    : 'Your group is frozen — you cannot submit new assignments.'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Submission Form */}
         {canSubmit && (
           <Card>
