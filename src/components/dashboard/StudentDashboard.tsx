@@ -614,7 +614,8 @@ export function StudentDashboard() {
         </Card>
       )}
 
-      {/* Pending Tasks */}
+      {/* Pending Tasks - hidden when frozen */}
+      {stats.groupInfo?.status !== 'frozen' && (
       <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
         {/* Pending Quizzes */}
         <Card>
