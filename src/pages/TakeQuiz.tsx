@@ -93,6 +93,20 @@ export default function TakeQuiz() {
 
       if (assignmentError) throw assignmentError;
       setAssignment(assignmentData);
+
+      // Check if student's group is frozen
+      if (assignmentData.group_id) {
+        const { data: groupData } = await supabase
+          .from('groups')
+          .select('status')
+          .eq('id', assignmentData.group_id)
+          .single();
+        if (groupData?.status === 'frozen') {
+          setQuizStatus('frozen');
+          setLoading(false);
+          return;
+        }
+      }
       
       // Calculate quiz status and remaining time based on start_time
       const now = new Date().getTime();
