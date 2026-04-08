@@ -15,6 +15,7 @@ interface Session {
     name: string
     name_ar: string
     instructor_id: string
+    status: string
   }
 }
 
