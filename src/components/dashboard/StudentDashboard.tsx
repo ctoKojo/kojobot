@@ -323,8 +323,8 @@ export function StudentDashboard() {
                 </h2>
                 <p className="text-sm sm:text-base text-sky-700 dark:text-sky-400">
                   {isRTL 
-                    ? 'لن تتمكن من استلام كويزات أو واجبات جديدة. تواصل مع الإدارة لمزيد من المعلومات.'
-                    : 'You will not receive new quizzes or assignments. Contact administration for more information.'}
+                    ? 'السيشنات متوقفة مؤقتاً ولن تتمكن من استلام كويزات أو واجبات جديدة. تواصل مع الإدارة لمزيد من المعلومات.'
+                    : 'Sessions are paused and you will not receive new quizzes or assignments. Contact administration for more information.'}
                 </p>
               </div>
             </div>
