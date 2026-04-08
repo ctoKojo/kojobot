@@ -149,8 +149,9 @@ serve(async (req) => {
         const sixtyDaysAgoAtt = getCairoDatePlusDays(-60);
         const { data: completedSessions, error: attendanceCheckError } = await supabase
           .from('sessions')
-          .select(`id, session_date, session_time, session_number, group_id, duration_minutes, groups!inner(instructor_id, name, name_ar, starting_session_number)`)
+          .select(`id, session_date, session_time, session_number, group_id, duration_minutes, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
           .eq('status', 'completed')
+          .neq('groups.status', 'frozen')
           .gte('session_date', sixtyDaysAgoAtt);
 
         if (attendanceCheckError) {
