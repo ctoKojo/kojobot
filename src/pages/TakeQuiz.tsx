@@ -61,7 +61,7 @@ export default function TakeQuiz() {
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<{ score: number; maxScore: number; percentage: number; passed: boolean } | null>(null);
   const [gradeResults, setGradeResults] = useState<Record<string, { correct: boolean; correctAnswer: string }>>({});
-  const [quizStatus, setQuizStatus] = useState<'loading' | 'not_started' | 'expired' | 'available'>('loading');
+  const [quizStatus, setQuizStatus] = useState<'loading' | 'not_started' | 'expired' | 'available' | 'frozen'>('loading');
 
   useEffect(() => {
     if (assignmentId) fetchQuizData();
@@ -93,6 +93,20 @@ export default function TakeQuiz() {
 
       if (assignmentError) throw assignmentError;
       setAssignment(assignmentData);
+
+      // Check if student's group is frozen
+      if (assignmentData.group_id) {
+        const { data: groupData } = await supabase
+          .from('groups')
+          .select('status')
+          .eq('id', assignmentData.group_id)
+          .single();
+        if (groupData?.status === 'frozen') {
+          setQuizStatus('frozen');
+          setLoading(false);
+          return;
+        }
+      }
       
       // Calculate quiz status and remaining time based on start_time
       const now = new Date().getTime();
@@ -270,6 +284,39 @@ export default function TakeQuiz() {
               <AlertTriangle className="w-4 h-4" />
               <p className="text-sm">
                 {isRTL ? 'عُد في الموعد المحدد لبدء الكويز' : 'Come back at the scheduled time to start'}
+              </p>
+            </div>
+            <Button className="w-full" variant="outline" onClick={() => navigate('/my-quizzes')}>
+              {isRTL ? 'العودة لقائمة الكويزات' : 'Back to My Quizzes'}
+            </Button>
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
+  // Show message if group is frozen
+  if (quizStatus === 'frozen') {
+    return (
+      <DashboardLayout title={isRTL ? 'حل الكويز' : 'Take Quiz'}>
+        <Card className="max-w-md mx-auto">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-20 h-20 rounded-full bg-sky-100 flex items-center justify-center">
+              <AlertTriangle className="w-10 h-10 text-sky-600" />
+            </div>
+            <CardTitle className="mt-4">
+              {isRTL ? 'المجموعة مجمدة' : 'Group is Frozen'}
+            </CardTitle>
+            <CardDescription>
+              {language === 'ar' ? assignment?.quizzes?.title_ar : assignment?.quizzes?.title}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="p-4 rounded-lg bg-sky-50 text-center">
+              <p className="text-sm text-sky-700">
+                {isRTL 
+                  ? 'مجموعتك مجمدة حالياً ولا يمكنك حل كويزات جديدة. تواصل مع الإدارة لمزيد من المعلومات.'
+                  : 'Your group is currently frozen and you cannot take new quizzes. Contact administration for more information.'}
               </p>
             </div>
             <Button className="w-full" variant="outline" onClick={() => navigate('/my-quizzes')}>

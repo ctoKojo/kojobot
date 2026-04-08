@@ -323,8 +323,8 @@ export function StudentDashboard() {
                 </h2>
                 <p className="text-sm sm:text-base text-sky-700 dark:text-sky-400">
                   {isRTL 
-                    ? 'لن تتمكن من استلام كويزات أو واجبات جديدة. تواصل مع الإدارة لمزيد من المعلومات.'
-                    : 'You will not receive new quizzes or assignments. Contact administration for more information.'}
+                    ? 'السيشنات متوقفة مؤقتاً ولن تتمكن من استلام كويزات أو واجبات جديدة. تواصل مع الإدارة لمزيد من المعلومات.'
+                    : 'Sessions are paused and you will not receive new quizzes or assignments. Contact administration for more information.'}
                 </p>
               </div>
             </div>
@@ -563,7 +563,7 @@ export function StudentDashboard() {
         </Card>
       )}
 
-      {stats.upcomingSessions.length > 0 && (
+      {stats.upcomingSessions.length > 0 && stats.groupInfo?.status !== 'frozen' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -614,7 +614,8 @@ export function StudentDashboard() {
         </Card>
       )}
 
-      {/* Pending Tasks */}
+      {/* Pending Tasks - hidden when frozen */}
+      {stats.groupInfo?.status !== 'frozen' && (
       <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
         {/* Pending Quizzes */}
         <Card>
@@ -687,6 +688,7 @@ export function StudentDashboard() {
           </CardContent>
         </Card>
       </div>
+      )}
 
       {/* Quick Actions */}
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">

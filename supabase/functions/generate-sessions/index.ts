@@ -56,9 +56,10 @@ Deno.serve(async (req) => {
     // Get all active groups that have started
     const { data: groups, error: groupsError } = await adminSupabase
       .from('groups')
-      .select('id, name, schedule_day, schedule_time, duration_minutes, is_active')
+      .select('id, name, schedule_day, schedule_time, duration_minutes, is_active, status')
       .eq('is_active', true)
       .eq('has_started', true)
+      .neq('status', 'frozen')
 
     if (groupsError) throw groupsError
 

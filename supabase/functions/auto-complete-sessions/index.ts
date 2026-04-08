@@ -35,11 +35,13 @@ Deno.serve(async (req) => {
     const today = cairo.today;
 
     // Find sessions that are scheduled and their date has passed or is today
+    // Fetch sessions with group status to skip frozen groups
     const { data: sessions, error: fetchError } = await supabase
       .from("sessions")
-      .select("id, session_date, session_time, duration_minutes, group_id")
+      .select("id, session_date, session_time, duration_minutes, group_id, groups!inner(status)")
       .eq("status", "scheduled")
-      .lte("session_date", today);
+      .lte("session_date", today)
+      .neq("groups.status", "frozen");
 
     if (fetchError) throw fetchError;
 

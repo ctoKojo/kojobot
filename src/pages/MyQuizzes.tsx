@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { formatDate, formatDateTime } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
-import { FileQuestion, Play, CheckCircle, Clock, Calendar } from 'lucide-react';
+import { FileQuestion, Play, CheckCircle, Clock, Calendar, Snowflake } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,8 @@ export default function MyQuizzes() {
   const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState<QuizAssignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [, setRefreshTrigger] = useState(0); // For auto-refresh
+  const [, setRefreshTrigger] = useState(0);
+  const [isFrozen, setIsFrozen] = useState(false);
 
   useEffect(() => {
     if (user) fetchQuizzes();
@@ -57,14 +58,16 @@ export default function MyQuizzes() {
 
   const fetchQuizzes = async () => {
     try {
-      // Get student's groups
+      // Get student's groups and check frozen status
       const { data: groupData } = await supabase
         .from('group_students')
-        .select('group_id')
+        .select('group_id, groups(status)')
         .eq('student_id', user?.id)
         .eq('is_active', true);
 
       const groupIds = groupData?.map(g => g.group_id) || [];
+      const frozen = groupData?.some(g => (g.groups as any)?.status === 'frozen') || false;
+      setIsFrozen(frozen);
 
       // Build filter for quiz assignments
       let query = supabase
@@ -177,6 +180,22 @@ export default function MyQuizzes() {
             <p className="text-sm text-muted-foreground">{isRTL ? 'كويزات بانتظارك ونتائجك' : 'Your pending and completed quizzes'}</p>
           </div>
         </div>
+
+        {/* Frozen Group Alert */}
+        {isFrozen && (
+          <Card className="border-sky-300 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-800">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Snowflake className="w-5 h-5 text-sky-600 flex-shrink-0" />
+                <p className="text-sm text-sky-700 dark:text-sky-400">
+                  {isRTL 
+                    ? 'مجموعتك مجمدة حالياً — لن تستلم كويزات جديدة. الكويزات السابقة متاحة للمراجعة.'
+                    : 'Your group is frozen — no new quizzes will be assigned. Previous quizzes are available for review.'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Pending Quizzes */}
         <div>

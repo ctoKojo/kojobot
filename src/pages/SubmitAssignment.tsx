@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { formatDateTime } from '@/lib/timeUtils';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, FileText, Image, Video, X, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, Image, Video, X, CheckCircle, Clock, AlertTriangle, Snowflake } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -54,6 +54,7 @@ export default function SubmitAssignment() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [isFrozen, setIsFrozen] = useState(false);
 
   useEffect(() => {
     if (assignmentId) fetchAssignmentData();
@@ -69,6 +70,16 @@ export default function SubmitAssignment() {
 
       if (assignmentError) throw assignmentError;
       setAssignment(assignmentData);
+
+      // Check if group is frozen
+      if (assignmentData.group_id) {
+        const { data: groupData } = await supabase
+          .from('groups')
+          .select('status')
+          .eq('id', assignmentData.group_id)
+          .single();
+        setIsFrozen(groupData?.status === 'frozen');
+      }
 
       // Check for existing submission
       const { data: submissionData } = await supabase
@@ -239,7 +250,7 @@ export default function SubmitAssignment() {
   const isOverdue = assignment ? new Date(assignment.due_date) < new Date() : false;
   const isGraded = submission?.status === 'graded';
   const isRevisionRequested = submission?.status === 'revision_requested';
-  const canSubmit = !isGraded || isRevisionRequested;
+  const canSubmit = (!isGraded || isRevisionRequested) && !isFrozen;
 
   const getFileIcon = (type: string | null) => {
     if (!type) return <FileText className="w-8 h-8" />;
@@ -381,6 +392,22 @@ export default function SubmitAssignment() {
                   </p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Frozen Group Alert */}
+        {isFrozen && !submission && (
+          <Card className="border-sky-300 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-800">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Snowflake className="w-5 h-5 text-sky-600 flex-shrink-0" />
+                <p className="text-sm text-sky-700 dark:text-sky-400">
+                  {isRTL 
+                    ? 'مجموعتك مجمدة حالياً — لا يمكنك تسليم واجبات جديدة.'
+                    : 'Your group is frozen — you cannot submit new assignments.'}
+                </p>
+              </div>
             </CardContent>
           </Card>
         )}

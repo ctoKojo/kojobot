@@ -95,8 +95,9 @@ serve(async (req) => {
       const sixtyDaysAgo = getCairoDatePlusDays(-60);
       const { data: sessionsWithoutQuiz, error: quizError } = await supabase
         .from('sessions')
-        .select(`id, session_date, session_time, session_number, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number)`)
+        .select(`id, session_date, session_time, session_number, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
         .eq('status', 'completed')
+        .neq('groups.status', 'frozen')
         .gte('session_date', sixtyDaysAgo);
 
       if (quizError) {
@@ -148,8 +149,9 @@ serve(async (req) => {
         const sixtyDaysAgoAtt = getCairoDatePlusDays(-60);
         const { data: completedSessions, error: attendanceCheckError } = await supabase
           .from('sessions')
-          .select(`id, session_date, session_time, session_number, group_id, duration_minutes, groups!inner(instructor_id, name, name_ar, starting_session_number)`)
+          .select(`id, session_date, session_time, session_number, group_id, duration_minutes, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
           .eq('status', 'completed')
+          .neq('groups.status', 'frozen')
           .gte('session_date', sixtyDaysAgoAtt);
 
         if (attendanceCheckError) {
@@ -204,8 +206,8 @@ serve(async (req) => {
 
         const { data: oldSessions, error: assignmentCheckError } = await supabase
           .from('sessions')
-          .select(`id, session_date, session_time, session_number, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number)`)
-          .eq('status', 'completed').lte('session_date', yesterdayStr);
+          .select(`id, session_date, session_time, session_number, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
+          .eq('status', 'completed').neq('groups.status', 'frozen').lte('session_date', yesterdayStr);
 
         if (assignmentCheckError) {
           results.errors.push(`Assignment check error: ${assignmentCheckError.message}`);
