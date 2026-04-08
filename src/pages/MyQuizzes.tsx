@@ -58,14 +58,16 @@ export default function MyQuizzes() {
 
   const fetchQuizzes = async () => {
     try {
-      // Get student's groups
+      // Get student's groups and check frozen status
       const { data: groupData } = await supabase
         .from('group_students')
-        .select('group_id')
+        .select('group_id, groups(status)')
         .eq('student_id', user?.id)
         .eq('is_active', true);
 
       const groupIds = groupData?.map(g => g.group_id) || [];
+      const frozen = groupData?.some(g => (g.groups as any)?.status === 'frozen') || false;
+      setIsFrozen(frozen);
 
       // Build filter for quiz assignments
       let query = supabase
