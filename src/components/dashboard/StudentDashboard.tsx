@@ -563,7 +563,7 @@ export function StudentDashboard() {
         </Card>
       )}
 
-      {stats.upcomingSessions.length > 0 && (
+      {stats.upcomingSessions.length > 0 && stats.groupInfo?.status !== 'frozen' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
