@@ -61,7 +61,7 @@ export default function TakeQuiz() {
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<{ score: number; maxScore: number; percentage: number; passed: boolean } | null>(null);
   const [gradeResults, setGradeResults] = useState<Record<string, { correct: boolean; correctAnswer: string }>>({});
-  const [quizStatus, setQuizStatus] = useState<'loading' | 'not_started' | 'expired' | 'available'>('loading');
+  const [quizStatus, setQuizStatus] = useState<'loading' | 'not_started' | 'expired' | 'available' | 'frozen'>('loading');
 
   useEffect(() => {
     if (assignmentId) fetchQuizData();
