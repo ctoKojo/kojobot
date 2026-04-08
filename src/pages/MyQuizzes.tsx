@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { formatDate, formatDateTime } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
-import { FileQuestion, Play, CheckCircle, Clock, Calendar } from 'lucide-react';
+import { FileQuestion, Play, CheckCircle, Clock, Calendar, Snowflake } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
