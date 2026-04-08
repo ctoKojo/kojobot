@@ -40,7 +40,8 @@ export default function MyQuizzes() {
   const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState<QuizAssignment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [, setRefreshTrigger] = useState(0); // For auto-refresh
+  const [, setRefreshTrigger] = useState(0);
+  const [isFrozen, setIsFrozen] = useState(false);
 
   useEffect(() => {
     if (user) fetchQuizzes();
