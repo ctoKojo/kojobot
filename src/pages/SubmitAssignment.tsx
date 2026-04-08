@@ -71,6 +71,16 @@ export default function SubmitAssignment() {
       if (assignmentError) throw assignmentError;
       setAssignment(assignmentData);
 
+      // Check if group is frozen
+      if (assignmentData.group_id) {
+        const { data: groupData } = await supabase
+          .from('groups')
+          .select('status')
+          .eq('id', assignmentData.group_id)
+          .single();
+        setIsFrozen(groupData?.status === 'frozen');
+      }
+
       // Check for existing submission
       const { data: submissionData } = await supabase
         .from('assignment_submissions')
