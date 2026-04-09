@@ -151,7 +151,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
   };
 
   // Show warning if already has active subscription
-  if (open && !loadingCheck && hasActiveSubscription) {
+   if (open && !loadingCheck && hasActiveSubscription && !isRenewal) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
@@ -180,7 +180,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isRTL ? 'إنشاء اشتراك جديد' : 'Create Subscription'}</DialogTitle>
+          <DialogTitle>{isRenewal ? (isRTL ? 'تجديد الاشتراك' : 'Renew Subscription') : (isRTL ? 'إنشاء اشتراك جديد' : 'Create Subscription')}</DialogTitle>
         </DialogHeader>
         {loadingCheck ? (
           <div className="py-8 text-center text-muted-foreground">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
