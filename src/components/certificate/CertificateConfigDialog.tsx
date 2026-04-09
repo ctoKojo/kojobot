@@ -43,7 +43,7 @@ const ANCHOR_OPTIONS: { value: CertificateConfig['anchor_type']; label: string; 
   { value: 'baseline', label: 'Baseline (raw)', labelAr: 'خط الأساس' },
 ];
 
-const PREVIEW_NAME = 'محمود حسام محمود صبري';
+const PREVIEW_NAME = 'Mahmoud Hossam Mahmoud';
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
