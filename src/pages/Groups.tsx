@@ -1068,7 +1068,16 @@ export default function GroupsPage() {
               <SelectItem value="online">{isRTL ? 'أونلاين' : 'Online'}</SelectItem>
               <SelectItem value="offline">{isRTL ? 'حضوري' : 'Offline'}</SelectItem>
             </SelectContent>
-          </Select>
+            </Select>
+
+          <Button
+            variant={showArchived ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowArchived(!showArchived)}
+            className="h-10"
+          >
+            {isRTL ? `الأرشيف (${groups.filter(g => g.status === 'completed' || g.status === 'archived').length})` : `Archive (${groups.filter(g => g.status === 'completed' || g.status === 'archived').length})`}
+          </Button>
         </div>
 
         {/* Dialog */}
