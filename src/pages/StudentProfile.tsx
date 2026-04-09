@@ -28,6 +28,7 @@ import { generateStudentReport } from '@/lib/pdfReports';
 import { PaymentsHistory } from '@/components/student/PaymentsHistory';
 import { SchedulePlacementDialog } from '@/components/student/SchedulePlacementDialog';
 import { StudentCertificatesTab } from '@/components/student/StudentCertificatesTab';
+import { StudentXpBreakdown } from '@/components/dashboard/StudentXpCard';
 
 interface StudentData {
   profile: any;
@@ -487,6 +488,7 @@ export default function StudentProfile() {
             <TabsTrigger value="assignments">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
             <TabsTrigger value="makeup">{isRTL ? 'التعويضات' : 'Makeup'}</TabsTrigger>
             <TabsTrigger value="certificates">{isRTL ? 'الشهادات' : 'Certificates'}</TabsTrigger>
+            <TabsTrigger value="xp">{isRTL ? 'نقاط XP' : 'XP'}</TabsTrigger>
           </TabsList>
 
           {/* Payments Tab */}

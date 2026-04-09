@@ -15,6 +15,7 @@ import { formatDate } from '@/lib/timeUtils';
 import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { isSessionActiveCairo } from '@/lib/sessionTimeGuard';
 import { ClosureBanner } from '@/components/shared/ClosureBanner';
+import { StudentXpCard } from '@/components/dashboard/StudentXpCard';
 
 interface GroupInfo {
   id: string;
@@ -369,6 +370,9 @@ export function StudentDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* XP Progress Card */}
+      {user && <StudentXpCard studentId={user.id} currentLevelId={stats.profile?.level_id} />}
 
       {/* Profile Summary - Gradient Cards */}
       <div className="grid gap-4 sm:gap-5 grid-cols-2 lg:grid-cols-4">
