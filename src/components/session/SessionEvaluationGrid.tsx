@@ -313,7 +313,11 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
 
       const parsedCriteria: Criterion[] = (criteriaData || []).map(c => ({
         ...c,
-        rubric_levels: (Array.isArray(c.rubric_levels) ? c.rubric_levels : []) as unknown as RubricLevel[],
+        rubric_levels: (Array.isArray(c.rubric_levels) ? c.rubric_levels : []).map((l: any) => ({
+          value: l.value ?? l.score ?? 0,
+          label: l.label ?? '',
+          label_ar: l.label_ar ?? '',
+        })) as RubricLevel[],
       }));
       setCriteria(parsedCriteria);
 
