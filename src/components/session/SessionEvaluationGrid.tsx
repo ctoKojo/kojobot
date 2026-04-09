@@ -181,35 +181,15 @@ function StudentEvalCard({
                 </Tooltip>
               </TooltipProvider>
 
-              {/* Rubric buttons */}
-              <div className="flex flex-wrap gap-1.5 flex-1 justify-center">
-                {c.rubric_levels.map((level, levelIdx) => {
-                  const selected = selectedValue === level.value;
-                  const levelLabel = language === 'ar' ? level.label_ar : level.label;
-                  return (
-                    <TooltipProvider key={level.value} delayDuration={200}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => setScore(rowIdx, c.key, level.value)}
-                            className={cn(
-                              'text-sm px-3.5 py-2 rounded-lg border-2 transition-all duration-200 font-bold min-w-[42px]',
-                              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1',
-                              getRubricColor(levelIdx, c.rubric_levels.length, selected),
-                              !selected && getRubricGhostColor(levelIdx, c.rubric_levels.length),
-                              selected && 'ring-2 ring-offset-2 ring-foreground/25 scale-110 shadow-md'
-                            )}
-                          >
-                            {level.value}
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[200px] text-center">
-                          <p className="font-semibold text-sm">{level.value} — {levelLabel}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  );
-                })}
+              {/* Star Rating */}
+              <div className="flex-1 flex justify-center">
+                <StarRating
+                  value={selectedValue}
+                  maxScore={c.max_score}
+                  onChange={(v) => setScore(rowIdx, c.key, v)}
+                  labels={buildStarLabels(c, language)}
+                  size="md"
+                />
               </div>
 
               {/* Score for this criterion */}
@@ -724,36 +704,19 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
                       {criteria.map((c, colIdx) => (
                         <td key={c.key} className="p-1.5">
                           <div
-                            className="flex flex-wrap justify-center gap-1"
+                            className="flex justify-center"
                             tabIndex={0}
                             onKeyDown={(e) => handleKeyDown(e, rowIdx, colIdx)}
                             data-row={rowIdx}
                             data-col={colIdx}
                           >
-                            {c.rubric_levels.map((level, levelIdx) => {
-                              const selected = row.scores[c.key] === level.value;
-                              return (
-                                <TooltipProvider key={level.value}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button
-                                        onClick={() => setScore(rowIdx, c.key, level.value)}
-                                        className={cn(
-                                          'text-xs px-2 py-0.5 rounded-md border-2 transition-all font-semibold min-w-[28px]',
-                                          getRubricColor(levelIdx, c.rubric_levels.length, selected),
-                                          selected && 'scale-110 shadow-sm'
-                                        )}
-                                      >
-                                        {level.value}
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="text-xs">
-                                      {language === 'ar' ? level.label_ar : level.label}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              );
-                            })}
+                            <StarRating
+                              value={row.scores[c.key]}
+                              maxScore={c.max_score}
+                              onChange={(v) => setScore(rowIdx, c.key, v)}
+                              labels={buildStarLabels(c, language)}
+                              size="sm"
+                            />
                           </div>
                         </td>
                       ))}
