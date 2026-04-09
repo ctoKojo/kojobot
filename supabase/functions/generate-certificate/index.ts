@@ -4,6 +4,26 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 
 const MAX_RETRIES = 3;
 
+interface CertConfig {
+  name_y_percent: number;
+  font_size: number;
+  font_color_hex: string;
+}
+
+const DEFAULT_CONFIG: CertConfig = {
+  name_y_percent: 59,
+  font_size: 22,
+  font_color_hex: "#1B2A4A",
+};
+
+function hexToRgb(hex: string) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16) / 255;
+  const g = parseInt(h.substring(2, 4), 16) / 255;
+  const b = parseInt(h.substring(4, 6), 16) / 255;
+  return rgb(r, g, b);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -42,7 +62,6 @@ Deno.serve(async (req) => {
         });
       }
     } else {
-      // Check CRON_SECRET for scheduled invocations
       const cronSecret = Deno.env.get("CRON_SECRET");
       const providedSecret = req.headers.get("x-cron-secret");
       if (!cronSecret || providedSecret !== cronSecret) {
@@ -55,10 +74,10 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const certificateId = body.certificate_id;
 
-    // Fetch pending certificates (specific or batch)
+    // Fetch pending certificates with level config
     let query = supabaseAdmin
       .from("student_certificates")
-      .select("*, levels:level_id(certificate_template_path, name)")
+      .select("*, levels:level_id(certificate_template_path, name, certificate_config)")
       .in("status", ["pending", "failed"])
       .lt("retry_count", MAX_RETRIES)
       .order("created_at", { ascending: true })
@@ -67,7 +86,7 @@ Deno.serve(async (req) => {
     if (certificateId) {
       query = supabaseAdmin
         .from("student_certificates")
-        .select("*, levels:level_id(certificate_template_path, name)")
+        .select("*, levels:level_id(certificate_template_path, name, certificate_config)")
         .eq("id", certificateId)
         .in("status", ["pending", "failed"])
         .lt("retry_count", MAX_RETRIES);
@@ -97,10 +116,19 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const templatePath = (cert.levels as any)?.certificate_template_path;
+        const levelData = cert.levels as any;
+        const templatePath = levelData?.certificate_template_path;
         if (!templatePath) {
           throw new Error("No template path configured for this level");
         }
+
+        // Read config from level, with defaults
+        const rawConfig = levelData?.certificate_config || {};
+        const config: CertConfig = {
+          name_y_percent: rawConfig.name_y_percent ?? DEFAULT_CONFIG.name_y_percent,
+          font_size: rawConfig.font_size ?? DEFAULT_CONFIG.font_size,
+          font_color_hex: rawConfig.font_color_hex ?? DEFAULT_CONFIG.font_color_hex,
+        };
 
         // Download template from storage
         const { data: templateData, error: dlError } = await supabaseAdmin
@@ -121,16 +149,18 @@ Deno.serve(async (req) => {
 
         const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
         const studentName = cert.student_name_snapshot || "Unknown";
-        const fontSize = 32;
+        const fontSize = config.font_size;
         const textWidth = font.widthOfTextAtSize(studentName, fontSize);
 
-        // Place name centered, at ~43% from top (where the blank line is)
+        // Place name centered, using config y position (% from bottom)
+        const yPosition = height * (config.name_y_percent / 100);
+
         page.drawText(studentName, {
           x: (width - textWidth) / 2,
-          y: height * 0.43,
+          y: yPosition,
           size: fontSize,
           font,
-          color: rgb(0.15, 0.15, 0.15),
+          color: hexToRgb(config.font_color_hex),
         });
 
         const modifiedPdf = await pdfDoc.save();
