@@ -51,6 +51,18 @@ export function getGroupStatusBadge(
   status: string, 
   isRTL: boolean
 ): { className: string; label: string } {
+  if (status === 'archived') {
+    return { 
+      className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400', 
+      label: isRTL ? 'مؤرشفة' : 'Archived' 
+    };
+  }
+  if (status === 'completed') {
+    return { 
+      className: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400', 
+      label: isRTL ? 'مكتملة' : 'Completed' 
+    };
+  }
   if (!hasStarted) {
     return { 
       className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400', 

@@ -10,7 +10,7 @@ export const APP_TIMEZONE = 'Africa/Cairo';
 
 export type GroupType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
 export type AttendanceMode = 'online' | 'offline';
-export type GroupStatus = 'active' | 'frozen';
+export type GroupStatus = 'active' | 'frozen' | 'completed' | 'archived';
 export type SubscriptionType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
 export type AppRole = 'admin' | 'instructor' | 'student' | 'reception';
 
