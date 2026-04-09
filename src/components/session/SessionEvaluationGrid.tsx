@@ -622,10 +622,20 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
                 <TableIcon className="h-4 w-4" />
               </button>
             </div>
-            <Button onClick={handleSaveAll} disabled={savingAll} size="sm">
-              {savingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              <span className="hidden sm:inline ms-1">{t.evaluation.saveAll}</span>
-            </Button>
+            {rows.some(r => {
+              const allFilled = criteria.every(c => r.scores[c.key] !== undefined);
+              return allFilled && r.isDirty && !r.saved;
+            }) ? (
+              <Button onClick={handleSaveAll} disabled={savingAll} size="sm">
+                {savingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                <span className="hidden sm:inline ms-1">{t.evaluation.saveAll}</span>
+              </Button>
+            ) : rows.length > 0 && rows.every(r => r.saved || criteria.some(c => r.scores[c.key] === undefined)) ? (
+              <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                <CheckCircle className="h-4 w-4" />
+                {isRTL ? 'تم الحفظ' : 'All saved'}
+              </span>
+            ) : null}
           </div>
         </div>
       </CardHeader>
