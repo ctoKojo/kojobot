@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw, ClipboardCheck, ChevronRight } from 'lucide-react';
+import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw, ClipboardCheck, ChevronRight, UserPlus } from 'lucide-react';
 import { LevelPassedBanner } from '@/components/student/LevelPassedBanner';
+import { PendingGroupBanner } from '@/components/student/PendingGroupBanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -337,6 +338,9 @@ export function StudentDashboard() {
 
       {/* Level Passed - Track Selection Banner */}
       {user && <LevelPassedBanner studentId={user.id} onUpgraded={fetchStats} />}
+
+      {/* Pending Group Assignment Banner */}
+      {user && <PendingGroupBanner studentId={user.id} isRTL={isRTL} />}
 
       {/* Welcome Banner */}
       {stats.profile && (
