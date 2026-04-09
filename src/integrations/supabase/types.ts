@@ -1730,11 +1730,14 @@ export type Database = {
           certificate_config: Json | null
           certificate_template_path: string | null
           created_at: string
+          eval_weight: number
+          exam_weight: number
           expected_sessions_count: number
           final_exam_quiz_id: string | null
           id: string
           is_active: boolean | null
           level_order: number
+          min_exam_score: number
           name: string
           name_ar: string
           parent_level_id: string | null
@@ -1747,11 +1750,14 @@ export type Database = {
           certificate_config?: Json | null
           certificate_template_path?: string | null
           created_at?: string
+          eval_weight?: number
+          exam_weight?: number
           expected_sessions_count?: number
           final_exam_quiz_id?: string | null
           id?: string
           is_active?: boolean | null
           level_order: number
+          min_exam_score?: number
           name: string
           name_ar: string
           parent_level_id?: string | null
@@ -1764,11 +1770,14 @@ export type Database = {
           certificate_config?: Json | null
           certificate_template_path?: string | null
           created_at?: string
+          eval_weight?: number
+          exam_weight?: number
           expected_sessions_count?: number
           final_exam_quiz_id?: string | null
           id?: string
           is_active?: boolean | null
           level_order?: number
+          min_exam_score?: number
           name?: string
           name_ar?: string
           parent_level_id?: string | null
