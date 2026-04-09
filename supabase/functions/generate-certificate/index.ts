@@ -12,8 +12,8 @@ interface CertConfig {
 }
 
 const DEFAULT_CONFIG: CertConfig = {
-  name_y_percent: 59,
-  font_size: 36,
+  name_y_percent: 52,
+  font_size: 42,
   font_color_hex: "#1B2A4A",
 };
 
@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
       const { data: fontData, error: fontError } = await supabaseAdmin
         .storage
         .from("certificates")
-        .download("fonts/DancingScript.ttf");
+        .download("fonts/PlayfairDisplay-Italic.ttf");
       if (!fontError && fontData) {
         customFont = new Uint8Array(await fontData.arrayBuffer());
       }
