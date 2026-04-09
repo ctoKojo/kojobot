@@ -36,6 +36,7 @@ interface ExamCandidate {
   exam_scheduled_at: string | null;
   exam_submitted_at: string | null;
   graded_at: string | null;
+  status_changed_at: string | null;
   full_name: string;
   full_name_ar: string | null;
   avatar_url: string | null;
