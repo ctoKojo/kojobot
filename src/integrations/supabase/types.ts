@@ -4368,6 +4368,7 @@ export type Database = {
       }
     }
     Functions: {
+      archive_group: { Args: { p_group_id: string }; Returns: undefined }
       assign_student_to_group: {
         Args: { p_new_group_id: string; p_student_id: string }
         Returns: Json
@@ -4389,6 +4390,10 @@ export type Database = {
         Returns: undefined
       }
       check_exam_sla_timeouts: { Args: never; Returns: Json }
+      check_group_completion: {
+        Args: { p_group_id: string }
+        Returns: undefined
+      }
       check_quiz_achievements: {
         Args: { p_percentage: number; p_student_id: string }
         Returns: undefined
