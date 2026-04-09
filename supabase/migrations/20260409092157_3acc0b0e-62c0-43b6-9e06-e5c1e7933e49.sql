@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "System insert certificates" ON public.student_certificates;

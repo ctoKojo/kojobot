@@ -27,6 +27,7 @@ import { ResetPasswordButton } from '@/components/ResetPasswordButton';
 import { generateStudentReport } from '@/lib/pdfReports';
 import { PaymentsHistory } from '@/components/student/PaymentsHistory';
 import { SchedulePlacementDialog } from '@/components/student/SchedulePlacementDialog';
+import { StudentCertificatesTab } from '@/components/student/StudentCertificatesTab';
 
 interface StudentData {
   profile: any;
@@ -478,13 +479,14 @@ export default function StudentProfile() {
         {/* Group Info */}
         {/* Detailed Tabs - Action First */}
         <Tabs defaultValue="payments" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="payments">{isRTL ? 'الدفعات' : 'Payments'}</TabsTrigger>
             <TabsTrigger value="attendance">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
             <TabsTrigger value="warnings">{isRTL ? 'الإنذارات' : 'Warnings'}</TabsTrigger>
             <TabsTrigger value="quizzes">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
             <TabsTrigger value="assignments">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
             <TabsTrigger value="makeup">{isRTL ? 'التعويضات' : 'Makeup'}</TabsTrigger>
+            <TabsTrigger value="certificates">{isRTL ? 'الشهادات' : 'Certificates'}</TabsTrigger>
           </TabsList>
 
           {/* Payments Tab */}
@@ -807,6 +809,11 @@ export default function StudentProfile() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Certificates Tab */}
+          <TabsContent value="certificates">
+            <StudentCertificatesTab studentId={studentId!} />
           </TabsContent>
         </Tabs>
 

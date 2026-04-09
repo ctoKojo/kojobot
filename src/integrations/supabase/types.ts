@@ -1727,6 +1727,7 @@ export type Database = {
       }
       levels: {
         Row: {
+          certificate_template_path: string | null
           created_at: string
           expected_sessions_count: number
           final_exam_quiz_id: string | null
@@ -1742,6 +1743,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          certificate_template_path?: string | null
           created_at?: string
           expected_sessions_count?: number
           final_exam_quiz_id?: string | null
@@ -1757,6 +1759,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          certificate_template_path?: string | null
           created_at?: string
           expected_sessions_count?: number
           final_exam_quiz_id?: string | null
@@ -3447,6 +3450,78 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_certificates: {
+        Row: {
+          certificate_code: string
+          created_at: string
+          error_message: string | null
+          group_id: string
+          id: string
+          issued_at: string | null
+          level_id: string
+          level_name_snapshot: string
+          printed_at: string | null
+          printed_by: string | null
+          retry_count: number
+          status: string
+          storage_path: string | null
+          student_id: string
+          student_name_snapshot: string
+          updated_at: string
+        }
+        Insert: {
+          certificate_code?: string
+          created_at?: string
+          error_message?: string | null
+          group_id: string
+          id?: string
+          issued_at?: string | null
+          level_id: string
+          level_name_snapshot: string
+          printed_at?: string | null
+          printed_by?: string | null
+          retry_count?: number
+          status?: string
+          storage_path?: string | null
+          student_id: string
+          student_name_snapshot: string
+          updated_at?: string
+        }
+        Update: {
+          certificate_code?: string
+          created_at?: string
+          error_message?: string | null
+          group_id?: string
+          id?: string
+          issued_at?: string | null
+          level_id?: string
+          level_name_snapshot?: string
+          printed_at?: string | null
+          printed_by?: string | null
+          retry_count?: number
+          status?: string
+          storage_path?: string | null
+          student_id?: string
+          student_name_snapshot?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_certificates_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_certificates_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
             referencedColumns: ["id"]
           },
         ]
