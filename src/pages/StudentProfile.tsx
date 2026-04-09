@@ -128,6 +128,7 @@ export default function StudentProfile() {
   const [data, setData] = useState<StudentData | null>(null);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
+  const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [showEditSubscriptionDialog, setShowEditSubscriptionDialog] = useState(false);
   const [showPlacementSchedule, setShowPlacementSchedule] = useState(false);
 
