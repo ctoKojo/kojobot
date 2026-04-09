@@ -32,9 +32,30 @@ const DEFAULT_CONFIG: CertificateConfig = {
   max_name_width_percent: 80,
 };
 
+const PREVIEW_FONT_REGISTRY = {
+  poppins_semibold: {
+    label: 'Poppins SemiBold',
+    family: 'CertificatePoppinsSemiBold',
+    path: 'fonts/Poppins-SemiBold.ttf',
+    style: 'normal',
+    weight: '600',
+    fallbackAscent: 0.92,
+    fallbackDescent: 0.24,
+  },
+  playfair_italic: {
+    label: 'Playfair Display Italic',
+    family: 'CertificatePlayfairItalic',
+    path: 'fonts/PlayfairDisplay-Italic.ttf',
+    style: 'italic',
+    weight: '400',
+    fallbackAscent: 0.85,
+    fallbackDescent: 0.22,
+  },
+} as const;
+
 const FONT_OPTIONS = [
-  { key: 'poppins_semibold', label: 'Poppins SemiBold' },
-  { key: 'playfair_italic', label: 'Playfair Display Italic' },
+  { key: 'poppins_semibold', label: PREVIEW_FONT_REGISTRY.poppins_semibold.label },
+  { key: 'playfair_italic', label: PREVIEW_FONT_REGISTRY.playfair_italic.label },
 ];
 
 const ANCHOR_OPTIONS: { value: CertificateConfig['anchor_type']; label: string; labelAr: string }[] = [
@@ -43,13 +64,31 @@ const ANCHOR_OPTIONS: { value: CertificateConfig['anchor_type']; label: string; 
   { value: 'baseline', label: 'Baseline (raw)', labelAr: 'خط الأساس' },
 ];
 
-const PREVIEW_NAME = 'Mahmoud Hossam Mahmoud';
+const PREVIEW_NAME = 'mahmoud hossam mahmoud';
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
 }
 
-/** Parse old or new config shape */
+function toTitleCaseName(name: string) {
+  const normalized = name.trim().replace(/\s+/g, ' ');
+  if (!normalized) return 'Unknown';
+
+  return normalized
+    .split(' ')
+    .map((part) => part ? `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}` : part)
+    .join(' ');
+}
+
+function getPreviewFontConfig(fontKey: string) {
+  return PREVIEW_FONT_REGISTRY[fontKey as keyof typeof PREVIEW_FONT_REGISTRY] ?? PREVIEW_FONT_REGISTRY.poppins_semibold;
+}
+
+function getPreviewFontDeclaration(fontKey: string, fontSize: number) {
+  const fontConfig = getPreviewFontConfig(fontKey);
+  return `${fontConfig.style} normal ${fontConfig.weight} ${fontSize}px "${fontConfig.family}"`;
+}
+
 function parseConfig(raw: Record<string, unknown>): CertificateConfig {
   return {
     anchor_type: (raw.anchor_type as CertificateConfig['anchor_type']) ?? DEFAULT_CONFIG.anchor_type,
@@ -69,7 +108,8 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
   const [templatePath, setTemplatePath] = useState('');
   const [saving, setSaving] = useState(false);
   const [templateImg, setTemplateImg] = useState<HTMLImageElement | null>(null);
-  const [templateAspect, setTemplateAspect] = useState(595 / 842); // default A4
+  const [templateAspect, setTemplateAspect] = useState(595 / 842);
+  const [loadedPreviewFontKey, setLoadedPreviewFontKey] = useState<string>(DEFAULT_CONFIG.font_key);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -97,7 +137,6 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
       const { data } = await supabase.storage.from('certificates').createSignedUrl(path, 300);
       if (!data?.signedUrl) return;
 
-      // Use pdfjs to render first page as image
       const pdfjsLib = await import('pdfjs-dist');
       pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
@@ -122,21 +161,53 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
     }
   };
 
-  // Draw preview on canvas
+  const loadPreviewFont = useCallback(async (fontKey: string) => {
+    const fontConfig = getPreviewFontConfig(fontKey);
+
+    if (document.fonts.check(`16px "${fontConfig.family}"`)) {
+      setLoadedPreviewFontKey(fontKey);
+      return;
+    }
+
+    try {
+      const { data } = await supabase.storage.from('certificates').createSignedUrl(fontConfig.path, 300);
+      if (!data?.signedUrl) {
+        setLoadedPreviewFontKey(fontKey);
+        return;
+      }
+
+      const fontFace = new FontFace(fontConfig.family, `url(${data.signedUrl})`, {
+        style: fontConfig.style,
+        weight: fontConfig.weight,
+      });
+
+      await fontFace.load();
+      document.fonts.add(fontFace);
+      setLoadedPreviewFontKey(fontKey);
+    } catch (err) {
+      console.warn('Could not load preview font:', err);
+      setLoadedPreviewFontKey(fontKey);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      void loadPreviewFont(config.font_key);
+    }
+  }, [open, config.font_key, loadPreviewFont]);
+
   const drawPreview = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Size canvas to match template aspect ratio
     const W = canvas.width;
     const H = Math.round(W / templateAspect);
     canvas.height = H;
 
     ctx.clearRect(0, 0, W, H);
 
-    // Draw template image or placeholder
     if (templateImg) {
       ctx.drawImage(templateImg, 0, 0, W, H);
     } else {
@@ -151,7 +222,6 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
       ctx.fillText('[ Certificate Template ]', W / 2, 40);
     }
 
-    // Draw reference line at anchor_y
     const anchorYPx = H - (H * config.anchor_y_percent / 100);
     ctx.strokeStyle = '#e74c3c';
     ctx.lineWidth = 1;
@@ -162,39 +232,48 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Compute font size scaled to preview
     const scaleFactor = W / 595;
-    const fontSize = config.font_size * scaleFactor;
+    const displayName = toTitleCaseName(PREVIEW_NAME);
+    const maxWidth = W * (config.max_name_width_percent / 100);
+    const minFontSize = Math.max(8, 8 * scaleFactor);
+    let fontSize = config.font_size * scaleFactor;
 
-    const ascent = fontSize * 0.85;
-    const descent = fontSize * 0.22;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = getPreviewFontDeclaration(config.font_key, fontSize);
+
+    while (fontSize > minFontSize && ctx.measureText(displayName).width > maxWidth) {
+      fontSize -= 1;
+      ctx.font = getPreviewFontDeclaration(config.font_key, fontSize);
+    }
+
+    const fontConfig = getPreviewFontConfig(config.font_key);
+    const metrics = ctx.measureText(displayName);
+    const ascent = metrics.actualBoundingBoxAscent || (fontSize * fontConfig.fallbackAscent);
+    const descent = metrics.actualBoundingBoxDescent || (fontSize * fontConfig.fallbackDescent);
 
     let drawY: number;
     switch (config.anchor_type) {
       case 'bottom':
         drawY = anchorYPx - descent;
         break;
-      case 'center': {
-        const textH = ascent + descent;
-        drawY = anchorYPx + textH / 2 - descent;
+      case 'center':
+        drawY = anchorYPx + ((ascent - descent) / 2);
         break;
-      }
       case 'baseline':
       default:
         drawY = anchorYPx;
     }
 
+    const xPos = (W / 2) + (config.x_offset_px * scaleFactor);
     ctx.fillStyle = config.font_color_hex;
-    ctx.font = `italic ${fontSize}px serif`;
-    ctx.textAlign = 'center';
-    const xPos = W / 2 + config.x_offset_px * scaleFactor;
-    ctx.fillText(PREVIEW_NAME, xPos, drawY);
+    ctx.fillText(displayName, xPos, drawY);
 
     ctx.fillStyle = '#e74c3c';
     ctx.font = '9px sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(`anchor ${config.anchor_y_percent}%`, 22, anchorYPx - 4);
-  }, [config, templateImg, templateAspect]);
+  }, [config, loadedPreviewFontKey, templateAspect, templateImg]);
 
   useEffect(() => {
     drawPreview();
@@ -205,7 +284,7 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
   };
 
   const validate = (): string | null => {
-    if (config.font_size < 16 || config.font_size > 120) return isRTL ? 'حجم الخط لازم يكون بين 16 و 120' : 'Font size must be 16-120';
+    if (config.font_size < 8 || config.font_size > 120) return isRTL ? 'حجم الخط لازم يكون بين 8 و 120' : 'Font size must be 8-120';
     if (config.anchor_y_percent < 0 || config.anchor_y_percent > 100) return isRTL ? 'موضع Y لازم يكون بين 0 و 100' : 'Y position must be 0-100';
     return null;
   };
