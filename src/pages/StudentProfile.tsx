@@ -480,7 +480,7 @@ export default function StudentProfile() {
         {/* Group Info */}
         {/* Detailed Tabs - Action First */}
         <Tabs defaultValue="payments" className="w-full">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="payments">{isRTL ? 'الدفعات' : 'Payments'}</TabsTrigger>
             <TabsTrigger value="attendance">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
             <TabsTrigger value="warnings">{isRTL ? 'الإنذارات' : 'Warnings'}</TabsTrigger>
@@ -816,6 +816,10 @@ export default function StudentProfile() {
           {/* Certificates Tab */}
           <TabsContent value="certificates">
             <StudentCertificatesTab studentId={studentId!} />
+          </TabsContent>
+
+          <TabsContent value="xp">
+            <StudentXpBreakdown studentId={studentId!} />
           </TabsContent>
         </Tabs>
 
