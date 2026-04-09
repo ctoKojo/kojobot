@@ -906,6 +906,17 @@ export default function StudentProfile() {
         onSuccess={fetchStudentData}
       />
 
+      {/* Renewal Subscription Dialog */}
+      <CreateSubscriptionDialog
+        open={showRenewalDialog}
+        onOpenChange={setShowRenewalDialog}
+        studentId={studentId!}
+        studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+        onSuccess={fetchStudentData}
+        isRenewal={true}
+        previousSubscriptionId={data.subscription?.id}
+      />
+
       {/* Edit Subscription Dialog */}
       {data.subscription && (
         <EditSubscriptionDialog
