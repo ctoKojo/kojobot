@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 
 const MAX_RETRIES = 3;
@@ -12,7 +13,7 @@ interface CertConfig {
 
 const DEFAULT_CONFIG: CertConfig = {
   name_y_percent: 59,
-  font_size: 22,
+  font_size: 36,
   font_color_hex: "#1B2A4A",
 };
 
@@ -100,6 +101,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Download the custom script font once for all certificates
+    let customFont: Uint8Array | null = null;
+    try {
+      const { data: fontData, error: fontError } = await supabaseAdmin
+        .storage
+        .from("certificates")
+        .download("fonts/DancingScript.ttf");
+      if (!fontError && fontData) {
+        customFont = new Uint8Array(await fontData.arrayBuffer());
+      }
+    } catch {
+      console.warn("Could not load custom font, falling back to Helvetica");
+    }
+
     const results: Array<{ id: string; status: string; error?: string }> = [];
 
     for (const cert of certs) {
@@ -143,11 +158,22 @@ Deno.serve(async (req) => {
         // Load PDF and overlay student name
         const pdfBytes = await templateData.arrayBuffer();
         const pdfDoc = await PDFDocument.load(pdfBytes);
+        
+        // Register fontkit for custom fonts
+        pdfDoc.registerFontkit(fontkit);
+        
         const pages = pdfDoc.getPages();
         const page = pages[0];
         const { width, height } = page.getSize();
 
-        const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        // Use custom script font if available, otherwise fallback
+        let font;
+        if (customFont) {
+          font = await pdfDoc.embedFont(customFont);
+        } else {
+          font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        }
+
         const studentName = cert.student_name_snapshot || "Unknown";
         const fontSize = config.font_size;
         const textWidth = font.widthOfTextAtSize(studentName, fontSize);
