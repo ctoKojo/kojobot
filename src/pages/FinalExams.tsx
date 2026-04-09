@@ -507,6 +507,17 @@ export default function FinalExams() {
                         )}
                       </TableCell>
                       <TableCell className="text-center">
+                        {(() => {
+                          const days = getWaitDays(c);
+                          const slaThreshold = c.status === 'awaiting_exam' ? 7 : 14;
+                          return (
+                            <span className={`text-xs font-medium ${days >= slaThreshold ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              {days > 0 ? `${days} ${isRTL ? 'يوم' : 'd'}` : '—'}
+                            </span>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell className="text-center">
                         {c.final_exam_quiz_id ? (
                           <div className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
                             <CheckCircle2 className="h-3.5 w-3.5" />
