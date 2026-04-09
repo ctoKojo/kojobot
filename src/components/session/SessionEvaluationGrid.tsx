@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
 import { Save, CheckCircle, Loader2, Info, Star, LayoutGrid, Table as TableIcon } from 'lucide-react';
+import { StarRating } from './StarRating';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { Json } from '@/integrations/supabase/types';
@@ -75,39 +76,11 @@ const FEEDBACK_TAGS = [
   { en: 'Keep It Up', ar: 'استمر' },
 ];
 
-// Helper: get rubric button color based on position in scale
-function getRubricColor(levelIdx: number, totalLevels: number, selected: boolean) {
-  if (!selected) return 'bg-muted text-muted-foreground border-border hover:border-foreground/30';
-  
-  if (totalLevels <= 3) {
-    if (levelIdx === 0) return 'bg-destructive text-destructive-foreground border-destructive';
-    if (levelIdx === totalLevels - 1) return 'bg-emerald-600 text-white border-emerald-600';
-    return 'bg-amber-500 text-white border-amber-500';
-  }
-  
-  const ratio = levelIdx / (totalLevels - 1);
-  if (ratio <= 0.15) return 'bg-destructive text-destructive-foreground border-destructive';
-  if (ratio <= 0.3) return 'bg-orange-500 text-white border-orange-500';
-  if (ratio <= 0.5) return 'bg-amber-500 text-white border-amber-500';
-  if (ratio <= 0.7) return 'bg-lime-600 text-white border-lime-600';
-  if (ratio <= 0.85) return 'bg-green-600 text-white border-green-600';
-  return 'bg-emerald-600 text-white border-emerald-600';
-}
-
-// Ghost tint for unselected rubric buttons to hint at the gradient
-function getRubricGhostColor(levelIdx: number, totalLevels: number) {
-  if (totalLevels <= 3) {
-    if (levelIdx === 0) return 'hover:bg-red-100 dark:hover:bg-red-950/40';
-    if (levelIdx === totalLevels - 1) return 'hover:bg-emerald-100 dark:hover:bg-emerald-950/40';
-    return 'hover:bg-amber-100 dark:hover:bg-amber-950/40';
-  }
-  const ratio = levelIdx / (totalLevels - 1);
-  if (ratio <= 0.15) return 'hover:bg-red-100 dark:hover:bg-red-950/40';
-  if (ratio <= 0.3) return 'hover:bg-orange-100 dark:hover:bg-orange-950/40';
-  if (ratio <= 0.5) return 'hover:bg-amber-100 dark:hover:bg-amber-950/40';
-  if (ratio <= 0.7) return 'hover:bg-lime-100 dark:hover:bg-lime-950/40';
-  if (ratio <= 0.85) return 'hover:bg-green-100 dark:hover:bg-green-950/40';
-  return 'hover:bg-emerald-100 dark:hover:bg-emerald-950/40';
+// Helper to build tooltip labels from rubric levels for StarRating
+function buildStarLabels(criterion: Criterion, lang: string) {
+  return criterion.rubric_levels
+    .filter(l => l.value > 0)
+    .map(l => ({ value: l.value, label: lang === 'ar' ? l.label_ar : l.label }));
 }
 
 function getPercentColor(pct: number) {
