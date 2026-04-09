@@ -390,6 +390,16 @@ export default function FinalExams() {
                           })}
                         </p>
                       )}
+                      {/* Wait days */}
+                      {(() => {
+                        const days = getWaitDays(c);
+                        const slaThreshold = c.status === 'awaiting_exam' ? 7 : 14;
+                        return days > 0 ? (
+                          <Badge variant="outline" className={`text-[10px] mt-1 ${days >= slaThreshold ? 'text-destructive border-destructive/30' : ''}`}>
+                            {days} {isRTL ? 'يوم' : 'days'}
+                          </Badge>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                 </CardContent>
@@ -421,6 +431,7 @@ export default function FinalExams() {
                     <TableHead>{isRTL ? 'المستوى' : 'Level'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'موعد الامتحان' : 'Exam Date'}</TableHead>
+                    <TableHead className="text-center">{isRTL ? 'أيام الانتظار' : 'Wait Days'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'كويز نهائي' : 'Final Quiz'}</TableHead>
                   </TableRow>
                 </TableHeader>
