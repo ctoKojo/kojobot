@@ -128,6 +128,7 @@ export default function StudentProfile() {
   const [data, setData] = useState<StudentData | null>(null);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
+  const [showRenewalDialog, setShowRenewalDialog] = useState(false);
   const [showEditSubscriptionDialog, setShowEditSubscriptionDialog] = useState(false);
   const [showPlacementSchedule, setShowPlacementSchedule] = useState(false);
 
@@ -285,13 +286,24 @@ export default function StudentProfile() {
                 </Button>
               )}
               {(role === 'admin' || role === 'reception') && data?.subscription && (
-                <Button 
-                  variant="outline"
-                  onClick={() => setShowEditSubscriptionDialog(true)}
-                >
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  {isRTL ? 'تعديل الاشتراك' : 'Edit Subscription'}
-                </Button>
+                <>
+                  <Button 
+                    variant="outline"
+                    onClick={() => setShowEditSubscriptionDialog(true)}
+                  >
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    {isRTL ? 'تعديل الاشتراك' : 'Edit Subscription'}
+                  </Button>
+                  {Number(data.subscription.remaining_amount) <= 0 && (
+                    <Button 
+                      variant="default"
+                      onClick={() => setShowRenewalDialog(true)}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      {isRTL ? 'تجديد الاشتراك' : 'Renew Subscription'}
+                    </Button>
+                  )}
+                </>
               )}
               {role === 'admin' && (
                 <ResetPasswordButton
@@ -892,6 +904,17 @@ export default function StudentProfile() {
         studentId={studentId!}
         studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
         onSuccess={fetchStudentData}
+      />
+
+      {/* Renewal Subscription Dialog */}
+      <CreateSubscriptionDialog
+        open={showRenewalDialog}
+        onOpenChange={setShowRenewalDialog}
+        studentId={studentId!}
+        studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+        onSuccess={fetchStudentData}
+        isRenewal={true}
+        previousSubscriptionId={data.subscription?.id}
       />
 
       {/* Edit Subscription Dialog */}

@@ -17,9 +17,11 @@ interface Props {
   studentId: string;
   studentName: string;
   onSuccess: () => void;
+  isRenewal?: boolean;
+  previousSubscriptionId?: string;
 }
 
-export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studentName, onSuccess }: Props) {
+export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studentName, onSuccess, isRenewal, previousSubscriptionId }: Props) {
   const { isRTL, language } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -88,6 +90,15 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
     }
     setSaving(true);
     try {
+      // If renewal, close the previous subscription first
+      if (isRenewal && previousSubscriptionId) {
+        await supabase.from('subscriptions').update({ status: 'completed' } as any).eq('id', previousSubscriptionId);
+      }
+
+      // Get student's current level_id from profile
+      const { data: profile } = await supabase.from('profiles').select('level_id').eq('user_id', studentId).single();
+      const levelId = profile?.level_id || null;
+
       // Create subscription with null dates - RPC will set them when student is in a started group
       const { data: sub, error } = await supabase.from('subscriptions').insert({
         student_id: studentId,
@@ -103,6 +114,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
         is_suspended: false,
         status: 'active',
         notes,
+        level_id: levelId,
       } as any).select().single();
 
       if (error) throw error;
@@ -139,7 +151,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
   };
 
   // Show warning if already has active subscription
-  if (open && !loadingCheck && hasActiveSubscription) {
+   if (open && !loadingCheck && hasActiveSubscription && !isRenewal) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md">
@@ -168,7 +180,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isRTL ? 'إنشاء اشتراك جديد' : 'Create Subscription'}</DialogTitle>
+          <DialogTitle>{isRenewal ? (isRTL ? 'تجديد الاشتراك' : 'Renew Subscription') : (isRTL ? 'إنشاء اشتراك جديد' : 'Create Subscription')}</DialogTitle>
         </DialogHeader>
         {loadingCheck ? (
           <div className="py-8 text-center text-muted-foreground">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>

@@ -3818,6 +3818,7 @@ export type Database = {
           id: string
           installment_amount: number | null
           is_suspended: boolean
+          level_id: string | null
           next_payment_date: string | null
           notes: string | null
           paid_amount: number
@@ -3837,6 +3838,7 @@ export type Database = {
           id?: string
           installment_amount?: number | null
           is_suspended?: boolean
+          level_id?: string | null
           next_payment_date?: string | null
           notes?: string | null
           paid_amount?: number
@@ -3856,6 +3858,7 @@ export type Database = {
           id?: string
           installment_amount?: number | null
           is_suspended?: boolean
+          level_id?: string | null
           next_payment_date?: string | null
           notes?: string | null
           paid_amount?: number
@@ -3869,6 +3872,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "subscriptions_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "subscriptions_pricing_plan_id_fkey"
             columns: ["pricing_plan_id"]
