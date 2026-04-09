@@ -140,6 +140,11 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
         } as any);
       }
 
+      // Clear needs_renewal flag so student can access the platform
+      await supabase.from('profiles').update({ needs_renewal: false } as any).eq('user_id', studentId);
+      // Invalidate ProtectedRoute cache
+      (window as any).__protectedRouteCacheReset?.();
+
       toast({ title: isRTL ? 'تم إنشاء الاشتراك بنجاح' : 'Subscription created successfully' });
       onOpenChange(false);
       onSuccess();
