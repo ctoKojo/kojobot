@@ -100,6 +100,7 @@ export function AppSidebar() {
               
               { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['admin'] },
               { title: isRTL ? 'الامتحانات النهائية' : 'Final Exams', url: '/final-exams', icon: Target, roles: ['admin'] },
+              { title: isRTL ? 'تحليلات التقدم' : 'Progression Metrics', url: '/progression-metrics', icon: BarChart3, roles: ['admin'] },
             ],
           },
           {
