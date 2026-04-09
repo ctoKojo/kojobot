@@ -336,7 +336,7 @@ export function CashFlowTab() {
             <CardDescription>{isRTL ? 'تقدير الإيرادات المتوقعة من تجديد الاشتراكات والأقساط المستحقة والتقدم الأكاديمي' : 'Estimated revenue from subscription renewals, due installments, and academic progress'}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-3 mb-6">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 mb-6">
               {projections.map((p) => (
                 <div key={p.month} className="p-4 rounded-lg border bg-muted/30 space-y-3">
                   <p className="text-sm font-semibold text-muted-foreground">{p.month}</p>
