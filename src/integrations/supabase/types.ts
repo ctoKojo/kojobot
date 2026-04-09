@@ -3718,6 +3718,7 @@ export type Database = {
           created_at: string
           event_type: string
           id: string
+          level_id: string | null
           reference_id: string | null
           student_id: string
           xp_amount: number
@@ -3726,6 +3727,7 @@ export type Database = {
           created_at?: string
           event_type: string
           id?: string
+          level_id?: string | null
           reference_id?: string | null
           student_id: string
           xp_amount: number
@@ -3734,11 +3736,20 @@ export type Database = {
           created_at?: string
           event_type?: string
           id?: string
+          level_id?: string | null
           reference_id?: string | null
           student_id?: string
           xp_amount?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "student_xp_events_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_requests: {
         Row: {
@@ -4573,6 +4584,22 @@ export type Database = {
       get_student_group_ids: {
         Args: { _student_id: string }
         Returns: string[]
+      }
+      get_student_level_xp: {
+        Args: { p_student_id: string }
+        Returns: {
+          assignment_xp: number
+          attendance_xp: number
+          completion_xp: number
+          evaluation_xp: number
+          level_id: string
+          level_name: string
+          level_name_ar: string
+          quiz_xp: number
+          rank_name: string
+          rank_progress: number
+          total_xp: number
+        }[]
       }
       get_user_role: {
         Args: { _user_id: string }
