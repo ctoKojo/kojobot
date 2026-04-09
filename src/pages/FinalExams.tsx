@@ -194,6 +194,11 @@ export default function FinalExams() {
   const getGroupName = (c: ExamCandidate) => language === 'ar' ? c.group_name_ar || c.group_name : c.group_name;
   const getLevelName = (c: ExamCandidate) => language === 'ar' ? c.level_name_ar || c.level_name : c.level_name;
 
+  const getWaitDays = (c: ExamCandidate): number => {
+    if (!c.status_changed_at) return 0;
+    return Math.floor((Date.now() - new Date(c.status_changed_at).getTime()) / (1000 * 60 * 60 * 24));
+  };
+
   // ─── Summary Stats ───
   const statsCards = [
     {
