@@ -10,7 +10,7 @@ interface ProtectedRouteProps {
 }
 
 // Routes students can access even without level_id (placement flow only)
-const STUDENT_ALLOWED_WITHOUT_LEVEL = ['/placement-gate', '/placement-test', '/account-suspended', '/profile'];
+const STUDENT_ALLOWED_WITHOUT_LEVEL = ['/placement-gate', '/placement-test', '/account-suspended', '/renewal-required', '/profile'];
 
 // Module-level cache shared across all ProtectedRoute instances
 const statusCache: {
@@ -18,8 +18,9 @@ const statusCache: {
   isSuspended: boolean;
   isTerminated: boolean;
   hasLevel: boolean;
+  needsRenewal: boolean;
   fetchedAt: number;
-} = { userId: null, isSuspended: false, isTerminated: false, hasLevel: true, fetchedAt: 0 };
+} = { userId: null, isSuspended: false, isTerminated: false, hasLevel: true, needsRenewal: false, fetchedAt: 0 };
 
 const CACHE_TTL_MS = 60_000; // 1 minute
 
@@ -29,6 +30,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   const [isSuspended, setIsSuspended] = useState<boolean | null>(null);
   const [isTerminated, setIsTerminated] = useState<boolean | null>(null);
   const [hasLevel, setHasLevel] = useState<boolean | null>(null);
+  const [needsRenewal, setNeedsRenewal] = useState<boolean | null>(null);
   const fetchingRef = useRef(false);
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       setIsSuspended(false);
       setIsTerminated(false);
       setHasLevel(true);
+      setNeedsRenewal(false);
       return;
     }
 
@@ -45,6 +48,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       setIsSuspended(statusCache.isSuspended);
       setIsTerminated(statusCache.isTerminated);
       setHasLevel(statusCache.hasLevel);
+      setNeedsRenewal(statusCache.needsRenewal);
       return;
     }
 
@@ -64,10 +68,12 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
           statusCache.isSuspended = false;
           statusCache.isTerminated = terminated;
           statusCache.hasLevel = true;
+          statusCache.needsRenewal = false;
           statusCache.fetchedAt = Date.now();
           setIsTerminated(terminated);
           setIsSuspended(false);
           setHasLevel(true);
+          setNeedsRenewal(false);
           fetchingRef.current = false;
         });
     } else if (role === 'student') {
@@ -82,20 +88,23 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
           .maybeSingle(),
         supabase
           .from('profiles')
-          .select('level_id')
+          .select('level_id, needs_renewal')
           .eq('user_id', user.id)
           .maybeSingle(),
       ]).then(([subRes, profileRes]) => {
         const suspended = subRes.data?.is_suspended ?? false;
         const level = !!profileRes.data?.level_id;
+        const renewal = !!(profileRes.data as any)?.needs_renewal;
         statusCache.userId = user.id;
         statusCache.isSuspended = suspended;
         statusCache.isTerminated = false;
         statusCache.hasLevel = level;
+        statusCache.needsRenewal = renewal;
         statusCache.fetchedAt = Date.now();
         setIsSuspended(suspended);
         setIsTerminated(false);
         setHasLevel(level);
+        setNeedsRenewal(renewal);
         fetchingRef.current = false;
       });
     } else {
@@ -103,10 +112,12 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       statusCache.isSuspended = false;
       statusCache.isTerminated = false;
       statusCache.hasLevel = true;
+      statusCache.needsRenewal = false;
       statusCache.fetchedAt = Date.now();
       setIsSuspended(false);
       setIsTerminated(false);
       setHasLevel(true);
+      setNeedsRenewal(false);
       fetchingRef.current = false;
     }
   }, [user, role]);
@@ -125,6 +136,10 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   if ((role === 'instructor' || role === 'reception') && isTerminated === true) {
     return <Navigate to="/account-terminated" replace />;
+  }
+
+  if (role === 'student' && needsRenewal === true) {
+    return <Navigate to="/renewal-required" replace />;
   }
 
   if (role === 'student' && isSuspended === true) {
