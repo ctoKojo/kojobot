@@ -67,7 +67,8 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
   const [config, setConfig] = useState<CertificateConfig>(DEFAULT_CONFIG);
   const [templatePath, setTemplatePath] = useState('');
   const [saving, setSaving] = useState(false);
-  const [templateUrl, setTemplateUrl] = useState<string | null>(null);
+  const [templateImg, setTemplateImg] = useState<HTMLImageElement | null>(null);
+  const [templateAspect, setTemplateAspect] = useState(595 / 842); // default A4
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -93,8 +94,31 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
   const loadTemplatePreview = async (path: string) => {
     try {
       const { data } = await supabase.storage.from('certificates').createSignedUrl(path, 300);
-      if (data?.signedUrl) setTemplateUrl(data.signedUrl);
-    } catch { /* ignore */ }
+      if (!data?.signedUrl) return;
+
+      // Use pdfjs to render first page as image
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
+      const pdf = await pdfjsLib.getDocument(data.signedUrl).promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 1.5 });
+
+      const offscreen = document.createElement('canvas');
+      offscreen.width = viewport.width;
+      offscreen.height = viewport.height;
+      const offCtx = offscreen.getContext('2d')!;
+      await page.render({ canvasContext: offCtx, viewport }).promise;
+
+      const img = new Image();
+      img.src = offscreen.toDataURL('image/png');
+      img.onload = () => {
+        setTemplateImg(img);
+        setTemplateAspect(viewport.width / viewport.height);
+      };
+    } catch (err) {
+      console.warn('Could not render template preview:', err);
+    }
   };
 
   // Draw preview on canvas
@@ -104,24 +128,27 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Size canvas to match template aspect ratio
     const W = canvas.width;
-    const H = canvas.height;
+    const H = Math.round(W / templateAspect);
+    canvas.height = H;
+
     ctx.clearRect(0, 0, W, H);
 
-    // Background
-    ctx.fillStyle = '#f5f0e8';
-    ctx.fillRect(0, 0, W, H);
-
-    // Decorative border
-    ctx.strokeStyle = '#c4a86d';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(10, 10, W - 20, H - 20);
-
-    // Placeholder text
-    ctx.fillStyle = '#999';
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('[ Certificate Template ]', W / 2, 40);
+    // Draw template image or placeholder
+    if (templateImg) {
+      ctx.drawImage(templateImg, 0, 0, W, H);
+    } else {
+      ctx.fillStyle = '#f5f0e8';
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = '#c4a86d';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(10, 10, W - 20, H - 20);
+      ctx.fillStyle = '#999';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('[ Certificate Template ]', W / 2, 40);
+    }
 
     // Draw reference line at anchor_y
     const anchorYPx = H - (H * config.anchor_y_percent / 100);
@@ -135,14 +162,12 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
     ctx.setLineDash([]);
 
     // Compute font size scaled to preview
-    const scaleFactor = W / 595; // A4-ish width reference
+    const scaleFactor = W / 595;
     const fontSize = config.font_size * scaleFactor;
 
-    // Approximate font metrics
     const ascent = fontSize * 0.85;
     const descent = fontSize * 0.22;
 
-    // Compute draw Y based on anchor type
     let drawY: number;
     switch (config.anchor_type) {
       case 'bottom':
@@ -158,19 +183,17 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
         drawY = anchorYPx;
     }
 
-    // Draw name
     ctx.fillStyle = config.font_color_hex;
     ctx.font = `italic ${fontSize}px serif`;
     ctx.textAlign = 'center';
     const xPos = W / 2 + config.x_offset_px * scaleFactor;
     ctx.fillText(PREVIEW_NAME, xPos, drawY);
 
-    // Label
     ctx.fillStyle = '#e74c3c';
     ctx.font = '9px sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(`anchor ${config.anchor_y_percent}%`, 22, anchorYPx - 4);
-  }, [config]);
+  }, [config, templateImg, templateAspect]);
 
   useEffect(() => {
     drawPreview();
