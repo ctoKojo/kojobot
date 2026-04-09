@@ -85,6 +85,7 @@ export function StudentCertificatesTab({ studentId }: { studentId: string }) {
   };
 
   const handleRegenerate = async (cert: Certificate) => {
+    if (!checkRateLimit()) return;
     setActionLoading(cert.id);
     try {
       await supabase
