@@ -1,59 +1,98 @@
 
 
-# اصلاح حساب التدفق النقدي المتوقع - اضافة التجديدات المبنية على التقدم الأكاديمي
+# خطة: تحويل نظام XP ليكون Level-Scoped + تحسين UI
 
-## المشكلة
+## الوضع الحالي
 
-التدفق النقدي المتوقع (Projected Cash Flow) حالياً بيعتمد فقط على:
-- `next_payment_date` للاشتراكات النشطة (أقساط مستحقة)
-- `end_date` للاشتراكات (تجديدات)
+| العنصر | الحالة |
+|--------|--------|
+| جدول `student_xp_events` | موجود — **مفيش `level_id`** |
+| Triggers (3) | attendance, quiz, assignment — **مفيش `level_id`** |
+| Evaluation XP trigger | **غير موجود** |
+| Level completion XP trigger | **غير موجود** |
+| Unique constraint (anti-duplicate) | **غير موجود** — الحماية بـ `NOT EXISTS` فقط |
+| UI للطالب | **مفيش** — الداتا بتتسجل بدون عرض |
+| بيانات موجودة | 466 record (243 attendance + 223 assignment) |
 
-لكنه **لا يحسب** الطلاب اللي قربوا يخلصوا المستوى وهيحتاجوا يجددوا اشتراكهم. مثلاً طالب فاضل له 2 سيشن ويخلص - ده متوقع يجدد الشهر ده أو الشهر الجاي، بس النظام مش بيظهره.
+## الخطوات
 
-## الحل
+### 1. Migration: إضافة `level_id` + Unique Constraint
 
-### 1. اضافة مصدر بيانات جديد: التقدم الأكاديمي
+- إضافة عمود `level_id uuid REFERENCES levels(id)` لجدول `student_xp_events`
+- إضافة `UNIQUE(student_id, event_type, reference_id)` لمنع double-counting
+- إنشاء index على `(student_id, level_id)`
 
-في `CashFlowTab.tsx`، داخل `queryFn`:
-- استعلام جديد يجيب الطلاب اللي `group_student_progress.status = 'in_progress'` في مجموعات نشطة
-- يحسب عدد السيشنات المتبقية لكل مجموعة (`expected_sessions_count - last_delivered_content_number`)
-- يحسب تاريخ الانتهاء المتوقع بناءً على الجدول الزمني (السيشنات المجدولة + معدل السيشنات في الأسبوع)
+### 2. Migration: تعديل الـ 3 Triggers + إضافة 2 جداد
 
-### 2. حساب التجديدات المتوقعة أكاديمياً
+**تعديل الموجود:**
+- `grant_xp_on_attendance` → يجيب `level_id` من `sessions.level_id` ويسجله
+- `grant_xp_on_quiz_grade` → يجيب `level_id` من `quiz_assignments → sessions.level_id`
+- `grant_xp_on_assignment_grade` → يجيب `level_id` من `assignments → sessions.level_id`
 
-لكل مجموعة قربت تخلص (مثلاً ≤ 4 سيشنات متبقية):
-- يقدر تاريخ الانتهاء المتوقع من آخر سيشن مجدول + (السيشنات المتبقية × متوسط الفارق بين السيشنات)
-- يربط كل طالب في المجموعة بأحدث اشتراك نشط عشان يعرف `total_amount` المتوقع للتجديد
-- يضيف المبلغ في الشهر المتوقع للتجديد
+**إضافة جديد:**
+- `grant_xp_on_evaluation` — trigger على `session_evaluations`:
+  - `XP = ROUND((percentage / 100) * 30)` — max 30 XP
+  - يسجل `level_id` من `sessions.level_id`
+- `grant_xp_on_level_completion` — trigger على `group_student_progress` لما `outcome` يتغير:
+  - `passed` → +200 XP
+  - `failed_exam` / `failed_total` → +50 XP
+  - `level_id` = `current_level_id`
 
-### 3. تعديل UI
+### 3. Backfill الداتا القديمة
 
-- اضافة صف جديد في كروت التوقعات: **"تجديدات متوقعة (أكاديمي)"** بأيقونة مختلفة ولون مختلف
-- او دمجها مع "Renewals" الحالية مع توضيح المصدر في الـ tooltip
+SQL update يربط الـ 466 record الموجودين بالـ `level_id` الصحيح:
+- attendance events → `sessions.level_id` عن طريق `reference_id = session_id`
+- assignment events → `assignment_submissions → assignments → sessions.level_id`
 
-## التفاصيل التقنية
+### 4. RPC Function: `get_student_level_xp`
 
-**ملف واحد يتعدل:** `src/components/finance/CashFlowTab.tsx`
+Parameters: `p_student_id uuid`
 
-**الاستعلام الجديد:**
-```sql
--- من group_student_progress + groups + levels + subscriptions
-SELECT gsp.student_id, g.id as group_id, g.name,
-  l.expected_sessions_count,
-  g.last_delivered_content_number,
-  (l.expected_sessions_count - g.last_delivered_content_number) as remaining
-FROM group_student_progress gsp
-JOIN groups g ON g.id = gsp.group_id  
-JOIN levels l ON l.id = gsp.current_level_id
-WHERE gsp.status = 'in_progress'
-  AND g.is_active = true AND g.status = 'active'
+Returns per level:
+- `level_id`, `level_name`, `level_name_ar`
+- `total_xp` (SUM within level)
+- `rank_name` (Rookie/Explorer/Warrior/Champion/Legend)
+- `rank_progress` (% toward next rank)
+- `event_breakdown` (attendance XP, quiz XP, etc.)
+
+Rank thresholds:
+```text
+Rookie:    0-199
+Explorer:  200-499
+Warrior:   500-899
+Champion:  900-1399
+Legend:    1400+
 ```
 
-**منطق التقدير:**
-1. لكل مجموعة، يحسب معدل السيشنات أسبوعياً من الجدول
-2. يقدر تاريخ انتهاء المستوى = اليوم + (sessions_remaining × أيام بين كل سيشن)
-3. يربط الطلاب باشتراكاتهم عشان يعرف المبلغ المتوقع
-4. يجمع المبالغ في الشهر المناسب من الـ projections
+### 5. UI: كومبوننت `StudentXpCard`
 
-**النتيجة:** الداشبورد هيظهر ان فيه مثلاً 5 طلاب متوقع يجددوا الشهر ده بإجمالي X جنيه، بناءً على تقدمهم الأكاديمي الفعلي.
+ملف جديد: `src/components/dashboard/StudentXpCard.tsx`
+
+يعرض:
+- اسم المستوى الحالي
+- Rank badge مع أيقونة (🏅)
+- XP bar → progress للرانك الجاي
+- Streak الحالي من `student_streaks`
+- آخر 5 XP events (timeline صغير)
+
+### 6. تعديل `StudentDashboard.tsx`
+
+إضافة `<StudentXpCard />` بعد Welcome card مباشرة
+
+### 7. تعديل `StudentProfile.tsx`
+
+إضافة section/tab "XP History" يعرض:
+- جدول XP breakdown per level
+- إجمالي + Rank لكل مستوى
+
+## ملخص الملفات
+
+| الملف | التعديل |
+|-------|---------|
+| Migration 1 | Schema: `level_id` + unique + index |
+| Migration 2 | 5 triggers (3 تعديل + 2 جديد) + backfill |
+| Migration 3 | RPC `get_student_level_xp` |
+| `src/components/dashboard/StudentXpCard.tsx` | **جديد** |
+| `src/components/dashboard/StudentDashboard.tsx` | إضافة XP Card |
+| `src/pages/StudentProfile.tsx` | إضافة XP section |
 
