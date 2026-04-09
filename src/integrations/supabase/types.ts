@@ -1727,6 +1727,7 @@ export type Database = {
       }
       levels: {
         Row: {
+          certificate_config: Json | null
           certificate_template_path: string | null
           created_at: string
           expected_sessions_count: number
@@ -1743,6 +1744,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          certificate_config?: Json | null
           certificate_template_path?: string | null
           created_at?: string
           expected_sessions_count?: number
@@ -1759,6 +1761,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          certificate_config?: Json | null
           certificate_template_path?: string | null
           created_at?: string
           expected_sessions_count?: number
