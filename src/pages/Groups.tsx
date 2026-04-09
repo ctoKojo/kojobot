@@ -168,6 +168,7 @@ export default function GroupsPage() {
   const [filterAgeGroup, setFilterAgeGroup] = useState<string>('all');
   const [filterGroupType, setFilterGroupType] = useState<string>('all');
   const [filterAttendanceMode, setFilterAttendanceMode] = useState<string>('all');
+  const [showArchived, setShowArchived] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isStudentsDialogOpen, setIsStudentsDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
