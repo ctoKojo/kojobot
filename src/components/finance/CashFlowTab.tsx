@@ -165,9 +165,9 @@ export function CashFlowTab() {
         });
       });
 
-      // Build projections for next 3 months
+      // Build projections for current month + next 3 months
       const projections: Projection[] = [];
-      for (let i = 1; i <= 3; i++) {
+      for (let i = 0; i <= 3; i++) {
         const futureMonth = new Date(now.getFullYear(), now.getMonth() + i, 1);
         const futureMonthEnd = new Date(futureMonth.getFullYear(), futureMonth.getMonth() + 1, 0);
         const monthLabel = futureMonth.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', year: '2-digit' });
