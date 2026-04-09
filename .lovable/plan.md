@@ -1,115 +1,59 @@
 
 
-# خطة تنفيذ نظام التجميد الكامل (Frozen Groups Enforcement)
+# اصلاح حساب التدفق النقدي المتوقع - اضافة التجديدات المبنية على التقدم الأكاديمي
 
-## الوضع الحالي
-- `status = 'frozen'` مجرد label في UI
-- كل الـ backend (triggers + edge functions) يتجاهله
-- UI فيها frozen alerts جاهزة في `StudentDashboard`, `GroupDetails`, `Sessions`
+## المشكلة
 
-## التغييرات المطلوبة
+التدفق النقدي المتوقع (Projected Cash Flow) حالياً بيعتمد فقط على:
+- `next_payment_date` للاشتراكات النشطة (أقساط مستحقة)
+- `end_date` للاشتراكات (تجديدات)
 
-### 1. Migration: تعديل `auto_generate_next_session` trigger
-**ملف**: Migration جديدة
+لكنه **لا يحسب** الطلاب اللي قربوا يخلصوا المستوى وهيحتاجوا يجددوا اشتراكهم. مثلاً طالب فاضل له 2 سيشن ويخلص - ده متوقع يجدد الشهر ده أو الشهر الجاي، بس النظام مش بيظهره.
 
-إضافة check بعد سطر `IF NOT v_group.is_active` مباشرة:
+## الحل
+
+### 1. اضافة مصدر بيانات جديد: التقدم الأكاديمي
+
+في `CashFlowTab.tsx`، داخل `queryFn`:
+- استعلام جديد يجيب الطلاب اللي `group_student_progress.status = 'in_progress'` في مجموعات نشطة
+- يحسب عدد السيشنات المتبقية لكل مجموعة (`expected_sessions_count - last_delivered_content_number`)
+- يحسب تاريخ الانتهاء المتوقع بناءً على الجدول الزمني (السيشنات المجدولة + معدل السيشنات في الأسبوع)
+
+### 2. حساب التجديدات المتوقعة أكاديمياً
+
+لكل مجموعة قربت تخلص (مثلاً ≤ 4 سيشنات متبقية):
+- يقدر تاريخ الانتهاء المتوقع من آخر سيشن مجدول + (السيشنات المتبقية × متوسط الفارق بين السيشنات)
+- يربط كل طالب في المجموعة بأحدث اشتراك نشط عشان يعرف `total_amount` المتوقع للتجديد
+- يضيف المبلغ في الشهر المتوقع للتجديد
+
+### 3. تعديل UI
+
+- اضافة صف جديد في كروت التوقعات: **"تجديدات متوقعة (أكاديمي)"** بأيقونة مختلفة ولون مختلف
+- او دمجها مع "Renewals" الحالية مع توضيح المصدر في الـ tooltip
+
+## التفاصيل التقنية
+
+**ملف واحد يتعدل:** `src/components/finance/CashFlowTab.tsx`
+
+**الاستعلام الجديد:**
 ```sql
--- Add frozen check to auto_generate_next_session
-SELECT g.status INTO v_group_status FROM groups g WHERE g.id = NEW.group_id;
-IF v_group_status = 'frozen' THEN RETURN NEW; END IF;
+-- من group_student_progress + groups + levels + subscriptions
+SELECT gsp.student_id, g.id as group_id, g.name,
+  l.expected_sessions_count,
+  g.last_delivered_content_number,
+  (l.expected_sessions_count - g.last_delivered_content_number) as remaining
+FROM group_student_progress gsp
+JOIN groups g ON g.id = gsp.group_id  
+JOIN levels l ON l.id = gsp.current_level_id
+WHERE gsp.status = 'in_progress'
+  AND g.is_active = true AND g.status = 'active'
 ```
 
-### 2. Migration: trigger لإلغاء السيشنات عند التجميد وإعادة التوليد عند الإلغاء
-**ملف**: نفس الـ Migration
+**منطق التقدير:**
+1. لكل مجموعة، يحسب معدل السيشنات أسبوعياً من الجدول
+2. يقدر تاريخ انتهاء المستوى = اليوم + (sessions_remaining × أيام بين كل سيشن)
+3. يربط الطلاب باشتراكاتهم عشان يعرف المبلغ المتوقع
+4. يجمع المبالغ في الشهر المناسب من الـ projections
 
-```sql
-CREATE FUNCTION handle_group_freeze_unfreeze() ...
-```
-- عند `frozen`: كل sessions بـ `status = 'scheduled'` → `cancelled` مع `cancellation_reason = 'group_frozen'`
-- عند `active` (من frozen): توليد السيشن التالية بناءً على آخر session مكتملة
-- إضافة `'group_frozen'` كـ cancellation_reason مسموح (لو فيه constraint)
-
-### 3. Edge Functions: إضافة frozen filter
-
-**`auto-complete-sessions/index.ts`** (سطر 38-42)
-- بعد fetch السيشنات، join مع groups وفلتر frozen:
-```typescript
-.select("id, session_date, session_time, duration_minutes, group_id, groups!inner(status)")
-// ثم في الـ loop: if session.groups.status === 'frozen') continue;
-```
-
-**`session-reminders/index.ts`** (سطر ~85-100)
-- إضافة filter: `.neq('groups.status', 'frozen')` في الـ queries الموجودة (inner join موجود أصلاً)
-
-**`compliance-monitor/index.ts`** (الأقسام 1-4)
-- إضافة join مع groups في كل section وفلتر `groups.status != 'frozen'`
-- أو: بناء set من frozen group_ids مرة واحدة في البداية وskip أي session تنتمي لهم
-
-**`generate-sessions/index.ts`** (سطر 57-61)
-- إضافة `.neq('status', 'frozen')` بجانب `.eq('is_active', true)`
-
-### 4. Frontend: تحسين تجربة الطالب في الجروب المجمد
-
-**`StudentDashboard.tsx`** — الـ alert الموجود ممتاز (سطر 312-333). تعديلات إضافية:
-- تحديث نص التنبيه ليشمل "السيشنات متوقفة مؤقتاً"
-- إخفاء قسم "upcoming sessions" لو الجروب frozen
-- إخفاء أزرار "Take Quiz" و "Submit Assignment" الجديدة (القديمة تفضل view-only)
-
-**`MyQuizzes.tsx`** + **`TakeQuiz.tsx`**:
-- إضافة check: لو الطالب في جروب frozen → عرض رسالة بدل زر Start Quiz
-- القديمة (submitted/graded) تفضل visible
-
-**`Assignments.tsx`** + **`SubmitAssignment.tsx`**:
-- نفس المنطق: منع submit جديد لو الجروب frozen
-- عرض القديم read-only
-
-**`MySessions.tsx`**:
-- عرض السيشنات المكتملة عادي
-- إضافة empty state واضح: "مفيش سيشنات حالياً — الجروب متجمد"
-
-### 5. لا تعديل على `check-payment-dues`
-- الدفع مستمر أثناء التجميد (by design)
-- الطالب لسه مطلوب منه يدفع
-
----
-
-## السلوك بعد التنفيذ
-
-```
-Admin يجمد الجروب:
-  → trigger يلغي كل السيشنات المجدولة (reason: group_frozen)
-  → auto_generate يتوقف (frozen check)
-  → auto-complete يتخطى سيشنات الجروب
-  → compliance-monitor يتجاهل الجروب
-  → session-reminders يتخطى الجروب
-  → الدفع يستمر عادي
-
-الطالب يفتح الاكونت:
-  → يدخل عادي (مفيش block)
-  → يشوف alert واضح "جروبك متجمد"
-  → يشوف السيشنات القديمة
-  → مفيش upcoming sessions
-  → مفيش quiz/assignment جديد
-  → يقدر يشوف القديم بس
-
-Admin يعيد التفعيل:
-  → trigger يولد السيشن التالية
-  → كل شيء يرجع عادي
-```
-
-## الملفات المتأثرة
-
-| ملف | تعديل |
-|-----|-------|
-| Migration جديدة | frozen check في trigger + freeze/unfreeze handler |
-| `auto-complete-sessions/index.ts` | skip frozen groups |
-| `session-reminders/index.ts` | filter frozen groups |
-| `compliance-monitor/index.ts` | filter frozen groups |
-| `generate-sessions/index.ts` | filter frozen groups |
-| `StudentDashboard.tsx` | تحسين alert + إخفاء actions |
-| `MyQuizzes.tsx` | منع quiz submission لجروب frozen |
-| `TakeQuiz.tsx` | block start لو frozen |
-| `Assignments.tsx` | منع submit جديد |
-| `SubmitAssignment.tsx` | block submit لو frozen |
-| `MySessions.tsx` | empty state واضح |
+**النتيجة:** الداشبورد هيظهر ان فيه مثلاً 5 طلاب متوقع يجددوا الشهر ده بإجمالي X جنيه، بناءً على تقدمهم الأكاديمي الفعلي.
 
