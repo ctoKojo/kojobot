@@ -448,6 +448,8 @@ export default function LevelsPage() {
                        <TableCell>{getTrackBadge(level.track)}</TableCell>
                       <TableCell>{getParentLevelName(level.parent_level_id)}</TableCell>
                       <TableCell>
+                        <div className="flex items-center gap-1">
+                        <CertificateConfigDialog levelId={level.id} levelName={level.name} />
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -468,6 +470,7 @@ export default function LevelsPage() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
