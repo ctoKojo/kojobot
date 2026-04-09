@@ -197,6 +197,7 @@ export function AppSidebar() {
               { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['student'] },
               { title: isRTL ? 'موادي التعليمية' : 'My Materials', url: '/my-materials', icon: BookMarked, roles: ['student'] },
               { title: isRTL ? 'سيشناتي' : 'My Sessions', url: '/my-sessions', icon: BookOpen, roles: ['student'] },
+              { title: isRTL ? 'شهاداتي' : 'My Certificates', url: '/my-certificates', icon: AcademicCap, roles: ['student'] },
               { title: isRTL ? 'الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3, roles: ['student'] },
             ],
           },
