@@ -4,7 +4,6 @@ import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 
 const MAX_RETRIES = 3;
-const REGEN_RATE_LIMIT = 5; // max regenerations per minute per cert
 
 interface CertConfig {
   anchor_type: "baseline" | "bottom" | "center";
@@ -26,7 +25,6 @@ const DEFAULT_CONFIG: CertConfig = {
   max_name_width_percent: 80,
 };
 
-// Font registry with known metrics (fallback – actual metrics computed from embedded font)
 const FONT_REGISTRY: Record<string, { path: string; fallback_ascent: number; fallback_descent: number }> = {
   playfair_italic: {
     path: "fonts/PlayfairDisplay-Italic.ttf",
@@ -48,7 +46,6 @@ function hexToRgb(hex: string) {
   return rgb(r, g, b);
 }
 
-/** Merge old config format into new CertConfig */
 function parseConfig(raw: Record<string, unknown>): CertConfig {
   return {
     anchor_type: (raw.anchor_type as CertConfig["anchor_type"]) ?? DEFAULT_CONFIG.anchor_type,
@@ -61,7 +58,6 @@ function parseConfig(raw: Record<string, unknown>): CertConfig {
   };
 }
 
-/** Compute draw Y so that the visible text anchors correctly */
 function computeDrawY(
   anchorType: CertConfig["anchor_type"],
   anchorYPercent: number,
@@ -76,7 +72,6 @@ function computeDrawY(
 
   switch (anchorType) {
     case "bottom":
-      // anchor_y = visible bottom of text → draw baseline above descent
       return anchorY + descent;
     case "center": {
       const textHeight = ascent + descent;
@@ -88,7 +83,6 @@ function computeDrawY(
   }
 }
 
-/** Auto-scale font to fit within maxWidth */
 function fitFontSize(
   font: { widthOfTextAtSize: (t: string, s: number) => number },
   text: string,
@@ -101,6 +95,19 @@ function fitFontSize(
     size -= 1;
   }
   return size;
+}
+
+function toTitleCaseName(name: string) {
+  const normalized = name.trim().replace(/\s+/g, " ");
+  if (!normalized) return "Unknown";
+
+  return normalized
+    .split(" ")
+    .map((part) => {
+      if (!part) return part;
+      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+    })
+    .join(" ");
 }
 
 async function verifyAuth(req: Request, supabaseAdmin: ReturnType<typeof createClient>) {
@@ -152,7 +159,6 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const certificateId = body.certificate_id;
 
-    // Fetch pending certificates with level config
     let query = supabaseAdmin
       .from("student_certificates")
       .select("*, levels:level_id(certificate_template_path, name, certificate_config)")
@@ -178,7 +184,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Pre-load fonts from storage (cache per font_key)
     const fontCache: Record<string, Uint8Array> = {};
     const loadFont = async (fontKey: string): Promise<Uint8Array | null> => {
       if (fontCache[fontKey]) return fontCache[fontKey];
@@ -199,7 +204,6 @@ Deno.serve(async (req) => {
 
     for (const cert of certs) {
       try {
-        // Lock: set status to generating
         const { error: lockError } = await supabaseAdmin
           .from("student_certificates")
           .update({ status: "generating", updated_at: new Date().toISOString() })
@@ -217,22 +221,18 @@ Deno.serve(async (req) => {
 
         const config = parseConfig((levelData?.certificate_config as Record<string, unknown>) || {});
 
-        // Download template
         const { data: templateData, error: dlError } = await supabaseAdmin.storage
           .from("certificates")
           .download(templatePath);
         if (dlError || !templateData) throw new Error(`Template download failed: ${dlError?.message || "No data"}`);
 
-        // Load PDF
         const pdfBytes = await templateData.arrayBuffer();
         const pdfDoc = await PDFDocument.load(pdfBytes);
         pdfDoc.registerFontkit(fontkit);
 
-        const pages = pdfDoc.getPages();
-        const page = pages[0];
+        const page = pdfDoc.getPages()[0];
         const { width, height } = page.getSize();
 
-        // Embed font
         let font;
         let ascentRatio: number;
         let descentRatio: number;
@@ -240,7 +240,6 @@ Deno.serve(async (req) => {
         const customFontBytes = await loadFont(config.font_key);
         if (customFontBytes) {
           font = await pdfDoc.embedFont(customFontBytes);
-          // Extract real metrics from font
           const em = (font as any).embedder?.font?.unitsPerEm || 1000;
           const rawAscent = (font as any).embedder?.font?.ascent;
           const rawDescent = (font as any).embedder?.font?.descent;
@@ -252,18 +251,11 @@ Deno.serve(async (req) => {
           descentRatio = -0.207;
         }
 
-        const studentName = cert.student_name_snapshot || "Unknown";
-
-        // Auto-scale if name too wide
+        const studentName = toTitleCaseName(cert.student_name_snapshot || "Unknown");
         const maxWidth = width * (config.max_name_width_percent / 100);
         const fontSize = fitFontSize(font, studentName, config.font_size, maxWidth);
-
         const textWidth = font.widthOfTextAtSize(studentName, fontSize);
-
-        // Compute Y using font metrics
         const drawY = computeDrawY(config.anchor_type, config.anchor_y_percent, height, fontSize, ascentRatio, descentRatio);
-
-        // Compute X (centered + offset)
         const drawX = (width - textWidth) / 2 + config.x_offset_px;
 
         page.drawText(studentName, {
@@ -275,9 +267,8 @@ Deno.serve(async (req) => {
         });
 
         const modifiedPdf = await pdfDoc.save();
-
-        // Upload
         const storagePath = `generated/${cert.student_id}/${cert.certificate_code}.pdf`;
+
         if (cert.storage_path) {
           await supabaseAdmin.storage.from("certificates").remove([cert.storage_path]);
         }
@@ -287,7 +278,6 @@ Deno.serve(async (req) => {
           .upload(storagePath, modifiedPdf, { contentType: "application/pdf", upsert: true });
         if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
 
-        // Save last_working_config for rollback
         await supabaseAdmin
           .from("student_certificates")
           .update({
@@ -298,12 +288,11 @@ Deno.serve(async (req) => {
           })
           .eq("id", cert.id);
 
-        // Save working config snapshot on level
         await supabaseAdmin
           .from("levels")
           .update({ certificate_config: { ...config, _last_working: true } as any })
           .eq("id", cert.level_id)
-          .is("certificate_config->_last_working", null); // only if not already marked
+          .is("certificate_config->_last_working", null);
 
         results.push({ id: cert.id, status: "ready" });
       } catch (err) {
