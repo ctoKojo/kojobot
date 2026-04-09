@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getStudentProgressStatusLabel, getStudentOutcomeLabel } from '@/lib/constants';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Target, GraduationCap, Calculator, ArrowUpCircle, RotateCcw, Info } from 'lucide-react';
 
 interface LevelProgressTabProps {
@@ -146,7 +147,8 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
     if (filter === 'awaiting_exam') return p.status === 'awaiting_exam' || p.status === 'exam_scheduled';
     if (filter === 'graded') return p.status === 'graded';
     if (filter === 'passed') return p.outcome === 'passed';
-    if (filter === 'failed') return p.outcome === 'failed' || p.outcome === 'repeat';
+    if (filter === 'failed') return p.outcome === 'failed' || p.outcome === 'failed_exam' || p.outcome === 'failed_total' || p.outcome === 'repeat';
+    if (filter === 'pending_group_assignment') return p.status === 'pending_group_assignment';
     return true;
   });
 
@@ -249,7 +251,7 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
     awaiting_exam: progress.filter(p => p.status === 'awaiting_exam' || p.status === 'exam_scheduled').length,
     graded: progress.filter(p => p.status === 'graded').length,
     passed: progress.filter(p => p.outcome === 'passed').length,
-    failed: progress.filter(p => p.outcome === 'failed' || p.outcome === 'repeat').length,
+    failed: progress.filter(p => p.outcome === 'failed' || p.outcome === 'failed_exam' || p.outcome === 'failed_total' || p.outcome === 'repeat').length,
     pending_group_assignment: progress.filter(p => p.status === 'pending_group_assignment').length,
   };
 
@@ -379,10 +381,21 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
                         </Badge>
                       ) : '-'}
                     </TableCell>
-                    <TableCell className="text-center text-sm">{grade?.evaluation_avg ?? '-'}</TableCell>
-                    <TableCell className="text-center text-sm">{grade?.final_exam_score ?? '-'}</TableCell>
-                    <TableCell className="text-center text-sm font-bold">
-                      {grade?.percentage != null ? `${Math.round(grade.percentage)}%` : '-'}
+                    <TableCell className="text-center text-sm">{grade?.evaluation_avg != null ? `${grade.evaluation_avg}%` : '-'}</TableCell>
+                    <TableCell className="text-center text-sm">{grade?.final_exam_score != null ? `${grade.final_exam_score}%` : '-'}</TableCell>
+                    <TableCell className="text-center">
+                      {grade?.percentage != null ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-sm font-bold cursor-help">{Math.round(grade.percentage)}%</span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <p className="text-xs font-mono">
+                              ({grade.evaluation_avg ?? 0}% × 60%) + ({grade.final_exam_score ?? 0}% × 40%) = {Math.round(grade.percentage)}%
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : '-'}
                     </TableCell>
                     {isAdmin && (
                       <TableCell className="text-center" onClick={e => e.stopPropagation()}>
@@ -396,7 +409,7 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
                               {isRTL ? 'ترقية' : 'Upgrade'}
                             </Button>
                           )}
-                          {(p.outcome === 'failed') && (
+                          {(p.outcome === 'failed' || p.outcome === 'failed_exam' || p.outcome === 'failed_total') && (
                             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleRepeat(p.student_id)}>
                               <RotateCcw className="h-3 w-3 mr-1" />
                               {isRTL ? 'إعادة' : 'Repeat'}
