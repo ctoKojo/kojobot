@@ -50,7 +50,7 @@ interface LevelGrade {
   outcome: string | null;
 }
 
-type FilterType = 'all' | 'in_progress' | 'awaiting_exam' | 'graded' | 'passed' | 'failed';
+type FilterType = 'all' | 'in_progress' | 'awaiting_exam' | 'graded' | 'passed' | 'failed' | 'pending_group_assignment';
 
 export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: LevelProgressTabProps) {
   const { isRTL, language } = useLanguage();
@@ -250,6 +250,7 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
     graded: progress.filter(p => p.status === 'graded').length,
     passed: progress.filter(p => p.outcome === 'passed').length,
     failed: progress.filter(p => p.outcome === 'failed' || p.outcome === 'repeat').length,
+    pending_group_assignment: progress.filter(p => p.status === 'pending_group_assignment').length,
   };
 
   if (loading) {
@@ -304,6 +305,7 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
           ['graded', isRTL ? 'تم التقييم' : 'Graded'],
           ['passed', isRTL ? 'ناجح' : 'Passed'],
           ['failed', isRTL ? 'راسب' : 'Failed'],
+          ['pending_group_assignment', isRTL ? 'في انتظار جروب' : 'Pending Group'],
         ] as [FilterType, string][]).map(([key, label]) => (
           <Badge
             key={key}
@@ -362,7 +364,11 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
                       </span>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Badge variant={p.status === 'awaiting_exam' ? 'default' : 'secondary'} className="text-xs">
+                      <Badge variant={
+                        p.status === 'awaiting_exam' ? 'default' 
+                        : p.status === 'pending_group_assignment' ? 'secondary'
+                        : 'secondary'
+                      } className={`text-xs ${p.status === 'pending_group_assignment' ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-0' : ''}`}>
                         {getStudentProgressStatusLabel(p.status, isRTL)}
                       </Badge>
                     </TableCell>
