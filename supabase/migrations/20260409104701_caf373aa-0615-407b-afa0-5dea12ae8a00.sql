@@ -1,0 +1,1 @@
+UPDATE student_certificates SET status = 'pending', retry_count = 0, error_message = NULL, updated_at = now() WHERE status IN ('ready','failed');
