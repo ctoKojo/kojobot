@@ -30,6 +30,18 @@ export function StudentCertificatesTab({ studentId }: { studentId: string }) {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const regenTimestamps = useRef<number[]>([]);
+
+  const checkRateLimit = (): boolean => {
+    const now = Date.now();
+    regenTimestamps.current = regenTimestamps.current.filter(t => now - t < REGEN_WINDOW_MS);
+    if (regenTimestamps.current.length >= REGEN_LIMIT) {
+      toast.error(isRTL ? 'كتير أوي! استنى دقيقة قبل ما تولد تاني' : 'Too many regenerations. Wait a minute.');
+      return false;
+    }
+    regenTimestamps.current.push(now);
+    return true;
+  };
 
   useEffect(() => {
     fetchCertificates();
