@@ -146,7 +146,8 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
     if (filter === 'awaiting_exam') return p.status === 'awaiting_exam' || p.status === 'exam_scheduled';
     if (filter === 'graded') return p.status === 'graded';
     if (filter === 'passed') return p.outcome === 'passed';
-    if (filter === 'failed') return p.outcome === 'failed' || p.outcome === 'repeat';
+    if (filter === 'failed') return p.outcome === 'failed' || p.outcome === 'failed_exam' || p.outcome === 'failed_total' || p.outcome === 'repeat';
+    if (filter === 'pending_group_assignment') return p.status === 'pending_group_assignment';
     return true;
   });
 
