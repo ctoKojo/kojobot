@@ -4046,6 +4046,7 @@ export type Database = {
           level_name_ar: string | null
           progress_id: string | null
           status: string | null
+          status_changed_at: string | null
           student_id: string | null
         }
         Relationships: [
