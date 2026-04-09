@@ -27,12 +27,13 @@ const DEFAULT_CONFIG: CertificateConfig = {
   anchor_y_percent: 52,
   font_size: 42,
   font_color_hex: '#1B2A4A',
-  font_key: 'playfair_italic',
+  font_key: 'poppins_semibold',
   x_offset_px: 0,
   max_name_width_percent: 80,
 };
 
 const FONT_OPTIONS = [
+  { key: 'poppins_semibold', label: 'Poppins SemiBold' },
   { key: 'playfair_italic', label: 'Playfair Display Italic' },
 ];
 
@@ -42,7 +43,7 @@ const ANCHOR_OPTIONS: { value: CertificateConfig['anchor_type']; label: string; 
   { value: 'baseline', label: 'Baseline (raw)', labelAr: 'خط الأساس' },
 ];
 
-const PREVIEW_NAME = 'محمود حسام محمود صبري';
+const PREVIEW_NAME = 'Mahmoud Hossam Mahmoud';
 
 function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
