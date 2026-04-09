@@ -459,9 +459,6 @@ export default function LevelsPage() {
                               <Pencil className="h-4 w-4 mr-2" />
                               {t.common.edit}
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                              <CertificateConfigDialog levelId={level.id} levelName={level.name} />
-                            </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => handleDelete(level.id)}
                               className="text-destructive"
