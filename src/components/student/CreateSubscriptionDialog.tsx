@@ -21,7 +21,7 @@ interface Props {
   previousSubscriptionId?: string;
 }
 
-export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studentName, onSuccess }: Props) {
+export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studentName, onSuccess, isRenewal, previousSubscriptionId }: Props) {
   const { isRTL, language } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
