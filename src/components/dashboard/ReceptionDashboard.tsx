@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getCairoToday } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
-import { Users, Calendar, Clock, AlertTriangle, CreditCard, RefreshCw, Target, ChevronRight, ArrowRight } from 'lucide-react';
+import { Users, Calendar, Clock, AlertTriangle, CreditCard, RefreshCw, Target, ChevronRight, ArrowRight, Award } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,6 +15,7 @@ interface DashboardStats {
   overduePayments: number;
   pendingMakeups: number;
   awaitingFinalExam: number;
+  unprintedCertificates: number;
 }
 
 export function ReceptionDashboard() {
@@ -28,6 +29,7 @@ export function ReceptionDashboard() {
     overduePayments: 0,
     pendingMakeups: 0,
     awaitingFinalExam: 0,
+    unprintedCertificates: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +41,7 @@ export function ReceptionDashboard() {
     try {
       const today = getCairoToday();
 
-      const [studentsRes, groupsRes, sessionsRes, attendanceRes, subsRes, makeupRes, awaitingExamRes] = await Promise.all([
+      const [studentsRes, groupsRes, sessionsRes, attendanceRes, subsRes, makeupRes, awaitingExamRes, certsRes] = await Promise.all([
         supabase.from('user_roles').select('id', { count: 'exact', head: true }).eq('role', 'student'),
         supabase.from('groups').select('id', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('sessions').select('id, group_id').eq('session_date', today).eq('status', 'scheduled'),
@@ -52,6 +54,7 @@ export function ReceptionDashboard() {
           .gt('remaining_amount', 0),
         supabase.from('makeup_sessions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('group_student_progress').select('id', { count: 'exact', head: true }).eq('status', 'awaiting_exam'),
+        supabase.from('student_certificates').select('id', { count: 'exact', head: true }).eq('status', 'ready').is('printed_at', null),
       ]);
 
       // Calculate unrecorded attendance
@@ -67,6 +70,7 @@ export function ReceptionDashboard() {
         overduePayments: subsRes.count || 0,
         pendingMakeups: makeupRes.count || 0,
         awaitingFinalExam: awaitingExamRes.count || 0,
+        unprintedCertificates: certsRes.count || 0,
       });
     } catch (error) {
       console.error('Error fetching reception stats:', error);
