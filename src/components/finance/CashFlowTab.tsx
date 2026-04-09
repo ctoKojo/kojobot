@@ -94,7 +94,7 @@ export function CashFlowTab() {
 
       // ---- Academic renewal projections ----
       const progressRows = (progressRes.data || []) as any[];
-      // Filter to active groups with ≤ 4 sessions remaining
+      // Filter to active groups with remaining sessions that fit within ~3 months (~13 weeks)
       const nearCompletion: { studentId: string; groupId: string; scheduleDay: string; remaining: number }[] = [];
       progressRows.forEach((row: any) => {
         const g = row.groups;
@@ -103,7 +103,8 @@ export function CashFlowTab() {
         const expected = Number(l.expected_sessions_count || 0);
         const delivered = Number(g.last_delivered_content_number || 0);
         const remaining = expected - delivered;
-        if (remaining > 0 && remaining <= 4) {
+        // Include any group that will finish within ~13 weeks (1 session/week)
+        if (remaining > 0 && remaining <= 13) {
           nearCompletion.push({
             studentId: row.student_id,
             groupId: g.id,
