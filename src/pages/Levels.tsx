@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, FileQuestion, ExternalLink } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Pencil, Trash2, FileQuestion, ExternalLink, Award } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { CertificateConfigDialog } from '@/components/certificate/CertificateConfigDialog';
 
 interface Level {
   id: string;
@@ -447,6 +448,8 @@ export default function LevelsPage() {
                        <TableCell>{getTrackBadge(level.track)}</TableCell>
                       <TableCell>{getParentLevelName(level.parent_level_id)}</TableCell>
                       <TableCell>
+                        <div className="flex items-center gap-1">
+                        <CertificateConfigDialog levelId={level.id} levelName={level.name} />
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -467,6 +470,7 @@ export default function LevelsPage() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
