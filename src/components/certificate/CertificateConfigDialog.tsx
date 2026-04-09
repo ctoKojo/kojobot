@@ -33,6 +33,7 @@ const DEFAULT_CONFIG: CertificateConfig = {
 };
 
 const FONT_OPTIONS = [
+  { key: 'poppins_semibold', label: 'Poppins SemiBold' },
   { key: 'playfair_italic', label: 'Playfair Display Italic' },
 ];
 

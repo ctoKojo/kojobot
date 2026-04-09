@@ -33,6 +33,11 @@ const FONT_REGISTRY: Record<string, { path: string; fallback_ascent: number; fal
     fallback_ascent: 0.85,
     fallback_descent: -0.22,
   },
+  poppins_semibold: {
+    path: "fonts/Poppins-SemiBold.ttf",
+    fallback_ascent: 0.92,
+    fallback_descent: -0.24,
+  },
 };
 
 function hexToRgb(hex: string) {
