@@ -302,51 +302,80 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
             </div>
           </div>
 
-          {/* Y Position slider */}
+          {/* Y Position */}
           <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">{isRTL ? 'موضع Y (% من الأسفل)' : 'Y Position (% from bottom)'}</Label>
-              <span className="text-xs font-mono text-muted-foreground">{config.anchor_y_percent}%</span>
+            <Label className="text-xs">{isRTL ? 'موضع Y (% من الأسفل)' : 'Y Position (% from bottom)'}</Label>
+            <div className="flex items-center gap-2">
+              <Slider
+                value={[config.anchor_y_percent]}
+                onValueChange={([v]) => setConfig(c => ({ ...c, anchor_y_percent: v }))}
+                min={0}
+                max={100}
+                step={0.1}
+                className="flex-1"
+              />
+              <Input
+                type="number"
+                value={config.anchor_y_percent}
+                onChange={(e) => setConfig(c => ({ ...c, anchor_y_percent: clamp(parseFloat(e.target.value) || 0, 0, 100) }))}
+                className="w-20 h-7 text-xs font-mono text-center"
+                step={0.1}
+                min={0}
+                max={100}
+              />
             </div>
-            <Slider
-              value={[config.anchor_y_percent]}
-              onValueChange={([v]) => setConfig(c => ({ ...c, anchor_y_percent: v }))}
-              min={10}
-              max={90}
-              step={0.5}
-            />
           </div>
 
-          {/* Font size + X offset */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">{isRTL ? 'حجم الخط' : 'Font Size'}</Label>
-              <div className="flex items-center gap-2">
-                <Slider
-                  value={[config.font_size]}
-                  onValueChange={([v]) => setConfig(c => ({ ...c, font_size: clamp(v, 16, 120) }))}
-                  min={16}
-                  max={120}
-                  step={1}
-                  className="flex-1"
-                />
-                <span className="text-xs font-mono w-8 text-right">{config.font_size}</span>
-              </div>
+          {/* Font size */}
+          <div className="space-y-1">
+            <Label className="text-xs">{isRTL ? 'حجم الخط' : 'Font Size'}</Label>
+            <div className="flex items-center gap-2">
+              <Slider
+                value={[config.font_size]}
+                onValueChange={([v]) => setConfig(c => ({ ...c, font_size: clamp(v, 8, 120) }))}
+                min={8}
+                max={120}
+                step={1}
+                className="flex-1"
+              />
+              <Input
+                type="number"
+                value={config.font_size}
+                onChange={(e) => setConfig(c => ({ ...c, font_size: clamp(parseInt(e.target.value) || 16, 8, 120) }))}
+                className="w-20 h-7 text-xs font-mono text-center"
+                step={1}
+                min={8}
+                max={120}
+              />
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">{isRTL ? 'إزاحة X' : 'X Offset'}</Label>
-                <Button variant="ghost" size="sm" className="h-5 px-1 text-[10px]" onClick={handleSnapCenter}>
-                  <Crosshair className="h-3 w-3 mr-0.5" />
-                  {isRTL ? 'توسيط' : 'Center'}
-                </Button>
-              </div>
+          </div>
+
+          {/* X Offset */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">{isRTL ? 'إزاحة X (بكسل)' : 'X Offset (px)'}</Label>
+              <Button variant="ghost" size="sm" className="h-5 px-1 text-[10px]" onClick={handleSnapCenter}>
+                <Crosshair className="h-3 w-3 mr-0.5" />
+                {isRTL ? 'توسيط' : 'Center'}
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
               <Slider
                 value={[config.x_offset_px]}
                 onValueChange={([v]) => setConfig(c => ({ ...c, x_offset_px: v }))}
-                min={-100}
-                max={100}
+                min={-200}
+                max={200}
                 step={1}
+                className="flex-1"
+              />
+              <Input
+                type="number"
+                value={config.x_offset_px}
+                onChange={(e) => setConfig(c => ({ ...c, x_offset_px: clamp(parseInt(e.target.value) || 0, -200, 200) }))}
+                className="w-20 h-7 text-xs font-mono text-center"
+                step={1}
+                min={-200}
+                max={200}
               />
             </div>
           </div>
