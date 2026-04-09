@@ -43,6 +43,7 @@ interface StudentRow {
   saved: boolean;
   saving: boolean;
   saveError: boolean;
+  isDirty: boolean;
   existing_id?: string;
   quiz_score?: number | null;
   quiz_max_score?: number | null;
@@ -213,7 +214,7 @@ function StudentEvalCard({
             onChange={(e) => {
               setRows(prev => {
                 const updated = [...prev];
-                updated[rowIdx] = { ...updated[rowIdx], notes: e.target.value, saved: false };
+                updated[rowIdx] = { ...updated[rowIdx], notes: e.target.value, saved: false, isDirty: true };
                 return updated;
               });
             }}
@@ -232,7 +233,7 @@ function StudentEvalCard({
                       const tags = active
                         ? updated[rowIdx].feedback_tags.filter(t => t !== tag.en)
                         : [...updated[rowIdx].feedback_tags, tag.en];
-                      updated[rowIdx] = { ...updated[rowIdx], feedback_tags: tags, saved: false };
+                      updated[rowIdx] = { ...updated[rowIdx], feedback_tags: tags, saved: false, isDirty: true };
                       return updated;
                     });
                   }}
@@ -257,19 +258,29 @@ function StudentEvalCard({
           <span className="text-muted-foreground">{isRTL ? 'السلوك' : 'Behavior'}:</span>{' '}
           <span className="font-semibold">{behaviorTotal}/{calcMaxBehavior}</span>
         </span>
-        <span>
-          <span className="text-muted-foreground">{isRTL ? 'كويز' : 'Quiz'}:</span>{' '}
-          <span className="font-semibold">{row.quiz_score != null ? `${row.quiz_score}/${row.quiz_max_score}` : '-'}</span>
-        </span>
-        <span>
-          <span className="text-muted-foreground">{isRTL ? 'واجب' : 'HW'}:</span>{' '}
-          <span className="font-semibold">{row.assignment_score != null ? `${row.assignment_score}/${row.assignment_max_score}` : '-'}</span>
-        </span>
-        <span className="ms-auto">
-          <span className="text-muted-foreground">{isRTL ? 'الإجمالي' : 'Total'}:</span>{' '}
-          <span className="font-bold">{totalS}/{maxTotal}</span>{' '}
-          <span className={cn('font-bold', getPercentColor(pct))}>({pct}%)</span>
-        </span>
+        {row.quiz_score != null && (
+          <span>
+            <span className="text-muted-foreground">{isRTL ? 'كويز' : 'Quiz'}:</span>{' '}
+            <span className="font-semibold">{row.quiz_score}/{row.quiz_max_score}</span>
+          </span>
+        )}
+        {row.assignment_score != null && (
+          <span>
+            <span className="text-muted-foreground">{isRTL ? 'واجب' : 'HW'}:</span>{' '}
+            <span className="font-semibold">{row.assignment_score}/{row.assignment_max_score}</span>
+          </span>
+        )}
+        {(row.quiz_score != null || row.assignment_score != null) ? (
+          <span className="ms-auto">
+            <span className="text-muted-foreground">{isRTL ? 'الإجمالي' : 'Total'}:</span>{' '}
+            <span className="font-bold">{totalS}/{maxTotal}</span>{' '}
+            <span className={cn('font-bold', getPercentColor(pct))}>({pct}%)</span>
+          </span>
+        ) : (
+          <span className="ms-auto">
+            <span className={cn('font-bold', getPercentColor(pct))}>({pct}%)</span>
+          </span>
+        )}
       </div>
     </Card>
   );
@@ -348,6 +359,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
           saved: !!existing,
           saving: false,
           saveError: false,
+          isDirty: false,
           existing_id: existing?.id,
           quiz_score: s.quiz_score,
           quiz_max_score: s.quiz_max_score,
@@ -373,6 +385,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
         scores: { ...updated[rowIndex].scores, [key]: value },
         saved: false,
         saveError: false,
+        isDirty: true,
       };
       return updated;
     });
@@ -466,7 +479,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
 
       setRows(prev => {
         const updated = [...prev];
-        updated[rowIndex] = { ...updated[rowIndex], saved: true, saving: false };
+        updated[rowIndex] = { ...updated[rowIndex], saved: true, saving: false, isDirty: false };
         return updated;
       });
     } catch (err: any) {
@@ -484,7 +497,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
   useEffect(() => {
     rows.forEach((row, idx) => {
       const allFilled = criteria.every(c => row.scores[c.key] !== undefined);
-      if (allFilled && !row.saved && !row.saving && !row.saveError) {
+      if (allFilled && row.isDirty && !row.saved && !row.saving && !row.saveError) {
         saveRow(idx);
       }
     });
@@ -495,7 +508,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
     try {
       const promises = rows.map((row, idx) => {
         const allFilled = criteria.every(c => row.scores[c.key] !== undefined);
-        if (allFilled && !row.saved) return saveRow(idx);
+        if (allFilled && row.isDirty && !row.saved) return saveRow(idx);
         return Promise.resolve();
       });
       await Promise.all(promises);
@@ -609,10 +622,20 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
                 <TableIcon className="h-4 w-4" />
               </button>
             </div>
-            <Button onClick={handleSaveAll} disabled={savingAll} size="sm">
-              {savingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              <span className="hidden sm:inline ms-1">{t.evaluation.saveAll}</span>
-            </Button>
+            {rows.some(r => {
+              const allFilled = criteria.every(c => r.scores[c.key] !== undefined);
+              return allFilled && r.isDirty && !r.saved;
+            }) ? (
+              <Button onClick={handleSaveAll} disabled={savingAll} size="sm">
+                {savingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                <span className="hidden sm:inline ms-1">{t.evaluation.saveAll}</span>
+              </Button>
+            ) : rows.length > 0 && rows.every(r => r.saved || criteria.some(c => r.scores[c.key] === undefined)) ? (
+              <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                <CheckCircle className="h-4 w-4" />
+                {isRTL ? 'تم الحفظ' : 'All saved'}
+              </span>
+            ) : null}
           </div>
         </div>
       </CardHeader>
@@ -766,7 +789,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
                         onChange={(e) => {
                           setRows(prev => {
                             const updated = [...prev];
-                            updated[rowIdx] = { ...updated[rowIdx], notes: e.target.value, saved: false };
+                            updated[rowIdx] = { ...updated[rowIdx], notes: e.target.value, saved: false, isDirty: true };
                             return updated;
                           });
                         }}
@@ -785,7 +808,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
                                   const tags = active
                                     ? updated[rowIdx].feedback_tags.filter(t => t !== tag.en)
                                     : [...updated[rowIdx].feedback_tags, tag.en];
-                                  updated[rowIdx] = { ...updated[rowIdx], feedback_tags: tags, saved: false };
+                                  updated[rowIdx] = { ...updated[rowIdx], feedback_tags: tags, saved: false, isDirty: true };
                                   return updated;
                                 });
                               }}
