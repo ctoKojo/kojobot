@@ -21,7 +21,7 @@ const DEFAULT_CONFIG: CertConfig = {
   anchor_y_percent: 52,
   font_size: 42,
   font_color_hex: "#1B2A4A",
-  font_key: "playfair_italic",
+  font_key: "poppins_semibold",
   x_offset_px: 0,
   max_name_width_percent: 80,
 };
