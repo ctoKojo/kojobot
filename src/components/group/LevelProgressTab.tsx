@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { getStudentProgressStatusLabel, getStudentOutcomeLabel } from '@/lib/constants';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Target, GraduationCap, Calculator, ArrowUpCircle, RotateCcw, Info } from 'lucide-react';
 
 interface LevelProgressTabProps {
@@ -395,7 +396,6 @@ export function LevelProgressTab({ groupId, levelId, levelName, onRefresh }: Lev
                           </TooltipContent>
                         </Tooltip>
                       ) : '-'}
-                    </TableCell>
                     </TableCell>
                     {isAdmin && (
                       <TableCell className="text-center" onClick={e => e.stopPropagation()}>
