@@ -750,6 +750,22 @@ serve(async (req) => {
     }
 
     // ========================================
+    // MODULE D-2: Exam SLA Timeout Check (Section 9a)
+    // ========================================
+    try {
+      if (!shouldCircuitBreak()) {
+        const { data: slaResult, error: slaError } = await supabase.rpc('check_exam_sla_timeouts');
+        if (slaError) {
+          results.errors.push(`Section 9a (Exam SLA) error: ${slaError.message}`);
+        } else {
+          console.log(`[Compliance Monitor] Exam SLA check: ${JSON.stringify(slaResult)}`);
+        }
+      }
+    } catch (e) {
+      results.errors.push(`Section 9a (Exam SLA) error: ${e.message}`);
+    }
+
+    // ========================================
     // MODULE D: System Health (Section 9)
     // ========================================
     try {

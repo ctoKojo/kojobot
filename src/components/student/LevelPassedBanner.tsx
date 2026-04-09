@@ -114,9 +114,9 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
       } else {
         toast({
           title: isRTL ? '🎉 مبروك!' : '🎉 Congratulations!',
-          description: isRTL ? 'تم ترقيتك للمستوى التالي بنجاح' : 'You have been promoted to the next level!',
+          description: isRTL ? 'تم ترقيتك — الإدارة هتعينك في جروب قريباً' : 'You have been promoted! Admin will assign you to a group soon.',
         });
-        setProgress(null); // Hide banner
+        setProgress(null);
         onUpgraded?.();
       }
     } catch (err: any) {
