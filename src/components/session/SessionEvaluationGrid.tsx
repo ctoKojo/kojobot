@@ -497,7 +497,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
   useEffect(() => {
     rows.forEach((row, idx) => {
       const allFilled = criteria.every(c => row.scores[c.key] !== undefined);
-      if (allFilled && !row.saved && !row.saving && !row.saveError) {
+      if (allFilled && row.isDirty && !row.saved && !row.saving && !row.saveError) {
         saveRow(idx);
       }
     });
