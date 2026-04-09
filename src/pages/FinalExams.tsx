@@ -36,6 +36,7 @@ interface ExamCandidate {
   exam_scheduled_at: string | null;
   exam_submitted_at: string | null;
   graded_at: string | null;
+  status_changed_at: string | null;
   full_name: string;
   full_name_ar: string | null;
   avatar_url: string | null;
@@ -192,6 +193,11 @@ export default function FinalExams() {
   const getName = (c: ExamCandidate) => language === 'ar' ? c.full_name_ar || c.full_name : c.full_name;
   const getGroupName = (c: ExamCandidate) => language === 'ar' ? c.group_name_ar || c.group_name : c.group_name;
   const getLevelName = (c: ExamCandidate) => language === 'ar' ? c.level_name_ar || c.level_name : c.level_name;
+
+  const getWaitDays = (c: ExamCandidate): number => {
+    if (!c.status_changed_at) return 0;
+    return Math.floor((Date.now() - new Date(c.status_changed_at).getTime()) / (1000 * 60 * 60 * 24));
+  };
 
   // ─── Summary Stats ───
   const statsCards = [
@@ -384,6 +390,16 @@ export default function FinalExams() {
                           })}
                         </p>
                       )}
+                      {/* Wait days */}
+                      {(() => {
+                        const days = getWaitDays(c);
+                        const slaThreshold = c.status === 'awaiting_exam' ? 7 : 14;
+                        return days > 0 ? (
+                          <Badge variant="outline" className={`text-[10px] mt-1 ${days >= slaThreshold ? 'text-destructive border-destructive/30' : ''}`}>
+                            {days} {isRTL ? 'يوم' : 'days'}
+                          </Badge>
+                        ) : null;
+                      })()}
                     </div>
                   </div>
                 </CardContent>
@@ -415,6 +431,7 @@ export default function FinalExams() {
                     <TableHead>{isRTL ? 'المستوى' : 'Level'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'موعد الامتحان' : 'Exam Date'}</TableHead>
+                    <TableHead className="text-center">{isRTL ? 'أيام الانتظار' : 'Wait Days'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'كويز نهائي' : 'Final Quiz'}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -488,6 +505,17 @@ export default function FinalExams() {
                         ) : (
                           <span className="text-muted-foreground/50">—</span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {(() => {
+                          const days = getWaitDays(c);
+                          const slaThreshold = c.status === 'awaiting_exam' ? 7 : 14;
+                          return (
+                            <span className={`text-xs font-medium ${days >= slaThreshold ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              {days > 0 ? `${days} ${isRTL ? 'يوم' : 'd'}` : '—'}
+                            </span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-center">
                         {c.final_exam_quiz_id ? (

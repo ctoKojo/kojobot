@@ -1,0 +1,1 @@
+ALTER VIEW public.final_exam_candidates SET (security_invoker = on);

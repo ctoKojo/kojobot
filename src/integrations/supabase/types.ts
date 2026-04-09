@@ -1046,6 +1046,7 @@ export type Database = {
           notes: string | null
           outcome: string | null
           status: string
+          status_changed_at: string | null
           student_id: string
           updated_at: string | null
         }
@@ -1064,6 +1065,7 @@ export type Database = {
           notes?: string | null
           outcome?: string | null
           status?: string
+          status_changed_at?: string | null
           student_id: string
           updated_at?: string | null
         }
@@ -1082,6 +1084,7 @@ export type Database = {
           notes?: string | null
           outcome?: string | null
           status?: string
+          status_changed_at?: string | null
           student_id?: string
           updated_at?: string | null
         }
@@ -4043,6 +4046,7 @@ export type Database = {
           level_name_ar: string | null
           progress_id: string | null
           status: string | null
+          status_changed_at: string | null
           student_id: string | null
         }
         Relationships: [
@@ -4286,6 +4290,10 @@ export type Database = {
       }
     }
     Functions: {
+      assign_student_to_group: {
+        Args: { p_new_group_id: string; p_student_id: string }
+        Returns: Json
+      }
       assign_subscription_dates: {
         Args: { p_group_id: string; p_student_id: string }
         Returns: Json
@@ -4302,6 +4310,7 @@ export type Database = {
         Args: { p_student_id: string }
         Returns: undefined
       }
+      check_exam_sla_timeouts: { Args: never; Returns: Json }
       check_quiz_achievements: {
         Args: { p_percentage: number; p_student_id: string }
         Returns: undefined
