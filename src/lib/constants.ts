@@ -99,16 +99,17 @@ export function getDayName(day: string, isRTL: boolean): string {
 }
 
 // --- Student Progress Status ---
-export type StudentProgressStatus = 'in_progress' | 'awaiting_exam' | 'exam_scheduled' | 'graded' | 'paused';
+export type StudentProgressStatus = 'in_progress' | 'awaiting_exam' | 'exam_scheduled' | 'graded' | 'paused' | 'pending_group_assignment';
 export type StudentOutcome = 'passed' | 'failed' | 'repeat';
 export type GroupLevelStatus = 'in_progress' | 'sessions_completed' | 'exam_scheduled' | 'exam_done' | 'grades_computed';
 
 export const STUDENT_PROGRESS_STATUSES: Record<StudentProgressStatus, { en: string; ar: string }> = {
-  in_progress:    { en: 'In Progress',     ar: 'جاري' },
-  awaiting_exam:  { en: 'Awaiting Exam',   ar: 'في انتظار الامتحان' },
-  exam_scheduled: { en: 'Exam Scheduled',  ar: 'امتحان مجدول' },
-  graded:         { en: 'Graded',          ar: 'تم التقييم' },
-  paused:         { en: 'Paused',          ar: 'متوقف' },
+  in_progress:              { en: 'In Progress',              ar: 'جاري' },
+  awaiting_exam:            { en: 'Awaiting Exam',            ar: 'في انتظار الامتحان' },
+  exam_scheduled:           { en: 'Exam Scheduled',           ar: 'امتحان مجدول' },
+  graded:                   { en: 'Graded',                   ar: 'تم التقييم' },
+  paused:                   { en: 'Paused',                   ar: 'متوقف' },
+  pending_group_assignment: { en: 'Pending Group Assignment', ar: 'في انتظار تعيين جروب' },
 };
 
 export function getStudentProgressStatusLabel(status: string, isRTL: boolean): string {
