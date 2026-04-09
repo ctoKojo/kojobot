@@ -956,9 +956,9 @@ export default function GroupsPage() {
         {/* Summary Stats */}
         <StatsGrid
           stats={[
-            { label: isRTL ? 'إجمالي المجموعات' : 'Total Groups', value: loading ? '...' : groups.length, icon: Users, gradient: 'from-blue-500 to-blue-600' },
+            { label: isRTL ? 'إجمالي المجموعات' : 'Total Groups', value: loading ? '...' : groups.filter(g => g.status !== 'completed' && g.status !== 'archived').length, icon: Users, gradient: 'from-blue-500 to-blue-600' },
             { label: isRTL ? 'نشطة' : 'Active', value: loading ? '...' : groups.filter(g => g.status === 'active' && g.has_started).length, icon: Play, gradient: 'from-emerald-500 to-emerald-600' },
-            { label: isRTL ? 'لم تبدأ' : 'Not Started', value: loading ? '...' : groups.filter(g => !g.has_started).length, icon: Clock, gradient: 'from-amber-500 to-orange-500' },
+            { label: isRTL ? 'لم تبدأ' : 'Not Started', value: loading ? '...' : groups.filter(g => !g.has_started && g.status === 'active').length, icon: Clock, gradient: 'from-amber-500 to-orange-500' },
             { label: isRTL ? 'مجمدة' : 'Frozen', value: loading ? '...' : groups.filter(g => g.status === 'frozen').length, icon: Snowflake, gradient: 'from-sky-400 to-sky-500' },
           ]}
         />
