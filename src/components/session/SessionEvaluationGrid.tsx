@@ -214,7 +214,7 @@ function StudentEvalCard({
             onChange={(e) => {
               setRows(prev => {
                 const updated = [...prev];
-                updated[rowIdx] = { ...updated[rowIdx], notes: e.target.value, saved: false };
+                updated[rowIdx] = { ...updated[rowIdx], notes: e.target.value, saved: false, isDirty: true };
                 return updated;
               });
             }}
@@ -233,7 +233,7 @@ function StudentEvalCard({
                       const tags = active
                         ? updated[rowIdx].feedback_tags.filter(t => t !== tag.en)
                         : [...updated[rowIdx].feedback_tags, tag.en];
-                      updated[rowIdx] = { ...updated[rowIdx], feedback_tags: tags, saved: false };
+                      updated[rowIdx] = { ...updated[rowIdx], feedback_tags: tags, saved: false, isDirty: true };
                       return updated;
                     });
                   }}
@@ -349,6 +349,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
           saved: !!existing,
           saving: false,
           saveError: false,
+          isDirty: false,
           existing_id: existing?.id,
           quiz_score: s.quiz_score,
           quiz_max_score: s.quiz_max_score,
@@ -374,6 +375,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
         scores: { ...updated[rowIndex].scores, [key]: value },
         saved: false,
         saveError: false,
+        isDirty: true,
       };
       return updated;
     });
@@ -467,7 +469,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
 
       setRows(prev => {
         const updated = [...prev];
-        updated[rowIndex] = { ...updated[rowIndex], saved: true, saving: false };
+        updated[rowIndex] = { ...updated[rowIndex], saved: true, saving: false, isDirty: false };
         return updated;
       });
     } catch (err: any) {
@@ -767,7 +769,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
                         onChange={(e) => {
                           setRows(prev => {
                             const updated = [...prev];
-                            updated[rowIdx] = { ...updated[rowIdx], notes: e.target.value, saved: false };
+                            updated[rowIdx] = { ...updated[rowIdx], notes: e.target.value, saved: false, isDirty: true };
                             return updated;
                           });
                         }}
@@ -786,7 +788,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
                                   const tags = active
                                     ? updated[rowIdx].feedback_tags.filter(t => t !== tag.en)
                                     : [...updated[rowIdx].feedback_tags, tag.en];
-                                  updated[rowIdx] = { ...updated[rowIdx], feedback_tags: tags, saved: false };
+                                  updated[rowIdx] = { ...updated[rowIdx], feedback_tags: tags, saved: false, isDirty: true };
                                   return updated;
                                 });
                               }}
