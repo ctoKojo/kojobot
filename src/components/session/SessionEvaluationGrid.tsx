@@ -43,6 +43,7 @@ interface StudentRow {
   saved: boolean;
   saving: boolean;
   saveError: boolean;
+  isDirty: boolean;
   existing_id?: string;
   quiz_score?: number | null;
   quiz_max_score?: number | null;
