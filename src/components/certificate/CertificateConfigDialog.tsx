@@ -67,7 +67,8 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
   const [config, setConfig] = useState<CertificateConfig>(DEFAULT_CONFIG);
   const [templatePath, setTemplatePath] = useState('');
   const [saving, setSaving] = useState(false);
-  const [templateUrl, setTemplateUrl] = useState<string | null>(null);
+  const [templateImg, setTemplateImg] = useState<HTMLImageElement | null>(null);
+  const [templateAspect, setTemplateAspect] = useState(595 / 842); // default A4
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -93,8 +94,31 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
   const loadTemplatePreview = async (path: string) => {
     try {
       const { data } = await supabase.storage.from('certificates').createSignedUrl(path, 300);
-      if (data?.signedUrl) setTemplateUrl(data.signedUrl);
-    } catch { /* ignore */ }
+      if (!data?.signedUrl) return;
+
+      // Use pdfjs to render first page as image
+      const pdfjsLib = await import('pdfjs-dist');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
+      const pdf = await pdfjsLib.getDocument(data.signedUrl).promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 1.5 });
+
+      const offscreen = document.createElement('canvas');
+      offscreen.width = viewport.width;
+      offscreen.height = viewport.height;
+      const offCtx = offscreen.getContext('2d')!;
+      await page.render({ canvasContext: offCtx, viewport }).promise;
+
+      const img = new Image();
+      img.src = offscreen.toDataURL('image/png');
+      img.onload = () => {
+        setTemplateImg(img);
+        setTemplateAspect(viewport.width / viewport.height);
+      };
+    } catch (err) {
+      console.warn('Could not render template preview:', err);
+    }
   };
 
   // Draw preview on canvas
