@@ -27,6 +27,7 @@ import { ResetPasswordButton } from '@/components/ResetPasswordButton';
 import { generateStudentReport } from '@/lib/pdfReports';
 import { PaymentsHistory } from '@/components/student/PaymentsHistory';
 import { SchedulePlacementDialog } from '@/components/student/SchedulePlacementDialog';
+import { StudentCertificatesTab } from '@/components/student/StudentCertificatesTab';
 
 interface StudentData {
   profile: any;
