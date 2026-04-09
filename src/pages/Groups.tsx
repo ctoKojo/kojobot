@@ -742,6 +742,8 @@ export default function GroupsPage() {
       const statusLabels: Record<GroupStatus, { en: string; ar: string }> = {
         active: { en: 'activated', ar: 'تم تفعيل' },
         frozen: { en: 'frozen', ar: 'تم تجميد' },
+        completed: { en: 'completed', ar: 'تم إكمال' },
+        archived: { en: 'archived', ar: 'تم أرشفة' },
       };
       
       toast({
