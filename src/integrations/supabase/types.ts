@@ -2581,6 +2581,7 @@ export type Database = {
           id: string
           is_paid_trainee: boolean | null
           level_id: string | null
+          needs_renewal: boolean | null
           phone: string | null
           specialization: string | null
           specialization_ar: string | null
@@ -2610,6 +2611,7 @@ export type Database = {
           id?: string
           is_paid_trainee?: boolean | null
           level_id?: string | null
+          needs_renewal?: boolean | null
           phone?: string | null
           specialization?: string | null
           specialization_ar?: string | null
@@ -2639,6 +2641,7 @@ export type Database = {
           id?: string
           is_paid_trainee?: boolean | null
           level_id?: string | null
+          needs_renewal?: boolean | null
           phone?: string | null
           specialization?: string | null
           specialization_ar?: string | null
