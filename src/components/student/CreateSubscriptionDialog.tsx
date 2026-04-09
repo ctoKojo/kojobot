@@ -17,6 +17,8 @@ interface Props {
   studentId: string;
   studentName: string;
   onSuccess: () => void;
+  isRenewal?: boolean;
+  previousSubscriptionId?: string;
 }
 
 export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studentName, onSuccess }: Props) {
