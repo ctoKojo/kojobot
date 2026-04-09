@@ -508,7 +508,7 @@ export function SessionEvaluationGrid({ sessionId, groupId, ageGroupId, students
     try {
       const promises = rows.map((row, idx) => {
         const allFilled = criteria.every(c => row.scores[c.key] !== undefined);
-        if (allFilled && !row.saved) return saveRow(idx);
+        if (allFilled && row.isDirty && !row.saved) return saveRow(idx);
         return Promise.resolve();
       });
       await Promise.all(promises);
