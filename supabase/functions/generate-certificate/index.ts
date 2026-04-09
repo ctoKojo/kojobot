@@ -12,7 +12,7 @@ interface CertConfig {
 }
 
 const DEFAULT_CONFIG: CertConfig = {
-  name_y_percent: 55,
+  name_y_percent: 52,
   font_size: 42,
   font_color_hex: "#1B2A4A",
 };
