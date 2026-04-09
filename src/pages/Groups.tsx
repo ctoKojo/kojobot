@@ -815,6 +815,8 @@ export default function GroupsPage() {
   };
 
   const filteredGroups = groups.filter((group) => {
+    // Hide completed/archived unless toggled
+    if (!showArchived && (group.status === 'completed' || group.status === 'archived')) return false;
     const matchesSearch = group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       group.name_ar.includes(searchQuery);
     const matchesDay = filterDay === 'all' || group.schedule_day === filterDay;
