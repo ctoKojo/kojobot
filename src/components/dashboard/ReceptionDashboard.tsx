@@ -144,6 +144,16 @@ export function ReceptionDashboard() {
       variant: 'secondary' as const,
       onClick: () => navigate('/final-exams'),
     },
+    stats.unprintedCertificates > 0 && {
+      icon: Award,
+      title: isRTL ? 'شهادات تحتاج طباعة' : 'Certificates to Print',
+      description: isRTL
+        ? `${stats.unprintedCertificates} شهادة جاهزة للطباعة`
+        : `${stats.unprintedCertificates} certificates ready to print`,
+      count: stats.unprintedCertificates,
+      variant: 'default' as const,
+      onClick: () => navigate('/students'),
+    },
   ].filter(Boolean) as Array<{
     icon: any;
     title: string;
