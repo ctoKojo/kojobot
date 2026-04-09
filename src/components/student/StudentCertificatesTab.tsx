@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Award, Download, Loader2, Printer, RefreshCw, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+const REGEN_LIMIT = 5;
+const REGEN_WINDOW_MS = 60_000;
 
 interface Certificate {
   id: string;
@@ -27,6 +30,18 @@ export function StudentCertificatesTab({ studentId }: { studentId: string }) {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const regenTimestamps = useRef<number[]>([]);
+
+  const checkRateLimit = (): boolean => {
+    const now = Date.now();
+    regenTimestamps.current = regenTimestamps.current.filter(t => now - t < REGEN_WINDOW_MS);
+    if (regenTimestamps.current.length >= REGEN_LIMIT) {
+      toast.error(isRTL ? 'كتير أوي! استنى دقيقة قبل ما تولد تاني' : 'Too many regenerations. Wait a minute.');
+      return false;
+    }
+    regenTimestamps.current.push(now);
+    return true;
+  };
 
   useEffect(() => {
     fetchCertificates();
@@ -70,6 +85,7 @@ export function StudentCertificatesTab({ studentId }: { studentId: string }) {
   };
 
   const handleRegenerate = async (cert: Certificate) => {
+    if (!checkRateLimit()) return;
     setActionLoading(cert.id);
     try {
       await supabase
