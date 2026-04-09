@@ -73,7 +73,6 @@ function clamp(v: number, min: number, max: number) {
 function toTitleCaseName(name: string) {
   const normalized = name.trim().replace(/\s+/g, ' ');
   if (!normalized) return 'Unknown';
-
   return normalized
     .split(' ')
     .map((part) => part ? `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}` : part)
@@ -101,6 +100,11 @@ function parseConfig(raw: Record<string, unknown>): CertificateConfig {
   };
 }
 
+/** Unified scale helper: converts PDF-point value to canvas pixels */
+function toCvs(valueInPdfPts: number, canvasWidth: number, pdfWidth: number): number {
+  return valueInPdfPts * (canvasWidth / pdfWidth);
+}
+
 export function CertificateConfigDialog({ levelId, levelName }: { levelId: string; levelName: string }) {
   const { isRTL } = useLanguage();
   const [open, setOpen] = useState(false);
@@ -109,6 +113,8 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
   const [saving, setSaving] = useState(false);
   const [templateImg, setTemplateImg] = useState<HTMLImageElement | null>(null);
   const [templateAspect, setTemplateAspect] = useState(595 / 842);
+  const [pdfPageWidth, setPdfPageWidth] = useState(595);  // real PDF pt width
+  const [pdfPageHeight, setPdfPageHeight] = useState(842); // real PDF pt height
   const [loadedPreviewFontKey, setLoadedPreviewFontKey] = useState<string>(DEFAULT_CONFIG.font_key);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -142,19 +148,25 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
 
       const pdf = await pdfjsLib.getDocument(data.signedUrl).promise;
       const page = await pdf.getPage(1);
-      const viewport = page.getViewport({ scale: 1.5 });
 
+      // Get real dimensions at scale=1, respecting rotation
+      const realVp = page.getViewport({ scale: 1, rotation: page.rotate });
+      setPdfPageWidth(realVp.width);
+      setPdfPageHeight(realVp.height);
+      setTemplateAspect(realVp.width / realVp.height);
+
+      // Render at higher scale for quality
+      const renderVp = page.getViewport({ scale: 1.5, rotation: page.rotate });
       const offscreen = document.createElement('canvas');
-      offscreen.width = viewport.width;
-      offscreen.height = viewport.height;
+      offscreen.width = renderVp.width;
+      offscreen.height = renderVp.height;
       const offCtx = offscreen.getContext('2d')!;
-      await page.render({ canvasContext: offCtx, viewport }).promise;
+      await page.render({ canvasContext: offCtx, viewport: renderVp }).promise;
 
       const img = new Image();
       img.src = offscreen.toDataURL('image/png');
       img.onload = () => {
         setTemplateImg(img);
-        setTemplateAspect(viewport.width / viewport.height);
       };
     } catch (err) {
       console.warn('Could not render template preview:', err);
@@ -202,9 +214,18 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = Math.round(W / templateAspect);
-    canvas.height = H;
+    // Handle devicePixelRatio for sharp rendering
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth || 400;
+    const cssH = Math.round(cssW / templateAspect);
+
+    canvas.width = cssW * dpr;
+    canvas.height = cssH * dpr;
+    canvas.style.height = `${cssH}px`;
+    ctx.scale(dpr, dpr);
+
+    const W = cssW;
+    const H = cssH;
 
     ctx.clearRect(0, 0, W, H);
 
@@ -222,21 +243,28 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
       ctx.fillText('[ Certificate Template ]', W / 2, 40);
     }
 
-    const anchorYPx = H - (H * config.anchor_y_percent / 100);
+    // ── Coordinate mapping ──
+    // Edge Function: anchorY = pdfHeight * (anchor_y_percent / 100)   (from bottom, PDF origin)
+    // Canvas: origin is top-left, so anchorY from top = H - (H * anchor_y_percent / 100)
+    const anchorYCanvas = H - (H * config.anchor_y_percent / 100);
+
+    // Draw anchor guideline
     ctx.strokeStyle = '#e74c3c';
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.moveTo(20, anchorYPx);
-    ctx.lineTo(W - 20, anchorYPx);
+    ctx.moveTo(20, anchorYCanvas);
+    ctx.lineTo(W - 20, anchorYCanvas);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    const scaleFactor = W / 595;
+    // Scale factor: maps PDF points → canvas pixels
+    const scaleFactor = W / pdfPageWidth;
+
     const displayName = toTitleCaseName(PREVIEW_NAME);
     const maxWidth = W * (config.max_name_width_percent / 100);
     const minFontSize = Math.max(8, 8 * scaleFactor);
-    let fontSize = config.font_size * scaleFactor;
+    let fontSize = toCvs(config.font_size, W, pdfPageWidth);
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
@@ -247,33 +275,43 @@ export function CertificateConfigDialog({ levelId, levelName }: { levelId: strin
       ctx.font = getPreviewFontDeclaration(config.font_key, fontSize);
     }
 
+    // Use font metrics matching the Edge Function logic
     const fontConfig = getPreviewFontConfig(config.font_key);
     const metrics = ctx.measureText(displayName);
     const ascent = metrics.actualBoundingBoxAscent || (fontSize * fontConfig.fallbackAscent);
     const descent = metrics.actualBoundingBoxDescent || (fontSize * fontConfig.fallbackDescent);
 
+    // Mirror the Edge Function's computeDrawY but in canvas coords (Y flipped)
+    // Edge: bottom → anchorY + descent (PDF, Y up)
+    // Canvas: bottom → anchorYCanvas - descent (Canvas, Y down)
     let drawY: number;
     switch (config.anchor_type) {
       case 'bottom':
-        drawY = anchorYPx - descent;
+        drawY = anchorYCanvas - descent;
         break;
-      case 'center':
-        drawY = anchorYPx + ((ascent - descent) / 2);
+      case 'center': {
+        const textHeight = ascent + descent;
+        drawY = anchorYCanvas + textHeight / 2 - descent;
         break;
+      }
       case 'baseline':
       default:
-        drawY = anchorYPx;
+        drawY = anchorYCanvas;
     }
 
-    const xPos = (W / 2) + (config.x_offset_px * scaleFactor);
+    const xPos = (W / 2) + toCvs(config.x_offset_px, W, pdfPageWidth);
     ctx.fillStyle = config.font_color_hex;
     ctx.fillText(displayName, xPos, drawY);
 
     ctx.fillStyle = '#e74c3c';
     ctx.font = '9px sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`anchor ${config.anchor_y_percent}%`, 22, anchorYPx - 4);
-  }, [config, loadedPreviewFontKey, templateAspect, templateImg]);
+    ctx.fillText(`anchor ${config.anchor_y_percent}%`, 22, anchorYCanvas - 4);
+
+    // Show real PDF dimensions
+    ctx.textAlign = 'right';
+    ctx.fillText(`${Math.round(pdfPageWidth)}×${Math.round(pdfPageHeight)} pt`, W - 10, H - 6);
+  }, [config, loadedPreviewFontKey, templateAspect, templateImg, pdfPageWidth, pdfPageHeight]);
 
   useEffect(() => {
     drawPreview();
