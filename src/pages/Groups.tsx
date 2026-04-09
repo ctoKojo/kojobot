@@ -168,6 +168,7 @@ export default function GroupsPage() {
   const [filterAgeGroup, setFilterAgeGroup] = useState<string>('all');
   const [filterGroupType, setFilterGroupType] = useState<string>('all');
   const [filterAttendanceMode, setFilterAttendanceMode] = useState<string>('all');
+  const [showArchived, setShowArchived] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isStudentsDialogOpen, setIsStudentsDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -742,6 +743,8 @@ export default function GroupsPage() {
       const statusLabels: Record<GroupStatus, { en: string; ar: string }> = {
         active: { en: 'activated', ar: 'تم تفعيل' },
         frozen: { en: 'frozen', ar: 'تم تجميد' },
+        completed: { en: 'completed', ar: 'تم إكمال' },
+        archived: { en: 'archived', ar: 'تم أرشفة' },
       };
       
       toast({
@@ -812,6 +815,8 @@ export default function GroupsPage() {
   };
 
   const filteredGroups = groups.filter((group) => {
+    // Hide completed/archived unless toggled
+    if (!showArchived && (group.status === 'completed' || group.status === 'archived')) return false;
     const matchesSearch = group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       group.name_ar.includes(searchQuery);
     const matchesDay = filterDay === 'all' || group.schedule_day === filterDay;
@@ -951,9 +956,9 @@ export default function GroupsPage() {
         {/* Summary Stats */}
         <StatsGrid
           stats={[
-            { label: isRTL ? 'إجمالي المجموعات' : 'Total Groups', value: loading ? '...' : groups.length, icon: Users, gradient: 'from-blue-500 to-blue-600' },
+            { label: isRTL ? 'إجمالي المجموعات' : 'Total Groups', value: loading ? '...' : groups.filter(g => g.status !== 'completed' && g.status !== 'archived').length, icon: Users, gradient: 'from-blue-500 to-blue-600' },
             { label: isRTL ? 'نشطة' : 'Active', value: loading ? '...' : groups.filter(g => g.status === 'active' && g.has_started).length, icon: Play, gradient: 'from-emerald-500 to-emerald-600' },
-            { label: isRTL ? 'لم تبدأ' : 'Not Started', value: loading ? '...' : groups.filter(g => !g.has_started).length, icon: Clock, gradient: 'from-amber-500 to-orange-500' },
+            { label: isRTL ? 'لم تبدأ' : 'Not Started', value: loading ? '...' : groups.filter(g => !g.has_started && g.status === 'active').length, icon: Clock, gradient: 'from-amber-500 to-orange-500' },
             { label: isRTL ? 'مجمدة' : 'Frozen', value: loading ? '...' : groups.filter(g => g.status === 'frozen').length, icon: Snowflake, gradient: 'from-sky-400 to-sky-500' },
           ]}
         />
@@ -1063,7 +1068,16 @@ export default function GroupsPage() {
               <SelectItem value="online">{isRTL ? 'أونلاين' : 'Online'}</SelectItem>
               <SelectItem value="offline">{isRTL ? 'حضوري' : 'Offline'}</SelectItem>
             </SelectContent>
-          </Select>
+            </Select>
+
+          <Button
+            variant={showArchived ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setShowArchived(!showArchived)}
+            className="h-10"
+          >
+            {isRTL ? `الأرشيف (${groups.filter(g => g.status === 'completed' || g.status === 'archived').length})` : `Archive (${groups.filter(g => g.status === 'completed' || g.status === 'archived').length})`}
+          </Button>
         </div>
 
         {/* Dialog */}
