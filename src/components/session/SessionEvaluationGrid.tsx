@@ -258,19 +258,29 @@ function StudentEvalCard({
           <span className="text-muted-foreground">{isRTL ? 'السلوك' : 'Behavior'}:</span>{' '}
           <span className="font-semibold">{behaviorTotal}/{calcMaxBehavior}</span>
         </span>
-        <span>
-          <span className="text-muted-foreground">{isRTL ? 'كويز' : 'Quiz'}:</span>{' '}
-          <span className="font-semibold">{row.quiz_score != null ? `${row.quiz_score}/${row.quiz_max_score}` : '-'}</span>
-        </span>
-        <span>
-          <span className="text-muted-foreground">{isRTL ? 'واجب' : 'HW'}:</span>{' '}
-          <span className="font-semibold">{row.assignment_score != null ? `${row.assignment_score}/${row.assignment_max_score}` : '-'}</span>
-        </span>
-        <span className="ms-auto">
-          <span className="text-muted-foreground">{isRTL ? 'الإجمالي' : 'Total'}:</span>{' '}
-          <span className="font-bold">{totalS}/{maxTotal}</span>{' '}
-          <span className={cn('font-bold', getPercentColor(pct))}>({pct}%)</span>
-        </span>
+        {row.quiz_score != null && (
+          <span>
+            <span className="text-muted-foreground">{isRTL ? 'كويز' : 'Quiz'}:</span>{' '}
+            <span className="font-semibold">{row.quiz_score}/{row.quiz_max_score}</span>
+          </span>
+        )}
+        {row.assignment_score != null && (
+          <span>
+            <span className="text-muted-foreground">{isRTL ? 'واجب' : 'HW'}:</span>{' '}
+            <span className="font-semibold">{row.assignment_score}/{row.assignment_max_score}</span>
+          </span>
+        )}
+        {(row.quiz_score != null || row.assignment_score != null) ? (
+          <span className="ms-auto">
+            <span className="text-muted-foreground">{isRTL ? 'الإجمالي' : 'Total'}:</span>{' '}
+            <span className="font-bold">{totalS}/{maxTotal}</span>{' '}
+            <span className={cn('font-bold', getPercentColor(pct))}>({pct}%)</span>
+          </span>
+        ) : (
+          <span className="ms-auto">
+            <span className={cn('font-bold', getPercentColor(pct))}>({pct}%)</span>
+          </span>
+        )}
       </div>
     </Card>
   );
