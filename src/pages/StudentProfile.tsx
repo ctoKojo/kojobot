@@ -286,13 +286,24 @@ export default function StudentProfile() {
                 </Button>
               )}
               {(role === 'admin' || role === 'reception') && data?.subscription && (
-                <Button 
-                  variant="outline"
-                  onClick={() => setShowEditSubscriptionDialog(true)}
-                >
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  {isRTL ? 'تعديل الاشتراك' : 'Edit Subscription'}
-                </Button>
+                <>
+                  <Button 
+                    variant="outline"
+                    onClick={() => setShowEditSubscriptionDialog(true)}
+                  >
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    {isRTL ? 'تعديل الاشتراك' : 'Edit Subscription'}
+                  </Button>
+                  {Number(data.subscription.remaining_amount) <= 0 && (
+                    <Button 
+                      variant="default"
+                      onClick={() => setShowRenewalDialog(true)}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      {isRTL ? 'تجديد الاشتراك' : 'Renew Subscription'}
+                    </Button>
+                  )}
+                </>
               )}
               {role === 'admin' && (
                 <ResetPasswordButton
