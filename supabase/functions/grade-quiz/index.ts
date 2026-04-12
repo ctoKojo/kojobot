@@ -374,9 +374,11 @@ serve(async (req) => {
         success: true,
         score,
         maxScore,
-        percentage,
+        percentage: hasOpenEnded ? null : percentage,
         passed,
-        results // Contains correct answers for review after submission
+        hasOpenEnded,
+        gradingStatus,
+        results
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
