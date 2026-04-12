@@ -536,6 +536,21 @@ export default function FinalExams() {
                           </div>
                         )}
                       </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-center">
+                          {c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={() => { setGradingCandidate(c); setShowGradingDialog(true); }}
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              {isRTL ? 'تصحيح' : 'Grade'}
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
