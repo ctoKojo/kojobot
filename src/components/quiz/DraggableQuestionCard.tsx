@@ -20,6 +20,9 @@ interface SimplifiedQuestion {
   order_index: number;
   image_url?: string;
   code_snippet?: string;
+  question_type?: string;
+  model_answer?: string;
+  rubric?: { steps: string[]; points_per_step: number } | null;
 }
 
 interface DraggableQuestionCardProps {
@@ -57,6 +60,8 @@ export function DraggableQuestionCard({
     zIndex: isDragging ? 1000 : 'auto',
   };
 
+  const isOpenEnded = question.question_type === 'open_ended';
+
   return (
     <Card ref={setNodeRef} style={style} className={`relative ${isDragging ? 'shadow-xl' : ''}`}>
       <CardHeader className="pb-3">
@@ -70,6 +75,11 @@ export function DraggableQuestionCard({
               <GripVertical className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
             </button>
             {isRTL ? `السؤال ${index + 1}` : `Question ${index + 1}`}
+            {isOpenEnded && (
+              <span className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full">
+                {isRTL ? 'مفتوح' : 'Open-Ended'}
+              </span>
+            )}
           </CardTitle>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
@@ -141,51 +151,115 @@ export function DraggableQuestionCard({
           />
         </div>
 
-        {/* Options - Single Field per Option */}
-        <div className="space-y-3">
-          <Label>
-            {isRTL ? 'الخيارات (اختر الإجابة الصحيحة)' : 'Options (Select correct answer)'}
-          </Label>
-          <RadioGroup
-            value={question.correct_answer}
-            onValueChange={(value) => onUpdate({ correct_answer: value })}
-          >
-            {[0, 1, 2, 3].map((optIndex) => {
-              const isSelected = question.correct_answer === optIndex.toString();
-              return (
-                <div
-                  key={optIndex}
-                  onClick={() => onUpdate({ correct_answer: optIndex.toString() })}
-                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                    isSelected
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                      : 'hover:border-muted-foreground/50 hover:bg-muted/30'
-                  }`}
-                >
-                  <RadioGroupItem 
-                    value={optIndex.toString()} 
-                    id={`q${index}-opt${optIndex}`}
-                    className="pointer-events-none"
-                  />
+        {isOpenEnded ? (
+          /* Open-Ended: Model Answer + Rubric */
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{isRTL ? 'الإجابة النموذجية (للمصحح فقط)' : 'Model Answer (for grader only)'}</Label>
+              <Textarea
+                value={question.model_answer || ''}
+                onChange={(e) => onUpdate({ model_answer: e.target.value })}
+                placeholder={isRTL ? 'اكتب الإجابة النموذجية هنا...' : 'Write the model answer here...'}
+                className="min-h-[120px] font-mono text-sm"
+                dir="rtl"
+                style={{ unicodeBidi: 'plaintext' }}
+              />
+            </div>
+
+            {/* Rubric Steps */}
+            <div className="space-y-2">
+              <Label>{isRTL ? 'معايير التصحيح (Rubric)' : 'Grading Rubric'}</Label>
+              <p className="text-xs text-muted-foreground">
+                {isRTL ? 'أضف خطوات التصحيح - كل خطوة لها درجة' : 'Add grading steps - each step has points'}
+              </p>
+              {(question.rubric?.steps || []).map((step, stepIdx) => (
+                <div key={stepIdx} className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground w-6">{stepIdx + 1}.</span>
                   <Input
-                    value={question.options[optIndex] || ''}
-                    onChange={(e) => onUpdateOption(optIndex, e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    placeholder={isRTL ? `الخيار ${optIndex + 1}` : `Option ${optIndex + 1}`}
+                    value={step}
+                    onChange={(e) => {
+                      const steps = [...(question.rubric?.steps || [])];
+                      steps[stepIdx] = e.target.value;
+                      onUpdate({ rubric: { steps, points_per_step: question.rubric?.points_per_step || 1 } });
+                    }}
+                    placeholder={isRTL ? `خطوة ${stepIdx + 1}` : `Step ${stepIdx + 1}`}
                     className="flex-1"
                     dir="rtl"
                     style={{ unicodeBidi: 'plaintext' }}
                   />
-                  {isSelected && (
-                    <span className="text-xs text-primary font-medium whitespace-nowrap">
-                      {isRTL ? '✓ صحيح' : '✓ Correct'}
-                    </span>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive"
+                    onClick={() => {
+                      const steps = (question.rubric?.steps || []).filter((_, i) => i !== stepIdx);
+                      onUpdate({ rubric: steps.length ? { steps, points_per_step: question.rubric?.points_per_step || 1 } : null });
+                    }}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
                 </div>
-              );
-            })}
-          </RadioGroup>
-        </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const steps = [...(question.rubric?.steps || []), ''];
+                  onUpdate({ rubric: { steps, points_per_step: question.rubric?.points_per_step || 1 } });
+                }}
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                {isRTL ? 'إضافة خطوة' : 'Add Step'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          /* MCQ: Options */
+          <div className="space-y-3">
+            <Label>
+              {isRTL ? 'الخيارات (اختر الإجابة الصحيحة)' : 'Options (Select correct answer)'}
+            </Label>
+            <RadioGroup
+              value={question.correct_answer}
+              onValueChange={(value) => onUpdate({ correct_answer: value })}
+            >
+              {[0, 1, 2, 3].map((optIndex) => {
+                const isSelected = question.correct_answer === optIndex.toString();
+                return (
+                  <div
+                    key={optIndex}
+                    onClick={() => onUpdate({ correct_answer: optIndex.toString() })}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                        : 'hover:border-muted-foreground/50 hover:bg-muted/30'
+                    }`}
+                  >
+                    <RadioGroupItem 
+                      value={optIndex.toString()} 
+                      id={`q${index}-opt${optIndex}`}
+                      className="pointer-events-none"
+                    />
+                    <Input
+                      value={question.options[optIndex] || ''}
+                      onChange={(e) => onUpdateOption(optIndex, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      placeholder={isRTL ? `الخيار ${optIndex + 1}` : `Option ${optIndex + 1}`}
+                      className="flex-1"
+                      dir="rtl"
+                      style={{ unicodeBidi: 'plaintext' }}
+                    />
+                    {isSelected && (
+                      <span className="text-xs text-primary font-medium whitespace-nowrap">
+                        {isRTL ? '✓ صحيح' : '✓ Correct'}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </RadioGroup>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
