@@ -1741,15 +1741,17 @@ export default function SessionDetails() {
             sessionId={session.id}
             groupId={session.group_id}
             ageGroupId={group.age_group_id}
-            students={students.map(s => ({
-              student_id: s.student_id,
-              student_name: s.student_name,
-              student_name_ar: s.student_name_ar,
-              quiz_score: s.quiz_score,
-              quiz_max_score: s.quiz_max_score,
-              assignment_score: s.assignment_score,
-              assignment_max_score: s.assignment_max_score,
-            }))}
+            students={students
+              .filter(s => s.attendance_status === 'present' || s.attendance_status === 'late' || s.attendance_status === null)
+              .map(s => ({
+                student_id: s.student_id,
+                student_name: s.student_name,
+                student_name_ar: s.student_name_ar,
+                quiz_score: s.quiz_score,
+                quiz_max_score: s.quiz_max_score,
+                assignment_score: s.assignment_score,
+                assignment_max_score: s.assignment_max_score,
+              }))}
             attendanceComplete={students.length > 0 && students.every(s => s.attendance_status !== null)}
           />
         )}
