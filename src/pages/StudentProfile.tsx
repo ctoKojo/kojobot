@@ -306,7 +306,7 @@ export default function StudentProfile() {
                     <DollarSign className="h-4 w-4 mr-2" />
                     {isRTL ? 'تعديل الاشتراك' : 'Edit Subscription'}
                   </Button>
-                  {Number(data.subscription.remaining_amount) <= 0 && (
+                  {data.levelProgress?.status === 'graded' && data.levelProgress?.outcome === 'passed' && (
                     <Button 
                       variant="default"
                       onClick={() => setShowRenewalDialog(true)}
