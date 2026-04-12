@@ -21,11 +21,12 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Target, CalendarClock, AlertTriangle, Search, Clock, CheckCircle2,
-  GraduationCap, Users, Loader2,
+  GraduationCap, Users, Loader2, FileText,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatsGrid } from '@/components/shared/StatsGrid';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { QuizResultsDialog } from '@/components/session/QuizResultsDialog';
 
 interface ExamCandidate {
   progress_id: string;
