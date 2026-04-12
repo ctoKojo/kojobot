@@ -71,6 +71,10 @@ export default function FinalExams() {
   const [scheduleDuration, setScheduleDuration] = useState(30);
   const [scheduling, setScheduling] = useState(false);
 
+  // Grading dialog
+  const [showGradingDialog, setShowGradingDialog] = useState(false);
+  const [gradingCandidate, setGradingCandidate] = useState<ExamCandidate | null>(null);
+
   useEffect(() => {
     fetchCandidates();
   }, []);
