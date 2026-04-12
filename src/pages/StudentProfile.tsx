@@ -202,6 +202,16 @@ export default function StudentProfile() {
         .eq('student_id', studentId!)
         .order('created_at', { ascending: false });
 
+      // Fetch level progress (to check if student completed level + exam)
+      const { data: levelProgress } = await supabase
+        .from('group_student_progress')
+        .select('status, outcome, graded_at, exam_submitted_at')
+        .eq('student_id', studentId!)
+        .in('status', ['graded', 'awaiting_exam', 'exam_scheduled'])
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
       setData({
         profile,
         subscription,
@@ -211,6 +221,7 @@ export default function StudentProfile() {
         assignmentSubmissions: assignmentSubmissions || [],
         warnings: warnings || [],
         makeupSessions: makeupSessions || [],
+        levelProgress,
       });
     } catch (error) {
       console.error('Error fetching student data:', error);
