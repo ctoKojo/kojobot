@@ -22,6 +22,7 @@ interface SimplifiedQuestion {
   order_index: number;
   image_url?: string;
   code_snippet?: string;
+  question_type?: string;
 }
 
 interface StudentPreviewDialogProps {
@@ -84,28 +85,36 @@ export function StudentPreviewDialog({ questions, isRTL }: StudentPreviewDialogP
                     {question.question_text || (isRTL ? 'نص السؤال...' : 'Question text...')}
                   </p>
 
-                  {/* Options */}
-                  <RadioGroup className="space-y-3">
-                    {question.options.map((option, optIndex) => (
-                      <div
-                        key={optIndex}
-                        className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
-                      >
-                        <RadioGroupItem
-                          value={optIndex.toString()}
-                          id={`preview-q${index}-opt${optIndex}`}
-                        />
-                        <Label
-                          htmlFor={`preview-q${index}-opt${optIndex}`}
-                          className="flex-1 cursor-pointer"
-                          dir="rtl"
-                          style={{ unicodeBidi: 'plaintext' }}
+                  {/* Options or Open-Ended Textarea */}
+                  {question.question_type === 'open_ended' ? (
+                    <div className="p-4 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/20">
+                      <p className="text-sm text-muted-foreground italic">
+                        {isRTL ? 'حقل إجابة نصية (يظهر للطالب textarea للكتابة)' : 'Text answer field (student will see a textarea to write in)'}
+                      </p>
+                    </div>
+                  ) : (
+                    <RadioGroup className="space-y-3">
+                      {question.options.map((option, optIndex) => (
+                        <div
+                          key={optIndex}
+                          className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
                         >
-                          {option || (isRTL ? `الخيار ${optIndex + 1}` : `Option ${optIndex + 1}`)}
-                        </Label>
-                      </div>
-                    ))}
-                  </RadioGroup>
+                          <RadioGroupItem
+                            value={optIndex.toString()}
+                            id={`preview-q${index}-opt${optIndex}`}
+                          />
+                          <Label
+                            htmlFor={`preview-q${index}-opt${optIndex}`}
+                            className="flex-1 cursor-pointer"
+                            dir="rtl"
+                            style={{ unicodeBidi: 'plaintext' }}
+                          >
+                            {option || (isRTL ? `الخيار ${optIndex + 1}` : `Option ${optIndex + 1}`)}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  )}
                 </div>
               </CardContent>
             </Card>
