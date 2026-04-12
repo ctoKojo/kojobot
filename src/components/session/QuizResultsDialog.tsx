@@ -3,10 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Eye, CheckCircle2, XCircle, Clock, CircleDashed, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, Clock, CircleDashed, ArrowLeft, ArrowRight, FileText, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from '@/hooks/use-toast';
@@ -23,6 +25,7 @@ interface StudentQuizResult {
   status: 'not_started' | 'in_progress' | 'submitted' | 'graded';
   submitted_at: string | null;
   answers: Record<string, string> | null;
+  grading_status: string | null;
 }
 
 interface QuestionDetail {
@@ -30,12 +33,19 @@ interface QuestionDetail {
   question_text: string;
   question_text_ar: string;
   options: string[];
-  correct_answer: string;
+  correct_answer: string | null;
   student_answer: string | null;
   is_correct: boolean;
   points: number;
   image_url: string | null;
   code_snippet: string | null;
+  question_type: string;
+  model_answer: string | null;
+  rubric: { steps: string[]; points_per_step: number } | null;
+  // Manual grading fields
+  attempt_id?: string;
+  manual_score?: number | null;
+  manual_feedback?: string | null;
 }
 
 interface QuizResultsDialogProps {
@@ -65,6 +75,8 @@ export function QuizResultsDialog({
   const [selectedStudent, setSelectedStudent] = useState<StudentQuizResult | null>(null);
   const [questionDetails, setQuestionDetails] = useState<QuestionDetail[]>([]);
   const [loadingAnswers, setLoadingAnswers] = useState(false);
+  const [savingGrades, setSavingGrades] = useState(false);
+  const [manualGrades, setManualGrades] = useState<Record<string, { score: number; feedback: string }>>({});
 
   useEffect(() => {
     if (open && quizAssignmentId) {
@@ -75,7 +87,6 @@ export function QuizResultsDialog({
   const fetchResults = async () => {
     setLoading(true);
     try {
-      // Fetch all students in the group
       const { data: groupStudents } = await supabase
         .from('group_students')
         .select('student_id')
@@ -84,19 +95,16 @@ export function QuizResultsDialog({
 
       const studentIds = groupStudents?.map(gs => gs.student_id) || [];
 
-      // Fetch student profiles
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, full_name, full_name_ar')
         .in('user_id', studentIds);
 
-      // Fetch quiz submissions
       const { data: submissions } = await supabase
         .from('quiz_submissions')
-        .select('id, student_id, score, max_score, percentage, status, submitted_at, answers')
+        .select('id, student_id, score, max_score, percentage, status, submitted_at, answers, grading_status')
         .eq('quiz_assignment_id', quizAssignmentId);
 
-      // Combine data
       const combinedResults: StudentQuizResult[] = studentIds.map(studentId => {
         const profile = profiles?.find(p => p.user_id === studentId);
         const submission = submissions?.find(s => s.student_id === studentId);
@@ -117,6 +125,7 @@ export function QuizResultsDialog({
           status,
           submitted_at: submission?.submitted_at || null,
           answers: submission?.answers as Record<string, string> || null,
+          grading_status: (submission as any)?.grading_status || null,
         };
       });
 
@@ -138,20 +147,42 @@ export function QuizResultsDialog({
 
     setLoadingAnswers(true);
     setSelectedStudent(student);
+    setManualGrades({});
 
     try {
-      // Fetch quiz questions
       const { data: questions } = await supabase
         .from('quiz_questions')
-        .select('id, question_text, question_text_ar, options, correct_answer, points, image_url, code_snippet')
+        .select('id, question_text, question_text_ar, options, correct_answer, points, image_url, code_snippet, question_type, model_answer, rubric')
         .eq('quiz_id', quizId)
         .order('order_index', { ascending: true });
 
+      // Fetch existing attempts for this submission
+      let attempts: any[] = [];
+      if (student.submission_id) {
+        const { data: attemptData } = await supabase
+          .from('quiz_question_attempts')
+          .select('id, question_id, score, feedback, grading_status')
+          .eq('submission_id', student.submission_id);
+        attempts = attemptData || [];
+      }
+
       if (questions) {
+        const initialGrades: Record<string, { score: number; feedback: string }> = {};
+        
         const details: QuestionDetail[] = questions.map(q => {
           const studentAnswer = student.answers?.[q.id] || null;
           const options = Array.isArray(q.options) ? q.options as string[] : [];
-          
+          const attempt = attempts.find(a => a.question_id === q.id);
+          const questionType = q.question_type || 'multiple_choice';
+
+          // For open_ended, initialize manual grades
+          if (questionType === 'open_ended') {
+            initialGrades[q.id] = {
+              score: attempt?.score ?? 0,
+              feedback: attempt?.feedback ?? '',
+            };
+          }
+
           return {
             id: q.id,
             question_text: q.question_text,
@@ -159,14 +190,21 @@ export function QuizResultsDialog({
             options,
             correct_answer: q.correct_answer,
             student_answer: studentAnswer,
-            is_correct: studentAnswer === q.correct_answer,
+            is_correct: questionType === 'multiple_choice' ? studentAnswer === q.correct_answer : false,
             points: q.points,
             image_url: q.image_url,
             code_snippet: (q as any).code_snippet || null,
+            question_type: questionType,
+            model_answer: (q as any).model_answer || null,
+            rubric: (q as any).rubric || null,
+            attempt_id: attempt?.id,
+            manual_score: attempt?.score,
+            manual_feedback: attempt?.feedback,
           };
         });
 
         setQuestionDetails(details);
+        setManualGrades(initialGrades);
       }
     } catch (error) {
       console.error('Error fetching student answers:', error);
@@ -180,20 +218,88 @@ export function QuizResultsDialog({
     }
   };
 
+  const handleSaveManualGrades = async () => {
+    if (!selectedStudent?.submission_id) return;
+    setSavingGrades(true);
+
+    try {
+      // Update each open_ended attempt
+      for (const [questionId, grade] of Object.entries(manualGrades)) {
+        const detail = questionDetails.find(q => q.id === questionId);
+        if (!detail || detail.question_type !== 'open_ended') continue;
+
+        if (detail.attempt_id) {
+          await supabase
+            .from('quiz_question_attempts')
+            .update({
+              score: grade.score,
+              feedback: grade.feedback || null,
+              grading_status: 'graded',
+              graded_at: new Date().toISOString(),
+            })
+            .eq('id', detail.attempt_id);
+        }
+      }
+
+      // Calculate new total score
+      const mcqScore = questionDetails
+        .filter(q => q.question_type !== 'open_ended' && q.is_correct)
+        .reduce((sum, q) => sum + q.points, 0);
+      const manualScore = Object.entries(manualGrades).reduce((sum, [, g]) => sum + (g.score || 0), 0);
+      const totalScore = mcqScore + manualScore;
+      const totalMaxScore = questionDetails.reduce((sum, q) => sum + q.points, 0);
+      const newPercentage = totalMaxScore > 0 ? Math.round((totalScore / totalMaxScore) * 100) : 0;
+
+      // Update submission
+      await supabase
+        .from('quiz_submissions')
+        .update({
+          score: totalScore,
+          percentage: newPercentage,
+          grading_status: 'fully_graded',
+          manual_score: manualScore,
+        })
+        .eq('id', selectedStudent.submission_id);
+
+      toast({
+        title: isRTL ? 'تم الحفظ' : 'Saved',
+        description: isRTL ? `الدرجة النهائية: ${totalScore}/${totalMaxScore} (${newPercentage}%)` : `Final score: ${totalScore}/${totalMaxScore} (${newPercentage}%)`,
+      });
+
+      // Refresh results
+      await fetchResults();
+      goBack();
+    } catch (error) {
+      console.error('Error saving manual grades:', error);
+      toast({
+        title: isRTL ? 'خطأ' : 'Error',
+        description: isRTL ? 'فشل في حفظ الدرجات' : 'Failed to save grades',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingGrades(false);
+    }
+  };
+
   const goBack = () => {
     setSelectedStudent(null);
     setQuestionDetails([]);
+    setManualGrades({});
   };
 
   // Stats
   const completedCount = results.filter(r => r.status === 'submitted' || r.status === 'graded').length;
   const inProgressCount = results.filter(r => r.status === 'in_progress').length;
   const passedCount = results.filter(r => (r.percentage || 0) >= passingScore).length;
+  const needsGradingCount = results.filter(r => r.grading_status === 'needs_manual_grading').length;
   const avgPercentage = results.filter(r => r.percentage !== null).length > 0
     ? results.filter(r => r.percentage !== null).reduce((sum, r) => sum + (r.percentage || 0), 0) / results.filter(r => r.percentage !== null).length
     : 0;
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string, gradingStatus?: string | null) => {
+    if (gradingStatus === 'needs_manual_grading') {
+      return <FileText className="h-4 w-4 text-amber-500" />;
+    }
     switch (status) {
       case 'graded':
       case 'submitted':
@@ -205,7 +311,10 @@ export function QuizResultsDialog({
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: string, gradingStatus?: string | null) => {
+    if (gradingStatus === 'needs_manual_grading') {
+      return isRTL ? 'يحتاج تصحيح' : 'Needs Grading';
+    }
     switch (status) {
       case 'graded':
       case 'submitted':
@@ -216,6 +325,8 @@ export function QuizResultsDialog({
         return isRTL ? 'لم يبدأ' : 'Not Started';
     }
   };
+
+  const hasOpenEndedQuestions = questionDetails.some(q => q.question_type === 'open_ended');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -236,7 +347,7 @@ export function QuizResultsDialog({
               </DialogTitle>
               <DialogDescription>
                 {selectedStudent
-                  ? (isRTL ? `الدرجة: ${selectedStudent.score}/${selectedStudent.max_score} (${selectedStudent.percentage?.toFixed(0)}%)` : `Score: ${selectedStudent.score}/${selectedStudent.max_score} (${selectedStudent.percentage?.toFixed(0)}%)`)
+                  ? (isRTL ? `الدرجة: ${selectedStudent.score}/${selectedStudent.max_score} (${selectedStudent.percentage?.toFixed(0) ?? '---'}%)` : `Score: ${selectedStudent.score}/${selectedStudent.max_score} (${selectedStudent.percentage?.toFixed(0) ?? '---'}%)`)
                   : (isRTL ? 'عرض حالة ونتائج كل طالب' : 'View status and results for each student')
                 }
               </DialogDescription>
@@ -247,7 +358,7 @@ export function QuizResultsDialog({
         {!selectedStudent ? (
           <>
             {/* Stats Bar */}
-            <div className="grid grid-cols-4 gap-3 py-3 border-b">
+            <div className={`grid ${needsGradingCount > 0 ? 'grid-cols-5' : 'grid-cols-4'} gap-3 py-3 border-b`}>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">{completedCount}/{results.length}</div>
                 <div className="text-xs text-muted-foreground">{isRTL ? 'مكتمل' : 'Completed'}</div>
@@ -264,6 +375,12 @@ export function QuizResultsDialog({
                 <div className="text-2xl font-bold text-primary">{passedCount}</div>
                 <div className="text-xs text-muted-foreground">{isRTL ? 'ناجحين' : 'Passed'}</div>
               </div>
+              {needsGradingCount > 0 && (
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-amber-600">{needsGradingCount}</div>
+                  <div className="text-xs text-muted-foreground">{isRTL ? 'يحتاج تصحيح' : 'Needs Grading'}</div>
+                </div>
+              )}
             </div>
 
             {/* Results Table */}
@@ -292,8 +409,8 @@ export function QuizResultsDialog({
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1.5">
-                          {getStatusIcon(student.status)}
-                          <span className="text-sm">{getStatusText(student.status)}</span>
+                          {getStatusIcon(student.status, student.grading_status)}
+                          <span className="text-sm">{getStatusText(student.status, student.grading_status)}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
@@ -308,6 +425,10 @@ export function QuizResultsDialog({
                           <Badge className={(student.percentage >= passingScore) ? 'bg-green-500' : 'bg-red-500'}>
                             {student.percentage.toFixed(0)}%
                           </Badge>
+                        ) : student.grading_status === 'needs_manual_grading' ? (
+                          <Badge variant="outline" className="text-amber-600 border-amber-300">
+                            {isRTL ? 'معلق' : 'Pending'}
+                          </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
@@ -315,13 +436,22 @@ export function QuizResultsDialog({
                       <TableCell className="text-center">
                         {student.answers ? (
                           <Button
-                            variant="ghost"
+                            variant={student.grading_status === 'needs_manual_grading' ? 'default' : 'ghost'}
                             size="sm"
                             onClick={() => fetchStudentAnswers(student)}
                             className="h-8"
                           >
-                            <Eye className="h-4 w-4 mr-1" />
-                            {isRTL ? 'معاينة' : 'Preview'}
+                            {student.grading_status === 'needs_manual_grading' ? (
+                              <>
+                                <FileText className="h-4 w-4 mr-1" />
+                                {isRTL ? 'تصحيح' : 'Grade'}
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="h-4 w-4 mr-1" />
+                                {isRTL ? 'معاينة' : 'Preview'}
+                              </>
+                            )}
                           </Button>
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>
@@ -346,7 +476,13 @@ export function QuizResultsDialog({
               {questionDetails.map((question, index) => (
                 <div
                   key={question.id}
-                  className={`p-4 rounded-lg border ${question.is_correct ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20' : 'border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20'}`}
+                  className={`p-4 rounded-lg border ${
+                    question.question_type === 'open_ended'
+                      ? 'border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20'
+                      : question.is_correct
+                        ? 'border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/20'
+                        : 'border-red-200 bg-red-50/50 dark:border-red-800 dark:bg-red-950/20'
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex-1">
@@ -354,72 +490,158 @@ export function QuizResultsDialog({
                         {isRTL ? `سؤال ${index + 1}` : `Question ${index + 1}`}
                         <span className="mx-2">•</span>
                         {question.points} {isRTL ? 'نقطة' : 'points'}
+                        {question.question_type === 'open_ended' && (
+                          <Badge variant="outline" className="ml-2 text-xs text-amber-600 border-amber-300">
+                            {isRTL ? 'إجابة مفتوحة' : 'Open-Ended'}
+                          </Badge>
+                        )}
                       </span>
-                      <p className="font-medium mt-1">
+                      <p className="font-medium mt-1" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>
                         {language === 'ar' ? question.question_text_ar : question.question_text}
                       </p>
                     </div>
-                    {question.is_correct ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                    {question.question_type !== 'open_ended' && (
+                      question.is_correct ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                      )
                     )}
                   </div>
 
                   {question.image_url && (
-                    <img
-                      src={question.image_url}
-                      alt="Question"
-                      className="max-h-32 rounded-lg mb-3"
-                    />
+                    <img src={question.image_url} alt="Question" className="max-h-32 rounded-lg mb-3" />
                   )}
 
                   {question.code_snippet && (
                     <CodeBlock code={question.code_snippet} className="mb-3" />
                   )}
 
-                  <div className="space-y-2">
-                    {question.options.map((option, optIndex) => {
-                      const isCorrect = option === question.correct_answer;
-                      const isStudentAnswer = option === question.student_answer;
+                  {question.question_type === 'open_ended' ? (
+                    /* Open-Ended Grading UI */
+                    <div className="space-y-3">
+                      {/* Student Answer */}
+                      <div className="space-y-1">
+                        <Label className="text-sm font-medium">{isRTL ? 'إجابة الطالب:' : "Student's Answer:"}</Label>
+                        <div className="p-3 rounded-md bg-background border font-mono text-sm whitespace-pre-wrap" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>
+                          {question.student_answer || (isRTL ? 'لم يجب' : 'No answer')}
+                        </div>
+                      </div>
 
-                      return (
-                        <div
-                          key={optIndex}
-                          className={`p-2 rounded-md text-sm ${
-                            isCorrect
-                              ? 'bg-green-100 dark:bg-green-900/30 border border-green-300'
-                              : isStudentAnswer
-                                ? 'bg-red-100 dark:bg-red-900/30 border border-red-300'
-                                : 'bg-muted/50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            {isCorrect && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                            {isStudentAnswer && !isCorrect && <XCircle className="h-4 w-4 text-red-600" />}
-                            <span>{option}</span>
-                            {isCorrect && (
-                              <Badge variant="outline" className="ml-auto text-xs text-green-600 border-green-300">
-                                {isRTL ? 'الإجابة الصحيحة' : 'Correct Answer'}
-                              </Badge>
-                            )}
-                            {isStudentAnswer && !isCorrect && (
-                              <Badge variant="outline" className="ml-auto text-xs text-red-600 border-red-300">
-                                {isRTL ? 'إجابة الطالب' : 'Student Answer'}
-                              </Badge>
-                            )}
+                      {/* Model Answer */}
+                      {question.model_answer && (
+                        <div className="space-y-1">
+                          <Label className="text-sm font-medium text-green-700">{isRTL ? 'الإجابة النموذجية:' : 'Model Answer:'}</Label>
+                          <div className="p-3 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 font-mono text-sm whitespace-pre-wrap" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>
+                            {question.model_answer}
                           </div>
                         </div>
-                      );
-                    })}
-                    {!question.student_answer && (
-                      <div className="p-2 rounded-md text-sm bg-muted/50 text-muted-foreground italic">
-                        {isRTL ? 'لم يجب الطالب على هذا السؤال' : 'Student did not answer this question'}
+                      )}
+
+                      {/* Rubric */}
+                      {question.rubric?.steps && question.rubric.steps.length > 0 && (
+                        <div className="space-y-1">
+                          <Label className="text-sm font-medium">{isRTL ? 'معايير التصحيح:' : 'Rubric:'}</Label>
+                          <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
+                            {question.rubric.steps.map((step, i) => (
+                              <li key={i}>{step}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Manual Grade Input */}
+                      <div className="flex items-end gap-3 pt-2 border-t">
+                        <div className="space-y-1">
+                          <Label className="text-xs">{isRTL ? 'الدرجة' : 'Score'}</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={question.points}
+                            value={manualGrades[question.id]?.score ?? 0}
+                            onChange={(e) => setManualGrades(prev => ({
+                              ...prev,
+                              [question.id]: { ...prev[question.id], score: Math.min(parseInt(e.target.value) || 0, question.points) }
+                            }))}
+                            className="w-20 h-8"
+                          />
+                          <span className="text-xs text-muted-foreground">/ {question.points}</span>
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">{isRTL ? 'ملاحظات' : 'Feedback'}</Label>
+                          <Input
+                            value={manualGrades[question.id]?.feedback ?? ''}
+                            onChange={(e) => setManualGrades(prev => ({
+                              ...prev,
+                              [question.id]: { ...prev[question.id], feedback: e.target.value }
+                            }))}
+                            placeholder={isRTL ? 'ملاحظات للطالب...' : 'Feedback for student...'}
+                            className="h-8"
+                            dir="rtl"
+                            style={{ unicodeBidi: 'plaintext' }}
+                          />
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    /* MCQ Options Display */
+                    <div className="space-y-2">
+                      {question.options.map((option, optIndex) => {
+                        const isCorrect = option === question.correct_answer;
+                        const isStudentAnswer = option === question.student_answer;
+
+                        return (
+                          <div
+                            key={optIndex}
+                            className={`p-2 rounded-md text-sm ${
+                              isCorrect
+                                ? 'bg-green-100 dark:bg-green-900/30 border border-green-300'
+                                : isStudentAnswer
+                                  ? 'bg-red-100 dark:bg-red-900/30 border border-red-300'
+                                  : 'bg-muted/50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {isCorrect && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                              {isStudentAnswer && !isCorrect && <XCircle className="h-4 w-4 text-red-600" />}
+                              <span>{option}</span>
+                              {isCorrect && (
+                                <Badge variant="outline" className="ml-auto text-xs text-green-600 border-green-300">
+                                  {isRTL ? 'الإجابة الصحيحة' : 'Correct Answer'}
+                                </Badge>
+                              )}
+                              {isStudentAnswer && !isCorrect && (
+                                <Badge variant="outline" className="ml-auto text-xs text-red-600 border-red-300">
+                                  {isRTL ? 'إجابة الطالب' : 'Student Answer'}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {!question.student_answer && (
+                        <div className="p-2 rounded-md text-sm bg-muted/50 text-muted-foreground italic">
+                          {isRTL ? 'لم يجب الطالب على هذا السؤال' : 'Student did not answer this question'}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
+
+              {/* Save Manual Grades Button */}
+              {hasOpenEndedQuestions && (
+                <Button
+                  className="w-full"
+                  onClick={handleSaveManualGrades}
+                  disabled={savingGrades}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {savingGrades
+                    ? (isRTL ? 'جاري الحفظ...' : 'Saving...')
+                    : (isRTL ? 'حفظ التصحيح اليدوي' : 'Save Manual Grades')}
+                </Button>
+              )}
             </div>
           )
         )}
