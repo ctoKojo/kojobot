@@ -369,26 +369,55 @@ export default function TakeQuiz() {
       <DashboardLayout title={isRTL ? 'نتيجة الكويز' : 'Quiz Result'}>
         <Card className="max-w-2xl mx-auto">
           <CardHeader className="text-center">
-            <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center ${result.passed ? 'bg-green-100' : 'bg-red-100'}`}>
-              {result.passed ? (
-                <CheckCircle className="w-10 h-10 text-green-600" />
-              ) : (
-                <XCircle className="w-10 h-10 text-red-600" />
-              )}
-            </div>
-            <CardTitle className="mt-4">
-              {result.passed ? (isRTL ? 'مبروك! نجحت في الكويز' : 'Congratulations! You Passed') : (isRTL ? 'للأسف لم تنجح' : 'Unfortunately, You Did Not Pass')}
-            </CardTitle>
+            {result.hasOpenEnded ? (
+              <>
+                <div className="mx-auto w-20 h-20 rounded-full flex items-center justify-center bg-amber-100">
+                  <Clock className="w-10 h-10 text-amber-600" />
+                </div>
+                <CardTitle className="mt-4">
+                  {isRTL ? 'تم تسليم الامتحان بنجاح' : 'Exam Submitted Successfully'}
+                </CardTitle>
+                <CardDescription>
+                  {isRTL ? 'يحتوي الامتحان على أسئلة تحتاج تصحيح يدوي. ستظهر النتيجة النهائية بعد التصحيح.' : 'This exam contains questions that require manual grading. Final results will appear after grading.'}
+                </CardDescription>
+              </>
+            ) : (
+              <>
+                <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center ${result.passed ? 'bg-green-100' : 'bg-red-100'}`}>
+                  {result.passed ? (
+                    <CheckCircle className="w-10 h-10 text-green-600" />
+                  ) : (
+                    <XCircle className="w-10 h-10 text-red-600" />
+                  )}
+                </div>
+                <CardTitle className="mt-4">
+                  {result.passed ? (isRTL ? 'مبروك! نجحت في الكويز' : 'Congratulations! You Passed') : (isRTL ? 'للأسف لم تنجح' : 'Unfortunately, You Did Not Pass')}
+                </CardTitle>
+              </>
+            )}
             <CardDescription>
               {language === 'ar' ? assignment?.quizzes?.title_ar : assignment?.quizzes?.title}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center">
-              <div className="text-5xl font-bold">{result.percentage}%</div>
-              <p className="text-muted-foreground mt-2">
-                {result.score} / {result.maxScore} {isRTL ? 'درجة' : 'points'}
-              </p>
+              {result.percentage !== null ? (
+                <>
+                  <div className="text-5xl font-bold">{result.percentage}%</div>
+                  <p className="text-muted-foreground mt-2">
+                    {result.score} / {result.maxScore} {isRTL ? 'درجة' : 'points'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="text-3xl font-bold text-amber-600">
+                    {isRTL ? 'في انتظار التصحيح' : 'Pending Grading'}
+                  </div>
+                  <p className="text-muted-foreground mt-2">
+                    {isRTL ? `الأسئلة الاختيارية: ${result.score} درجة` : `MCQ Score: ${result.score} points`}
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-center">
