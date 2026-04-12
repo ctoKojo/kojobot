@@ -57,6 +57,8 @@ interface QuizResultsDialogProps {
   quizTitleAr: string;
   groupId: string;
   passingScore: number;
+  /** When true, fetches students from group_student_progress instead of group_students */
+  isFinalExam?: boolean;
 }
 
 export function QuizResultsDialog({
@@ -68,6 +70,7 @@ export function QuizResultsDialog({
   quizTitleAr,
   groupId,
   passingScore,
+  isFinalExam = false,
 }: QuizResultsDialogProps) {
   const { isRTL, language } = useLanguage();
   const [loading, setLoading] = useState(true);
