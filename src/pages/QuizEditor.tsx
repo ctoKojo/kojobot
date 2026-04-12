@@ -24,6 +24,9 @@ interface SimplifiedQuestion {
   order_index: number;
   image_url?: string;
   code_snippet?: string;
+  question_type?: string;
+  model_answer?: string;
+  rubric?: { steps: string[]; points_per_step: number } | null;
 }
 
 interface Quiz {
@@ -94,9 +97,10 @@ export default function QuizEditor() {
       if (questionsError) throw questionsError;
       
       const formattedQuestions: SimplifiedQuestion[] = (questionsData || []).map(q => {
+        const isOpenEnded = q.question_type === 'open_ended';
         const oldOptions = typeof q.options === 'object' ? q.options as { en?: string[]; ar?: string[] } : null;
-        let options: string[] = ['', '', '', ''];
-        if (oldOptions) {
+        let options: string[] = isOpenEnded ? [] : ['', '', '', ''];
+        if (!isOpenEnded && oldOptions) {
           options = oldOptions.en?.length ? oldOptions.en : (oldOptions.ar || options);
         }
         
@@ -105,11 +109,14 @@ export default function QuizEditor() {
           question_text: q.question_text || q.question_text_ar || '',
           question_text_ar: q.question_text_ar || q.question_text || '',
           options,
-          correct_answer: q.correct_answer,
+          correct_answer: q.correct_answer || '',
           points: q.points,
           order_index: q.order_index,
           image_url: (q as any).image_url,
           code_snippet: (q as any).code_snippet || undefined,
+          question_type: q.question_type || 'multiple_choice',
+          model_answer: (q as any).model_answer || undefined,
+          rubric: (q as any).rubric || null,
         };
       });
       
@@ -187,16 +194,18 @@ export default function QuizEditor() {
           quiz_id: quizId,
           question_text: q.question_text,
           question_text_ar: q.question_text_ar || q.question_text,
-          options: { 
+          options: q.question_type === 'open_ended' ? null : { 
             en: q.options, 
             ar: q.options
           },
-          correct_answer: q.correct_answer,
+          correct_answer: q.question_type === 'open_ended' ? null : q.correct_answer,
           points: q.points,
           order_index: idx,
-          question_type: 'multiple_choice',
+          question_type: q.question_type || 'multiple_choice',
           image_url: q.image_url || null,
           code_snippet: q.code_snippet || null,
+          model_answer: q.model_answer || null,
+          rubric: q.rubric || null,
         }));
 
         const { error } = await supabase.from('quiz_questions').insert(questionsToInsert);

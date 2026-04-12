@@ -2773,13 +2773,81 @@ export type Database = {
           },
         ]
       }
+      quiz_question_attempts: {
+        Row: {
+          answer: string | null
+          created_at: string
+          feedback: string | null
+          graded_at: string | null
+          graded_by: string | null
+          grading_status: string
+          id: string
+          max_score: number
+          question_id: string
+          score: number | null
+          student_id: string
+          submission_id: string
+        }
+        Insert: {
+          answer?: string | null
+          created_at?: string
+          feedback?: string | null
+          graded_at?: string | null
+          graded_by?: string | null
+          grading_status?: string
+          id?: string
+          max_score?: number
+          question_id: string
+          score?: number | null
+          student_id: string
+          submission_id: string
+        }
+        Update: {
+          answer?: string | null
+          created_at?: string
+          feedback?: string | null
+          graded_at?: string | null
+          graded_by?: string | null
+          grading_status?: string
+          id?: string
+          max_score?: number
+          question_id?: string
+          score?: number | null
+          student_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_question_attempts_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_question_attempts_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions_student_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_question_attempts_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_questions: {
         Row: {
           code_snippet: string | null
-          correct_answer: string
+          correct_answer: string | null
           created_at: string
           id: string
           image_url: string | null
+          model_answer: string | null
           options: Json | null
           order_index: number
           points: number
@@ -2787,13 +2855,15 @@ export type Database = {
           question_text_ar: string
           question_type: string
           quiz_id: string
+          rubric: Json | null
         }
         Insert: {
           code_snippet?: string | null
-          correct_answer: string
+          correct_answer?: string | null
           created_at?: string
           id?: string
           image_url?: string | null
+          model_answer?: string | null
           options?: Json | null
           order_index?: number
           points?: number
@@ -2801,13 +2871,15 @@ export type Database = {
           question_text_ar: string
           question_type?: string
           quiz_id: string
+          rubric?: Json | null
         }
         Update: {
           code_snippet?: string | null
-          correct_answer?: string
+          correct_answer?: string | null
           created_at?: string
           id?: string
           image_url?: string | null
+          model_answer?: string | null
           options?: Json | null
           order_index?: number
           points?: number
@@ -2815,6 +2887,7 @@ export type Database = {
           question_text_ar?: string
           question_type?: string
           quiz_id?: string
+          rubric?: Json | null
         }
         Relationships: [
           {
@@ -2831,8 +2904,10 @@ export type Database = {
           answers: Json
           graded_at: string | null
           graded_by: string | null
+          grading_status: string
           id: string
           is_auto_generated: boolean
+          manual_score: number | null
           max_score: number | null
           percentage: number | null
           quiz_assignment_id: string
@@ -2846,8 +2921,10 @@ export type Database = {
           answers: Json
           graded_at?: string | null
           graded_by?: string | null
+          grading_status?: string
           id?: string
           is_auto_generated?: boolean
+          manual_score?: number | null
           max_score?: number | null
           percentage?: number | null
           quiz_assignment_id: string
@@ -2861,8 +2938,10 @@ export type Database = {
           answers?: Json
           graded_at?: string | null
           graded_by?: string | null
+          grading_status?: string
           id?: string
           is_auto_generated?: boolean
+          manual_score?: number | null
           max_score?: number | null
           percentage?: number | null
           quiz_assignment_id?: string

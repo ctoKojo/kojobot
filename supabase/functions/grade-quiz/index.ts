@@ -156,7 +156,7 @@ serve(async (req) => {
     // Get questions with correct answers (only accessible server-side)
     const { data: questions, error: questionsError } = await adminSupabase
       .from('quiz_questions')
-      .select('id, options, correct_answer, points')
+      .select('id, options, correct_answer, points, question_type, model_answer, rubric')
       .eq('quiz_id', assignment.quiz_id)
 
     if (questionsError || !questions) {
@@ -166,17 +166,35 @@ serve(async (req) => {
       )
     }
 
-    // Calculate score
+    // Calculate score (MCQ only - open_ended scored manually)
     let score = 0
     let maxScore = 0
-    const results: Record<string, { correct: boolean; correctAnswer: string; correctIndex: number }> = {}
+    let mcqMaxScore = 0
+    let openEndedMaxScore = 0
+    let hasOpenEnded = false
+    const results: Record<string, { correct: boolean; correctAnswer: string; correctIndex: number; questionType: string }> = {}
 
     for (const question of questions) {
       maxScore += question.points
+
+      if (question.question_type === 'open_ended') {
+        hasOpenEnded = true
+        openEndedMaxScore += question.points
+        // Open-ended: store answer text, score = 0 until manual grading
+        results[question.id] = {
+          correct: false,
+          correctAnswer: '',
+          correctIndex: -1,
+          questionType: 'open_ended'
+        }
+        continue
+      }
+
+      // MCQ grading
+      mcqMaxScore += question.points
       const optionsData = question.options as any
       let optionsList: string[] = []
       
-      // Support both new format { en: [...], ar: [...] } and old format { options: [...] }
       if (optionsData?.en && Array.isArray(optionsData.en)) {
         optionsList = optionsData.en
       } else if (optionsData?.options && Array.isArray(optionsData.options)) {
@@ -185,17 +203,12 @@ serve(async (req) => {
       
       const selectedIdx = parseInt(answers[question.id] ?? '-1')
       
-      // correct_answer can be either:
-      // 1. An index as string (e.g., "0", "1", "2") - new simplified format
-      // 2. The actual option text - old format
       let correctIdx = -1
-      const parsedCorrectIdx = parseInt(question.correct_answer)
+      const parsedCorrectIdx = parseInt(question.correct_answer ?? '-1')
       
       if (!isNaN(parsedCorrectIdx) && parsedCorrectIdx >= 0 && parsedCorrectIdx < optionsList.length) {
-        // correct_answer is an index
         correctIdx = parsedCorrectIdx
       } else {
-        // correct_answer is the option text, find its index
         correctIdx = optionsList.findIndex(opt => opt === question.correct_answer)
       }
       
@@ -204,20 +217,24 @@ serve(async (req) => {
         score += question.points
       }
       
-      // Store result for each question
       const correctAnswerText = correctIdx >= 0 && correctIdx < optionsList.length 
         ? optionsList[correctIdx] 
-        : question.correct_answer
+        : (question.correct_answer ?? '')
         
       results[question.id] = {
         correct: isCorrect,
         correctAnswer: correctAnswerText,
-        correctIndex: correctIdx
+        correctIndex: correctIdx,
+        questionType: 'multiple_choice'
       }
     }
 
-    const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0
-    const passed = percentage >= (assignment.quizzes?.passing_score || 60)
+    // For percentage: only count MCQ score if there are open_ended questions
+    // Open-ended will be added after manual grading
+    const gradableMaxScore = hasOpenEnded ? mcqMaxScore : maxScore
+    const percentage = gradableMaxScore > 0 ? Math.round((score / gradableMaxScore) * 100) : 0
+    const gradingStatus = hasOpenEnded ? 'needs_manual_grading' : 'auto_graded'
+    const passed = hasOpenEnded ? false : percentage >= (assignment.quizzes?.passing_score || 60) // Can't determine pass until manual grading
 
     // Save submission
     const { data: submission, error: submissionError } = await adminSupabase
@@ -228,9 +245,11 @@ serve(async (req) => {
         answers,
         score,
         max_score: maxScore,
-        percentage,
+        percentage: hasOpenEnded ? null : percentage, // null until manual grading complete
         status: 'submitted',
         submitted_at: new Date().toISOString(),
+        grading_status: gradingStatus,
+        manual_score: 0,
       })
       .select()
       .single()
@@ -241,6 +260,26 @@ serve(async (req) => {
         JSON.stringify({ error: 'Failed to save submission' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+
+    // Save per-question attempts
+    const attempts = questions.map(q => ({
+      submission_id: submission.id,
+      question_id: q.id,
+      student_id: userId,
+      answer: answers[q.id] || null,
+      score: q.question_type === 'open_ended' ? null : (results[q.id]?.correct ? q.points : 0),
+      max_score: q.points,
+      grading_status: q.question_type === 'open_ended' ? 'ungraded' : 'auto_graded',
+    }))
+
+    const { error: attemptsError } = await adminSupabase
+      .from('quiz_question_attempts')
+      .insert(attempts)
+
+    if (attemptsError) {
+      console.error('Attempts insert error:', attemptsError)
+      // Non-fatal: submission already saved
     }
 
     console.log(`Quiz graded for user ${userId}: ${score}/${maxScore} (${percentage}%)`)
@@ -335,9 +374,11 @@ serve(async (req) => {
         success: true,
         score,
         maxScore,
-        percentage,
+        percentage: hasOpenEnded ? null : percentage,
         passed,
-        results // Contains correct answers for review after submission
+        hasOpenEnded,
+        gradingStatus,
+        results
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

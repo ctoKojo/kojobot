@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { formatDateTime } from '@/lib/timeUtils';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Clock, CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +27,7 @@ interface Question {
   order_index: number;
   image_url?: string | null;
   code_snippet?: string | null;
+  question_type?: string;
 }
 
 interface QuizAssignment {
@@ -59,8 +61,8 @@ export default function TakeQuiz() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [result, setResult] = useState<{ score: number; maxScore: number; percentage: number; passed: boolean } | null>(null);
-  const [gradeResults, setGradeResults] = useState<Record<string, { correct: boolean; correctAnswer: string }>>({});
+  const [result, setResult] = useState<{ score: number; maxScore: number; percentage: number | null; passed: boolean; hasOpenEnded?: boolean } | null>(null);
+  const [gradeResults, setGradeResults] = useState<Record<string, { correct: boolean; correctAnswer: string; questionType?: string }>>({});
   const [quizStatus, setQuizStatus] = useState<'loading' | 'not_started' | 'expired' | 'available' | 'frozen'>('loading');
 
   useEffect(() => {
@@ -204,7 +206,8 @@ export default function TakeQuiz() {
         score: data.score,
         maxScore: data.maxScore,
         percentage: data.percentage,
-        passed: data.passed
+        passed: data.passed,
+        hasOpenEnded: data.hasOpenEnded,
       });
       setGradeResults(data.results || {});
       setSubmitted(true);
@@ -366,26 +369,55 @@ export default function TakeQuiz() {
       <DashboardLayout title={isRTL ? 'نتيجة الكويز' : 'Quiz Result'}>
         <Card className="max-w-2xl mx-auto">
           <CardHeader className="text-center">
-            <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center ${result.passed ? 'bg-green-100' : 'bg-red-100'}`}>
-              {result.passed ? (
-                <CheckCircle className="w-10 h-10 text-green-600" />
-              ) : (
-                <XCircle className="w-10 h-10 text-red-600" />
-              )}
-            </div>
-            <CardTitle className="mt-4">
-              {result.passed ? (isRTL ? 'مبروك! نجحت في الكويز' : 'Congratulations! You Passed') : (isRTL ? 'للأسف لم تنجح' : 'Unfortunately, You Did Not Pass')}
-            </CardTitle>
+            {result.hasOpenEnded ? (
+              <>
+                <div className="mx-auto w-20 h-20 rounded-full flex items-center justify-center bg-amber-100">
+                  <Clock className="w-10 h-10 text-amber-600" />
+                </div>
+                <CardTitle className="mt-4">
+                  {isRTL ? 'تم تسليم الامتحان بنجاح' : 'Exam Submitted Successfully'}
+                </CardTitle>
+                <CardDescription>
+                  {isRTL ? 'يحتوي الامتحان على أسئلة تحتاج تصحيح يدوي. ستظهر النتيجة النهائية بعد التصحيح.' : 'This exam contains questions that require manual grading. Final results will appear after grading.'}
+                </CardDescription>
+              </>
+            ) : (
+              <>
+                <div className={`mx-auto w-20 h-20 rounded-full flex items-center justify-center ${result.passed ? 'bg-green-100' : 'bg-red-100'}`}>
+                  {result.passed ? (
+                    <CheckCircle className="w-10 h-10 text-green-600" />
+                  ) : (
+                    <XCircle className="w-10 h-10 text-red-600" />
+                  )}
+                </div>
+                <CardTitle className="mt-4">
+                  {result.passed ? (isRTL ? 'مبروك! نجحت في الكويز' : 'Congratulations! You Passed') : (isRTL ? 'للأسف لم تنجح' : 'Unfortunately, You Did Not Pass')}
+                </CardTitle>
+              </>
+            )}
             <CardDescription>
               {language === 'ar' ? assignment?.quizzes?.title_ar : assignment?.quizzes?.title}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center">
-              <div className="text-5xl font-bold">{result.percentage}%</div>
-              <p className="text-muted-foreground mt-2">
-                {result.score} / {result.maxScore} {isRTL ? 'درجة' : 'points'}
-              </p>
+              {result.percentage !== null ? (
+                <>
+                  <div className="text-5xl font-bold">{result.percentage}%</div>
+                  <p className="text-muted-foreground mt-2">
+                    {result.score} / {result.maxScore} {isRTL ? 'درجة' : 'points'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="text-3xl font-bold text-amber-600">
+                    {isRTL ? 'في انتظار التصحيح' : 'Pending Grading'}
+                  </div>
+                  <p className="text-muted-foreground mt-2">
+                    {isRTL ? `الأسئلة الاختيارية: ${result.score} درجة` : `MCQ Score: ${result.score} points`}
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-center">
@@ -516,43 +548,59 @@ export default function TakeQuiz() {
               )}
             </CardHeader>
             <CardContent>
-              <RadioGroup
-                value={answers[currentQuestion.id] || ''}
-                onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
-                className="space-y-3"
-              >
-                {(() => {
-                  // Support both old format { options: [...] } and new format { en: [...], ar: [...] }
-                  const optionsData = currentQuestion.options as any;
-                  let optionsList: string[] = [];
-                  
-                  if (optionsData?.en && Array.isArray(optionsData.en)) {
-                    // New simplified format
-                    optionsList = language === 'ar' && optionsData.ar ? optionsData.ar : optionsData.en;
-                  } else if (optionsData?.options && Array.isArray(optionsData.options)) {
-                    // Old format with nested objects
-                    optionsList = optionsData.options.map((opt: any) => 
-                      language === 'ar' ? opt.text_ar : opt.text
-                    );
-                  }
-                  
-                  return optionsList.map((optionText, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => handleAnswerChange(currentQuestion.id, idx.toString())}
-                      className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${answers[currentQuestion.id] === idx.toString() ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
-                    >
-                      <RadioGroupItem value={idx.toString()} id={`option-${idx}`} className="pointer-events-none" />
-                      <span className="flex-1" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>
-                        {optionText || `Option ${idx + 1}`}
-                      </span>
-                      {answers[currentQuestion.id] === idx.toString() && (
-                        <span className="text-xs text-primary font-medium">✓</span>
-                      )}
-                    </div>
-                  ));
-                })()}
-              </RadioGroup>
+              {currentQuestion.question_type === 'open_ended' ? (
+                /* Open-Ended: Textarea */
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                    <FileText className="w-4 h-4" />
+                    {isRTL ? 'اكتب إجابتك بالتفصيل' : 'Write your detailed answer'}
+                  </div>
+                  <Textarea
+                    value={answers[currentQuestion.id] || ''}
+                    onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                    placeholder={isRTL ? 'اكتب إجابتك هنا...' : 'Write your answer here...'}
+                    className="min-h-[200px] font-mono text-sm"
+                    dir="rtl"
+                    style={{ unicodeBidi: 'plaintext' }}
+                  />
+                </div>
+              ) : (
+                /* MCQ: RadioGroup */
+                <RadioGroup
+                  value={answers[currentQuestion.id] || ''}
+                  onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
+                  className="space-y-3"
+                >
+                  {(() => {
+                    const optionsData = currentQuestion.options as any;
+                    let optionsList: string[] = [];
+                    
+                    if (optionsData?.en && Array.isArray(optionsData.en)) {
+                      optionsList = language === 'ar' && optionsData.ar ? optionsData.ar : optionsData.en;
+                    } else if (optionsData?.options && Array.isArray(optionsData.options)) {
+                      optionsList = optionsData.options.map((opt: any) => 
+                        language === 'ar' ? opt.text_ar : opt.text
+                      );
+                    }
+                    
+                    return optionsList.map((optionText, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => handleAnswerChange(currentQuestion.id, idx.toString())}
+                        className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${answers[currentQuestion.id] === idx.toString() ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'}`}
+                      >
+                        <RadioGroupItem value={idx.toString()} id={`option-${idx}`} className="pointer-events-none" />
+                        <span className="flex-1" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>
+                          {optionText || `Option ${idx + 1}`}
+                        </span>
+                        {answers[currentQuestion.id] === idx.toString() && (
+                          <span className="text-xs text-primary font-medium">✓</span>
+                        )}
+                      </div>
+                    ));
+                  })()}
+                </RadioGroup>
+              )}
             </CardContent>
           </Card>
         )}

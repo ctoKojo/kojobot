@@ -26,6 +26,10 @@ interface SimplifiedQuestion {
   points: number;
   order_index: number;
   image_url?: string;
+  code_snippet?: string;
+  question_type?: string;
+  model_answer?: string;
+  rubric?: { steps: string[]; points_per_step: number } | null;
 }
 
 interface SimplifiedQuestionEditorProps {
@@ -46,14 +50,16 @@ export function SimplifiedQuestionEditor({ questions, onChange, isRTL }: Simplif
     })
   );
 
-  const addQuestion = () => {
+  const addQuestion = (type: string = 'multiple_choice') => {
     const newQuestion: SimplifiedQuestion = {
       question_text: '',
       question_text_ar: '',
-      options: ['', '', '', ''],
-      correct_answer: '0',
+      options: type === 'open_ended' ? [] : ['', '', '', ''],
+      correct_answer: type === 'open_ended' ? '' : '0',
       points: 1,
       order_index: questions.length,
+      question_type: type,
+      model_answer: type === 'open_ended' ? '' : undefined,
     };
     onChange([...questions, newQuestion]);
   };
@@ -137,15 +143,26 @@ export function SimplifiedQuestionEditor({ questions, onChange, isRTL }: Simplif
         </SortableContext>
       </DndContext>
 
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full"
-        onClick={addQuestion}
-      >
-        <Plus className="w-4 h-4 mr-2" />
-        {isRTL ? 'إضافة سؤال' : 'Add Question'}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1"
+          onClick={() => addQuestion('multiple_choice')}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          {isRTL ? 'إضافة سؤال MCQ' : 'Add MCQ'}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="flex-1"
+          onClick={() => addQuestion('open_ended')}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          {isRTL ? 'إضافة سؤال مفتوح' : 'Add Open-Ended'}
+        </Button>
+      </div>
     </div>
   );
 }
