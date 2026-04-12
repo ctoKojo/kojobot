@@ -39,6 +39,7 @@ interface StudentData {
   assignmentSubmissions: any[];
   warnings: any[];
   makeupSessions: any[];
+  levelProgress: any | null;
 }
 
 function MakeupCreditsDisplay({ studentId }: { studentId: string }) {
