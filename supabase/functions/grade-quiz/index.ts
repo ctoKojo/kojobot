@@ -262,6 +262,26 @@ serve(async (req) => {
       )
     }
 
+    // Save per-question attempts
+    const attempts = questions.map(q => ({
+      submission_id: submission.id,
+      question_id: q.id,
+      student_id: userId,
+      answer: answers[q.id] || null,
+      score: q.question_type === 'open_ended' ? null : (results[q.id]?.correct ? q.points : 0),
+      max_score: q.points,
+      grading_status: q.question_type === 'open_ended' ? 'ungraded' : 'auto_graded',
+    }))
+
+    const { error: attemptsError } = await adminSupabase
+      .from('quiz_question_attempts')
+      .insert(attempts)
+
+    if (attemptsError) {
+      console.error('Attempts insert error:', attemptsError)
+      // Non-fatal: submission already saved
+    }
+
     console.log(`Quiz graded for user ${userId}: ${score}/${maxScore} (${percentage}%)`)
 
     // Check if this quiz is a level final exam
