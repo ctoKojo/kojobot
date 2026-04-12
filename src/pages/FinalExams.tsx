@@ -21,11 +21,12 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Target, CalendarClock, AlertTriangle, Search, Clock, CheckCircle2,
-  GraduationCap, Users, Loader2,
+  GraduationCap, Users, Loader2, FileText,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatsGrid } from '@/components/shared/StatsGrid';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { QuizResultsDialog } from '@/components/session/QuizResultsDialog';
 
 interface ExamCandidate {
   progress_id: string;
@@ -69,6 +70,10 @@ export default function FinalExams() {
   const [scheduleTime, setScheduleTime] = useState('');
   const [scheduleDuration, setScheduleDuration] = useState(30);
   const [scheduling, setScheduling] = useState(false);
+
+  // Grading dialog
+  const [showGradingDialog, setShowGradingDialog] = useState(false);
+  const [gradingCandidate, setGradingCandidate] = useState<ExamCandidate | null>(null);
 
   useEffect(() => {
     fetchCandidates();
@@ -400,6 +405,18 @@ export default function FinalExams() {
                           </Badge>
                         ) : null;
                       })()}
+                      {/* Grade button for submitted exams */}
+                      {isAdmin && c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 mt-2"
+                          onClick={(e) => { e.stopPropagation(); setGradingCandidate(c); setShowGradingDialog(true); }}
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          {isRTL ? 'تصحيح الامتحان' : 'Grade Exam'}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -433,6 +450,7 @@ export default function FinalExams() {
                     <TableHead className="text-center">{isRTL ? 'موعد الامتحان' : 'Exam Date'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'أيام الانتظار' : 'Wait Days'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'كويز نهائي' : 'Final Quiz'}</TableHead>
+                    {isAdmin && <TableHead className="text-center">{isRTL ? 'إجراءات' : 'Actions'}</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -530,6 +548,21 @@ export default function FinalExams() {
                           </div>
                         )}
                       </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-center">
+                          {c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={() => { setGradingCandidate(c); setShowGradingDialog(true); }}
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              {isRTL ? 'تصحيح' : 'Grade'}
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -612,6 +645,21 @@ export default function FinalExams() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Grading Dialog */}
+        {gradingCandidate && gradingCandidate.final_exam_quiz_id && (
+          <QuizResultsDialog
+            open={showGradingDialog}
+            onOpenChange={(open) => { setShowGradingDialog(open); if (!open) setGradingCandidate(null); }}
+            quizAssignmentId=""
+            quizId={gradingCandidate.final_exam_quiz_id}
+            quizTitle={`Final Exam - ${gradingCandidate.level_name}`}
+            quizTitleAr={`الامتحان النهائي - ${gradingCandidate.level_name_ar || gradingCandidate.level_name}`}
+            groupId={gradingCandidate.group_id}
+            passingScore={60}
+            isFinalExam
+          />
+        )}
       </div>
     </DashboardLayout>
   );
