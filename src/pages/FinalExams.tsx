@@ -438,6 +438,7 @@ export default function FinalExams() {
                     <TableHead className="text-center">{isRTL ? 'موعد الامتحان' : 'Exam Date'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'أيام الانتظار' : 'Wait Days'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'كويز نهائي' : 'Final Quiz'}</TableHead>
+                    {isAdmin && <TableHead className="text-center">{isRTL ? 'إجراءات' : 'Actions'}</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
