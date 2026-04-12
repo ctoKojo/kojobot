@@ -234,7 +234,7 @@ serve(async (req) => {
     const gradableMaxScore = hasOpenEnded ? mcqMaxScore : maxScore
     const percentage = gradableMaxScore > 0 ? Math.round((score / gradableMaxScore) * 100) : 0
     const gradingStatus = hasOpenEnded ? 'needs_manual_grading' : 'auto_graded'
-    const passed = percentage >= (assignment.quizzes?.passing_score || 60)
+    const passed = hasOpenEnded ? false : percentage >= (assignment.quizzes?.passing_score || 60) // Can't determine pass until manual grading
 
     // Save submission
     const { data: submission, error: submissionError } = await adminSupabase
