@@ -90,23 +90,53 @@ export function QuizResultsDialog({
   const fetchResults = async () => {
     setLoading(true);
     try {
-      const { data: groupStudents } = await supabase
-        .from('group_students')
-        .select('student_id')
-        .eq('group_id', groupId)
-        .eq('is_active', true);
+      let studentIds: string[] = [];
 
-      const studentIds = groupStudents?.map(gs => gs.student_id) || [];
+      if (isFinalExam) {
+        // For final exams: get students from group_student_progress (they may be is_active=false in group_students)
+        const { data: progressStudents } = await supabase
+          .from('group_student_progress')
+          .select('student_id')
+          .eq('group_id', groupId)
+          .in('status', ['exam_scheduled', 'graded']);
+        studentIds = progressStudents?.map(gs => gs.student_id) || [];
+      } else {
+        const { data: groupStudents } = await supabase
+          .from('group_students')
+          .select('student_id')
+          .eq('group_id', groupId)
+          .eq('is_active', true);
+        studentIds = groupStudents?.map(gs => gs.student_id) || [];
+      }
 
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, full_name, full_name_ar')
         .in('user_id', studentIds);
 
-      const { data: submissions } = await supabase
-        .from('quiz_submissions')
-        .select('id, student_id, score, max_score, percentage, status, submitted_at, answers, grading_status')
-        .eq('quiz_assignment_id', quizAssignmentId);
+      let submissions: any[] = [];
+      if (isFinalExam) {
+        // For final exams: each student has their own quiz_assignment, fetch by quiz_id + group
+        const { data: assignments } = await supabase
+          .from('quiz_assignments')
+          .select('id')
+          .eq('quiz_id', quizId)
+          .eq('group_id', groupId);
+        const assignmentIds = assignments?.map(a => a.id) || [];
+        if (assignmentIds.length > 0) {
+          const { data: subs } = await supabase
+            .from('quiz_submissions')
+            .select('id, student_id, score, max_score, percentage, status, submitted_at, answers, grading_status')
+            .in('quiz_assignment_id', assignmentIds);
+          submissions = subs || [];
+        }
+      } else {
+        const { data: subs } = await supabase
+          .from('quiz_submissions')
+          .select('id, student_id, score, max_score, percentage, status, submitted_at, answers, grading_status')
+          .eq('quiz_assignment_id', quizAssignmentId);
+        submissions = subs || [];
+      }
 
       const combinedResults: StudentQuizResult[] = studentIds.map(studentId => {
         const profile = profiles?.find(p => p.user_id === studentId);
