@@ -198,6 +198,11 @@ export default function Finance() {
     setPaymentDialog(false);
     queryClient.invalidateQueries({ queryKey: ['finance-data'] });
     queryClient.invalidateQueries({ queryKey: ['payment-tracker'] });
+    } catch (e: any) {
+      toast({ title: isRTL ? 'خطأ' : 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setSavingPayment(false);
+    }
   };
 
   const filtered = subscriptions.filter(s => {
