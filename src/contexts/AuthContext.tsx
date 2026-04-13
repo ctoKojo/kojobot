@@ -10,6 +10,7 @@ interface AuthContextType {
   session: Session | null;
   role: AppRole | null;
   loading: boolean;
+  roleLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   
   signOut: () => Promise<void>;
@@ -26,6 +27,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(true);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   const fetchUserRole = async (userId: string) => {
@@ -49,27 +51,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Only fetch role if user exists, defer with setTimeout to avoid deadlock
         if (session?.user) {
-          setTimeout(() => {
-            fetchUserRole(session.user.id).then((fetchedRole) => {
-              setRole(fetchedRole);
-              // Only set loading false on initial load
-              if (!initialLoadComplete) {
-                setLoading(false);
-                setInitialLoadComplete(true);
-              }
-            });
-          }, 0);
+          setRoleLoading(true);
+          fetchUserRole(session.user.id).then((fetchedRole) => {
+            setRole(fetchedRole);
+            setRoleLoading(false);
+            if (!initialLoadComplete) {
+              setLoading(false);
+              setInitialLoadComplete(true);
+            }
+          }).catch(() => {
+            setRole(null);
+            setRoleLoading(false);
+            if (!initialLoadComplete) {
+              setLoading(false);
+              setInitialLoadComplete(true);
+            }
+          });
         } else {
           setRole(null);
-          // Only set loading false on initial load
+          setRoleLoading(false);
           if (!initialLoadComplete) {
             setLoading(false);
             setInitialLoadComplete(true);
@@ -78,18 +84,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        setRoleLoading(true);
         fetchUserRole(session.user.id).then((fetchedRole) => {
           setRole(fetchedRole);
+          setRoleLoading(false);
+          setLoading(false);
+          setInitialLoadComplete(true);
+        }).catch(() => {
+          setRole(null);
+          setRoleLoading(false);
           setLoading(false);
           setInitialLoadComplete(true);
         });
       } else {
+        setRoleLoading(false);
         setLoading(false);
         setInitialLoadComplete(true);
       }
@@ -125,6 +138,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     session,
     role,
     loading,
+    roleLoading,
     signIn,
     signOut,
   };

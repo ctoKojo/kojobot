@@ -25,7 +25,7 @@ const statusCache: {
 const CACHE_TTL_MS = 60_000; // 1 minute
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, roleLoading } = useAuth();
   const location = useLocation();
   const [isSuspended, setIsSuspended] = useState<boolean | null>(null);
   const [isTerminated, setIsTerminated] = useState<boolean | null>(null);
@@ -135,7 +135,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     }
   }, [user, role]);
 
-  if (loading && !user) {
+  if (loading || roleLoading) {
     return <LoadingScreen />;
   }
 
@@ -144,7 +144,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   // User is authenticated but has no role — redirect to parent registration (likely a Google OAuth user)
-  if (!role && !loading) {
+  if (!role) {
     if (location.pathname !== '/parent-register') {
       return <Navigate to="/parent-register" replace />;
     }
