@@ -139,12 +139,6 @@ export default function StudentProfile() {
     if (studentId) fetchStudentData();
   }, [studentId]);
 
-  // Debug: log role and key data for troubleshooting
-  useEffect(() => {
-    if (!loading && data) {
-      console.log('[StudentProfile] role:', role, 'roleLoading:', roleLoading, 'hasSubscription:', !!data?.subscription, 'levelProgressStatus:', data?.levelProgress?.status, 'parentsCount:', data?.parents?.length);
-    }
-  }, [loading, data, role, roleLoading]);
 
   const fetchStudentData = async () => {
     try {
@@ -199,7 +193,7 @@ export default function StudentProfile() {
       // Fetch warnings
       const { data: warnings } = await supabase
         .from('warnings')
-        .select('*, profiles!warnings_issued_by_fkey(full_name, full_name_ar)')
+        .select('*')
         .eq('student_id', studentId)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
