@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Users } from 'lucide-react';
 
 interface Props {
   open: boolean;
@@ -37,6 +38,7 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [loadingCheck, setLoadingCheck] = useState(true);
   const [studentGroupInfo, setStudentGroupInfo] = useState<{ groupId: string; hasStarted: boolean; firstSessionDate: string | null } | null>(null);
+  const [siblingInfo, setSiblingInfo] = useState<{ has_siblings: boolean; discount_percentage: number; sibling_names: string[] } | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -50,14 +52,29 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
       setNotes('');
       setDiscountPercentage(0);
       setPaymentDate(new Date().toISOString().split('T')[0]);
+      setSiblingInfo(null);
 
       Promise.all([
         supabase.from('subscriptions').select('id').eq('student_id', studentId).eq('status', 'active').limit(1),
         supabase.from('pricing_plans').select('*').eq('is_active', true),
         supabase.from('group_students').select('group_id').eq('student_id', studentId).eq('is_active', true).limit(1),
-      ]).then(async ([subRes, plansRes, groupRes]) => {
+        supabase.rpc('check_sibling_discount', { p_student_id: studentId }),
+      ]).then(async ([subRes, plansRes, groupRes, siblingRes]) => {
         setHasActiveSubscription((subRes.data?.length || 0) > 0);
         setPlans((plansRes.data as any) || []);
+
+        // Handle sibling discount
+        if (siblingRes.data && typeof siblingRes.data === 'object') {
+          const sd = siblingRes.data as any;
+          if (sd.has_siblings) {
+            setSiblingInfo({
+              has_siblings: true,
+              discount_percentage: sd.discount_percentage || 0,
+              sibling_names: sd.sibling_names || [],
+            });
+            setDiscountPercentage(sd.discount_percentage || 0);
+          }
+        }
 
         const groupId = groupRes.data?.[0]?.group_id;
         if (groupId) {
