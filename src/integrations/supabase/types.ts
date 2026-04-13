@@ -4806,7 +4806,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "instructor" | "student" | "reception"
+      app_role: "admin" | "instructor" | "student" | "reception" | "parent"
       employment_status: "permanent" | "training" | "terminated"
       group_type: "kojo_squad" | "kojo_core" | "kojo_x"
       subscription_type: "kojo_squad" | "kojo_core" | "kojo_x"
@@ -4937,7 +4937,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "instructor", "student", "reception"],
+      app_role: ["admin", "instructor", "student", "reception", "parent"],
       employment_status: ["permanent", "training", "terminated"],
       group_type: ["kojo_squad", "kojo_core", "kojo_x"],
       subscription_type: ["kojo_squad", "kojo_core", "kojo_x"],
