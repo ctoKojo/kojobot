@@ -36,6 +36,7 @@ export default function Finance() {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [paymentDialog, setPaymentDialog] = useState(false);
+  const [savingPayment, setSavingPayment] = useState(false);
   const [selectedSub, setSelectedSub] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('cash');
