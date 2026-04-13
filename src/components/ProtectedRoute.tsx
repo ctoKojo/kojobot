@@ -12,6 +12,7 @@ interface ProtectedRouteProps {
 // Routes students can access even without level_id (placement flow only)
 const STUDENT_ALLOWED_WITHOUT_LEVEL = ['/placement-gate', '/placement-test', '/account-suspended', '/renewal-required', '/profile'];
 const PARENT_PUBLIC_ROUTES = ['/parent-register', '/parent-login'];
+const PARENT_ALLOWED_WITHOUT_APPROVAL = ['/parent-pending', '/profile'];
 
 // Module-level cache shared across all ProtectedRoute instances
 const statusCache: {
@@ -20,8 +21,9 @@ const statusCache: {
   isTerminated: boolean;
   hasLevel: boolean;
   needsRenewal: boolean;
+  isParentApproved: boolean;
   fetchedAt: number;
-} = { userId: null, isSuspended: false, isTerminated: false, hasLevel: true, needsRenewal: false, fetchedAt: 0 };
+} = { userId: null, isSuspended: false, isTerminated: false, hasLevel: true, needsRenewal: false, isParentApproved: true, fetchedAt: 0 };
 
 const CACHE_TTL_MS = 60_000; // 1 minute
 
@@ -32,6 +34,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   const [isTerminated, setIsTerminated] = useState<boolean | null>(null);
   const [hasLevel, setHasLevel] = useState<boolean | null>(null);
   const [needsRenewal, setNeedsRenewal] = useState<boolean | null>(null);
+  const [isParentApproved, setIsParentApproved] = useState<boolean | null>(null);
   const fetchingRef = useRef(false);
 
   useEffect(() => {
@@ -40,6 +43,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       setIsTerminated(false);
       setHasLevel(true);
       setNeedsRenewal(false);
+      setIsParentApproved(true);
       return;
     }
 
@@ -50,6 +54,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       setIsTerminated(statusCache.isTerminated);
       setHasLevel(statusCache.hasLevel);
       setNeedsRenewal(statusCache.needsRenewal);
+      setIsParentApproved(statusCache.isParentApproved);
       return;
     }
 
