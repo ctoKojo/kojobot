@@ -69,10 +69,15 @@ export default function Finance() {
     const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
     const enriched = (subs || []).map((s: any) => ({ ...s, profile: profileMap.get(s.student_id) }));
 
-    const { data: payData } = await supabase
-      .from('payments')
-      .select('*, subscriptions(student_id)')
-      .order('created_at', { ascending: false });
+    const [payRes, expRes, salRes] = await Promise.all([
+      supabase.from('payments').select('*, subscriptions(student_id)').order('created_at', { ascending: false }),
+      supabase.from('expenses').select('amount, expense_date'),
+      supabase.from('salary_payments').select('net_amount, month, status').eq('status', 'paid'),
+    ]);
+
+    const payData = payRes.data || [];
+    const expData = expRes.data || [];
+    const salData = salRes.data || [];
 
     const active = enriched.filter((s: any) => s.status === 'active');
     const now = new Date();
@@ -80,20 +85,36 @@ export default function Finance() {
     // Calculate current month's revenue from actual payments
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const totalRevenue = (payData || []).reduce((sum: number, p: any) => {
+    const totalRevenue = payData.reduce((sum: number, p: any) => {
       const pd = new Date(p.payment_date);
-      if (pd >= thisMonthStart && pd <= thisMonthEnd) {
-        return sum + Number(p.amount || 0);
-      }
+      if (pd >= thisMonthStart && pd <= thisMonthEnd) return sum + Number(p.amount || 0);
       return sum;
     }, 0);
+
+    // Current month expenses
+    const thisMonthExpenses = expData.reduce((sum: number, e: any) => {
+      const ed = new Date(e.expense_date);
+      if (ed >= thisMonthStart && ed <= thisMonthEnd) return sum + Number(e.amount || 0);
+      return sum;
+    }, 0);
+
+    // Current month salaries
+    const thisMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const thisMonthSalaries = salData.reduce((sum: number, s: any) => {
+      const sd = new Date(s.month);
+      const sKey = `${sd.getFullYear()}-${String(sd.getMonth() + 1).padStart(2, '0')}`;
+      if (sKey === thisMonthKey) return sum + Number(s.net_amount || 0);
+      return sum;
+    }, 0);
+
+    const netProfit = totalRevenue - thisMonthExpenses - thisMonthSalaries;
     
     const totalOutstanding = active.reduce((sum: number, s: any) => sum + Number(s.remaining_amount || 0), 0);
     const suspendedCount = active.filter((s: any) => s.is_suspended).length;
     const overdueCount = active.filter((s: any) => s.next_payment_date && new Date(s.next_payment_date) < new Date() && Number(s.remaining_amount) > 0).length;
 
     // Enrich payments with student profile
-    const enrichedPayments = (payData || []).map((p: any) => {
+    const enrichedPayments = payData.map((p: any) => {
       const studentId = p.subscriptions?.student_id || p.student_id;
       return { ...p, profile: profileMap.get(studentId) };
     });
@@ -101,7 +122,7 @@ export default function Finance() {
     return {
       subscriptions: enriched,
       payments: enrichedPayments,
-      stats: { totalRevenue, totalOutstanding, activeCount: active.length, suspendedCount, overdueCount },
+      stats: { totalRevenue, totalOutstanding, activeCount: active.length, suspendedCount, overdueCount, netProfit, thisMonthExpenses, thisMonthSalaries },
     };
   };
 
