@@ -397,7 +397,7 @@ export default function StudentProfile() {
                   {isRTL ? 'جدولة امتحان تحديد المستوى' : 'Schedule Placement Exam'}
                 </Button>
               )}
-              {(role === 'admin' || role === 'reception') && (
+              {(role === 'admin' || role === 'reception') && (!data?.parents || data.parents.length === 0) && (
                 <GenerateParentCodeDialog
                   studentId={studentId!}
                   studentName={data?.profile?.full_name || ''}
