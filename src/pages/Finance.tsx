@@ -601,61 +601,117 @@ export default function Finance() {
           <TabsContent value="cashflow"><CashFlowTab /></TabsContent>
         </Tabs>
 
-        {/* Outstanding / Overdue Detail Dialog */}
+        {/* Detail Dialog */}
         <Dialog open={!!detailDialog} onOpenChange={() => setDetailDialog(null)}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 {detailDialog === 'outstanding' ? (
                   <><DollarSign className="h-5 w-5 text-amber-500" />{isRTL ? 'تفاصيل المبالغ المستحقة' : 'Outstanding Amounts Details'}</>
-                ) : (
+                ) : detailDialog === 'overdue' ? (
                   <><AlertTriangle className="h-5 w-5 text-red-500" />{isRTL ? 'تفاصيل المتأخرين' : 'Overdue Details'}</>
+                ) : (
+                  <><TrendingUp className="h-5 w-5 text-emerald-500" />{isRTL ? 'تفاصيل إيرادات الشهر الحالي' : 'This Month Revenue Details'}</>
                 )}
               </DialogTitle>
             </DialogHeader>
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/20 hover:bg-muted/20">
-                  <TableHead className="font-semibold">{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                  <TableHead className="font-semibold">{isRTL ? 'الباقة' : 'Plan'}</TableHead>
-                  <TableHead className="font-semibold">{isRTL ? 'المتبقي' : 'Remaining'}</TableHead>
-                  <TableHead className="font-semibold">{isRTL ? 'القسط' : 'Installment'}</TableHead>
-                  <TableHead className="font-semibold">{isRTL ? 'تاريخ الاستحقاق' : 'Due Date'}</TableHead>
-                  {detailDialog === 'overdue' && (
-                    <TableHead className="font-semibold">{isRTL ? 'أيام التأخير' : 'Days Late'}</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(detailDialog === 'outstanding' ? outstandingStudents : overdueStudents).map((s: any) => (
-                  <TableRow key={s.id} className="hover:bg-muted/30 transition-colors">
-                    <TableCell>
-                      <button className="text-start hover:underline font-medium" onClick={() => { setDetailDialog(null); navigate(`/student/${s.student_id}`); }}>
-                        {s.name || '-'}
-                      </button>
-                    </TableCell>
-                    <TableCell className="text-sm">{s.planName || '-'}</TableCell>
-                    <TableCell className="font-semibold text-orange-600">{s.remaining} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
-                    <TableCell className="text-sm">{s.installment ? `${s.installment} ${isRTL ? 'ج.م' : 'EGP'}` : '-'}</TableCell>
-                    <TableCell className="text-sm">{s.nextPayment ? formatDate(s.nextPayment, language) : '-'}</TableCell>
+
+            {detailDialog === 'revenue' ? (
+              <>
+                {/* Revenue summary */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="p-3 rounded-lg border bg-emerald-50 dark:bg-emerald-900/20">
+                    <p className="text-xs text-muted-foreground">{isRTL ? 'الإيرادات' : 'Revenue'}</p>
+                    <p className="text-lg font-bold text-emerald-600">{stats.totalRevenue} {isRTL ? 'ج.م' : 'EGP'}</p>
+                  </div>
+                  <div className="p-3 rounded-lg border bg-red-50 dark:bg-red-900/20">
+                    <p className="text-xs text-muted-foreground">{isRTL ? 'المصروفات + الرواتب' : 'Expenses + Salaries'}</p>
+                    <p className="text-lg font-bold text-red-600">{stats.thisMonthExpenses + stats.thisMonthSalaries} {isRTL ? 'ج.م' : 'EGP'}</p>
+                  </div>
+                  <div className={`p-3 rounded-lg border ${stats.netProfit >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+                    <p className="text-xs text-muted-foreground">{isRTL ? 'صافي الربح' : 'Net Profit'}</p>
+                    <p className={`text-lg font-bold ${stats.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{stats.netProfit} {isRTL ? 'ج.م' : 'EGP'}</p>
+                  </div>
+                </div>
+                {/* Revenue payments list */}
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/20 hover:bg-muted/20">
+                      <TableHead className="font-semibold">{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'المبلغ' : 'Amount'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'التاريخ' : 'Date'}</TableHead>
+                      <TableHead className="font-semibold">{isRTL ? 'الطريقة' : 'Method'}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments.filter((p: any) => {
+                      const now = new Date();
+                      const pd = new Date(p.payment_date);
+                      return pd.getMonth() === now.getMonth() && pd.getFullYear() === now.getFullYear();
+                    }).map((p: any) => (
+                      <TableRow key={p.id} className="hover:bg-muted/30 transition-colors">
+                        <TableCell>
+                          <button className="text-start hover:underline font-medium" onClick={() => { setDetailDialog(null); navigate(`/student/${p.subscriptions?.student_id || p.student_id}`); }}>
+                            {language === 'ar' ? p.profile?.full_name_ar || p.profile?.full_name || '-' : p.profile?.full_name || '-'}
+                          </button>
+                        </TableCell>
+                        <TableCell className="font-semibold text-emerald-600">{p.amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
+                        <TableCell className="text-sm">{formatDate(p.payment_date, language)}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="font-normal">
+                            {p.payment_method === 'cash' ? (isRTL ? 'كاش' : 'Cash') : (isRTL ? 'تحويل' : 'Transfer')}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20 hover:bg-muted/20">
+                    <TableHead className="font-semibold">{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                    <TableHead className="font-semibold">{isRTL ? 'الباقة' : 'Plan'}</TableHead>
+                    <TableHead className="font-semibold">{isRTL ? 'المتبقي' : 'Remaining'}</TableHead>
+                    <TableHead className="font-semibold">{isRTL ? 'القسط' : 'Installment'}</TableHead>
+                    <TableHead className="font-semibold">{isRTL ? 'تاريخ الاستحقاق' : 'Due Date'}</TableHead>
                     {detailDialog === 'overdue' && (
-                      <TableCell>
-                        <Badge variant="destructive" className="font-mono">
-                          {s.daysOverdue} {isRTL ? 'يوم' : 'days'}
-                        </Badge>
-                      </TableCell>
+                      <TableHead className="font-semibold">{isRTL ? 'أيام التأخير' : 'Days Late'}</TableHead>
                     )}
                   </TableRow>
-                ))}
-                {(detailDialog === 'outstanding' ? outstandingStudents : overdueStudents).length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      {isRTL ? 'لا توجد بيانات' : 'No data'}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {(detailDialog === 'outstanding' ? outstandingStudents : overdueStudents).map((s: any) => (
+                    <TableRow key={s.id} className="hover:bg-muted/30 transition-colors">
+                      <TableCell>
+                        <button className="text-start hover:underline font-medium" onClick={() => { setDetailDialog(null); navigate(`/student/${s.student_id}`); }}>
+                          {s.name || '-'}
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-sm">{s.planName || '-'}</TableCell>
+                      <TableCell className="font-semibold text-orange-600">{s.remaining} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
+                      <TableCell className="text-sm">{s.installment ? `${s.installment} ${isRTL ? 'ج.م' : 'EGP'}` : '-'}</TableCell>
+                      <TableCell className="text-sm">{s.nextPayment ? formatDate(s.nextPayment, language) : '-'}</TableCell>
+                      {detailDialog === 'overdue' && (
+                        <TableCell>
+                          <Badge variant="destructive" className="font-mono">
+                            {s.daysOverdue} {isRTL ? 'يوم' : 'days'}
+                          </Badge>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                  {(detailDialog === 'outstanding' ? outstandingStudents : overdueStudents).length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        {isRTL ? 'لا توجد بيانات' : 'No data'}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </DialogContent>
         </Dialog>
         {/* Payment Dialog */}
