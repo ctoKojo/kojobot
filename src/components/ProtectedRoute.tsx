@@ -143,10 +143,15 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/auth" replace />;
   }
 
-  // User is authenticated but has no role — redirect to parent registration (likely a Google OAuth user)
+  // User is authenticated but has no role
   if (!role) {
-    if (location.pathname !== '/parent-register') {
+    const isGoogleUser = user?.app_metadata?.provider === 'google';
+    if (isGoogleUser && location.pathname !== '/parent-register') {
       return <Navigate to="/parent-register" replace />;
+    }
+    // Non-Google users without a role — stay on current page or go to dashboard
+    if (!isGoogleUser) {
+      return <Navigate to="/dashboard" replace />;
     }
   }
 

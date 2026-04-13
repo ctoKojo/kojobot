@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logLogin, logLogout } from '@/lib/activityLogger';
@@ -12,7 +12,6 @@ interface AuthContextType {
   loading: boolean;
   roleLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  
   signOut: () => Promise<void>;
 }
 
@@ -28,9 +27,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [roleLoading, setRoleLoading] = useState(true);
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const fetchingForRef = useRef<string | null>(null);
 
-  const fetchUserRole = async (userId: string) => {
+  const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
     try {
       const { data, error } = await supabase
         .from('user_roles')
@@ -42,7 +41,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.error('Error fetching user role:', error);
         return null;
       }
-
       return data?.role as AppRole | null;
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
@@ -52,76 +50,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          setRoleLoading(true);
-          fetchUserRole(session.user.id).then((fetchedRole) => {
-            setRole(fetchedRole);
-            setRoleLoading(false);
-            if (!initialLoadComplete) {
-              setLoading(false);
-              setInitialLoadComplete(true);
-            }
-          }).catch(() => {
-            setRole(null);
-            setRoleLoading(false);
-            if (!initialLoadComplete) {
-              setLoading(false);
-              setInitialLoadComplete(true);
-            }
-          });
-        } else {
-          setRole(null);
-          setRoleLoading(false);
-          if (!initialLoadComplete) {
-            setLoading(false);
-            setInitialLoadComplete(true);
-          }
-        }
-      }
-    );
+      async (_event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        setRoleLoading(true);
-        fetchUserRole(session.user.id).then((fetchedRole) => {
+        if (currentSession?.user) {
+          const uid = currentSession.user.id;
+
+          // Guard: skip if already fetching for this user
+          if (fetchingForRef.current === uid) return;
+          fetchingForRef.current = uid;
+
+          setRoleLoading(true);
+          const fetchedRole = await fetchUserRole(uid);
           setRole(fetchedRole);
           setRoleLoading(false);
           setLoading(false);
-          setInitialLoadComplete(true);
-        }).catch(() => {
+          fetchingForRef.current = null;
+        } else {
           setRole(null);
           setRoleLoading(false);
           setLoading(false);
-          setInitialLoadComplete(true);
-        });
-      } else {
-        setRoleLoading(false);
-        setLoading(false);
-        setInitialLoadComplete(true);
+          fetchingForRef.current = null;
+        }
       }
-    });
+    );
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (!error) {
-      // Log successful login
       setTimeout(() => logLogin(), 100);
     }
-    
     return { error };
   };
 
