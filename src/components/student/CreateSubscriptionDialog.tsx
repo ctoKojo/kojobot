@@ -229,6 +229,23 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
                 <p className="font-medium">{studentName}</p>
               </div>
 
+              {/* Sibling Discount Banner */}
+              {siblingInfo?.has_siblings && (
+                <div className="flex items-start gap-3 p-3 rounded-lg border border-primary/20 bg-primary/5">
+                  <Users className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">
+                      {isRTL ? 'خصم إخوة مقترح' : 'Sibling Discount Suggested'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {isRTL
+                        ? `إخوة مشتركين: ${siblingInfo.sibling_names.join('، ')} — خصم ${siblingInfo.discount_percentage}% تم تطبيقه تلقائياً (قابل للتعديل)`
+                        : `Active siblings: ${siblingInfo.sibling_names.join(', ')} — ${siblingInfo.discount_percentage}% discount auto-applied (editable)`}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <Label>{isRTL ? 'الباقة' : 'Pricing Plan'}</Label>
                 <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
