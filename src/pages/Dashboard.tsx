@@ -6,6 +6,10 @@ import { InstructorDashboard } from '@/components/dashboard/InstructorDashboard'
 import { StudentDashboard } from '@/components/dashboard/StudentDashboard';
 import { ReceptionDashboard } from '@/components/dashboard/ReceptionDashboard';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import React, { Suspense } from 'react';
+import { LoadingScreen } from '@/components/LoadingScreen';
+
+const ParentDashboard = React.lazy(() => import('./ParentDashboard'));
 
 export default function Dashboard() {
   const { user, role } = useAuth();
@@ -23,6 +27,7 @@ export default function Dashboard() {
         case 'instructor': return 'تابع مجموعاتك وطلابك';
         case 'student': return 'شاهد دوراتك ومهامك';
         case 'reception': return 'إدارة العمليات اليومية';
+        case 'parent': return 'تابع أداء أبنائك';
         default: return '';
       }
     }
@@ -31,6 +36,7 @@ export default function Dashboard() {
       case 'instructor': return 'Track your groups and students';
       case 'student': return 'View your courses and assignments';
       case 'reception': return 'Manage daily operations';
+      case 'parent': return 'Track your children\'s progress';
       default: return '';
     }
   };
@@ -45,6 +51,8 @@ export default function Dashboard() {
         return <StudentDashboard />;
       case 'reception':
         return <ReceptionDashboard />;
+      case 'parent':
+        return <Suspense fallback={<LoadingScreen />}><ParentDashboard /></Suspense>;
       default:
         return (
           <Card>
@@ -61,16 +69,18 @@ export default function Dashboard() {
     }
   };
 
+  // For parent role, ParentDashboard renders its own DashboardLayout
+  if (role === 'parent') {
+    return renderDashboard();
+  }
+
   return (
     <DashboardLayout title={t.nav.dashboard}>
       <div className="space-y-6 md:space-y-8">
-        {/* Welcome Section */}
         <div>
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">{getWelcomeMessage()}</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">{getSubtitle()}</p>
         </div>
-
-        {/* Role-specific Dashboard */}
         {renderDashboard()}
       </div>
     </DashboardLayout>
