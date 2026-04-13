@@ -140,16 +140,16 @@ const App = () => (
                   <Route path="/pricing-plans" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><PricingPlans /></ProtectedRoute>} />
                   <Route path="/finance" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Finance /></ProtectedRoute>} />
                   <Route path="/deduction-rules" element={<ProtectedRoute allowedRoles={['admin']}><DeductionRules /></ProtectedRoute>} />
-                  <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                  <Route path="/messages" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception', 'parent']}><Messages /></ProtectedRoute>} />
                   <Route path="/instructor-performance" element={<ProtectedRoute allowedRoles={['admin']}><InstructorPerformanceDashboard /></ProtectedRoute>} />
                   <Route path="/curriculum" element={<ProtectedRoute allowedRoles={['admin']}><CurriculumManagement /></ProtectedRoute>} />
                   <Route path="/curriculum/session/:sessionId" element={<ProtectedRoute allowedRoles={['admin']}><CurriculumSessionEdit /></ProtectedRoute>} />
                   <Route path="/my-sessions" element={<ProtectedRoute allowedRoles={['student']}><MySessions /></ProtectedRoute>} />
                   <Route path="/ssot-health" element={<ProtectedRoute allowedRoles={['admin']}><SSOTHealth /></ProtectedRoute>} />
                   <Route path="/leaderboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception']}><Leaderboard /></ProtectedRoute>} />
-                  <Route path="/my-finances" element={<ProtectedRoute allowedRoles={['student']}><MyFinances /></ProtectedRoute>} />
+                  <Route path="/my-finances" element={<ProtectedRoute allowedRoles={['parent']}><MyFinances /></ProtectedRoute>} />
                   <Route path="/subscribe" element={<Subscribe />} />
-                  <Route path="/subscription-requests" element={<ProtectedRoute allowedRoles={['admin']}><SubscriptionRequests /></ProtectedRoute>} />
+                  <Route path="/subscription-requests" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><SubscriptionRequests /></ProtectedRoute>} />
                   <Route path="/placement-test-settings" element={<ProtectedRoute allowedRoles={['admin']}><PlacementTestSettings /></ProtectedRoute>} />
                   <Route path="/placement-test-review" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><PlacementTestReview /></ProtectedRoute>} />
                   <Route path="/placement-test" element={<ProtectedRoute allowedRoles={['student']}><TakePlacementTest /></ProtectedRoute>} />
