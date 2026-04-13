@@ -11,6 +11,7 @@ interface ProtectedRouteProps {
 
 // Routes students can access even without level_id (placement flow only)
 const STUDENT_ALLOWED_WITHOUT_LEVEL = ['/placement-gate', '/placement-test', '/account-suspended', '/renewal-required', '/profile'];
+const PARENT_PUBLIC_ROUTES = ['/parent-register', '/parent-login'];
 
 // Module-level cache shared across all ProtectedRoute instances
 const statusCache: {
@@ -146,7 +147,8 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   // User is authenticated but has no role
   if (!role) {
     const isGoogleUser = user?.app_metadata?.provider === 'google';
-    if (isGoogleUser && location.pathname !== '/parent-register') {
+    const isParentRoute = PARENT_PUBLIC_ROUTES.some(r => location.pathname.startsWith(r));
+    if (isGoogleUser && !isParentRoute) {
       return <Navigate to="/parent-register" replace />;
     }
     // Non-Google users without a role — stay on current page or go to dashboard
