@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Award, AlertTriangle, BookOpen, 
-  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw, DollarSign, Printer
+  FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw, DollarSign, Printer, Users
 } from 'lucide-react';
 import { GenerateParentCodeDialog } from '@/components/student/GenerateParentCodeDialog';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -41,6 +41,7 @@ interface StudentData {
   warnings: any[];
   makeupSessions: any[];
   levelProgress: any | null;
+  parents: any[];
 }
 
 function MakeupCreditsDisplay({ studentId }: { studentId: string }) {
@@ -213,6 +214,26 @@ export default function StudentProfile() {
         .limit(1)
         .maybeSingle();
 
+      // Fetch linked parents
+      const { data: parentLinks } = await supabase
+        .from('parent_students')
+        .select('relationship, created_at, parent_id')
+        .eq('student_id', studentId!);
+
+      let parents: any[] = [];
+      if (parentLinks && parentLinks.length > 0) {
+        const parentIds = parentLinks.map(p => p.parent_id);
+        const { data: parentProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, full_name_ar, phone, email, avatar_url')
+          .in('user_id', parentIds);
+
+        parents = parentLinks.map(link => {
+          const profile = parentProfiles?.find(p => p.user_id === link.parent_id);
+          return { ...link, profile };
+        });
+      }
+
       setData({
         profile,
         subscription,
@@ -223,6 +244,7 @@ export default function StudentProfile() {
         warnings: warnings || [],
         makeupSessions: makeupSessions || [],
         levelProgress,
+        parents,
       });
     } catch (error) {
       console.error('Error fetching student data:', error);
@@ -441,8 +463,30 @@ export default function StudentProfile() {
                     </span>
                   )}
                 </div>
-              </div>
-
+                </div>
+                {/* Linked Parents */}
+                {data.parents && data.parents.length > 0 && (
+                  <div className="flex flex-wrap gap-3 mt-3">
+                    {data.parents.map((parent: any, idx: number) => (
+                      <div key={idx} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-1.5">
+                        <Users className="h-4 w-4 text-primary" />
+                        <div className="text-sm">
+                          <span className="font-medium">
+                            {language === 'ar' ? (parent.profile?.full_name_ar || parent.profile?.full_name || isRTL ? 'ولي أمر' : 'Parent') : (parent.profile?.full_name || 'Parent')}
+                          </span>
+                          {parent.relationship && (
+                            <span className="text-muted-foreground ms-1">({parent.relationship})</span>
+                          )}
+                          {parent.profile?.phone && (
+                            <span className="text-muted-foreground ms-2">
+                              <Phone className="h-3 w-3 inline me-0.5" />{parent.profile.phone}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               {/* Subscription Status */}
               <div className="text-right">
                 {data.subscription ? (
