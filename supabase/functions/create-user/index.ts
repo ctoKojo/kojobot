@@ -30,6 +30,8 @@ interface CreateUserRequest {
   work_type?: 'full_time' | 'part_time'
   is_paid_trainee?: boolean
   hourly_rate?: number
+  // Parent-specific fields
+  linked_student_ids?: string[]
 }
 
 serve(async (req) => {
