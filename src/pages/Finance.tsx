@@ -92,9 +92,15 @@ export default function Finance() {
     const suspendedCount = active.filter((s: any) => s.is_suspended).length;
     const overdueCount = active.filter((s: any) => s.next_payment_date && new Date(s.next_payment_date) < new Date() && Number(s.remaining_amount) > 0).length;
 
+    // Enrich payments with student profile
+    const enrichedPayments = (payData || []).map((p: any) => {
+      const studentId = p.subscriptions?.student_id || p.student_id;
+      return { ...p, profile: profileMap.get(studentId) };
+    });
+
     return {
       subscriptions: enriched,
-      payments: payData || [],
+      payments: enrichedPayments,
       stats: { totalRevenue, totalOutstanding, activeCount: active.length, suspendedCount, overdueCount },
     };
   };
