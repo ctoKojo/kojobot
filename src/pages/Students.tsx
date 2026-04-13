@@ -670,6 +670,36 @@ export default function StudentsPage() {
     setFormData(prev => ({ ...prev, date_of_birth: dob, age_group_id: ageGroupId }));
   };
 
+  // Parent search handler
+  const handleParentSearch = (query: string) => {
+    setParentSearchQuery(query);
+    if (parentSearchTimeout.current) clearTimeout(parentSearchTimeout.current);
+    if (query.length < 2) {
+      setParentSearchResults([]);
+      return;
+    }
+    setParentSearching(true);
+    parentSearchTimeout.current = setTimeout(async () => {
+      const { data, error } = await supabase.rpc('search_parents', { p_query: query });
+      if (!error && data) {
+        setParentSearchResults(data as any[]);
+      }
+      setParentSearching(false);
+    }, 300);
+  };
+
+  const handleSelectParent = (parent: typeof parentSearchResults[0]) => {
+    setSelectedParent(parent);
+    setFormData(prev => ({ ...prev, parent_id: parent.id }));
+    setParentSearchQuery('');
+    setParentSearchResults([]);
+  };
+
+  const handleClearParent = () => {
+    setSelectedParent(null);
+    setFormData(prev => ({ ...prev, parent_id: '' }));
+  };
+
   const calculatedAge = calculateAge(formData.date_of_birth);
 
   const getAgeGroupName = (id: string | null) => {
