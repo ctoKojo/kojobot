@@ -125,7 +125,7 @@ export default function StudentProfile() {
   const { studentId } = useParams();
   const navigate = useNavigate();
   const { isRTL, language } = useLanguage();
-  const { role } = useAuth();
+  const { role, roleLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<StudentData | null>(null);
