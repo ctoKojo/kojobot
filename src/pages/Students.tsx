@@ -160,13 +160,22 @@ export default function StudentsPage() {
     sub_notes: '',
     discount_percentage: 0,
     payment_date: new Date().toISOString().split('T')[0],
+    // Parent linking
+    parent_id: '',
   });
   const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
+  // Parent search state
+  const [parentSearchQuery, setParentSearchQuery] = useState('');
+  const [parentSearchResults, setParentSearchResults] = useState<Array<{ id: string; full_name: string; full_name_ar: string | null; phone: string | null; email: string | null; children_count: number }>>([]);
+  const [parentSearching, setParentSearching] = useState(false);
+  const [selectedParent, setSelectedParent] = useState<{ id: string; full_name: string; full_name_ar: string | null; phone: string | null; children_count: number } | null>(null);
+  const parentSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Credentials dialog state
-  const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string; name: string; avatarUrl?: string | null; levelName?: string; subscriptionType?: string; attendanceMode?: string; ageGroupName?: string }>({ open: false, email: '', password: '', name: '' });
+  const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string; name: string; avatarUrl?: string | null; levelName?: string; subscriptionType?: string; attendanceMode?: string; ageGroupName?: string; linkCode?: string | null }>({ open: false, email: '', password: '', name: '' });
 
   // Validation results computed from form data
   const validationErrors = useMemo(() => {
@@ -195,12 +204,13 @@ export default function StudentsPage() {
       return baseValid;
     }
     
-    // For new students, also validate email, password, and subscription type
+    // For new students, also validate email, password, subscription type, and parent
     return baseValid && 
            !validationErrors.email && 
            validationErrors.passwordDetails.isValid && 
-           formData.subscription_type !== '';
-  }, [validationErrors, editingStudent, formData.subscription_type]);
+           formData.subscription_type !== '' &&
+           formData.parent_id !== '';
+  }, [validationErrors, editingStudent, formData.subscription_type, formData.parent_id]);
 
   const subscriptionTypes = GROUP_TYPES_LIST;
 
@@ -397,6 +407,7 @@ export default function StudentsPage() {
             level_id: formData.level_id || undefined,
             subscription_type: formData.subscription_type || undefined,
             attendance_mode: formData.attendance_mode,
+            parent_id: formData.parent_id || undefined,
           }
         });
 
@@ -471,6 +482,7 @@ export default function StudentsPage() {
           subscriptionType: formData.subscription_type || undefined,
           attendanceMode: formData.attendance_mode,
           ageGroupName,
+          linkCode: data?.link_code || null,
         });
       }
 
@@ -528,10 +540,14 @@ export default function StudentsPage() {
       sub_notes: '',
       discount_percentage: 0,
       payment_date: new Date().toISOString().split('T')[0],
+      parent_id: '',
     });
     setFormTouched({});
     setAvatarFile(null);
     setAvatarPreview(null);
+    setSelectedParent(null);
+    setParentSearchQuery('');
+    setParentSearchResults([]);
   };
 
   const handleEdit = (student: Student) => {
@@ -553,9 +569,12 @@ export default function StudentsPage() {
       sub_notes: '',
       discount_percentage: 0,
       payment_date: new Date().toISOString().split('T')[0],
+      parent_id: '',
     });
     setAvatarFile(null);
     setAvatarPreview(student.avatar_url || null);
+    setSelectedParent(null);
+    setParentSearchQuery('');
     setIsDialogOpen(true);
   };
 
@@ -650,6 +669,36 @@ export default function StudentsPage() {
     const age = calculateAge(dob);
     const ageGroupId = age !== null ? findMatchingAgeGroup(age) : '';
     setFormData(prev => ({ ...prev, date_of_birth: dob, age_group_id: ageGroupId }));
+  };
+
+  // Parent search handler
+  const handleParentSearch = (query: string) => {
+    setParentSearchQuery(query);
+    if (parentSearchTimeout.current) clearTimeout(parentSearchTimeout.current);
+    if (query.length < 2) {
+      setParentSearchResults([]);
+      return;
+    }
+    setParentSearching(true);
+    parentSearchTimeout.current = setTimeout(async () => {
+      const { data, error } = await supabase.rpc('search_parents', { p_query: query });
+      if (!error && data) {
+        setParentSearchResults(data as any[]);
+      }
+      setParentSearching(false);
+    }, 300);
+  };
+
+  const handleSelectParent = (parent: typeof parentSearchResults[0]) => {
+    setSelectedParent(parent);
+    setFormData(prev => ({ ...prev, parent_id: parent.id }));
+    setParentSearchQuery('');
+    setParentSearchResults([]);
+  };
+
+  const handleClearParent = () => {
+    setSelectedParent(null);
+    setFormData(prev => ({ ...prev, parent_id: '' }));
   };
 
   const calculatedAge = calculateAge(formData.date_of_birth);
@@ -991,6 +1040,82 @@ export default function StudentsPage() {
                   </>
                 )}
               </div>
+
+              {/* Parent Link - Required for new students */}
+              {!editingStudent && (
+                <div className="grid gap-2 border-t pt-4 mt-2">
+                  <Label className={cn(formTouched.parent_id && !formData.parent_id && 'text-destructive')}>
+                    {isRTL ? '👨‍👩‍👧 ولي الأمر' : '👨‍👩‍👧 Parent'} <span className="text-destructive">*</span>
+                  </Label>
+                  {selectedParent ? (
+                    <div className="flex items-center justify-between rounded-md border bg-primary/5 border-primary/20 p-3">
+                      <div>
+                        <p className="font-medium text-sm">{language === 'ar' && selectedParent.full_name_ar ? selectedParent.full_name_ar : selectedParent.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{selectedParent.phone}</p>
+                        {selectedParent.children_count > 0 && (
+                          <Badge variant="secondary" className="mt-1 text-xs">
+                            {isRTL ? `${selectedParent.children_count} طفل مرتبط` : `${selectedParent.children_count} linked child(ren)`}
+                          </Badge>
+                        )}
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={handleClearParent}>
+                        {isRTL ? 'تغيير' : 'Change'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <Input
+                        value={parentSearchQuery}
+                        onChange={(e) => handleParentSearch(e.target.value)}
+                        onBlur={() => setFormTouched({ ...formTouched, parent_id: true })}
+                        placeholder={isRTL ? 'ابحث بالاسم أو رقم الموبايل...' : 'Search by name or phone...'}
+                        className={cn(
+                          formTouched.parent_id && !formData.parent_id && 'border-destructive focus-visible:ring-destructive'
+                        )}
+                      />
+                      {parentSearching && (
+                        <div className="absolute top-2.5 end-3">
+                          <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                      {parentSearchResults.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 rounded-md border bg-popover shadow-md max-h-48 overflow-auto">
+                          {parentSearchResults.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className="w-full text-start px-3 py-2 hover:bg-accent text-sm flex items-center justify-between"
+                              onClick={() => handleSelectParent(p)}
+                            >
+                              <div>
+                                <p className="font-medium">{language === 'ar' && p.full_name_ar ? p.full_name_ar : p.full_name}</p>
+                                <p className="text-xs text-muted-foreground">{p.phone || p.email}</p>
+                              </div>
+                              {p.children_count > 0 && (
+                                <Badge variant="outline" className="text-xs">
+                                  {p.children_count} {isRTL ? 'طفل' : 'child'}
+                                </Badge>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {parentSearchQuery.length >= 2 && !parentSearching && parentSearchResults.length === 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {isRTL ? 'لا يوجد ولي أمر بهذا الاسم. ولي الأمر لازم يسجل الأول من صفحة تسجيل أولياء الأمور.' : 'No parent found. Parent must register first via the parent registration page.'}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {formTouched.parent_id && !formData.parent_id && (
+                    <p className="text-sm text-destructive flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {isRTL ? 'يجب اختيار ولي أمر' : 'Parent is required'}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="grid gap-2">
                 <Label>{isRTL ? 'نوع الاشتراك' : 'Subscription Type'} *</Label>
                 <Select
@@ -1463,7 +1588,7 @@ export default function StudentsPage() {
       <CredentialsDialog
         open={credentialsDialog.open}
         onClose={() => {
-          setCredentialsDialog({ open: false, email: '', password: '', name: '', avatarUrl: null, levelName: undefined, subscriptionType: undefined, attendanceMode: undefined, ageGroupName: undefined });
+          setCredentialsDialog({ open: false, email: '', password: '', name: '', avatarUrl: null, levelName: undefined, subscriptionType: undefined, attendanceMode: undefined, ageGroupName: undefined, linkCode: null });
           setIsDialogOpen(false);
           setEditingStudent(null);
           resetForm();
@@ -1477,6 +1602,7 @@ export default function StudentsPage() {
         subscriptionType={credentialsDialog.subscriptionType}
         attendanceMode={credentialsDialog.attendanceMode}
         ageGroupName={credentialsDialog.ageGroupName}
+        linkCode={credentialsDialog.linkCode}
       />
     </DashboardLayout>
   );

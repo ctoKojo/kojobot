@@ -4716,6 +4716,7 @@ export type Database = {
         Args: { p_percentage: number; p_student_id: string }
         Returns: undefined
       }
+      check_sibling_discount: { Args: { p_student_id: string }; Returns: Json }
       check_streak_achievements: {
         Args: { p_student_id: string }
         Returns: undefined
@@ -4989,6 +4990,17 @@ export type Database = {
           p_time: string
         }
         Returns: Json
+      }
+      search_parents: {
+        Args: { p_query: string }
+        Returns: {
+          children_count: number
+          email: string
+          full_name: string
+          full_name_ar: string
+          id: string
+          phone: string
+        }[]
       }
       student_choose_track_and_upgrade: {
         Args: { p_chosen_track_id?: string; p_group_id: string }
