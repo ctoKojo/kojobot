@@ -214,6 +214,26 @@ export default function StudentProfile() {
         .limit(1)
         .maybeSingle();
 
+      // Fetch linked parents
+      const { data: parentLinks } = await supabase
+        .from('parent_students')
+        .select('relationship, created_at, parent_id')
+        .eq('student_id', studentId!);
+
+      let parents: any[] = [];
+      if (parentLinks && parentLinks.length > 0) {
+        const parentIds = parentLinks.map(p => p.parent_id);
+        const { data: parentProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, full_name_ar, phone, email, avatar_url')
+          .in('user_id', parentIds);
+
+        parents = parentLinks.map(link => {
+          const profile = parentProfiles?.find(p => p.user_id === link.parent_id);
+          return { ...link, profile };
+        });
+      }
+
       setData({
         profile,
         subscription,
@@ -224,6 +244,7 @@ export default function StudentProfile() {
         warnings: warnings || [],
         makeupSessions: makeupSessions || [],
         levelProgress,
+        parents,
       });
     } catch (error) {
       console.error('Error fetching student data:', error);
