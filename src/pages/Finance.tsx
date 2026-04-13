@@ -159,7 +159,9 @@ export default function Finance() {
   };
 
   const handleRecordPayment = async () => {
-    if (!selectedSub || paymentAmount <= 0) return;
+    if (!selectedSub || paymentAmount <= 0 || savingPayment) return;
+    setSavingPayment(true);
+    try {
 
     const wasSuspended = selectedSub.is_suspended;
 
