@@ -1039,6 +1039,82 @@ export default function StudentsPage() {
                   </>
                 )}
               </div>
+
+              {/* Parent Link - Required for new students */}
+              {!editingStudent && (
+                <div className="grid gap-2 border-t pt-4 mt-2">
+                  <Label className={cn(formTouched.parent_id && !formData.parent_id && 'text-destructive')}>
+                    {isRTL ? '👨‍👩‍👧 ولي الأمر' : '👨‍👩‍👧 Parent'} <span className="text-destructive">*</span>
+                  </Label>
+                  {selectedParent ? (
+                    <div className="flex items-center justify-between rounded-md border bg-primary/5 border-primary/20 p-3">
+                      <div>
+                        <p className="font-medium text-sm">{language === 'ar' && selectedParent.full_name_ar ? selectedParent.full_name_ar : selectedParent.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{selectedParent.phone}</p>
+                        {selectedParent.children_count > 0 && (
+                          <Badge variant="secondary" className="mt-1 text-xs">
+                            {isRTL ? `${selectedParent.children_count} طفل مرتبط` : `${selectedParent.children_count} linked child(ren)`}
+                          </Badge>
+                        )}
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={handleClearParent}>
+                        {isRTL ? 'تغيير' : 'Change'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <Input
+                        value={parentSearchQuery}
+                        onChange={(e) => handleParentSearch(e.target.value)}
+                        onBlur={() => setFormTouched({ ...formTouched, parent_id: true })}
+                        placeholder={isRTL ? 'ابحث بالاسم أو رقم الموبايل...' : 'Search by name or phone...'}
+                        className={cn(
+                          formTouched.parent_id && !formData.parent_id && 'border-destructive focus-visible:ring-destructive'
+                        )}
+                      />
+                      {parentSearching && (
+                        <div className="absolute top-2.5 end-3">
+                          <div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                      {parentSearchResults.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 rounded-md border bg-popover shadow-md max-h-48 overflow-auto">
+                          {parentSearchResults.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className="w-full text-start px-3 py-2 hover:bg-accent text-sm flex items-center justify-between"
+                              onClick={() => handleSelectParent(p)}
+                            >
+                              <div>
+                                <p className="font-medium">{language === 'ar' && p.full_name_ar ? p.full_name_ar : p.full_name}</p>
+                                <p className="text-xs text-muted-foreground">{p.phone || p.email}</p>
+                              </div>
+                              {p.children_count > 0 && (
+                                <Badge variant="outline" className="text-xs">
+                                  {p.children_count} {isRTL ? 'طفل' : 'child'}
+                                </Badge>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {parentSearchQuery.length >= 2 && !parentSearching && parentSearchResults.length === 0 && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {isRTL ? 'لا يوجد ولي أمر بهذا الاسم. ولي الأمر لازم يسجل الأول من صفحة تسجيل أولياء الأمور.' : 'No parent found. Parent must register first via the parent registration page.'}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {formTouched.parent_id && !formData.parent_id && (
+                    <p className="text-sm text-destructive flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {isRTL ? 'يجب اختيار ولي أمر' : 'Parent is required'}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="grid gap-2">
                 <Label>{isRTL ? 'نوع الاشتراك' : 'Subscription Type'} *</Label>
                 <Select
