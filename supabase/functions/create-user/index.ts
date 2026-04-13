@@ -23,6 +23,7 @@ interface CreateUserRequest {
   level_id?: string
   subscription_type?: 'kojo_squad' | 'kojo_core' | 'kojo_x'
   attendance_mode?: 'online' | 'offline'
+  parent_id?: string
   // Instructor-specific fields
   specialization?: string
   specialization_ar?: string
