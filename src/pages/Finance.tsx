@@ -49,6 +49,7 @@ export default function Finance() {
   const [subPageSize, setSubPageSize] = useState(10);
   const [payPage, setPayPage] = useState(1);
   const [payPageSize, setPayPageSize] = useState(10);
+  const [detailDialog, setDetailDialog] = useState<'outstanding' | 'overdue' | null>(null);
 
   const fetchFinanceData = async () => {
     const { data: plans } = await supabase.from('pricing_plans').select('id, name, name_ar').eq('is_active', true);
