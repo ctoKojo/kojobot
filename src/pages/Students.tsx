@@ -1588,7 +1588,7 @@ export default function StudentsPage() {
       <CredentialsDialog
         open={credentialsDialog.open}
         onClose={() => {
-          setCredentialsDialog({ open: false, email: '', password: '', name: '', avatarUrl: null, levelName: undefined, subscriptionType: undefined, attendanceMode: undefined, ageGroupName: undefined });
+          setCredentialsDialog({ open: false, email: '', password: '', name: '', avatarUrl: null, levelName: undefined, subscriptionType: undefined, attendanceMode: undefined, ageGroupName: undefined, linkCode: null });
           setIsDialogOpen(false);
           setEditingStudent(null);
           resetForm();
@@ -1602,6 +1602,7 @@ export default function StudentsPage() {
         subscriptionType={credentialsDialog.subscriptionType}
         attendanceMode={credentialsDialog.attendanceMode}
         ageGroupName={credentialsDialog.ageGroupName}
+        linkCode={credentialsDialog.linkCode}
       />
     </DashboardLayout>
   );
