@@ -24,7 +24,6 @@ interface MakeupSessionData {
 
 export default function MyMakeupSessions() {
   const { isRTL, language } = useLanguage();
-  const { toast } = useToast();
   const { user } = useAuth();
   const [sessions, setSessions] = useState<MakeupSessionData[]>([]);
   const [loading, setLoading] = useState(true);
