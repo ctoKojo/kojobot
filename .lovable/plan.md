@@ -1,110 +1,51 @@
 
 
-# خطة: الميزات الناقصة لبوابة ولي الأمر
+# خطة: استبيانات الرضا (Testimonials) على اللاندينج بيدج
 
-## ملخص
-4 محاور: (1) تابات كويزات + شهادات + ميك أب في ParentStudentView، (2) نظام طلبات إجازة، (3) إشعار غياب فوري لأولياء الأمور، (4) نقل تأكيد/رفض الميك أب من الطالب لولي الأمر.
+## الفكرة
+إنشاء نظام لعرض آراء أولياء الأمور الإيجابية فقط (المعتمدة من الأدمن) على اللاندينج بيدج بشكل احترافي — سكشن بين الباقات والأسئلة الشائعة.
 
----
+## التنفيذ
 
-## 1. Database Migration — جدول `leave_requests`
+### 1. Database Migration — جدول `testimonials`
 
 ```sql
-CREATE TABLE public.leave_requests (
+CREATE TABLE public.testimonials (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id uuid NOT NULL,
-  parent_id uuid NOT NULL,
-  request_date date NOT NULL,
-  end_date date,
-  reason text NOT NULL,
-  status text DEFAULT 'pending',
-  reviewed_by uuid,
-  reviewed_at timestamptz,
-  admin_notes text,
+  parent_id uuid,
+  parent_name text NOT NULL,
+  parent_name_ar text,
+  content_en text,
+  content_ar text,
+  rating int NOT NULL DEFAULT 5 CHECK (rating BETWEEN 1 AND 5),
+  is_approved boolean DEFAULT false,
+  show_on_landing boolean DEFAULT false,
+  sort_order int DEFAULT 0,
   created_at timestamptz DEFAULT now()
 );
-ALTER TABLE public.leave_requests ENABLE ROW LEVEL SECURITY;
 ```
+- RLS: قراءة عامة للمعتمدة فقط (`is_approved = true AND show_on_landing = true`)
+- الأدمن: CRUD كامل
 
-RLS:
-- Parents: SELECT/INSERT/UPDATE own rows (`parent_id = auth.uid()`)
-- Admin/Reception: SELECT all + UPDATE status
+### 2. تحديث `get_landing_content` RPC
+- إضافة `testimonials` (المعتمدة والمعروضة) ضمن البيانات المرجعة
 
----
+### 3. عرض على اللاندينج (`Index.tsx`)
+- سكشن جديد بين Plans و FAQ
+- تصميم كروت احترافية متحركة (carousel أو grid) بنفس ستايل اللاندينج الداكن
+- كل كارت يعرض: الاسم، التقييم (نجوم)، والنص
+- عنوان السكشن: "ماذا يقول أولياء الأمور" / "What Parents Say"
 
-## 2. `ParentStudentView.tsx` — إضافة 3 تابات جديدة
-
-التابات الحالية: حضور، درجات، مدفوعات، اشتراك (4 تابات، grid-cols-4).
-**بعد التعديل**: حضور، درجات، كويزات، شهادات، تعويضية، مدفوعات، اشتراك (**7 تابات**، scrollable أو wrapped).
-
-### تاب الكويزات
-- جلب من `quiz_submissions` مع join على `quiz_assignments → quizzes` لعرض: اسم الكويز، الدرجة، النسبة، الحالة (ناجح ≥60% / راسب).
-
-### تاب الشهادات
-- جلب من `student_certificates` بنفس منطق `StudentCertificatesTab` لكن **بدون** أزرار إعادة توليد/طباعة (read-only + download فقط).
-
-### تاب السيشنات التعويضية
-- جلب من `makeup_sessions` للطالب المحدد.
-- عرض السيشنات المجدولة مع أزرار **تأكيد/رفض** (نفس منطق `handleConfirm` الموجود حالياً في `MyMakeupSessions.tsx`).
-- الإشعار يروح للأدمن باسم ولي الأمر.
-
-### تقرير PDF شهري
-- زر "تحميل تقرير" يستخدم `pdfReports.ts` لتوليد ملخص (حضور + درجات + مالي).
-
----
-
-## 3. `MyMakeupSessions.tsx` — Read-Only للطالب
-
-- إزالة أزرار "تأكيد/رفض" (lines 60-105 تقريباً).
-- إضافة رسالة توضيحية: "التأكيد يتم عبر حساب ولي الأمر".
-- العرض يبقى كما هو (الطالب يشوف سيشناته التعويضية بدون تفاعل).
-
----
-
-## 4. `SessionDetails.tsx` — إشعار غياب لأولياء الأمور
-
-بعد نجاح `handleSaveAttendance` (بعد line 968):
-- لكل طالب في `attendanceRecords` بحالة `absent`:
-  - جلب أولياء أموره من `parent_students`.
-  - إرسال إشعار عبر `notificationService.create()` بعنوان "تسجيل غياب" مع اسم الطالب والمجموعة والتاريخ.
-
----
-
-## 5. صفحة `ParentLeaveRequests.tsx` (جديدة)
-
-- صفحة لولي الأمر لإدارة طلبات الإجازة.
-- عرض قائمة الطلبات مع حالاتها (معلق/موافق/مرفوض).
-- زر "طلب إجازة جديد" → Dialog: اختيار الابن (من الأبناء المرتبطين)، التاريخ من-إلى، السبب.
-- عند الإنشاء: إشعار لكل الأدمن والريسيبشن.
-
----
-
-## 6. صفحة `LeaveRequests.tsx` (جديدة)
-
-- صفحة للأدمن/الريسيبشن لإدارة كل طلبات الإجازة.
-- فلتر بالحالة (الكل/معلق/موافق/مرفوض).
-- أزرار موافقة/رفض + حقل ملاحظات.
-- عند الرد: إشعار لولي الأمر.
-
----
-
-## 7. `App.tsx` + `AppSidebar.tsx`
-
-- Routes: `/leave-requests` (admin/reception)، `/parent-leave-requests` (parent).
-- Sidebar: إضافة "طلبات الإجازة" للأدمن/الريسيبشن وولي الأمر.
-
----
+### 4. إدارة الاستبيانات (Settings أو صفحة مستقلة)
+- تاب أو قسم في صفحة Settings للأدمن لإضافة/تعديل/حذف الاستبيانات
+- Toggle لـ `show_on_landing` و `is_approved`
 
 ## الملفات المتأثرة
 
 | ملف | تغيير |
 |---|---|
-| Migration جديد | `leave_requests` + RLS |
-| `src/pages/ParentStudentView.tsx` | 3 تابات جديدة (كويزات، شهادات، تعويضية) + تقرير PDF |
-| `src/pages/MyMakeupSessions.tsx` | إزالة أزرار التأكيد → read-only |
-| `src/pages/SessionDetails.tsx` | إشعار غياب لأولياء الأمور بعد حفظ الحضور |
-| `src/pages/ParentLeaveRequests.tsx` | **جديد** |
-| `src/pages/LeaveRequests.tsx` | **جديد** |
-| `src/components/AppSidebar.tsx` | روابط جديدة |
-| `src/App.tsx` | Routes جديدة |
+| Migration جديد | جدول `testimonials` + RLS |
+| Migration جديد | تحديث `get_landing_content` |
+| `src/pages/Index.tsx` | سكشن testimonials + interface + data |
+| `src/pages/Settings.tsx` | قسم إدارة الاستبيانات |
 
