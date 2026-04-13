@@ -1,51 +1,60 @@
 
 
-# خطة: استبيانات الرضا (Testimonials) على اللاندينج بيدج
+# خطة: تأكيد الأدمن لحسابات أولياء الأمور لمنع السبام
 
 ## الفكرة
-إنشاء نظام لعرض آراء أولياء الأمور الإيجابية فقط (المعتمدة من الأدمن) على اللاندينج بيدج بشكل احترافي — سكشن بين الباقات والأسئلة الشائعة.
+حالياً أي شخص يملك رابط التسجيل (`/parent-login`) يقدر يسجل حساب ولي أمر عبر Google OAuth ويربط أبنائه بأكواد الربط فوراً. الخطة تضيف طبقة تأكيد من الأدمن بحيث ولي الأمر الجديد يبقى "معلّق" حتى يوافق عليه الأدمن/الريسيبشن.
 
-## التنفيذ
+---
 
-### 1. Database Migration — جدول `testimonials`
+## 1. Database Migration
 
-```sql
-CREATE TABLE public.testimonials (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  parent_id uuid,
-  parent_name text NOT NULL,
-  parent_name_ar text,
-  content_en text,
-  content_ar text,
-  rating int NOT NULL DEFAULT 5 CHECK (rating BETWEEN 1 AND 5),
-  is_approved boolean DEFAULT false,
-  show_on_landing boolean DEFAULT false,
-  sort_order int DEFAULT 0,
-  created_at timestamptz DEFAULT now()
-);
-```
-- RLS: قراءة عامة للمعتمدة فقط (`is_approved = true AND show_on_landing = true`)
-- الأدمن: CRUD كامل
+- إضافة عمود `is_approved` (boolean, default `false`) إلى جدول `profiles` — يُستخدم فقط لأولياء الأمور.
+- تعديل RLS على `profiles` لو لزم (الأدمن فقط يقدر يغير `is_approved`).
 
-### 2. تحديث `get_landing_content` RPC
-- إضافة `testimonials` (المعتمدة والمعروضة) ضمن البيانات المرجعة
+---
 
-### 3. عرض على اللاندينج (`Index.tsx`)
-- سكشن جديد بين Plans و FAQ
-- تصميم كروت احترافية متحركة (carousel أو grid) بنفس ستايل اللاندينج الداكن
-- كل كارت يعرض: الاسم، التقييم (نجوم)، والنص
-- عنوان السكشن: "ماذا يقول أولياء الأمور" / "What Parents Say"
+## 2. Edge Function `register-parent` — تعديل
 
-### 4. إدارة الاستبيانات (Settings أو صفحة مستقلة)
-- تاب أو قسم في صفحة Settings للأدمن لإضافة/تعديل/حذف الاستبيانات
-- Toggle لـ `show_on_landing` و `is_approved`
+- عند إنشاء بروفايل ولي أمر جديد، يُضبط `is_approved = false` تلقائياً.
+- إرسال إشعار للأدمن/الريسيبشن عبر `notifications` (عنوان: "طلب تسجيل ولي أمر جديد").
+- ولي الأمر لا يزال يقدر يربط الأكواد ويكمل التسجيل لكن حسابه يبقى معلّق.
+
+---
+
+## 3. ProtectedRoute — حظر ولي الأمر غير المعتمد
+
+- في قسم `role === 'parent'` داخل `ProtectedRoute.tsx`:
+  - جلب `is_approved` من `profiles`.
+  - لو `is_approved === false` → توجيه لصفحة جديدة `/parent-pending`.
+- إضافة صفحة `ParentPending.tsx` تعرض رسالة: "حسابك قيد المراجعة من الإدارة. سيتم إخطارك عند التفعيل."
+
+---
+
+## 4. صفحة Parents.tsx — أزرار الموافقة
+
+- إضافة عمود "الحالة" في الجدول (معتمد / معلّق).
+- أزرار "موافقة" / "رفض" لكل ولي أمر معلّق.
+- عند الموافقة: `UPDATE profiles SET is_approved = true`.
+- عند الموافقة: إرسال إشعار لولي الأمر.
+- فلتر بالحالة (الكل / معلّق / معتمد).
+
+---
+
+## 5. إشعار لولي الأمر عند الموافقة
+
+- عند تأكيد الأدمن → إشعار لولي الأمر: "تم تفعيل حسابك! يمكنك الدخول الآن."
+
+---
 
 ## الملفات المتأثرة
 
 | ملف | تغيير |
 |---|---|
-| Migration جديد | جدول `testimonials` + RLS |
-| Migration جديد | تحديث `get_landing_content` |
-| `src/pages/Index.tsx` | سكشن testimonials + interface + data |
-| `src/pages/Settings.tsx` | قسم إدارة الاستبيانات |
+| Migration جديد | إضافة `is_approved` لـ `profiles` |
+| `supabase/functions/register-parent/index.ts` | ضبط `is_approved = false` + إشعار أدمن |
+| `src/components/ProtectedRoute.tsx` | فحص `is_approved` لأولياء الأمور |
+| `src/pages/ParentPending.tsx` | **جديد** — صفحة انتظار الموافقة |
+| `src/pages/Parents.tsx` | أزرار موافقة/رفض + فلتر الحالة |
+| `src/App.tsx` | Route `/parent-pending` |
 
