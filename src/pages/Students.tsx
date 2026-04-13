@@ -175,7 +175,7 @@ export default function StudentsPage() {
   const parentSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Credentials dialog state
-  const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string; name: string; avatarUrl?: string | null; levelName?: string; subscriptionType?: string; attendanceMode?: string; ageGroupName?: string }>({ open: false, email: '', password: '', name: '' });
+  const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string; name: string; avatarUrl?: string | null; levelName?: string; subscriptionType?: string; attendanceMode?: string; ageGroupName?: string; linkCode?: string | null }>({ open: false, email: '', password: '', name: '' });
 
   // Validation results computed from form data
   const validationErrors = useMemo(() => {
@@ -204,12 +204,13 @@ export default function StudentsPage() {
       return baseValid;
     }
     
-    // For new students, also validate email, password, and subscription type
+    // For new students, also validate email, password, subscription type, and parent
     return baseValid && 
            !validationErrors.email && 
            validationErrors.passwordDetails.isValid && 
-           formData.subscription_type !== '';
-  }, [validationErrors, editingStudent, formData.subscription_type]);
+           formData.subscription_type !== '' &&
+           formData.parent_id !== '';
+  }, [validationErrors, editingStudent, formData.subscription_type, formData.parent_id]);
 
   const subscriptionTypes = GROUP_TYPES_LIST;
 
@@ -406,6 +407,7 @@ export default function StudentsPage() {
             level_id: formData.level_id || undefined,
             subscription_type: formData.subscription_type || undefined,
             attendance_mode: formData.attendance_mode,
+            parent_id: formData.parent_id || undefined,
           }
         });
 
