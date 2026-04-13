@@ -199,7 +199,7 @@ export default function StudentProfile() {
       // Fetch warnings
       const { data: warnings } = await supabase
         .from('warnings')
-        .select('*, profiles!warnings_issued_by_fkey(full_name, full_name_ar)')
+        .select('*')
         .eq('student_id', studentId)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
