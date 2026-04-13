@@ -135,7 +135,7 @@ export default function Finance() {
 
   const subscriptions = financeData?.subscriptions || [];
   const payments = financeData?.payments || [];
-  const stats = financeData?.stats || { totalRevenue: 0, totalOutstanding: 0, activeCount: 0, suspendedCount: 0, overdueCount: 0 };
+  const stats = financeData?.stats || { totalRevenue: 0, totalOutstanding: 0, activeCount: 0, suspendedCount: 0, overdueCount: 0, netProfit: 0, thisMonthExpenses: 0, thisMonthSalaries: 0 };
 
   // Build filtered monthly data based on reportPeriod and reportPlan
   const filteredMonthlyData = useMemo(() => {
