@@ -1749,6 +1749,48 @@ export type Database = {
           },
         ]
       }
+      leave_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          end_date: string | null
+          id: string
+          parent_id: string
+          reason: string
+          request_date: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          student_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          parent_id: string
+          reason: string
+          request_date: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          parent_id?: string
+          reason?: string
+          request_date?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       level_grades: {
         Row: {
           created_at: string | null
