@@ -142,6 +142,7 @@ const App = () => (
                   <Route path="/finance" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Finance /></ProtectedRoute>} />
                   <Route path="/deduction-rules" element={<ProtectedRoute allowedRoles={['admin']}><DeductionRules /></ProtectedRoute>} />
                   <Route path="/messages" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception', 'parent']}><Messages /></ProtectedRoute>} />
+                  <Route path="/parents" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Parents /></ProtectedRoute>} />
                   <Route path="/instructor-performance" element={<ProtectedRoute allowedRoles={['admin']}><InstructorPerformanceDashboard /></ProtectedRoute>} />
                   <Route path="/curriculum" element={<ProtectedRoute allowedRoles={['admin']}><CurriculumManagement /></ProtectedRoute>} />
                   <Route path="/curriculum/session/:sessionId" element={<ProtectedRoute allowedRoles={['admin']}><CurriculumSessionEdit /></ProtectedRoute>} />
