@@ -47,6 +47,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { notificationService } from '@/lib/notificationService';
 import { toast } from '@/hooks/use-toast';
 import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { QuizResultsDialog } from '@/components/session/QuizResultsDialog';
@@ -978,6 +979,48 @@ export default function SessionDetails() {
         });
       }
       
+      // Notify parents of absent students
+      const absentStudentIds = Object.entries(attendanceRecords)
+        .filter(([_, status]) => status === 'absent')
+        .map(([studentId]) => studentId);
+
+      if (absentStudentIds.length > 0) {
+        try {
+          const { data: parentLinks } = await supabase
+            .from('parent_students')
+            .select('parent_id, student_id')
+            .in('student_id', absentStudentIds);
+
+          if (parentLinks && parentLinks.length > 0) {
+            const studentIds = [...new Set(parentLinks.map(l => l.student_id))];
+            const { data: studentProfiles } = await supabase
+              .from('profiles')
+              .select('user_id, full_name, full_name_ar')
+              .in('user_id', studentIds);
+
+            const profileMap = new Map(studentProfiles?.map(p => [p.user_id, p]) || []);
+            const groupName = isRTL ? (group?.name_ar || group?.name) : group?.name;
+
+            for (const link of parentLinks) {
+              const sp = profileMap.get(link.student_id);
+              const sName = isRTL ? (sp?.full_name_ar || sp?.full_name) : sp?.full_name;
+              await notificationService.create({
+                user_id: link.parent_id,
+                title: 'Absence Recorded',
+                title_ar: 'تسجيل غياب',
+                message: `${sName} was marked absent in "${groupName}" on ${session?.session_date}`,
+                message_ar: `تم تسجيل غياب ${sName} في مجموعة "${groupName}" بتاريخ ${session?.session_date}`,
+                type: 'warning',
+                category: 'attendance',
+                action_url: `/parent/student/${link.student_id}`,
+              });
+            }
+          }
+        } catch (notifErr) {
+          console.error('Error notifying parents:', notifErr);
+        }
+      }
+
       setAttendanceDialogOpen(false);
       fetchSessionData();
     } catch (error: any) {

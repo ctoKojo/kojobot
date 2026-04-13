@@ -3,13 +3,10 @@ import { formatDate } from '@/lib/timeUtils';
 import { Calendar, Clock, CheckCircle, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { notificationService } from '@/lib/notificationService';
 
 interface MakeupSessionData {
   id: string;
@@ -27,7 +24,6 @@ interface MakeupSessionData {
 
 export default function MyMakeupSessions() {
   const { isRTL, language } = useLanguage();
-  const { toast } = useToast();
   const { user } = useAuth();
   const [sessions, setSessions] = useState<MakeupSessionData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,56 +49,7 @@ export default function MyMakeupSessions() {
     }
   };
 
-  const handleConfirm = async (session: MakeupSessionData, confirmed: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('makeup_sessions')
-        .update({ student_confirmed: confirmed })
-        .eq('id', session.id);
-
-      if (error) throw error;
-
-      // Notify all admins
-      const { data: adminRoles } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-
-      const groupName = language === 'ar' ? (session.groups?.name_ar || session.groups?.name) : session.groups?.name;
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, full_name_ar')
-        .eq('user_id', user!.id)
-        .single();
-
-      const studentName = language === 'ar' ? (profile?.full_name_ar || profile?.full_name) : profile?.full_name;
-
-      if (adminRoles) {
-        for (const admin of adminRoles) {
-          await notificationService.create({
-            user_id: admin.user_id,
-            title: confirmed ? 'Makeup Session Confirmed' : 'Makeup Session Rejected',
-            title_ar: confirmed ? 'تأكيد سيشن تعويضية' : 'رفض سيشن تعويضية',
-            message: `${studentName} has ${confirmed ? 'confirmed' : 'rejected'} the makeup session for "${groupName}"`,
-            message_ar: `${studentName} ${confirmed ? 'أكد' : 'رفض'} السيشن التعويضية لمجموعة "${groupName}"`,
-            type: confirmed ? 'success' : 'warning',
-            category: 'makeup_session',
-            action_url: '/makeup-sessions',
-          });
-        }
-      }
-
-      toast({
-        title: confirmed
-          ? (isRTL ? 'تم التأكيد' : 'Confirmed')
-          : (isRTL ? 'تم الرفض' : 'Rejected'),
-      });
-      fetchSessions();
-    } catch (error) {
-      console.error(error);
-      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error' });
-    }
-  };
+  // Confirm/Reject removed — handled by parent account now
 
   const getStatusInfo = (status: string) => {
     const map: Record<string, { label: string; className: string }> = {
@@ -117,6 +64,8 @@ export default function MyMakeupSessions() {
 
   const pending = sessions.filter(s => s.status === 'pending' || (s.status === 'scheduled' && s.student_confirmed === null));
   const others = sessions.filter(s => !pending.includes(s));
+
+  // Note: Confirm/Reject actions are now handled by the parent account
 
   return (
     <DashboardLayout title={isRTL ? 'سيشناتي التعويضية' : 'My Makeup Sessions'}>
@@ -185,15 +134,10 @@ export default function MyMakeupSessions() {
                           )}
                         </div>
                         {session.status === 'scheduled' && session.student_confirmed === null && (
-                          <div className="flex gap-2 shrink-0">
-                            <Button size="sm" onClick={() => handleConfirm(session, true)}>
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              {isRTL ? 'تأكيد' : 'Confirm'}
-                            </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleConfirm(session, false)}>
-                              <XCircle className="h-4 w-4 mr-1" />
-                              {isRTL ? 'رفض' : 'Reject'}
-                            </Button>
+                          <div className="shrink-0">
+                            <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                              {isRTL ? 'بانتظار تأكيد ولي الأمر' : 'Awaiting Parent Confirmation'}
+                            </Badge>
                           </div>
                         )}
                       </div>
