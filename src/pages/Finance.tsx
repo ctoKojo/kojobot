@@ -177,16 +177,10 @@ export default function Finance() {
       p_recorded_by: user?.id || null,
     });
 
-    if (error) {
-      toast({ title: isRTL ? 'خطأ في تسجيل الدفعة' : 'Payment recording error', description: error.message, variant: 'destructive' });
-      return;
-    }
+    if (error) throw new Error(error.message);
 
     const res = result as any;
-    if (res?.error) {
-      toast({ title: isRTL ? 'خطأ' : 'Error', description: res.error, variant: 'destructive' });
-      return;
-    }
+    if (res?.error) throw new Error(res.error);
 
     // Send notifications
     await notificationService.notifyPaymentRecorded(selectedSub.student_id, paymentAmount, Math.max(0, res.new_remaining));
