@@ -482,6 +482,7 @@ export default function StudentsPage() {
           subscriptionType: formData.subscription_type || undefined,
           attendanceMode: formData.attendance_mode,
           ageGroupName,
+          linkCode: data?.link_code || null,
         });
       }
 
