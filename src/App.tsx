@@ -75,6 +75,7 @@ const MyCertificates = React.lazy(() => import("./pages/MyCertificates"));
 const RenewalRequired = React.lazy(() => import("./pages/RenewalRequired"));
 const ParentStudentView = React.lazy(() => import("./pages/ParentStudentView"));
 const ParentRegister = React.lazy(() => import("./pages/ParentRegister"));
+const ParentLogin = React.lazy(() => import("./pages/ParentLogin"));
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
@@ -159,6 +160,7 @@ const App = () => (
                   <Route path="/account-suspended" element={<AccountSuspended />} />
                   <Route path="/account-terminated" element={<AccountTerminated />} />
                   <Route path="/renewal-required" element={<RenewalRequired />} />
+                  <Route path="/parent-login" element={<ParentLogin />} />
                   <Route path="/parent-register" element={<ParentRegister />} />
                   <Route path="/parent/student/:studentId" element={<ProtectedRoute allowedRoles={['parent']}><ParentStudentView /></ProtectedRoute>} />
                   <Route path="*" element={<NotFound />} />
