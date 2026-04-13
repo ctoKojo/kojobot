@@ -4,6 +4,7 @@ import {
   User, Calendar, Clock, Award, AlertTriangle, BookOpen, 
   FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw, DollarSign, Printer, Users
 } from 'lucide-react';
+import { LinkParentDialog } from '@/components/student/LinkParentDialog';
 import { GenerateParentCodeDialog } from '@/components/student/GenerateParentCodeDialog';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -399,6 +400,13 @@ export default function StudentProfile() {
                 </Button>
               )}
               {(role === 'admin' || role === 'reception') && (!data?.parents || data.parents.length === 0) && (
+                <LinkParentDialog
+                  studentId={studentId!}
+                  studentName={data?.profile?.full_name || ''}
+                  onLinked={() => fetchStudentData()}
+                />
+              )}
+              {(role === 'admin' || role === 'reception') && (
                 <GenerateParentCodeDialog
                   studentId={studentId!}
                   studentName={data?.profile?.full_name || ''}
