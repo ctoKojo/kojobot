@@ -235,6 +235,7 @@ export function AppSidebar() {
               { title: isRTL ? 'الامتحانات النهائية' : 'Final Exams', url: '/final-exams', icon: Target, roles: ['reception'] },
               { title: isRTL ? 'جدول العمل' : 'Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['reception'] },
               { title: isRTL ? 'مراجعة تحديد المستوى' : 'Placement Review', url: '/placement-test-review', icon: ClipboardCheck, roles: ['reception'] },
+              { title: isRTL ? 'طلبات الإجازة' : 'Leave Requests', url: '/leave-requests', icon: CalendarDays, roles: ['reception'] },
             ],
           },
           {
