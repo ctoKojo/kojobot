@@ -553,7 +553,7 @@ export default function MakeupSessionsPage() {
                               )}
                             </div>
                           </div>
-                          {role === 'admin' && (
+                          {(role === 'admin' || role === 'reception') && (
                             <div className="flex gap-1 shrink-0">
                               <Button size="sm" onClick={() => handleSchedule(session)}>
                                 <Calendar className="h-3 w-3 mr-1" />
@@ -605,7 +605,7 @@ export default function MakeupSessionsPage() {
                               <span>{isRTL ? 'المدرب:' : 'Instructor:'} {session.instructor_name}</span>
                             </div>
                           </div>
-                          {role === 'admin' && (
+                          {(role === 'admin' || role === 'reception') && (
                             <div className="flex gap-1 shrink-0">
                               <Button size="sm" variant="outline" onClick={() => handleSchedule(session)}>
                                 <Calendar className="h-3 w-3 mr-1" />

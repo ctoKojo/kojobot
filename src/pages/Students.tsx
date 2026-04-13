@@ -128,7 +128,7 @@ export default function StudentsPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
   const { user, role } = useAuth();
-  const isAdmin = role === 'admin';
+  const isAdmin = role === 'admin' || role === 'reception';
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();

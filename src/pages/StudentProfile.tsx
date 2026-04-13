@@ -329,7 +329,7 @@ export default function StudentProfile() {
                     <DollarSign className="h-4 w-4 mr-2" />
                     {isRTL ? 'تعديل الاشتراك' : 'Edit Subscription'}
                   </Button>
-                  {(data.levelProgress?.status === 'graded' || data.levelProgress?.status === 'pending_group_assignment') && (
+                  {data.levelProgress?.status === 'graded' && (
                     <Button 
                       variant="default"
                       onClick={() => setShowRenewalDialog(true)}
@@ -340,7 +340,7 @@ export default function StudentProfile() {
                   )}
                 </>
               )}
-              {role === 'admin' && (
+              {(role === 'admin' || role === 'reception') && (
                 <ResetPasswordButton
                   userId={studentId!}
                   userName={data?.profile?.full_name || ''}
