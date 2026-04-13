@@ -107,6 +107,19 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
         setNeedsRenewal(renewal);
         fetchingRef.current = false;
       });
+    } else if (role === 'parent') {
+      // Parents don't need suspension/level checks
+      statusCache.userId = user.id;
+      statusCache.isSuspended = false;
+      statusCache.isTerminated = false;
+      statusCache.hasLevel = true;
+      statusCache.needsRenewal = false;
+      statusCache.fetchedAt = Date.now();
+      setIsSuspended(false);
+      setIsTerminated(false);
+      setHasLevel(true);
+      setNeedsRenewal(false);
+      fetchingRef.current = false;
     } else {
       statusCache.userId = user.id;
       statusCache.isSuspended = false;

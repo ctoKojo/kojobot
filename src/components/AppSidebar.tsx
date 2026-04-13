@@ -55,7 +55,7 @@ interface NavItem {
   title: string;
   url: string;
   icon: React.ComponentType<{ className?: string }>;
-  roles: ('admin' | 'instructor' | 'student' | 'reception')[];
+  roles: ('admin' | 'instructor' | 'student' | 'reception' | 'parent')[];
 }
 
 interface NavSection {
