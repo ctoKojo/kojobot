@@ -2122,6 +2122,30 @@ export type Database = {
           },
         ]
       }
+      parent_students: {
+        Row: {
+          created_at: string
+          id: string
+          parent_id: string
+          relationship: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          parent_id: string
+          relationship?: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          parent_id?: string
+          relationship?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
