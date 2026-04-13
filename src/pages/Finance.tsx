@@ -280,13 +280,20 @@ export default function Finance() {
         {/* Stats */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
           {[
-            { label: isRTL ? 'إيرادات الشهر الحالي' : 'This Month Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600', adminOnly: true },
-            { label: isRTL ? 'المبالغ المستحقة' : 'Outstanding', value: `${stats.totalOutstanding} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, gradient: 'from-amber-500 to-orange-500', adminOnly: true },
-            { label: isRTL ? 'اشتراكات نشطة' : 'Active', value: stats.activeCount, icon: Users, gradient: 'from-blue-500 to-blue-600', adminOnly: false },
-            { label: isRTL ? 'متأخرين' : 'Overdue', value: stats.overdueCount, icon: AlertTriangle, gradient: 'from-red-500 to-red-600', adminOnly: false },
-            { label: isRTL ? 'موقوفين' : 'Suspended', value: stats.suspendedCount, icon: Ban, gradient: 'from-gray-500 to-gray-600', adminOnly: false },
+            { key: 'revenue', label: isRTL ? 'إيرادات الشهر الحالي' : 'This Month Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600', adminOnly: true, clickable: false },
+            { key: 'outstanding', label: isRTL ? 'المبالغ المستحقة' : 'Outstanding', value: `${stats.totalOutstanding} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, gradient: 'from-amber-500 to-orange-500', adminOnly: true, clickable: true },
+            { key: 'active', label: isRTL ? 'اشتراكات نشطة' : 'Active', value: stats.activeCount, icon: Users, gradient: 'from-blue-500 to-blue-600', adminOnly: false, clickable: false },
+            { key: 'overdue', label: isRTL ? 'متأخرين' : 'Overdue', value: stats.overdueCount, icon: AlertTriangle, gradient: 'from-red-500 to-red-600', adminOnly: false, clickable: true },
+            { key: 'suspended', label: isRTL ? 'موقوفين' : 'Suspended', value: stats.suspendedCount, icon: Ban, gradient: 'from-gray-500 to-gray-600', adminOnly: false, clickable: false },
           ].filter(stat => !stat.adminOnly || role === 'admin').map(stat => (
-            <Card key={stat.label} className="relative overflow-hidden hover:shadow-md transition-all duration-300">
+            <Card
+              key={stat.label}
+              className={`relative overflow-hidden hover:shadow-md transition-all duration-300 ${stat.clickable ? 'cursor-pointer hover:ring-2 hover:ring-primary/30' : ''}`}
+              onClick={() => {
+                if (stat.key === 'outstanding') setDetailDialog('outstanding');
+                if (stat.key === 'overdue') setDetailDialog('overdue');
+              }}
+            >
               <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
