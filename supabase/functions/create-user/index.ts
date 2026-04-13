@@ -346,10 +346,51 @@ serve(async (req) => {
         .insert(links)
       if (linkError) {
         console.error('Error linking parent to students:', linkError)
-        // Non-fatal: parent is created, links can be added later
       } else {
         console.log('Linked parent to students:', body.linked_student_ids)
       }
+    }
+
+    // Link student to parent if parent_id provided
+    let linkCode: string | null = null
+    if (body.role === 'student' && body.parent_id) {
+      const { error: parentLinkError } = await adminSupabase
+        .from('parent_students')
+        .insert({ parent_id: body.parent_id, student_id: newUserId })
+      if (parentLinkError) {
+        console.error('Error linking student to parent:', parentLinkError)
+      } else {
+        console.log('Linked student to parent:', body.parent_id)
+      }
+    }
+
+    // Generate link code for every new student
+    if (body.role === 'student') {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+      const parts = [3, 4, 4]
+      linkCode = parts.map(len => {
+        let s = ''
+        for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)]
+        return s
+      }).join('-')
+      const expiresAt = new Date()
+      expiresAt.setDate(expiresAt.getDate() + 7)
+
+      const authHeader = req.headers.get('Authorization')!
+      const token = authHeader.replace('Bearer ', '')
+      const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      })
+      const { data: claimsData2 } = await userSupabase.auth.getClaims(token)
+      const createdBy = claimsData2?.claims?.sub as string
+
+      await adminSupabase.from('parent_link_codes').insert({
+        code: linkCode,
+        student_id: newUserId,
+        created_by: createdBy || newUserId,
+        expires_at: expiresAt.toISOString(),
+      })
+      console.log('Generated link code for student:', linkCode)
     }
 
     // Log activity (skip in bootstrap mode as there's no requesting user)
@@ -375,6 +416,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         user_id: newUserId,
+        link_code: linkCode,
         message: `${body.role} created successfully`
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
