@@ -209,7 +209,7 @@ export default function StudentProfile() {
         .from('group_student_progress')
         .select('status, outcome, graded_at, exam_submitted_at')
         .eq('student_id', studentId!)
-        .in('status', ['graded', 'awaiting_exam', 'exam_scheduled'])
+        .in('status', ['graded', 'awaiting_exam', 'exam_scheduled', 'pending_group_assignment'])
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
