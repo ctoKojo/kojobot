@@ -4,6 +4,7 @@ import {
   User, Calendar, Clock, Award, AlertTriangle, BookOpen, 
   FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw, DollarSign, Printer, Users
 } from 'lucide-react';
+import { LinkParentDialog } from '@/components/student/LinkParentDialog';
 import { GenerateParentCodeDialog } from '@/components/student/GenerateParentCodeDialog';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -399,6 +400,13 @@ export default function StudentProfile() {
                 </Button>
               )}
               {(role === 'admin' || role === 'reception') && (!data?.parents || data.parents.length === 0) && (
+                <LinkParentDialog
+                  studentId={studentId!}
+                  studentName={data?.profile?.full_name || ''}
+                  onLinked={() => fetchStudentData()}
+                />
+              )}
+              {(role === 'admin' || role === 'reception') && (
                 <GenerateParentCodeDialog
                   studentId={studentId!}
                   studentName={data?.profile?.full_name || ''}
@@ -407,6 +415,21 @@ export default function StudentProfile() {
             </div>
           )}
         </div>
+
+        {/* No Parent Warning Banner */}
+        {(role === 'admin' || role === 'reception') && (!data?.parents || data.parents.length === 0) && (
+          <div className="flex items-center gap-3 p-3 rounded-lg border border-warning/50 bg-warning/10">
+            <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0" />
+            <p className="text-sm font-medium flex-1">
+              {isRTL ? 'هذا الطالب غير مربوط بولي أمر. يرجى ربطه بولي أمر.' : 'This student is not linked to a parent. Please link them to a parent.'}
+            </p>
+            <LinkParentDialog
+              studentId={studentId!}
+              studentName={data?.profile?.full_name || ''}
+              onLinked={() => fetchStudentData()}
+            />
+          </div>
+        )}
 
         {/* Profile Header */}
         <Card className="relative overflow-hidden border-0 shadow-md">
