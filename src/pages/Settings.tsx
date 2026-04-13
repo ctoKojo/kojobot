@@ -314,6 +314,9 @@ export default function SettingsPage() {
           </Card>
         )}
 
+        {/* Sibling Discount Settings - Admin Only */}
+        {role === 'admin' && <SiblingDiscountSettings isRTL={isRTL} />}
+
         {/* Content Access Permissions - Admin Only */}
         {role === 'admin' && <ContentAccessSettings isRTL={isRTL} />}
 
