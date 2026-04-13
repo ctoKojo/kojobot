@@ -303,14 +303,14 @@ export default function StudentProfile() {
     <DashboardLayout title={isRTL ? 'ملف الطالب' : 'Student Profile'}>
       <div className="space-y-6">
         {/* Back Button & Actions */}
-        <div className="flex justify-between items-center flex-wrap gap-2">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <Button variant="ghost" onClick={() => navigate('/students')}>
             <ArrowLeft className={`h-4 w-4 ${isRTL ? "ms-2 rotate-180" : "me-2"}`} />
             {isRTL ? 'رجوع' : 'Back'}
           </Button>
           
           {(role === 'admin' || role === 'instructor' || role === 'reception') && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {(role === 'admin' || role === 'reception') && !data?.subscription && (
                 <Button 
                   variant="outline"
@@ -412,8 +412,8 @@ export default function StudentProfile() {
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full -translate-y-10 translate-x-10" />
           <CardContent className="relative p-6">
-            <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-              <Avatar className="h-24 w-24 ring-4 ring-primary/20 shadow-lg">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 items-center sm:items-start">
+              <Avatar className="h-20 w-20 sm:h-24 sm:w-24 ring-4 ring-primary/20 shadow-lg flex-shrink-0">
                 <AvatarImage src={data.profile.avatar_url} className="object-cover" />
                 <AvatarFallback className="text-2xl bg-gradient-to-br from-primary to-secondary text-white">
                   {data.profile.full_name?.charAt(0) || 'S'}
@@ -488,7 +488,7 @@ export default function StudentProfile() {
                   </div>
                 )}
               {/* Subscription Status */}
-              <div className="text-right">
+              <div className="w-full sm:w-auto sm:text-right mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0">
                 {data.subscription ? (
                   <div className="space-y-1">
                     <Badge className="bg-green-100 text-green-800">
@@ -555,15 +555,15 @@ export default function StudentProfile() {
         {/* Group Info */}
         {/* Detailed Tabs - Action First */}
         <Tabs defaultValue="payments" className="w-full">
-          <TabsList className="grid w-full grid-cols-8">
-            <TabsTrigger value="payments">{isRTL ? 'الدفعات' : 'Payments'}</TabsTrigger>
-            <TabsTrigger value="attendance">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
-            <TabsTrigger value="warnings">{isRTL ? 'الإنذارات' : 'Warnings'}</TabsTrigger>
-            <TabsTrigger value="quizzes">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
-            <TabsTrigger value="assignments">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
-            <TabsTrigger value="makeup">{isRTL ? 'التعويضات' : 'Makeup'}</TabsTrigger>
-            <TabsTrigger value="certificates">{isRTL ? 'الشهادات' : 'Certificates'}</TabsTrigger>
-            <TabsTrigger value="xp">{isRTL ? 'نقاط XP' : 'XP'}</TabsTrigger>
+          <TabsList className="flex w-full overflow-x-auto no-scrollbar">
+            <TabsTrigger value="payments" className="flex-shrink-0">{isRTL ? 'الدفعات' : 'Payments'}</TabsTrigger>
+            <TabsTrigger value="attendance" className="flex-shrink-0">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
+            <TabsTrigger value="warnings" className="flex-shrink-0">{isRTL ? 'الإنذارات' : 'Warnings'}</TabsTrigger>
+            <TabsTrigger value="quizzes" className="flex-shrink-0">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
+            <TabsTrigger value="assignments" className="flex-shrink-0">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
+            <TabsTrigger value="makeup" className="flex-shrink-0">{isRTL ? 'التعويضات' : 'Makeup'}</TabsTrigger>
+            <TabsTrigger value="certificates" className="flex-shrink-0">{isRTL ? 'الشهادات' : 'Certificates'}</TabsTrigger>
+            <TabsTrigger value="xp" className="flex-shrink-0">{isRTL ? 'نقاط XP' : 'XP'}</TabsTrigger>
           </TabsList>
 
           {/* Payments Tab */}
