@@ -90,16 +90,20 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
     }
     setSaving(true);
     try {
-      // Close any existing active subscription for this student before creating a new one
-      if (isRenewal && previousSubscriptionId) {
-        const { error: closeErr } = await supabase.from('subscriptions').update({ status: 'completed' } as any).eq('id', previousSubscriptionId);
-        if (closeErr) {
-          console.error('Failed to close previous subscription:', closeErr);
+      // Close ALL active subscriptions for this student before creating a new one
+      const { error: closeErr } = await supabase
+        .from('subscriptions')
+        .update({ status: 'completed' } as any)
+        .eq('student_id', studentId)
+        .eq('status', 'active');
+      
+      if (closeErr) {
+        console.error('Failed to close previous subscriptions:', closeErr);
+        // Don't block if there are no active subscriptions to close
+        if (closeErr.code !== 'PGRST116') {
           throw new Error(isRTL ? 'فشل إغلاق الاشتراك السابق' : 'Failed to close previous subscription');
         }
       }
-      // Fallback: close any remaining active subscription for this student (handles edge cases)
-      await supabase.from('subscriptions').update({ status: 'completed' } as any).eq('student_id', studentId).eq('status', 'active');
 
       // Get student's current level_id from profile
       const { data: profile } = await supabase.from('profiles').select('level_id').eq('user_id', studentId).single();
