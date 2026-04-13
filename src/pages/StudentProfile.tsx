@@ -4,6 +4,7 @@ import {
   User, Calendar, Clock, Award, AlertTriangle, BookOpen, 
   FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw, DollarSign, Printer
 } from 'lucide-react';
+import { GenerateParentCodeDialog } from '@/components/student/GenerateParentCodeDialog';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -373,6 +374,12 @@ export default function StudentProfile() {
                   <Calendar className="h-4 w-4 mr-2" />
                   {isRTL ? 'جدولة امتحان تحديد المستوى' : 'Schedule Placement Exam'}
                 </Button>
+              )}
+              {(role === 'admin' || role === 'reception') && (
+                <GenerateParentCodeDialog
+                  studentId={studentId!}
+                  studentName={data?.profile?.full_name || ''}
+                />
               )}
             </div>
           )}

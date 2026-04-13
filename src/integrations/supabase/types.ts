@@ -2122,6 +2122,77 @@ export type Database = {
           },
         ]
       }
+      parent_link_audit: {
+        Row: {
+          action: string
+          code_id: string | null
+          created_at: string
+          id: string
+          ip_address: string | null
+          parent_id: string
+          student_id: string
+        }
+        Insert: {
+          action: string
+          code_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          parent_id: string
+          student_id: string
+        }
+        Update: {
+          action?: string
+          code_id?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          parent_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parent_link_audit_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "parent_link_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parent_link_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          student_id: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          expires_at: string
+          id?: string
+          student_id: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          student_id?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
       parent_students: {
         Row: {
           created_at: string
