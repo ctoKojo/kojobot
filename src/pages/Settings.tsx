@@ -736,3 +736,101 @@ function SocialLinksSettings({ isRTL }: { isRTL: boolean }) {
     </Card>
   );
 }
+
+function SiblingDiscountSettings({ isRTL }: { isRTL: boolean }) {
+  const { user } = useAuth();
+  const [enabled, setEnabled] = useState(false);
+  const [percentage, setPercentage] = useState(10);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'sibling_discount')
+        .maybeSingle();
+      if (data?.value) {
+        const v = data.value as any;
+        setEnabled(v.enabled || false);
+        setPercentage(v.percentage || 10);
+      }
+      setLoading(false);
+    };
+    load();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await supabase.from('system_settings').upsert(
+        { key: 'sibling_discount', value: { enabled, percentage } as any, updated_by: user?.id },
+        { onConflict: 'key' }
+      );
+      setHasChanges(false);
+      toast.success(isRTL ? 'تم حفظ إعدادات خصم الإخوة' : 'Sibling discount settings saved');
+    } catch {
+      toast.error(isRTL ? 'فشل في الحفظ' : 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CardTitle>{isRTL ? 'خصم الإخوة' : 'Sibling Discount'}</CardTitle>
+          </div>
+          {hasChanges && (
+            <Button onClick={handleSave} disabled={saving} size="sm">
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              {isRTL ? 'حفظ' : 'Save'}
+            </Button>
+          )}
+        </div>
+        <CardDescription>
+          {isRTL ? 'خصم تلقائي عند وجود إخوة بإشتراكات نشطة' : 'Auto-discount when siblings have active subscriptions'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {loading ? (
+          <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+              <div>
+                <Label className="text-base">{isRTL ? 'تفعيل خصم الإخوة' : 'Enable Sibling Discount'}</Label>
+                <p className="text-sm text-muted-foreground">
+                  {isRTL ? 'اقتراح خصم تلقائي عند إنشاء اشتراك لطالب له إخوة' : 'Suggest discount when creating subscription for a student with siblings'}
+                </p>
+              </div>
+              <Switch checked={enabled} onCheckedChange={(v) => { setEnabled(v); setHasChanges(true); }} />
+            </div>
+            {enabled && (
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <Label className="text-base">{isRTL ? 'نسبة الخصم %' : 'Discount Percentage %'}</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {isRTL ? 'النسبة المقترحة تلقائياً (قابلة للتعديل)' : 'Auto-suggested percentage (editable)'}
+                  </p>
+                </div>
+                <Input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={percentage}
+                  onChange={(e) => { setPercentage(Number(e.target.value)); setHasChanges(true); }}
+                  className="w-20"
+                />
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
