@@ -91,6 +91,10 @@ export function SalariesTab() {
 
   const fetchData = async () => {
     setLoading(true);
+
+    // Auto-initialize salary snapshots for the current month
+    await supabase.rpc('init_salary_month', { p_month: currentMonth });
+
     const [rolesRes, salariesRes, snapshotsRes, eventsRes, paymentsRes] = await Promise.all([
       supabase.from('user_roles').select('user_id, role').in('role', ['instructor', 'reception']),
       supabase.from('employee_salaries').select('*').eq('is_active', true),
