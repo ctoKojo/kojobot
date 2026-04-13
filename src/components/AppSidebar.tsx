@@ -204,7 +204,6 @@ export function AppSidebar() {
           {
             label: 'Support', labelAr: 'الدعم',
             items: [
-              { title: isRTL ? 'حسابي المالي' : 'My Finances', url: '/my-finances', icon: DollarSign, roles: ['student'] },
               { title: isRTL ? 'سيشناتي التعويضية' : 'My Makeup Sessions', url: '/my-makeup-sessions', icon: RefreshCw, roles: ['student'] },
               { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['student'] },
               { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-warnings', icon: AlertTriangle, roles: ['student'] },
@@ -240,6 +239,7 @@ export function AppSidebar() {
             items: [
               { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['reception'] },
               { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['reception'] },
+              { title: isRTL ? 'طلبات الاشتراك' : 'Subscription Requests', url: '/subscription-requests', icon: ClipboardList, roles: ['reception'] },
             ],
           },
         ];
@@ -250,7 +250,14 @@ export function AppSidebar() {
             label: 'Main', labelAr: 'الرئيسية',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['parent'] },
+              { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare, roles: ['parent'] },
               { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['parent'] },
+            ],
+          },
+          {
+            label: 'Finance', labelAr: 'المالية',
+            items: [
+              { title: isRTL ? 'الحساب المالي' : 'Finances', url: '/my-finances', icon: DollarSign, roles: ['parent'] },
             ],
           },
         ];
