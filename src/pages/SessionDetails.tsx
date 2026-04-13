@@ -999,7 +999,7 @@ export default function SessionDetails() {
               .in('user_id', studentIds);
 
             const profileMap = new Map(studentProfiles?.map(p => [p.user_id, p]) || []);
-            const groupName = isRTL ? (session?.groups?.name_ar || session?.groups?.name) : session?.groups?.name;
+            const groupName = isRTL ? (group?.name_ar || group?.name) : group?.name;
 
             for (const link of parentLinks) {
               const sp = profileMap.get(link.student_id);
