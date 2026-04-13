@@ -4,6 +4,7 @@ import {
   User, Calendar, Clock, Award, AlertTriangle, BookOpen, 
   FileText, GraduationCap, ArrowLeft, Mail, Phone, CheckCircle, XCircle, BarChart3, Plus, RefreshCw, DollarSign, Printer
 } from 'lucide-react';
+import { GenerateParentCodeDialog } from '@/components/student/GenerateParentCodeDialog';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
