@@ -426,6 +426,7 @@ export default function Finance() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/20 hover:bg-muted/20">
+                      <TableHead className="font-semibold">{isRTL ? 'الطالب' : 'Student'}</TableHead>
                       <TableHead className="font-semibold">{isRTL ? 'التاريخ' : 'Date'}</TableHead>
                       <TableHead className="font-semibold">{isRTL ? 'المبلغ' : 'Amount'}</TableHead>
                       <TableHead className="font-semibold">{isRTL ? 'طريقة الدفع' : 'Method'}</TableHead>
@@ -436,6 +437,11 @@ export default function Finance() {
                   <TableBody>
                     {paginatedPayments.map((p: any) => (
                       <TableRow key={p.id} className="hover:bg-muted/30 transition-colors">
+                        <TableCell>
+                          <button className="text-start hover:underline font-medium" onClick={() => navigate(`/student/${p.subscriptions?.student_id || p.student_id}`)}>
+                            {language === 'ar' ? p.profile?.full_name_ar || p.profile?.full_name || '-' : p.profile?.full_name || '-'}
+                          </button>
+                        </TableCell>
                         <TableCell>{formatDate(p.payment_date, language)}</TableCell>
                         <TableCell className="font-medium text-emerald-600">{p.amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
                         <TableCell>
