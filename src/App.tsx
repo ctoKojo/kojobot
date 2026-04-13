@@ -78,6 +78,7 @@ const ParentRegister = React.lazy(() => import("./pages/ParentRegister"));
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
+  // This component must be rendered inside AuthProvider
   useAdminSessionTimeout();
   return null;
 }
