@@ -36,6 +36,7 @@ export default function Finance() {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [paymentDialog, setPaymentDialog] = useState(false);
+  const [savingPayment, setSavingPayment] = useState(false);
   const [selectedSub, setSelectedSub] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -158,7 +159,9 @@ export default function Finance() {
   };
 
   const handleRecordPayment = async () => {
-    if (!selectedSub || paymentAmount <= 0) return;
+    if (!selectedSub || paymentAmount <= 0 || savingPayment) return;
+    setSavingPayment(true);
+    try {
 
     const wasSuspended = selectedSub.is_suspended;
 
@@ -174,16 +177,10 @@ export default function Finance() {
       p_recorded_by: user?.id || null,
     });
 
-    if (error) {
-      toast({ title: isRTL ? 'خطأ في تسجيل الدفعة' : 'Payment recording error', description: error.message, variant: 'destructive' });
-      return;
-    }
+    if (error) throw new Error(error.message);
 
     const res = result as any;
-    if (res?.error) {
-      toast({ title: isRTL ? 'خطأ' : 'Error', description: res.error, variant: 'destructive' });
-      return;
-    }
+    if (res?.error) throw new Error(res.error);
 
     // Send notifications
     await notificationService.notifyPaymentRecorded(selectedSub.student_id, paymentAmount, Math.max(0, res.new_remaining));
@@ -195,6 +192,11 @@ export default function Finance() {
     setPaymentDialog(false);
     queryClient.invalidateQueries({ queryKey: ['finance-data'] });
     queryClient.invalidateQueries({ queryKey: ['payment-tracker'] });
+    } catch (e: any) {
+      toast({ title: isRTL ? 'خطأ' : 'Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setSavingPayment(false);
+    }
   };
 
   const filtered = subscriptions.filter(s => {
@@ -550,8 +552,8 @@ export default function Finance() {
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setPaymentDialog(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-              <Button onClick={handleRecordPayment}>{isRTL ? 'تسجيل الدفعة' : 'Record Payment'}</Button>
+              <Button variant="outline" onClick={() => setPaymentDialog(false)} disabled={savingPayment}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+              <Button onClick={handleRecordPayment} disabled={savingPayment}>{savingPayment ? (isRTL ? 'جاري التسجيل...' : 'Saving...') : (isRTL ? 'تسجيل الدفعة' : 'Record Payment')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
