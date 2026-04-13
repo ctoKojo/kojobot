@@ -44,6 +44,12 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
       setHasActiveSubscription(false);
       setStartDate('');
       setStudentGroupInfo(null);
+      setSelectedPlanId('');
+      setPaymentType('full');
+      setPaidAmount(0);
+      setNotes('');
+      setDiscountPercentage(0);
+      setPaymentDate(new Date().toISOString().split('T')[0]);
 
       Promise.all([
         supabase.from('subscriptions').select('id').eq('student_id', studentId).eq('status', 'active').limit(1),
