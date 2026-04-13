@@ -115,6 +115,15 @@ interface LandingContent {
       specializations?: string[];
     }[];
   }[];
+  testimonials?: {
+    id: string;
+    parent_name: string;
+    parent_name_ar?: string;
+    content_en?: string;
+    content_ar?: string;
+    rating: number;
+    sort_order: number;
+  }[];
 }
 
 const faqData = [
@@ -190,6 +199,7 @@ const navSections = [
 { id: "features", en: "Features", ar: "المميزات" },
 { id: "tracks", en: "Tracks", ar: "المسارات" },
 { id: "plans", en: "Plans", ar: "الباقات" },
+{ id: "testimonials", en: "Reviews", ar: "آراء" },
 { id: "faq", en: "FAQ", ar: "الأسئلة" },
 { id: "contact", en: "Contact", ar: "تواصل" }];
 
@@ -384,6 +394,7 @@ const Index = ({ lang: routeLang }: IndexProps) => {
   const plans = content?.plans || [];
   const tracks = content?.tracks || [];
   const socialLinks: SocialLink[] = Array.isArray(s?.social_links) ? s.social_links : [];
+  const testimonials = content?.testimonials || [];
 
   // JSON-LD Structured Data
   useEffect(() => {
