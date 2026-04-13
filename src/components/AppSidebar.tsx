@@ -226,6 +226,7 @@ export function AppSidebar() {
             label: 'Operations', labelAr: 'العمليات',
             items: [
               { title: t.nav.students, url: '/students', icon: GraduationCap, roles: ['reception'] },
+              { title: isRTL ? 'أولياء الأمور' : 'Parents', url: '/parents', icon: Users, roles: ['reception'] },
               { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['reception'] },
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['reception'] },
               
