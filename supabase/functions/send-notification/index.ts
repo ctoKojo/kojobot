@@ -211,6 +211,27 @@ serve(async (req) => {
       );
     }
 
+    // Also notify linked parents for each student notification
+    const studentIds = [...new Set(notifications.map(n => n.user_id))];
+    if (studentIds.length > 0) {
+      const { data: parentLinks } = await serviceClient
+        .from('parent_students')
+        .select('parent_id, student_id')
+        .in('student_id', studentIds);
+
+      if (parentLinks && parentLinks.length > 0) {
+        for (const notif of [...notifications]) {
+          const parents = parentLinks.filter(pl => pl.student_id === notif.user_id);
+          for (const parent of parents) {
+            notifications.push({
+              ...notif,
+              user_id: parent.parent_id,
+            });
+          }
+        }
+      }
+    }
+
     const { error: insertError } = await serviceClient
       .from('notifications')
       .insert(notifications);
@@ -219,7 +240,7 @@ serve(async (req) => {
       throw insertError;
     }
 
-    console.log(`Sent ${notifications.length} notifications`);
+    console.log(`Sent ${notifications.length} notifications (including parent copies)`);
 
     return new Response(
       JSON.stringify({ success: true, count: notifications.length }),
