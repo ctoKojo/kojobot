@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ('admin' | 'instructor' | 'student' | 'reception')[];
+  allowedRoles?: ('admin' | 'instructor' | 'student' | 'reception' | 'parent')[];
 }
 
 // Routes students can access even without level_id (placement flow only)
