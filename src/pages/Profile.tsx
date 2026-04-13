@@ -144,10 +144,12 @@ export default function Profile() {
   };
 
   const getRoleBadge = () => {
-    const roleLabels = {
+    const roleLabels: Record<string, { en: string; ar: string }> = {
       admin: { en: 'Administrator', ar: 'مدير النظام' },
       instructor: { en: 'Instructor', ar: 'مدرب' },
       student: { en: 'Student', ar: 'طالب' },
+      reception: { en: 'Reception', ar: 'استقبال' },
+      parent: { en: 'Parent', ar: 'ولي أمر' },
     };
     return role ? roleLabels[role]?.[isRTL ? 'ar' : 'en'] : '';
   };
