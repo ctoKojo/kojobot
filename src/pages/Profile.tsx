@@ -16,6 +16,7 @@ import { toast } from '@/hooks/use-toast';
 import { User, Mail, Phone, Calendar, Save, ArrowLeft, Camera, Loader2 } from 'lucide-react';
 import { ImageCropDialog } from '@/components/ImageCropDialog';
 import { EmployeeFinanceSection } from '@/components/profile/EmployeeFinanceSection';
+import { LinkedParentsSection } from '@/components/profile/LinkedParentsSection';
 
 export default function Profile() {
   const { isRTL, language } = useLanguage();
@@ -144,10 +145,12 @@ export default function Profile() {
   };
 
   const getRoleBadge = () => {
-    const roleLabels = {
+    const roleLabels: Record<string, { en: string; ar: string }> = {
       admin: { en: 'Administrator', ar: 'مدير النظام' },
       instructor: { en: 'Instructor', ar: 'مدرب' },
       student: { en: 'Student', ar: 'طالب' },
+      reception: { en: 'Reception', ar: 'استقبال' },
+      parent: { en: 'Parent', ar: 'ولي أمر' },
     };
     return role ? roleLabels[role]?.[isRTL ? 'ar' : 'en'] : '';
   };
@@ -370,6 +373,9 @@ export default function Profile() {
         {(role === 'instructor' || role === 'reception') && profile && (
           <EmployeeFinanceSection profile={profile} />
         )}
+
+        {/* Linked Parents for Students */}
+        {role === 'student' && <LinkedParentsSection />}
 
       </div>
 
