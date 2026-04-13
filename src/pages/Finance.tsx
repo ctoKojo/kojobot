@@ -558,8 +558,8 @@ export default function Finance() {
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setPaymentDialog(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-              <Button onClick={handleRecordPayment}>{isRTL ? 'تسجيل الدفعة' : 'Record Payment'}</Button>
+              <Button variant="outline" onClick={() => setPaymentDialog(false)} disabled={savingPayment}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+              <Button onClick={handleRecordPayment} disabled={savingPayment}>{savingPayment ? (isRTL ? 'جاري التسجيل...' : 'Saving...') : (isRTL ? 'تسجيل الدفعة' : 'Record Payment')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
