@@ -160,10 +160,19 @@ export default function StudentsPage() {
     sub_notes: '',
     discount_percentage: 0,
     payment_date: new Date().toISOString().split('T')[0],
+    // Parent linking
+    parent_id: '',
   });
   const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // Parent search state
+  const [parentSearchQuery, setParentSearchQuery] = useState('');
+  const [parentSearchResults, setParentSearchResults] = useState<Array<{ id: string; full_name: string; full_name_ar: string | null; phone: string | null; email: string | null; children_count: number }>>([]);
+  const [parentSearching, setParentSearching] = useState(false);
+  const [selectedParent, setSelectedParent] = useState<{ id: string; full_name: string; full_name_ar: string | null; phone: string | null; children_count: number } | null>(null);
+  const parentSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Credentials dialog state
   const [credentialsDialog, setCredentialsDialog] = useState<{ open: boolean; email: string; password: string; name: string; avatarUrl?: string | null; levelName?: string; subscriptionType?: string; attendanceMode?: string; ageGroupName?: string }>({ open: false, email: '', password: '', name: '' });
