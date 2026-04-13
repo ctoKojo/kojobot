@@ -49,6 +49,7 @@ export default function Finance() {
   const [subPageSize, setSubPageSize] = useState(10);
   const [payPage, setPayPage] = useState(1);
   const [payPageSize, setPayPageSize] = useState(10);
+  const [detailDialog, setDetailDialog] = useState<'outstanding' | 'overdue' | null>(null);
 
   const fetchFinanceData = async () => {
     const { data: plans } = await supabase.from('pricing_plans').select('id, name, name_ar').eq('is_active', true);
@@ -215,6 +216,43 @@ export default function Finance() {
   // Reset page on filter/search change
   useEffect(() => { setSubPage(1); }, [filter, search]);
 
+  // Detail lists for outstanding / overdue dialogs
+  const outstandingStudents = useMemo(() => {
+    return subscriptions
+      .filter((s: any) => s.status === 'active' && Number(s.remaining_amount) > 0)
+      .map((s: any) => ({
+        id: s.id,
+        student_id: s.student_id,
+        name: language === 'ar' ? s.profile?.full_name_ar || s.profile?.full_name : s.profile?.full_name,
+        remaining: Number(s.remaining_amount),
+        nextPayment: s.next_payment_date,
+        planName: language === 'ar' ? s.pricing_plans?.name_ar : s.pricing_plans?.name,
+        installment: s.installment_amount,
+      }))
+      .sort((a: any, b: any) => b.remaining - a.remaining);
+  }, [subscriptions, language]);
+
+  const overdueStudents = useMemo(() => {
+    const now = new Date();
+    return subscriptions
+      .filter((s: any) => s.status === 'active' && s.next_payment_date && new Date(s.next_payment_date) < now && Number(s.remaining_amount) > 0)
+      .map((s: any) => {
+        const dueDate = new Date(s.next_payment_date);
+        const diffDays = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        return {
+          id: s.id,
+          student_id: s.student_id,
+          name: language === 'ar' ? s.profile?.full_name_ar || s.profile?.full_name : s.profile?.full_name,
+          remaining: Number(s.remaining_amount),
+          nextPayment: s.next_payment_date,
+          planName: language === 'ar' ? s.pricing_plans?.name_ar : s.pricing_plans?.name,
+          installment: s.installment_amount,
+          daysOverdue: diffDays,
+        };
+      })
+      .sort((a: any, b: any) => b.daysOverdue - a.daysOverdue);
+  }, [subscriptions, language]);
+
   // Paginated subscriptions
   const subTotalPages = Math.max(1, Math.ceil(filtered.length / subPageSize));
   const paginatedSubs = filtered.slice((subPage - 1) * subPageSize, subPage * subPageSize);
@@ -242,13 +280,20 @@ export default function Finance() {
         {/* Stats */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
           {[
-            { label: isRTL ? 'إيرادات الشهر الحالي' : 'This Month Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600', adminOnly: true },
-            { label: isRTL ? 'المبالغ المستحقة' : 'Outstanding', value: `${stats.totalOutstanding} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, gradient: 'from-amber-500 to-orange-500', adminOnly: true },
-            { label: isRTL ? 'اشتراكات نشطة' : 'Active', value: stats.activeCount, icon: Users, gradient: 'from-blue-500 to-blue-600', adminOnly: false },
-            { label: isRTL ? 'متأخرين' : 'Overdue', value: stats.overdueCount, icon: AlertTriangle, gradient: 'from-red-500 to-red-600', adminOnly: false },
-            { label: isRTL ? 'موقوفين' : 'Suspended', value: stats.suspendedCount, icon: Ban, gradient: 'from-gray-500 to-gray-600', adminOnly: false },
+            { key: 'revenue', label: isRTL ? 'إيرادات الشهر الحالي' : 'This Month Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600', adminOnly: true, clickable: false },
+            { key: 'outstanding', label: isRTL ? 'المبالغ المستحقة' : 'Outstanding', value: `${stats.totalOutstanding} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, gradient: 'from-amber-500 to-orange-500', adminOnly: true, clickable: true },
+            { key: 'active', label: isRTL ? 'اشتراكات نشطة' : 'Active', value: stats.activeCount, icon: Users, gradient: 'from-blue-500 to-blue-600', adminOnly: false, clickable: false },
+            { key: 'overdue', label: isRTL ? 'متأخرين' : 'Overdue', value: stats.overdueCount, icon: AlertTriangle, gradient: 'from-red-500 to-red-600', adminOnly: false, clickable: true },
+            { key: 'suspended', label: isRTL ? 'موقوفين' : 'Suspended', value: stats.suspendedCount, icon: Ban, gradient: 'from-gray-500 to-gray-600', adminOnly: false, clickable: false },
           ].filter(stat => !stat.adminOnly || role === 'admin').map(stat => (
-            <Card key={stat.label} className="relative overflow-hidden hover:shadow-md transition-all duration-300">
+            <Card
+              key={stat.label}
+              className={`relative overflow-hidden hover:shadow-md transition-all duration-300 ${stat.clickable ? 'cursor-pointer hover:ring-2 hover:ring-primary/30' : ''}`}
+              onClick={() => {
+                if (stat.key === 'outstanding') setDetailDialog('outstanding');
+                if (stat.key === 'overdue') setDetailDialog('overdue');
+              }}
+            >
               <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
@@ -521,6 +566,63 @@ export default function Finance() {
           <TabsContent value="cashflow"><CashFlowTab /></TabsContent>
         </Tabs>
 
+        {/* Outstanding / Overdue Detail Dialog */}
+        <Dialog open={!!detailDialog} onOpenChange={() => setDetailDialog(null)}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {detailDialog === 'outstanding' ? (
+                  <><DollarSign className="h-5 w-5 text-amber-500" />{isRTL ? 'تفاصيل المبالغ المستحقة' : 'Outstanding Amounts Details'}</>
+                ) : (
+                  <><AlertTriangle className="h-5 w-5 text-red-500" />{isRTL ? 'تفاصيل المتأخرين' : 'Overdue Details'}</>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/20 hover:bg-muted/20">
+                  <TableHead className="font-semibold">{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                  <TableHead className="font-semibold">{isRTL ? 'الباقة' : 'Plan'}</TableHead>
+                  <TableHead className="font-semibold">{isRTL ? 'المتبقي' : 'Remaining'}</TableHead>
+                  <TableHead className="font-semibold">{isRTL ? 'القسط' : 'Installment'}</TableHead>
+                  <TableHead className="font-semibold">{isRTL ? 'تاريخ الاستحقاق' : 'Due Date'}</TableHead>
+                  {detailDialog === 'overdue' && (
+                    <TableHead className="font-semibold">{isRTL ? 'أيام التأخير' : 'Days Late'}</TableHead>
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(detailDialog === 'outstanding' ? outstandingStudents : overdueStudents).map((s: any) => (
+                  <TableRow key={s.id} className="hover:bg-muted/30 transition-colors">
+                    <TableCell>
+                      <button className="text-start hover:underline font-medium" onClick={() => { setDetailDialog(null); navigate(`/student/${s.student_id}`); }}>
+                        {s.name || '-'}
+                      </button>
+                    </TableCell>
+                    <TableCell className="text-sm">{s.planName || '-'}</TableCell>
+                    <TableCell className="font-semibold text-orange-600">{s.remaining} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
+                    <TableCell className="text-sm">{s.installment ? `${s.installment} ${isRTL ? 'ج.م' : 'EGP'}` : '-'}</TableCell>
+                    <TableCell className="text-sm">{s.nextPayment ? formatDate(s.nextPayment, language) : '-'}</TableCell>
+                    {detailDialog === 'overdue' && (
+                      <TableCell>
+                        <Badge variant="destructive" className="font-mono">
+                          {s.daysOverdue} {isRTL ? 'يوم' : 'days'}
+                        </Badge>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+                {(detailDialog === 'outstanding' ? outstandingStudents : overdueStudents).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      {isRTL ? 'لا توجد بيانات' : 'No data'}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </DialogContent>
+        </Dialog>
         {/* Payment Dialog */}
         <Dialog open={paymentDialog} onOpenChange={setPaymentDialog}>
           <DialogContent>
