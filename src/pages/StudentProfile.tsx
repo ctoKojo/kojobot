@@ -463,8 +463,30 @@ export default function StudentProfile() {
                     </span>
                   )}
                 </div>
-              </div>
-
+                </div>
+                {/* Linked Parents */}
+                {data.parents && data.parents.length > 0 && (
+                  <div className="flex flex-wrap gap-3 mt-3">
+                    {data.parents.map((parent: any, idx: number) => (
+                      <div key={idx} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-1.5">
+                        <Users className="h-4 w-4 text-primary" />
+                        <div className="text-sm">
+                          <span className="font-medium">
+                            {language === 'ar' ? (parent.profile?.full_name_ar || parent.profile?.full_name || isRTL ? 'ولي أمر' : 'Parent') : (parent.profile?.full_name || 'Parent')}
+                          </span>
+                          {parent.relationship && (
+                            <span className="text-muted-foreground ms-1">({parent.relationship})</span>
+                          )}
+                          {parent.profile?.phone && (
+                            <span className="text-muted-foreground ms-2">
+                              <Phone className="h-3 w-3 inline me-0.5" />{parent.profile.phone}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               {/* Subscription Status */}
               <div className="text-right">
                 {data.subscription ? (
