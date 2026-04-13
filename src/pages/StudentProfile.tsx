@@ -555,15 +555,15 @@ export default function StudentProfile() {
         {/* Group Info */}
         {/* Detailed Tabs - Action First */}
         <Tabs defaultValue="payments" className="w-full">
-          <TabsList className="grid w-full grid-cols-8">
-            <TabsTrigger value="payments">{isRTL ? 'الدفعات' : 'Payments'}</TabsTrigger>
-            <TabsTrigger value="attendance">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
-            <TabsTrigger value="warnings">{isRTL ? 'الإنذارات' : 'Warnings'}</TabsTrigger>
-            <TabsTrigger value="quizzes">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
-            <TabsTrigger value="assignments">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
-            <TabsTrigger value="makeup">{isRTL ? 'التعويضات' : 'Makeup'}</TabsTrigger>
-            <TabsTrigger value="certificates">{isRTL ? 'الشهادات' : 'Certificates'}</TabsTrigger>
-            <TabsTrigger value="xp">{isRTL ? 'نقاط XP' : 'XP'}</TabsTrigger>
+          <TabsList className="flex w-full overflow-x-auto no-scrollbar">
+            <TabsTrigger value="payments" className="flex-shrink-0">{isRTL ? 'الدفعات' : 'Payments'}</TabsTrigger>
+            <TabsTrigger value="attendance" className="flex-shrink-0">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
+            <TabsTrigger value="warnings" className="flex-shrink-0">{isRTL ? 'الإنذارات' : 'Warnings'}</TabsTrigger>
+            <TabsTrigger value="quizzes" className="flex-shrink-0">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
+            <TabsTrigger value="assignments" className="flex-shrink-0">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
+            <TabsTrigger value="makeup" className="flex-shrink-0">{isRTL ? 'التعويضات' : 'Makeup'}</TabsTrigger>
+            <TabsTrigger value="certificates" className="flex-shrink-0">{isRTL ? 'الشهادات' : 'Certificates'}</TabsTrigger>
+            <TabsTrigger value="xp" className="flex-shrink-0">{isRTL ? 'نقاط XP' : 'XP'}</TabsTrigger>
           </TabsList>
 
           {/* Payments Tab */}
