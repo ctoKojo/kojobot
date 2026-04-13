@@ -27,56 +27,47 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [roleLoading, setRoleLoading] = useState(true);
-  const fetchingForRef = useRef<string | null>(null);
-
-  const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching user role:', error);
-        return null;
-      }
-      return data?.role as AppRole | null;
-    } catch (error) {
-      console.error('Error in fetchUserRole:', error);
-      return null;
-    }
-  };
+  const authRequestRef = useRef(0);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const applyAuthState = async (currentSession: Session | null) => {
+      if (!isMounted) return;
+
+      const requestId = ++authRequestRef.current;
+      const nextUser = currentSession?.user ?? null;
+
+      setSession(currentSession);
+      setUser(nextUser);
+
+      if (!nextUser) {
+        setRole(null);
+        setRoleLoading(false);
+        setLoading(false);
+        return;
+      }
+
+      setRoleLoading(true);
+      const fetchedRole = await fetchUserRole(nextUser.id);
+
+      if (!isMounted || authRequestRef.current !== requestId) return;
+
+      setRole(fetchedRole);
+      setRoleLoading(false);
+      setLoading(false);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-
-        if (currentSession?.user) {
-          const uid = currentSession.user.id;
-
-          // Guard: skip if already fetching for this user
-          if (fetchingForRef.current === uid) return;
-          fetchingForRef.current = uid;
-
-          setRoleLoading(true);
-          const fetchedRole = await fetchUserRole(uid);
-          setRole(fetchedRole);
-          setRoleLoading(false);
-          setLoading(false);
-          fetchingForRef.current = null;
-        } else {
-          setRole(null);
-          setRoleLoading(false);
-          setLoading(false);
-          fetchingForRef.current = null;
-        }
+      (_event, currentSession) => {
+        void applyAuthState(currentSession);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
