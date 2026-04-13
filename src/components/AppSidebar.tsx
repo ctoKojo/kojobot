@@ -244,6 +244,17 @@ export function AppSidebar() {
           },
         ];
 
+      case 'parent':
+        return [
+          {
+            label: 'Main', labelAr: 'الرئيسية',
+            items: [
+              { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['parent'] },
+              { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['parent'] },
+            ],
+          },
+        ];
+
       default:
         return [
           {
