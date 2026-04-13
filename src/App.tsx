@@ -77,6 +77,8 @@ const ParentStudentView = React.lazy(() => import("./pages/ParentStudentView"));
 const ParentRegister = React.lazy(() => import("./pages/ParentRegister"));
 const ParentLogin = React.lazy(() => import("./pages/ParentLogin"));
 const Parents = React.lazy(() => import("./pages/Parents"));
+const ParentLeaveRequests = React.lazy(() => import("./pages/ParentLeaveRequests"));
+const LeaveRequests = React.lazy(() => import("./pages/LeaveRequests"));
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
@@ -165,6 +167,8 @@ const App = () => (
                   <Route path="/parent-login" element={<ParentLogin />} />
                   <Route path="/parent-register" element={<ParentRegister />} />
                   <Route path="/parent/student/:studentId" element={<ProtectedRoute allowedRoles={['parent']}><ParentStudentView /></ProtectedRoute>} />
+                  <Route path="/parent-leave-requests" element={<ProtectedRoute allowedRoles={['parent']}><ParentLeaveRequests /></ProtectedRoute>} />
+                  <Route path="/leave-requests" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><LeaveRequests /></ProtectedRoute>} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

@@ -138,15 +138,10 @@ export default function MyMakeupSessions() {
                           )}
                         </div>
                         {session.status === 'scheduled' && session.student_confirmed === null && (
-                          <div className="flex gap-2 shrink-0">
-                            <Button size="sm" onClick={() => handleConfirm(session, true)}>
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              {isRTL ? 'تأكيد' : 'Confirm'}
-                            </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleConfirm(session, false)}>
-                              <XCircle className="h-4 w-4 mr-1" />
-                              {isRTL ? 'رفض' : 'Reject'}
-                            </Button>
+                          <div className="shrink-0">
+                            <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                              {isRTL ? 'بانتظار تأكيد ولي الأمر' : 'Awaiting Parent Confirmation'}
+                            </Badge>
                           </div>
                         )}
                       </div>
