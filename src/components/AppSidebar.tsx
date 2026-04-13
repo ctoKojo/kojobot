@@ -55,7 +55,7 @@ interface NavItem {
   title: string;
   url: string;
   icon: React.ComponentType<{ className?: string }>;
-  roles: ('admin' | 'instructor' | 'student' | 'reception')[];
+  roles: ('admin' | 'instructor' | 'student' | 'reception' | 'parent')[];
 }
 
 interface NavSection {
@@ -240,6 +240,17 @@ export function AppSidebar() {
             items: [
               { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['reception'] },
               { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['reception'] },
+            ],
+          },
+        ];
+
+      case 'parent':
+        return [
+          {
+            label: 'Main', labelAr: 'الرئيسية',
+            items: [
+              { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard, roles: ['parent'] },
+              { title: t.nav.notifications, url: '/notifications', icon: Bell, roles: ['parent'] },
             ],
           },
         ];

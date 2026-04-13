@@ -16,7 +16,7 @@ interface CreateUserRequest {
   full_name: string
   full_name_ar?: string
   phone?: string
-  role: 'admin' | 'student' | 'instructor' | 'reception'
+  role: 'admin' | 'student' | 'instructor' | 'reception' | 'parent'
   // Student-specific fields
   date_of_birth?: string
   age_group_id?: string
@@ -30,6 +30,8 @@ interface CreateUserRequest {
   work_type?: 'full_time' | 'part_time'
   is_paid_trainee?: boolean
   hourly_rate?: number
+  // Parent-specific fields
+  linked_student_ids?: string[]
 }
 
 serve(async (req) => {
@@ -117,11 +119,11 @@ serve(async (req) => {
         )
       }
 
-      // Reception can only create students
-      if (requesterRole === 'reception' && body.role !== 'student') {
-        console.error('Reception attempted to create non-student role:', body.role)
+      // Reception can only create students and parents
+      if (requesterRole === 'reception' && !['student', 'parent'].includes(body.role)) {
+        console.error('Reception attempted to create non-student/parent role:', body.role)
         return new Response(
-          JSON.stringify({ error: 'Reception can only create student accounts', error_ar: 'الاستقبال يمكنه فقط إنشاء حسابات الطلاب' }),
+          JSON.stringify({ error: 'Reception can only create student and parent accounts', error_ar: 'الاستقبال يمكنه فقط إنشاء حسابات الطلاب وأولياء الأمور' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -169,7 +171,7 @@ serve(async (req) => {
     }
 
     // Validate role
-    const validRoles = ['admin', 'student', 'instructor', 'reception']
+    const validRoles = ['admin', 'student', 'instructor', 'reception', 'parent']
     if (!validRoles.includes(body.role)) {
       return new Response(
         JSON.stringify({ error: 'Invalid role', error_ar: 'دور غير صحيح' }),
@@ -331,6 +333,23 @@ serve(async (req) => {
     }
 
     console.log('Assigned role:', body.role, 'to user:', newUserId)
+
+    // Link parent to students if parent role
+    if (body.role === 'parent' && body.linked_student_ids?.length) {
+      const links = body.linked_student_ids.map(studentId => ({
+        parent_id: newUserId,
+        student_id: studentId,
+      }))
+      const { error: linkError } = await adminSupabase
+        .from('parent_students')
+        .insert(links)
+      if (linkError) {
+        console.error('Error linking parent to students:', linkError)
+        // Non-fatal: parent is created, links can be added later
+      } else {
+        console.log('Linked parent to students:', body.linked_student_ids)
+      }
+    }
 
     // Log activity (skip in bootstrap mode as there's no requesting user)
     if (!isBootstrapMode) {

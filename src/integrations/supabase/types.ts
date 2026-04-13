@@ -2122,6 +2122,30 @@ export type Database = {
           },
         ]
       }
+      parent_students: {
+        Row: {
+          created_at: string
+          id: string
+          parent_id: string
+          relationship: string
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          parent_id: string
+          relationship?: string
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          parent_id?: string
+          relationship?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -4806,7 +4830,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "instructor" | "student" | "reception"
+      app_role: "admin" | "instructor" | "student" | "reception" | "parent"
       employment_status: "permanent" | "training" | "terminated"
       group_type: "kojo_squad" | "kojo_core" | "kojo_x"
       subscription_type: "kojo_squad" | "kojo_core" | "kojo_x"
@@ -4937,7 +4961,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "instructor", "student", "reception"],
+      app_role: ["admin", "instructor", "student", "reception", "parent"],
       employment_status: ["permanent", "training", "terminated"],
       group_type: ["kojo_squad", "kojo_core", "kojo_x"],
       subscription_type: ["kojo_squad", "kojo_core", "kojo_x"],
