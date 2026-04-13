@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, X, Loader2, CheckCircle, AlertCircle, LogIn } from 'lucide-react';
+import { Plus, X, Loader2, CheckCircle, AlertCircle, LogIn, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,6 +17,10 @@ import kojobotLogo from '@/assets/kojobot-main-logo.png';
 
 export default function ParentRegister() {
   const [codes, setCodes] = useState<string[]>(['']);
+  const [fullName, setFullName] = useState('');
+  const [fullNameAr, setFullNameAr] = useState('');
+  const [phone, setPhone] = useState('');
+  const [relationship, setRelationship] = useState<string>('parent');
   const [isLinking, setIsLinking] = useState(false);
   const [results, setResults] = useState<{ code: string; status: string }[] | null>(null);
   const navigate = useNavigate();
@@ -30,13 +36,25 @@ export default function ParentRegister() {
     }
   }, [user, role, navigate]);
 
-  // Pre-fill code from URL param
+  // Pre-fill code from URL param + name from Google metadata
   useEffect(() => {
     const codeParam = searchParams.get('code');
     if (codeParam) {
       setCodes([codeParam.trim().toUpperCase()]);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (user) {
+      const meta = user.user_metadata;
+      if (meta?.full_name || meta?.name) {
+        setFullName(meta.full_name || meta.name || '');
+      }
+      if (user.phone) {
+        setPhone(user.phone);
+      }
+    }
+  }, [user]);
 
   const handleGoogleSignIn = async () => {
     const result = await lovable.auth.signInWithOAuth("google", {
@@ -65,7 +83,6 @@ export default function ParentRegister() {
 
   const handlePaste = (index: number, e: React.ClipboardEvent) => {
     const pasted = e.clipboardData.getData('text').trim();
-    // If pasted text contains spaces/commas/newlines, split into multiple codes
     const parts = pasted.split(/[\s,\n]+/).filter(Boolean).map(p => p.toUpperCase().replace(/[^A-Z0-9-]/g, ''));
     if (parts.length > 1) {
       e.preventDefault();
@@ -79,6 +96,11 @@ export default function ParentRegister() {
     const validCodes = codes.filter(c => c.trim().length >= 8);
     if (validCodes.length === 0) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'أدخل كود واحد على الأقل' : 'Enter at least one valid code' });
+      return;
+    }
+
+    if (!fullName.trim()) {
+      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'أدخل الاسم بالكامل' : 'Please enter your full name' });
       return;
     }
 
@@ -100,7 +122,15 @@ export default function ParentRegister() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ codes: validCodes }),
+        body: JSON.stringify({
+          codes: validCodes,
+          profile: {
+            full_name: fullName.trim(),
+            full_name_ar: fullNameAr.trim() || fullName.trim(),
+            phone: phone.trim() || null,
+            relationship,
+          },
+        }),
       });
 
       const data = await response.json();
@@ -113,7 +143,6 @@ export default function ParentRegister() {
       } else {
         setResults(data.details);
         toast({ title: isRTL ? 'تم بنجاح!' : 'Success!', description: isRTL ? `تم ربط ${data.linked} طالب` : `Linked ${data.linked} student(s)` });
-        // Refresh auth state to get new role
         setTimeout(() => {
           window.location.href = '/dashboard';
         }, 2000);
@@ -152,8 +181,8 @@ export default function ParentRegister() {
           </CardTitle>
           <CardDescription>
             {isRTL
-              ? 'سجّل بحساب Google وأدخل كود الربط لمتابعة أولادك'
-              : 'Sign in with Google and enter your linking code to follow your children\'s progress'}
+              ? 'سجّل بحساب Google وأدخل بياناتك وكود الربط لمتابعة أولادك'
+              : 'Sign in with Google, fill your details and enter your linking code'}
           </CardDescription>
         </CardHeader>
 
@@ -182,12 +211,69 @@ export default function ParentRegister() {
             )}
           </div>
 
-          {/* Step 2: Enter Codes */}
+          {/* Step 2: Profile Info */}
           {isSignedIn && (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
                   2
+                </div>
+                <span className="font-medium">
+                  {isRTL ? 'البيانات الشخصية' : 'Personal Info'}
+                </span>
+              </div>
+
+              <div className="space-y-3 px-10">
+                <div className="space-y-1">
+                  <Label>{isRTL ? 'الاسم بالكامل (إنجليزي)' : 'Full Name (English)'} *</Label>
+                  <Input
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder={isRTL ? 'مثال: Ahmed Mohamed' : 'e.g. Ahmed Mohamed'}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>{isRTL ? 'الاسم بالكامل (عربي)' : 'Full Name (Arabic)'}</Label>
+                  <Input
+                    value={fullNameAr}
+                    onChange={(e) => setFullNameAr(e.target.value)}
+                    placeholder={isRTL ? 'مثال: أحمد محمد' : 'e.g. أحمد محمد'}
+                    dir="rtl"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>{isRTL ? 'رقم الهاتف' : 'Phone Number'}</Label>
+                  <Input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder={isRTL ? 'مثال: 01xxxxxxxxx' : 'e.g. 01xxxxxxxxx'}
+                    type="tel"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>{isRTL ? 'صلة القرابة' : 'Relationship'}</Label>
+                  <Select value={relationship} onValueChange={setRelationship}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="father">{isRTL ? 'أب' : 'Father'}</SelectItem>
+                      <SelectItem value="mother">{isRTL ? 'أم' : 'Mother'}</SelectItem>
+                      <SelectItem value="guardian">{isRTL ? 'وصي' : 'Guardian'}</SelectItem>
+                      <SelectItem value="parent">{isRTL ? 'ولي أمر' : 'Parent'}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Enter Codes */}
+          {isSignedIn && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                  3
                 </div>
                 <span className="font-medium">
                   {isRTL ? 'أدخل كود الربط' : 'Enter Linking Code'}
@@ -204,7 +290,6 @@ export default function ParentRegister() {
                       placeholder={isRTL ? 'مثال: KJB-A7X2-9P3M' : 'e.g. KJB-A7X2-9P3M'}
                       className="font-mono text-center tracking-wider"
                       maxLength={14}
-                      autoFocus={index === 0}
                     />
                     {codes.length > 1 && (
                       <Button variant="ghost" size="icon" onClick={() => removeCodeField(index)}>
@@ -227,7 +312,7 @@ export default function ParentRegister() {
 
               <Button
                 onClick={handleLinkCodes}
-                disabled={isLinking || codes.every(c => c.trim().length < 8)}
+                disabled={isLinking || codes.every(c => c.trim().length < 8) || !fullName.trim()}
                 className="w-full"
                 size="lg"
               >
