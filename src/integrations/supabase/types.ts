@@ -4918,6 +4918,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      init_salary_month: { Args: { p_month?: string }; Returns: Json }
       is_conversation_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
