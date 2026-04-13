@@ -45,7 +45,8 @@ serve(async (req) => {
       })
     }
 
-    const { codes } = await req.json()
+    const body = await req.json()
+    const { codes, profile: profileData } = body
     if (!Array.isArray(codes) || codes.length === 0 || codes.length > 10) {
       return new Response(JSON.stringify({ error: 'Provide 1-10 valid codes' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -118,21 +119,33 @@ serve(async (req) => {
       await adminClient.from('user_roles').insert({ user_id: user.id, role: 'parent' })
     }
 
-    // Create profile if not exists
+    // Create or update profile
     const { data: existingProfile } = await adminClient
       .from('profiles')
       .select('user_id')
       .eq('user_id', user.id)
       .maybeSingle()
 
+    const profileName = profileData?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Parent'
+    const profileNameAr = profileData?.full_name_ar || profileData?.full_name || user.user_metadata?.full_name || 'ولي أمر'
+    const profilePhone = profileData?.phone || null
+    const profileRelationship = profileData?.relationship || 'parent'
+
     if (!existingProfile) {
       await adminClient.from('profiles').insert({
         user_id: user.id,
-        full_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Parent',
-        full_name_ar: user.user_metadata?.full_name || 'ولي أمر',
+        full_name: profileName,
+        full_name_ar: profileNameAr,
         email: user.email,
+        phone: profilePhone,
         role: 'parent',
       })
+    } else {
+      await adminClient.from('profiles').update({
+        full_name: profileName,
+        full_name_ar: profileNameAr,
+        phone: profilePhone,
+      }).eq('user_id', user.id)
     }
 
     // Link each valid code
@@ -149,7 +162,7 @@ serve(async (req) => {
         await adminClient.from('parent_students').insert({
           parent_id: user.id,
           student_id: entry.studentId,
-          relationship: 'parent',
+          relationship: profileRelationship,
         })
       }
 
