@@ -305,9 +305,10 @@ export default function Finance() {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
           {[
-            { key: 'revenue', label: isRTL ? 'إيرادات الشهر الحالي' : 'This Month Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600', adminOnly: true, clickable: false },
+            { key: 'revenue', label: isRTL ? 'إيرادات الشهر الحالي' : 'This Month Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600', adminOnly: true, clickable: true },
+            { key: 'netprofit', label: isRTL ? 'صافي الربح الشهري' : 'Monthly Net Profit', value: `${stats.netProfit} ${isRTL ? 'ج.م' : 'EGP'}`, icon: stats.netProfit >= 0 ? TrendingUp : TrendingUp, gradient: stats.netProfit >= 0 ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600', adminOnly: true, clickable: false },
             { key: 'outstanding', label: isRTL ? 'المبالغ المستحقة' : 'Outstanding', value: `${stats.totalOutstanding} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, gradient: 'from-amber-500 to-orange-500', adminOnly: true, clickable: true },
             { key: 'active', label: isRTL ? 'اشتراكات نشطة' : 'Active', value: stats.activeCount, icon: Users, gradient: 'from-blue-500 to-blue-600', adminOnly: false, clickable: false },
             { key: 'overdue', label: isRTL ? 'متأخرين' : 'Overdue', value: stats.overdueCount, icon: AlertTriangle, gradient: 'from-red-500 to-red-600', adminOnly: false, clickable: true },
@@ -319,6 +320,7 @@ export default function Finance() {
               onClick={() => {
                 if (stat.key === 'outstanding') setDetailDialog('outstanding');
                 if (stat.key === 'overdue') setDetailDialog('overdue');
+                if (stat.key === 'revenue') setDetailDialog('revenue');
               }}
             >
               <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${stat.gradient}`} />
