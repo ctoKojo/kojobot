@@ -11,25 +11,27 @@ import kojobotLogo from '@/assets/kojobot-main-logo.png';
 
 export default function ParentLogin() {
   const navigate = useNavigate();
-  const { user, role } = useAuth();
-  const { t, isRTL, language } = useLanguage();
+  const { user, role, loading, roleLoading } = useAuth();
+  const { isRTL, language } = useLanguage();
   const { toast } = useToast();
 
   useEffect(() => {
+    if (loading || roleLoading) return;
+
     if (user && role === 'parent') {
       navigate('/dashboard', { replace: true });
     } else if (user && role && role !== 'parent') {
       navigate('/dashboard', { replace: true });
     } else if (user && !role) {
-      // Google user without role → go to parent registration
       navigate('/parent-register', { replace: true });
     }
-  }, [user, role, navigate]);
+  }, [user, role, loading, roleLoading, navigate]);
 
   const handleGoogleSignIn = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + '/parent-register',
+    const result = await lovable.auth.signInWithOAuth('google', {
+      redirect_uri: `${window.location.origin}/parent-register`,
     });
+
     if (result.error) {
       toast({
         variant: 'destructive',
@@ -37,7 +39,6 @@ export default function ParentLogin() {
         description: isRTL ? 'فشل تسجيل الدخول بـ Google' : 'Google sign-in failed',
       });
     }
-    if (result.redirected) return;
   };
 
   return (
@@ -49,21 +50,32 @@ export default function ParentLogin() {
         fontFamily: isRTL ? "'Cairo', sans-serif" : "'Poppins', sans-serif",
       }}
     >
-      {/* Background glows */}
       <div
         style={{
-          position: 'absolute', width: 500, height: 500, top: -150, left: -100,
-          background: 'rgba(100,85,240,.18)', borderRadius: '50%', filter: 'blur(100px)', pointerEvents: 'none',
+          position: 'absolute',
+          width: 500,
+          height: 500,
+          top: -150,
+          left: -100,
+          background: 'rgba(100,85,240,.18)',
+          borderRadius: '50%',
+          filter: 'blur(100px)',
+          pointerEvents: 'none',
         }}
       />
       <div
         style={{
-          position: 'absolute', width: 400, height: 400, bottom: -100, right: -80,
-          background: 'rgba(97,186,226,.12)', borderRadius: '50%', filter: 'blur(100px)', pointerEvents: 'none',
+          position: 'absolute',
+          width: 400,
+          height: 400,
+          bottom: -100,
+          right: -80,
+          background: 'rgba(97,186,226,.12)',
+          borderRadius: '50%',
+          filter: 'blur(100px)',
+          pointerEvents: 'none',
         }}
       />
-
-      {/* Dot grid */}
       <div
         className="absolute inset-0 opacity-[0.04]"
         style={{
@@ -72,7 +84,6 @@ export default function ParentLogin() {
         }}
       />
 
-      {/* Top bar */}
       <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 z-20">
         <Link
           to={`/${language}`}
@@ -84,7 +95,6 @@ export default function ParentLogin() {
         <LanguageToggle />
       </div>
 
-      {/* Card */}
       <div className="relative z-10 w-full max-w-md px-6">
         <div className="text-center mb-8">
           <img src={kojobotLogo} alt="Kojobot" className="h-16 mx-auto mb-6 object-contain drop-shadow-lg" />
@@ -99,7 +109,7 @@ export default function ParentLogin() {
             {isRTL ? 'بوابة أولياء الأمور' : 'Parents Portal'}
           </h1>
           <p className="text-white/50 text-sm">
-            {isRTL ? 'سجل دخولك بحساب Google لمتابعة أبنائك' : 'Sign in with Google to follow your children\'s progress'}
+            {isRTL ? 'سجل دخولك بحساب Google لمتابعة أبنائك' : "Sign in with Google to follow your children's progress"}
           </p>
         </div>
 
@@ -131,14 +141,11 @@ export default function ParentLogin() {
 
           <div className="mt-6 text-center">
             <p className="text-white/30 text-xs">
-              {isRTL
-                ? 'ستحتاج كود الربط الخاص بابنك للمتابعة'
-                : 'You will need your child\'s linking code to proceed'}
+              {isRTL ? 'ستحتاج كود الربط الخاص بابنك للمتابعة' : "You will need your child's linking code to proceed"}
             </p>
           </div>
         </div>
 
-        {/* Footer */}
         <p className="text-center text-xs text-white/25 mt-8">
           {isRTL
             ? `© ${new Date().getFullYear()} Kojobot. جميع الحقوق محفوظة.`

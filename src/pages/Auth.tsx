@@ -24,14 +24,14 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signIn } = useAuth();
+  const { user, signIn, loading, roleLoading } = useAuth();
   const { t, isRTL, language } = useLanguage();
 
   useEffect(() => {
-    if (user) {
+    if (!loading && !roleLoading && user) {
       navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, loading, roleLoading, navigate]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
