@@ -328,6 +328,9 @@ export default function SettingsPage() {
 
         {/* Social Links - Admin Only */}
         {role === 'admin' && <SocialLinksSettings isRTL={isRTL} />}
+
+        {/* Testimonials - Admin Only */}
+        {role === 'admin' && <TestimonialsSettings isRTL={isRTL} />}
       </div>
     </DashboardLayout>
   );
