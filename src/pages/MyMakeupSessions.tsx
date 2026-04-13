@@ -53,56 +53,7 @@ export default function MyMakeupSessions() {
     }
   };
 
-  const handleConfirm = async (session: MakeupSessionData, confirmed: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('makeup_sessions')
-        .update({ student_confirmed: confirmed })
-        .eq('id', session.id);
-
-      if (error) throw error;
-
-      // Notify all admins
-      const { data: adminRoles } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-
-      const groupName = language === 'ar' ? (session.groups?.name_ar || session.groups?.name) : session.groups?.name;
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, full_name_ar')
-        .eq('user_id', user!.id)
-        .single();
-
-      const studentName = language === 'ar' ? (profile?.full_name_ar || profile?.full_name) : profile?.full_name;
-
-      if (adminRoles) {
-        for (const admin of adminRoles) {
-          await notificationService.create({
-            user_id: admin.user_id,
-            title: confirmed ? 'Makeup Session Confirmed' : 'Makeup Session Rejected',
-            title_ar: confirmed ? 'تأكيد سيشن تعويضية' : 'رفض سيشن تعويضية',
-            message: `${studentName} has ${confirmed ? 'confirmed' : 'rejected'} the makeup session for "${groupName}"`,
-            message_ar: `${studentName} ${confirmed ? 'أكد' : 'رفض'} السيشن التعويضية لمجموعة "${groupName}"`,
-            type: confirmed ? 'success' : 'warning',
-            category: 'makeup_session',
-            action_url: '/makeup-sessions',
-          });
-        }
-      }
-
-      toast({
-        title: confirmed
-          ? (isRTL ? 'تم التأكيد' : 'Confirmed')
-          : (isRTL ? 'تم الرفض' : 'Rejected'),
-      });
-      fetchSessions();
-    } catch (error) {
-      console.error(error);
-      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error' });
-    }
-  };
+  // Confirm/Reject removed — handled by parent account now
 
   const getStatusInfo = (status: string) => {
     const map: Record<string, { label: string; className: string }> = {
@@ -117,6 +68,8 @@ export default function MyMakeupSessions() {
 
   const pending = sessions.filter(s => s.status === 'pending' || (s.status === 'scheduled' && s.student_confirmed === null));
   const others = sessions.filter(s => !pending.includes(s));
+
+  // Note: Confirm/Reject actions are now handled by the parent account
 
   return (
     <DashboardLayout title={isRTL ? 'سيشناتي التعويضية' : 'My Makeup Sessions'}>
