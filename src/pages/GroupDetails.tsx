@@ -480,8 +480,8 @@ export default function GroupDetails() {
                 </div>
               )}
               
-              {/* Reschedule Button - Admin Only */}
-              {role === 'admin' && (
+              {/* Reschedule Button - Admin & Reception */}
+              {(role === 'admin' || role === 'reception') && (
                 <div className="pt-2">
                   <RescheduleDialog
                     groupId={groupId!}
@@ -795,8 +795,8 @@ export default function GroupDetails() {
                              session.status === 'cancelled' ? (isRTL ? 'ملغية' : 'Cancelled') :
                              (isRTL ? 'مجدولة' : 'Scheduled')}
                           </Badge>
-                          {/* Edit Session Button - Admin only for scheduled sessions */}
-                          {role === 'admin' && session.status === 'scheduled' && (
+                          {/* Edit Session Button - Admin & Reception */}
+                          {(role === 'admin' || role === 'reception') && session.status === 'scheduled' && (
                             <EditSessionDialog
                               session={session}
                               onUpdated={fetchGroupData}

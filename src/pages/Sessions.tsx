@@ -994,7 +994,7 @@ user_id: gs.student_id,
                                         {isRTL ? 'تحويل لأونلاين' : 'Convert to Online'}
                                       </DropdownMenuItem>
                                     )}
-                                    {role === 'admin' && session.status !== 'cancelled' && (
+                                    {(role === 'admin' || role === 'reception') && session.status !== 'cancelled' && (
                                       <DropdownMenuItem
                                         onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
                                         className="text-destructive"
@@ -1115,7 +1115,7 @@ user_id: gs.student_id,
                                               {isRTL ? 'تحويل لأونلاين' : 'Convert to Online'}
                                             </DropdownMenuItem>
                                           )}
-                                          {role === 'admin' && session.status !== 'cancelled' && (
+                                          {(role === 'admin' || role === 'reception') && session.status !== 'cancelled' && (
                                             <DropdownMenuItem
                                               onClick={(e) => { e.stopPropagation(); handleDelete(session.id); }}
                                               className="text-destructive"

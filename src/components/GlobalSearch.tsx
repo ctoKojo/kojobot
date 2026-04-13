@@ -84,8 +84,8 @@ export function GlobalSearch() {
         }
       }
 
-      // Search instructors (admin)
-      if (role === 'admin') {
+      // Search instructors (admin & reception)
+      if (role === 'admin' || role === 'reception') {
         const { data: instructors } = await supabase
           .from('profiles')
           .select('user_id, full_name, full_name_ar, email')
