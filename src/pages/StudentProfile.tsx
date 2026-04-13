@@ -125,7 +125,7 @@ export default function StudentProfile() {
   const { studentId } = useParams();
   const navigate = useNavigate();
   const { isRTL, language } = useLanguage();
-  const { role } = useAuth();
+  const { role, roleLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<StudentData | null>(null);
@@ -138,6 +138,13 @@ export default function StudentProfile() {
   useEffect(() => {
     if (studentId) fetchStudentData();
   }, [studentId]);
+
+  // Debug: log role and key data for troubleshooting
+  useEffect(() => {
+    if (!loading && data) {
+      console.log('[StudentProfile] role:', role, 'roleLoading:', roleLoading, 'hasSubscription:', !!data?.subscription, 'levelProgressStatus:', data?.levelProgress?.status, 'parentsCount:', data?.parents?.length);
+    }
+  }, [loading, data, role, roleLoading]);
 
   const fetchStudentData = async () => {
     try {
