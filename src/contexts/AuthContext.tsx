@@ -29,6 +29,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [roleLoading, setRoleLoading] = useState(true);
   const authRequestRef = useRef(0);
 
+  const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return null;
+      }
+
+      return data?.role as AppRole | null;
+    } catch (error) {
+      console.error('Error in fetchUserRole:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
