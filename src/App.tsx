@@ -76,6 +76,7 @@ const RenewalRequired = React.lazy(() => import("./pages/RenewalRequired"));
 const ParentStudentView = React.lazy(() => import("./pages/ParentStudentView"));
 const ParentRegister = React.lazy(() => import("./pages/ParentRegister"));
 const ParentLogin = React.lazy(() => import("./pages/ParentLogin"));
+const Parents = React.lazy(() => import("./pages/Parents"));
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {

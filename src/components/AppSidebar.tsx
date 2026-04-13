@@ -90,6 +90,7 @@ export function AppSidebar() {
             items: [
               { title: t.nav.students, url: '/students', icon: GraduationCap, roles: ['admin'] },
               { title: t.nav.instructors, url: '/instructors', icon: Users, roles: ['admin'] },
+              { title: isRTL ? 'أولياء الأمور' : 'Parents', url: '/parents', icon: Users, roles: ['admin'] },
             ],
           },
           {
