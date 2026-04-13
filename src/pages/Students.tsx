@@ -539,10 +539,14 @@ export default function StudentsPage() {
       sub_notes: '',
       discount_percentage: 0,
       payment_date: new Date().toISOString().split('T')[0],
+      parent_id: '',
     });
     setFormTouched({});
     setAvatarFile(null);
     setAvatarPreview(null);
+    setSelectedParent(null);
+    setParentSearchQuery('');
+    setParentSearchResults([]);
   };
 
   const handleEdit = (student: Student) => {
@@ -564,9 +568,12 @@ export default function StudentsPage() {
       sub_notes: '',
       discount_percentage: 0,
       payment_date: new Date().toISOString().split('T')[0],
+      parent_id: '',
     });
     setAvatarFile(null);
     setAvatarPreview(student.avatar_url || null);
+    setSelectedParent(null);
+    setParentSearchQuery('');
     setIsDialogOpen(true);
   };
 
