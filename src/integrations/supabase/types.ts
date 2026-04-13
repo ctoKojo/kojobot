@@ -4275,6 +4275,48 @@ export type Database = {
         }
         Relationships: []
       }
+      testimonials: {
+        Row: {
+          content_ar: string | null
+          content_en: string | null
+          created_at: string | null
+          id: string
+          is_approved: boolean | null
+          parent_id: string | null
+          parent_name: string
+          parent_name_ar: string | null
+          rating: number
+          show_on_landing: boolean | null
+          sort_order: number | null
+        }
+        Insert: {
+          content_ar?: string | null
+          content_en?: string | null
+          created_at?: string | null
+          id?: string
+          is_approved?: boolean | null
+          parent_id?: string | null
+          parent_name: string
+          parent_name_ar?: string | null
+          rating?: number
+          show_on_landing?: boolean | null
+          sort_order?: number | null
+        }
+        Update: {
+          content_ar?: string | null
+          content_en?: string | null
+          created_at?: string | null
+          id?: string
+          is_approved?: boolean | null
+          parent_id?: string | null
+          parent_name?: string
+          parent_name_ar?: string | null
+          rating?: number
+          show_on_landing?: boolean | null
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
       tracks: {
         Row: {
           created_at: string | null

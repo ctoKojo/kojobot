@@ -10,7 +10,7 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { AlertTriangle, Plus, Trash2, Save, Clock, Loader2, Bell, Key, CheckCircle, BookOpen, Globe } from 'lucide-react';
+import { AlertTriangle, Plus, Trash2, Save, Clock, Loader2, Bell, Key, CheckCircle, BookOpen, Globe, Star, MessageSquare, Eye, EyeOff } from 'lucide-react';
 import { AcademyClosuresSettings } from '@/components/settings/AcademyClosuresSettings';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
@@ -328,6 +328,9 @@ export default function SettingsPage() {
 
         {/* Social Links - Admin Only */}
         {role === 'admin' && <SocialLinksSettings isRTL={isRTL} />}
+
+        {/* Testimonials - Admin Only */}
+        {role === 'admin' && <TestimonialsSettings isRTL={isRTL} />}
       </div>
     </DashboardLayout>
   );
@@ -829,6 +832,178 @@ function SiblingDiscountSettings({ isRTL }: { isRTL: boolean }) {
               </div>
             )}
           </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface Testimonial {
+  id: string;
+  parent_name: string;
+  parent_name_ar: string | null;
+  content_en: string | null;
+  content_ar: string | null;
+  rating: number;
+  is_approved: boolean;
+  show_on_landing: boolean;
+  sort_order: number;
+}
+
+function TestimonialsSettings({ isRTL }: { isRTL: boolean }) {
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    parent_name: '', parent_name_ar: '', content_en: '', content_ar: '', rating: 5
+  });
+
+  const loadTestimonials = async () => {
+    const { data } = await supabase
+      .from('testimonials')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    if (data) setTestimonials(data as unknown as Testimonial[]);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadTestimonials(); }, []);
+
+  const handleAdd = async () => {
+    if (!form.parent_name.trim()) {
+      toast.error(isRTL ? 'ادخل اسم ولي الأمر' : 'Enter parent name');
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('testimonials').insert({
+        parent_name: form.parent_name,
+        parent_name_ar: form.parent_name_ar || null,
+        content_en: form.content_en || null,
+        content_ar: form.content_ar || null,
+        rating: form.rating,
+        is_approved: true,
+        show_on_landing: true,
+        sort_order: testimonials.length
+      });
+      if (error) throw error;
+      setForm({ parent_name: '', parent_name_ar: '', content_en: '', content_ar: '', rating: 5 });
+      setShowForm(false);
+      await loadTestimonials();
+      toast.success(isRTL ? 'تمت الإضافة' : 'Added successfully');
+    } catch (err) {
+      console.error(err);
+      toast.error(isRTL ? 'فشل في الإضافة' : 'Failed to add');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleLanding = async (id: string, current: boolean) => {
+    await supabase.from('testimonials').update({ show_on_landing: !current }).eq('id', id);
+    await loadTestimonials();
+  };
+
+  const handleDelete = async (id: string) => {
+    await supabase.from('testimonials').delete().eq('id', id);
+    await loadTestimonials();
+    toast.success(isRTL ? 'تم الحذف' : 'Deleted');
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            <CardTitle>{isRTL ? 'استبيانات الرضا' : 'Testimonials'}</CardTitle>
+          </div>
+          <Button size="sm" onClick={() => setShowForm(!showForm)}>
+            <Plus className="h-4 w-4 mr-1" />
+            {isRTL ? 'إضافة' : 'Add'}
+          </Button>
+        </div>
+        <CardDescription>
+          {isRTL ? 'إدارة آراء أولياء الأمور المعروضة على صفحة الهبوط' : 'Manage parent testimonials shown on the landing page'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {showForm && (
+          <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">{isRTL ? 'الاسم (EN)' : 'Name (EN)'}</Label>
+                <Input value={form.parent_name} onChange={(e) => setForm({...form, parent_name: e.target.value})} />
+              </div>
+              <div>
+                <Label className="text-xs">{isRTL ? 'الاسم (AR)' : 'Name (AR)'}</Label>
+                <Input value={form.parent_name_ar} onChange={(e) => setForm({...form, parent_name_ar: e.target.value})} dir="rtl" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">{isRTL ? 'المحتوى (EN)' : 'Content (EN)'}</Label>
+              <Input value={form.content_en} onChange={(e) => setForm({...form, content_en: e.target.value})} />
+            </div>
+            <div>
+              <Label className="text-xs">{isRTL ? 'المحتوى (AR)' : 'Content (AR)'}</Label>
+              <Input value={form.content_ar} onChange={(e) => setForm({...form, content_ar: e.target.value})} dir="rtl" />
+            </div>
+            <div className="flex items-center gap-3">
+              <Label className="text-xs">{isRTL ? 'التقييم' : 'Rating'}</Label>
+              <div className="flex gap-1">
+                {[1,2,3,4,5].map(r => (
+                  <button key={r} onClick={() => setForm({...form, rating: r})} className="p-0.5">
+                    <Star size={18} fill={r <= form.rating ? '#f59e0b' : 'transparent'} color="#f59e0b" />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Button onClick={handleAdd} disabled={saving} size="sm" className="w-full">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              {isRTL ? 'حفظ' : 'Save'}
+            </Button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : testimonials.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            {isRTL ? 'لا توجد استبيانات بعد' : 'No testimonials yet'}
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {testimonials.map((t) => (
+              <div key={t.id} className="flex items-start justify-between gap-3 p-3 border rounded-lg">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-sm">{isRTL ? t.parent_name_ar || t.parent_name : t.parent_name}</span>
+                    <div className="flex gap-0.5">
+                      {Array.from({ length: t.rating }).map((_, i) => (
+                        <Star key={i} size={12} fill="#f59e0b" color="#f59e0b" />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {isRTL ? t.content_ar || t.content_en : t.content_en || t.content_ar}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost" size="icon"
+                    onClick={() => toggleLanding(t.id, t.show_on_landing)}
+                    title={t.show_on_landing ? 'Hide from landing' : 'Show on landing'}
+                  >
+                    {t.show_on_landing ? <Eye className="h-4 w-4 text-primary" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleDelete(t.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
