@@ -114,9 +114,31 @@ export function GenerateParentCodeDialog({ studentId, studentName }: Props) {
             <div>
               <h4 className="text-sm font-medium mb-2">{isRTL ? 'أولياء أمور مرتبطين' : 'Linked Parents'}</h4>
               {linkedParents.map((p: any) => (
-                <div key={p.id} className="flex items-center gap-2 py-1 text-sm">
-                  <Badge variant="secondary">{isRTL ? 'مرتبط' : 'Linked'}</Badge>
-                  <span>{p.profiles?.full_name || p.profiles?.email}</span>
+                <div key={p.id} className="flex items-center justify-between py-1 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">{isRTL ? 'مرتبط' : 'Linked'}</Badge>
+                    <span>{p.profiles?.full_name || p.profiles?.email}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive hover:text-destructive"
+                    onClick={async () => {
+                      const { error } = await supabase
+                        .from('parent_students')
+                        .delete()
+                        .eq('id', p.id);
+                      if (error) {
+                        toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: error.message });
+                      } else {
+                        toast({ title: isRTL ? 'تم فك الربط' : 'Parent unlinked' });
+                        fetchCodes();
+                      }
+                    }}
+                    title={isRTL ? 'فك الربط' : 'Unlink'}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
