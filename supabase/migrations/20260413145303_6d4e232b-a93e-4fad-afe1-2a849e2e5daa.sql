@@ -1,0 +1,2 @@
+ALTER TABLE public.subscriptions DROP CONSTRAINT subscriptions_status_check;
+ALTER TABLE public.subscriptions ADD CONSTRAINT subscriptions_status_check CHECK (status = ANY (ARRAY['active'::text, 'expired'::text, 'suspended'::text, 'completed'::text]));
