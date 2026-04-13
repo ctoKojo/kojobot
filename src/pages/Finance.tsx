@@ -216,6 +216,43 @@ export default function Finance() {
   // Reset page on filter/search change
   useEffect(() => { setSubPage(1); }, [filter, search]);
 
+  // Detail lists for outstanding / overdue dialogs
+  const outstandingStudents = useMemo(() => {
+    return subscriptions
+      .filter((s: any) => s.status === 'active' && Number(s.remaining_amount) > 0)
+      .map((s: any) => ({
+        id: s.id,
+        student_id: s.student_id,
+        name: language === 'ar' ? s.profile?.full_name_ar || s.profile?.full_name : s.profile?.full_name,
+        remaining: Number(s.remaining_amount),
+        nextPayment: s.next_payment_date,
+        planName: language === 'ar' ? s.pricing_plans?.name_ar : s.pricing_plans?.name,
+        installment: s.installment_amount,
+      }))
+      .sort((a: any, b: any) => b.remaining - a.remaining);
+  }, [subscriptions, language]);
+
+  const overdueStudents = useMemo(() => {
+    const now = new Date();
+    return subscriptions
+      .filter((s: any) => s.status === 'active' && s.next_payment_date && new Date(s.next_payment_date) < now && Number(s.remaining_amount) > 0)
+      .map((s: any) => {
+        const dueDate = new Date(s.next_payment_date);
+        const diffDays = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        return {
+          id: s.id,
+          student_id: s.student_id,
+          name: language === 'ar' ? s.profile?.full_name_ar || s.profile?.full_name : s.profile?.full_name,
+          remaining: Number(s.remaining_amount),
+          nextPayment: s.next_payment_date,
+          planName: language === 'ar' ? s.pricing_plans?.name_ar : s.pricing_plans?.name,
+          installment: s.installment_amount,
+          daysOverdue: diffDays,
+        };
+      })
+      .sort((a: any, b: any) => b.daysOverdue - a.daysOverdue);
+  }, [subscriptions, language]);
+
   // Paginated subscriptions
   const subTotalPages = Math.max(1, Math.ceil(filtered.length / subPageSize));
   const paginatedSubs = filtered.slice((subPage - 1) * subPageSize, subPage * subPageSize);
