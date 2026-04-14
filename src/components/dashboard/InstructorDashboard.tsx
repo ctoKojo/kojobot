@@ -95,6 +95,44 @@ export function InstructorDashboard() {
         upcomingSessions = data || [];
       }
 
+      // Fetch confirmed makeup sessions assigned to this instructor
+      const { data: makeupData } = await supabase
+        .from('makeup_sessions')
+        .select('id, scheduled_date, scheduled_time, student_id, group_id, groups(name, name_ar)')
+        .eq('assigned_instructor_id', user?.id)
+        .eq('status', 'scheduled')
+        .eq('student_confirmed', true)
+        .in('scheduled_date', [todayStr, tomorrowStr]);
+
+      if (makeupData && makeupData.length > 0) {
+        // Get student names for makeup sessions
+        const studentIds = [...new Set(makeupData.map(m => m.student_id))];
+        const { data: studentProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, full_name_ar')
+          .in('user_id', studentIds);
+        const profileMap = new Map((studentProfiles || []).map(p => [p.user_id, p]));
+
+        for (const ms of makeupData) {
+          const studentProfile = profileMap.get(ms.student_id);
+          const studentName = language === 'ar' ? (studentProfile?.full_name_ar || studentProfile?.full_name || '') : (studentProfile?.full_name || '');
+          upcomingSessions.push({
+            id: `makeup-${ms.id}`,
+            session_date: ms.scheduled_date,
+            session_time: ms.scheduled_time,
+            status: 'scheduled',
+            is_makeup: true,
+            student_name: studentName,
+            groups: ms.groups,
+          });
+        }
+        // Re-sort after adding makeup sessions
+        upcomingSessions.sort((a: any, b: any) => {
+          if (a.session_date !== b.session_date) return a.session_date.localeCompare(b.session_date);
+          return (a.session_time || '').localeCompare(b.session_time || '');
+        });
+      }
+
       // Get pending submissions (assignments waiting to be graded)
       const { count: pendingCount } = await supabase
         .from('assignment_submissions')
