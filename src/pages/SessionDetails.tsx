@@ -267,7 +267,8 @@ export default function SessionDetails() {
   // Grace period ended = instructor can't act
   const graceEnded = isGracePeriodEndedCairo(session?.session_date, session?.session_time, session?.duration_minutes);
   const sessionEnded = isSessionEndedCairo(session?.session_date, session?.session_time, session?.duration_minutes);
-  const instructorActionsDisabled = role === 'instructor' && graceEnded && session?.status !== 'completed';
+  const sessionNotStarted = liveStatus === 'not_started' && !sessionEnded;
+  const instructorActionsDisabled = role === 'instructor' && (graceEnded || sessionNotStarted) && session?.status !== 'completed';
 
   useEffect(() => {
     if (sessionId) {
