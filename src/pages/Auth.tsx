@@ -117,7 +117,7 @@ export default function Auth() {
       if (user.phone) setPhone(user.phone);
       setStep('parent-register');
     }
-  }, [user, role, loading, roleLoading, navigate, userType]);
+  }, [user, role, loading, roleLoading, navigate, userType, parentApproved]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
