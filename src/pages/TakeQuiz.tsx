@@ -55,8 +55,16 @@ export default function TakeQuiz() {
 
   const [assignment, setAssignment] = useState<QuizAssignment | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const saved = sessionStorage.getItem(`quiz-${assignmentId}-index`);
+    return saved ? Number(saved) : 0;
+  });
+  const [answers, setAnswers] = useState<Record<string, string>>(() => {
+    try {
+      const saved = sessionStorage.getItem(`quiz-${assignmentId}-answers`);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
