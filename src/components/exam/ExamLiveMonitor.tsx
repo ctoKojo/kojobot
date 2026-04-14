@@ -336,5 +336,43 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
         ))}
       </CardContent>
     </Card>
+
+    {/* Extend Time Dialog */}
+    <Dialog open={showExtendDialog} onOpenChange={setShowExtendDialog}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{isRTL ? 'تمديد وقت الامتحان' : 'Extend Exam Time'}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <p className="text-sm text-muted-foreground">
+            {isRTL
+              ? 'أدخل عدد الدقائق الإضافية. سيتم تمديد الوقت لجميع الطلاب في هذه المجموعة.'
+              : 'Enter additional minutes. Time will be extended for all students in this group.'}
+          </p>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              max={120}
+              value={extendMinutes}
+              onChange={e => setExtendMinutes(Number(e.target.value))}
+              className="w-24"
+            />
+            <span className="text-sm text-muted-foreground">{isRTL ? 'دقيقة' : 'minutes'}</span>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setShowExtendDialog(false)}>
+            {isRTL ? 'إلغاء' : 'Cancel'}
+          </Button>
+          <Button onClick={handleExtendTime} disabled={extending || extendMinutes <= 0}>
+            {extending
+              ? (isRTL ? 'جاري التمديد...' : 'Extending...')
+              : (isRTL ? 'تمديد الوقت' : 'Extend Time')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
