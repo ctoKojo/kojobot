@@ -166,7 +166,7 @@ const App = () => (
                   <Route path="/account-terminated" element={<AccountTerminated />} />
                   <Route path="/renewal-required" element={<RenewalRequired />} />
                   <Route path="/parent-login" element={<Navigate to="/auth" replace />} />
-                  <Route path="/parent-register" element={<ParentRegister />} />
+                  <Route path="/parent-register" element={<Navigate to="/auth" replace />} />
                   <Route path="/parent/student/:studentId" element={<ProtectedRoute allowedRoles={['parent']}><ParentStudentView /></ProtectedRoute>} />
                   <Route path="/parent-leave-requests" element={<ProtectedRoute allowedRoles={['parent']}><ParentLeaveRequests /></ProtectedRoute>} />
                   <Route path="/leave-requests" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><LeaveRequests /></ProtectedRoute>} />
