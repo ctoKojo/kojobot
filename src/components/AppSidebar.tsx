@@ -261,7 +261,7 @@ export function AppSidebar() {
           {
             label: 'Management', labelAr: 'الإدارة',
             items: [
-              { title: isRTL ? 'طلبات الإجازة' : 'Leave Requests', url: '/parent-leave-requests', icon: CalendarDays, roles: ['parent'] },
+              { title: isRTL ? 'الإجازات والأعذار' : 'Leave & Absence', url: '/parent-leave-requests', icon: CalendarDays, roles: ['parent'] },
               { title: isRTL ? 'الحساب المالي' : 'Finances', url: '/my-finances', icon: DollarSign, roles: ['parent'] },
             ],
           },
