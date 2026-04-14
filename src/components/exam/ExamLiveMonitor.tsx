@@ -37,11 +37,57 @@ interface ExamLiveMonitorProps {
 
 export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
   const { isRTL, language } = useLanguage();
+  const { toast } = useToast();
   const [progressList, setProgressList] = useState<(LiveProgress & { student?: StudentInfo })[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [examEndTime, setExamEndTime] = useState<number | null>(null);
   const [countdown, setCountdown] = useState('');
+
+  // Extend time state
+  const [showExtendDialog, setShowExtendDialog] = useState(false);
+  const [extendMinutes, setExtendMinutes] = useState(30);
+  const [extending, setExtending] = useState(false);
+
+  const handleExtendTime = async () => {
+    if (extendMinutes <= 0) return;
+    setExtending(true);
+    try {
+      // Get all active assignments for this quiz+group
+      const { data: assignments, error } = await supabase
+        .from('quiz_assignments')
+        .select('id, extra_minutes')
+        .eq('quiz_id', quizId)
+        .eq('group_id', groupId)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      if (!assignments?.length) throw new Error('No assignments found');
+
+      // Update each assignment's extra_minutes
+      for (const a of assignments) {
+        const currentExtra = (a as any).extra_minutes || 0;
+        await supabase
+          .from('quiz_assignments')
+          .update({ extra_minutes: currentExtra + extendMinutes } as any)
+          .eq('id', a.id);
+      }
+
+      toast({
+        title: isRTL ? 'تم تمديد الوقت' : 'Time Extended',
+        description: isRTL
+          ? `تم إضافة ${extendMinutes} دقيقة للامتحان`
+          : `Added ${extendMinutes} minutes to the exam`,
+      });
+
+      setShowExtendDialog(false);
+      fetchProgress(); // Refresh to recalculate end time
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: err.message });
+    } finally {
+      setExtending(false);
+    }
+  };
 
   const fetchProgress = async () => {
     // Get all quiz assignments for this quiz+group
