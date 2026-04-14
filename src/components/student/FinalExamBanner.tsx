@@ -52,7 +52,7 @@ export function FinalExamBanner({ studentId }: { studentId: string }) {
         // Get quiz assignment for this student
         const { data: qa } = await supabase
           .from('quiz_assignments')
-          .select('id, start_time, due_date, quizzes:quiz_id(duration_minutes)')
+          .select('id, start_time, due_date')
           .eq('quiz_id', finalQuizId)
           .eq('student_id', studentId)
           .eq('is_active', true)
@@ -62,7 +62,10 @@ export function FinalExamBanner({ studentId }: { studentId: string }) {
           quizAssignmentId = qa.id;
           startTime = qa.start_time;
           dueDate = qa.due_date;
-          durationMinutes = (qa.quizzes as any)?.duration_minutes || null;
+          // Calculate duration from the scheduled window (what admin set), not quiz default
+          if (qa.start_time && qa.due_date) {
+            durationMinutes = Math.round((new Date(qa.due_date).getTime() - new Date(qa.start_time).getTime()) / 60000);
+          }
         }
       }
 
