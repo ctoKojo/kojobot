@@ -83,7 +83,7 @@ export function GenerateParentCodeDialog({ studentId, studentName }: Props) {
   };
 
   const copyLink = (code: string) => {
-    const link = `${window.location.origin}/parent-register?code=${code}`;
+    const link = `${window.location.origin}/auth?code=${code}`;
     navigator.clipboard.writeText(link);
     setCopied(`link-${code}`);
     toast({ title: isRTL ? 'تم نسخ الرابط' : 'Link copied' });
