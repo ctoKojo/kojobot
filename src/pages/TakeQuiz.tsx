@@ -187,6 +187,28 @@ export default function TakeQuiz() {
     }
   };
 
+  // Track live progress for exam monitoring
+  useEffect(() => {
+    if (!assignment || !user || quizStatus !== 'available' || questions.length === 0) return;
+
+    const upsertProgress = async () => {
+      const answeredCount = Object.keys(answers).length;
+      await supabase
+        .from('exam_live_progress')
+        .upsert({
+          student_id: user.id,
+          quiz_assignment_id: assignment.id,
+          current_question_index: currentIndex,
+          answered_count: answeredCount,
+          total_questions: questions.length,
+          last_activity_at: new Date().toISOString(),
+          status: 'in_progress',
+        }, { onConflict: 'student_id,quiz_assignment_id' });
+    };
+
+    upsertProgress();
+  }, [currentIndex, Object.keys(answers).length, quizStatus]);
+
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
   };
