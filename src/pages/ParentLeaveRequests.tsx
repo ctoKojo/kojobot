@@ -206,9 +206,20 @@ export default function ParentLeaveRequests() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{isRTL ? 'طلب إجازة جديد' : 'New Leave Request'}</DialogTitle>
+              <DialogTitle>{isRTL ? 'طلب جديد' : 'New Request'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Request Type */}
+              <div>
+                <Label>{isRTL ? 'نوع الطلب' : 'Request Type'}</Label>
+                <Select value={form.request_type} onValueChange={(v: 'leave' | 'absence_excuse') => setForm(f => ({ ...f, request_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="leave">{isRTL ? 'طلب إجازة' : 'Leave Request'}</SelectItem>
+                    <SelectItem value="absence_excuse">{isRTL ? 'عذر غياب' : 'Absence Excuse'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Label>{isRTL ? 'الطالب' : 'Student'}</Label>
                 <Select value={form.student_id} onValueChange={v => setForm(f => ({ ...f, student_id: v }))}>
@@ -232,9 +243,30 @@ export default function ParentLeaveRequests() {
                   <Input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
                 </div>
               </div>
+
+              {/* 24h Warning */}
+              {form.request_date && (() => {
+                const requestDate = new Date(form.request_date + 'T00:00:00');
+                const now = new Date();
+                const hoursUntil = (requestDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+                if (hoursUntil < 24 && hoursUntil > -24) {
+                  return (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        {isRTL
+                          ? 'يُنصح بتقديم الطلب قبل موعد الجلسة بـ 24 ساعة على الأقل لضمان المعالجة في الوقت المناسب.'
+                          : 'It is recommended to submit requests at least 24 hours before the session for timely processing.'}
+                      </AlertDescription>
+                    </Alert>
+                  );
+                }
+                return null;
+              })()}
+
               <div>
                 <Label>{isRTL ? 'السبب' : 'Reason'}</Label>
-                <Textarea value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} placeholder={isRTL ? 'اكتب سبب الإجازة...' : 'Write the reason...'} />
+                <Textarea value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} placeholder={isRTL ? 'اكتب السبب...' : 'Write the reason...'} />
               </div>
             </div>
             <DialogFooter>
