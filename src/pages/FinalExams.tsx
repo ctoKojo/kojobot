@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -21,10 +22,9 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Target, CalendarClock, AlertTriangle, Search, Clock, CheckCircle2,
-  GraduationCap, Users, Loader2, FileText,
+  GraduationCap, Users, Loader2, FileText, ArrowRight, Timer,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { StatsGrid } from '@/components/shared/StatsGrid';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { QuizResultsDialog } from '@/components/session/QuizResultsDialog';
 
@@ -132,6 +132,16 @@ export default function FinalExams() {
     });
   };
 
+  const handleSelectAll = () => {
+    const awaitingInView = filtered.filter(c => c.status === 'awaiting_exam');
+    const allSelected = awaitingInView.every(c => selectedIds.has(c.progress_id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(awaitingInView.map(c => c.progress_id)));
+    }
+  };
+
   const handleOpenScheduleDialog = () => {
     if (!canSchedule) return;
     const firstCandidate = selectedCandidates[0];
@@ -204,34 +214,29 @@ export default function FinalExams() {
     return Math.floor((Date.now() - new Date(c.status_changed_at).getTime()) / (1000 * 60 * 60 * 24));
   };
 
-  // ─── Summary Stats ───
-  const statsCards = [
-    {
-      label: isRTL ? 'إجمالي الطلاب' : 'Total Students',
-      value: filterCounts.all,
-      icon: Users,
-      color: 'text-primary',
-      bg: 'bg-primary/10',
-    },
-    {
-      label: isRTL ? 'في انتظار الجدولة' : 'Awaiting Scheduling',
-      value: filterCounts.awaiting_exam,
-      icon: Clock,
-      color: 'text-amber-600 dark:text-amber-400',
-      bg: 'bg-amber-500/10',
-    },
-    {
-      label: isRTL ? 'مجدول' : 'Scheduled',
-      value: filterCounts.exam_scheduled,
-      icon: CheckCircle2,
-      color: 'text-emerald-600 dark:text-emerald-400',
-      bg: 'bg-emerald-500/10',
-    },
-  ];
+  const formatExamDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+      month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  };
+
+  // Group candidates by group for better visual grouping
+  const groupedCandidates = useMemo(() => {
+    const groups = new Map<string, { groupName: string; candidates: ExamCandidate[] }>();
+    filtered.forEach(c => {
+      const key = c.group_id;
+      if (!groups.has(key)) {
+        groups.set(key, { groupName: getGroupName(c), candidates: [] });
+      }
+      groups.get(key)!.candidates.push(c);
+    });
+    return Array.from(groups.entries());
+  }, [filtered, language]);
 
   return (
     <DashboardLayout>
-      <div className="space-y-5">
+      <div className="space-y-6">
         {/* Header */}
         <PageHeader
           title={isRTL ? 'الامتحانات النهائية' : 'Final Exams'}
@@ -242,12 +247,13 @@ export default function FinalExams() {
             <Button
               onClick={handleOpenScheduleDialog}
               disabled={!canSchedule}
-              className="gap-2"
+              size="default"
+              className="gap-2 shadow-sm"
             >
               <CalendarClock className="h-4 w-4" />
               {isRTL ? 'جدولة امتحان' : 'Schedule Exam'}
               {selectedCandidates.length > 0 && (
-                <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground text-xs px-1.5">
+                <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground text-xs px-1.5 ms-1">
                   {selectedCandidates.length}
                 </Badge>
               )}
@@ -255,19 +261,36 @@ export default function FinalExams() {
           ) : undefined}
         />
 
-        {/* Stats Cards */}
-        <StatsGrid
-          columns={3}
-          stats={[
-            { label: isRTL ? 'إجمالي الطلاب' : 'Total Students', value: filterCounts.all, icon: Users, gradient: 'from-blue-500 to-blue-600' },
-            { label: isRTL ? 'في انتظار الجدولة' : 'Awaiting Scheduling', value: filterCounts.awaiting_exam, icon: Clock, gradient: 'from-amber-500 to-orange-500' },
-            { label: isRTL ? 'مجدول' : 'Scheduled', value: filterCounts.exam_scheduled, icon: CheckCircle2, gradient: 'from-emerald-500 to-emerald-600' },
-          ]}
-        />
+        {/* Stats Strip */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { key: 'all' as FilterType, label: isRTL ? 'الإجمالي' : 'Total', count: filterCounts.all, icon: Users, color: 'text-primary', bgColor: 'bg-primary/10', borderColor: 'border-primary/20' },
+            { key: 'awaiting_exam' as FilterType, label: isRTL ? 'في الانتظار' : 'Awaiting', count: filterCounts.awaiting_exam, icon: Clock, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20' },
+            { key: 'exam_scheduled' as FilterType, label: isRTL ? 'مجدول' : 'Scheduled', count: filterCounts.exam_scheduled, icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20' },
+          ].map(stat => (
+            <button
+              key={stat.key}
+              onClick={() => setFilter(filter === stat.key ? 'all' : stat.key)}
+              className={`relative flex items-center gap-3 rounded-xl border p-3 sm:p-4 transition-all duration-200 text-start ${
+                filter === stat.key
+                  ? `${stat.borderColor} ${stat.bgColor} shadow-sm ring-1 ring-inset ${stat.borderColor}`
+                  : 'border-border bg-card hover:bg-muted/50'
+              }`}
+            >
+              <div className={`p-2 rounded-lg ${stat.bgColor} flex-shrink-0`}>
+                <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.color}`} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold tabular-nums leading-none">{stat.count}</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 truncate">{stat.label}</p>
+              </div>
+            </button>
+          ))}
+        </div>
 
         {/* Multi-group warning */}
         {selectedGroupIds.size > 1 && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-2 duration-300">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>{isRTL ? 'تنبيه' : 'Warning'}</AlertTitle>
             <AlertDescription>
@@ -278,55 +301,40 @@ export default function FinalExams() {
           </Alert>
         )}
 
-        {/* Search + Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground`} />
-            <Input
-              placeholder={isRTL ? 'بحث بالاسم أو المجموعة...' : 'Search by name or group...'}
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="ps-9"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {([
-              ['all', isRTL ? 'الكل' : 'All'],
-              ['awaiting_exam', isRTL ? 'في انتظار الجدولة' : 'Awaiting'],
-              ['exam_scheduled', isRTL ? 'مجدول' : 'Scheduled'],
-            ] as [FilterType, string][]).map(([key, label]) => (
-              <Badge
-                key={key}
-                variant={filter === key ? 'default' : 'outline'}
-                className={`cursor-pointer px-3 py-1.5 transition-all ${
-                  filter === key ? 'shadow-sm' : 'hover:bg-muted'
-                }`}
-                onClick={() => setFilter(key)}
-              >
-                {label} ({filterCounts[key]})
-              </Badge>
-            ))}
-          </div>
+        {/* Search Bar */}
+        <div className="relative max-w-md">
+          <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground`} />
+          <Input
+            placeholder={isRTL ? 'بحث بالاسم أو المجموعة...' : 'Search by name or group...'}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="ps-9 bg-card"
+          />
         </div>
 
         {/* Content */}
         {loading ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
-              <p className="text-sm text-muted-foreground">{isRTL ? 'جاري التحميل...' : 'Loading...'}</p>
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-20">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-primary/10 animate-ping" />
+                <div className="relative p-4 rounded-full bg-primary/10">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mt-4">{isRTL ? 'جاري التحميل...' : 'Loading...'}</p>
             </CardContent>
           </Card>
         ) : filtered.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="p-4 rounded-full bg-muted/50 mb-4">
-                <Target className="h-10 w-10 text-muted-foreground/40" />
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="p-5 rounded-2xl bg-muted/50 mb-5">
+                <Target className="h-12 w-12 text-muted-foreground/30" />
               </div>
-              <h3 className="text-base font-semibold mb-1">
+              <h3 className="text-lg font-semibold mb-1.5">
                 {isRTL ? 'لا يوجد طلاب حالياً' : 'No Students Yet'}
               </h3>
-              <p className="text-sm text-muted-foreground max-w-sm">
+              <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
                 {isRTL
                   ? 'سيظهر هنا الطلاب الذين أكملوا عدد السيشنات المطلوبة وجاهزين للامتحان النهائي'
                   : 'Students who complete their required sessions will appear here ready for final exam scheduling'}
@@ -334,240 +342,291 @@ export default function FinalExams() {
             </CardContent>
           </Card>
         ) : isMobile ? (
-          /* ─── Mobile: Card View ─── */
-          <div className="space-y-3">
-            {filtered.map(c => (
-              <Card
-                key={c.progress_id}
-                className="overflow-hidden hover:shadow-md transition-shadow"
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    {isAdmin && c.status === 'awaiting_exam' && (
-                      <div className="pt-1" onClick={e => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedIds.has(c.progress_id)}
-                          onCheckedChange={() => handleToggleSelect(c.progress_id)}
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0" onClick={() => navigate(`/student/${c.student_id}`)}>
-                      <div className="flex items-center gap-2.5 mb-2">
-                        <Avatar className="h-9 w-9 ring-2 ring-border">
-                          <AvatarImage src={c.avatar_url || undefined} />
-                          <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
-                            {getName(c)?.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold truncate">{getName(c)}</p>
-                          <p className="text-xs text-muted-foreground truncate">{getGroupName(c)}</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant="outline" className="text-[10px] py-0">
-                          {getLevelName(c)}
-                        </Badge>
-                        <Badge
-                          variant={c.status === 'exam_scheduled' ? 'default' : 'secondary'}
-                          className="text-[10px] py-0"
-                        >
-                          {c.status === 'awaiting_exam'
-                            ? (isRTL ? 'في انتظار الجدولة' : 'Awaiting')
-                            : (isRTL ? 'مجدول' : 'Scheduled')}
-                        </Badge>
-                        {c.final_exam_quiz_id ? (
-                          <Badge variant="outline" className="text-[10px] py-0 text-emerald-600 border-emerald-300 dark:text-emerald-400 dark:border-emerald-700">
-                            {isRTL ? 'كويز مربوط' : 'Quiz linked'}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] py-0 text-destructive border-destructive/30">
-                            {isRTL ? 'بدون كويز' : 'No quiz'}
-                          </Badge>
-                        )}
-                      </div>
-                      {c.exam_scheduled_at && (
-                        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                          <CalendarClock className="h-3 w-3" />
-                          {new Date(c.exam_scheduled_at).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-                            year: 'numeric', month: 'short', day: 'numeric',
-                            hour: '2-digit', minute: '2-digit',
-                          })}
-                        </p>
-                      )}
-                      {/* Wait days */}
-                      {(() => {
-                        const days = getWaitDays(c);
-                        const slaThreshold = c.status === 'awaiting_exam' ? 7 : 14;
-                        return days > 0 ? (
-                          <Badge variant="outline" className={`text-[10px] mt-1 ${days >= slaThreshold ? 'text-destructive border-destructive/30' : ''}`}>
-                            {days} {isRTL ? 'يوم' : 'days'}
-                          </Badge>
-                        ) : null;
-                      })()}
-                      {/* Grade button for submitted exams */}
-                      {isAdmin && c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 mt-2"
-                          onClick={(e) => { e.stopPropagation(); setGradingCandidate(c); setShowGradingDialog(true); }}
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          {isRTL ? 'تصحيح الامتحان' : 'Grade Exam'}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+          /* ─── Mobile: Grouped Card View ─── */
+          <div className="space-y-4">
+            {groupedCandidates.map(([groupId, { groupName, candidates: groupCandidates }]) => (
+              <div key={groupId} className="space-y-2">
+                <div className="flex items-center gap-2 px-1">
+                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{groupName}</span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{groupCandidates.length}</Badge>
+                </div>
+                <div className="space-y-2">
+                  {groupCandidates.map(c => {
+                    const waitDays = getWaitDays(c);
+                    const slaThreshold = c.status === 'awaiting_exam' ? 7 : 14;
+                    const isOverdue = waitDays >= slaThreshold;
+
+                    return (
+                      <Card
+                        key={c.progress_id}
+                        className={`overflow-hidden transition-all duration-200 ${
+                          selectedIds.has(c.progress_id)
+                            ? 'ring-2 ring-primary/30 bg-primary/[0.02]'
+                            : 'hover:shadow-sm'
+                        }`}
+                      >
+                        <CardContent className="p-3.5">
+                          <div className="flex items-start gap-3">
+                            {isAdmin && c.status === 'awaiting_exam' && (
+                              <div className="pt-0.5" onClick={e => e.stopPropagation()}>
+                                <Checkbox
+                                  checked={selectedIds.has(c.progress_id)}
+                                  onCheckedChange={() => handleToggleSelect(c.progress_id)}
+                                />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0" onClick={() => navigate(`/student/${c.student_id}`)}>
+                              <div className="flex items-center gap-2.5 mb-2.5">
+                                <Avatar className="h-10 w-10 ring-2 ring-background shadow-sm">
+                                  <AvatarImage src={c.avatar_url || undefined} />
+                                  <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                                    {getName(c)?.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-semibold truncate">{getName(c)}</p>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal">
+                                      {getLevelName(c)}
+                                    </Badge>
+                                    {c.status === 'exam_scheduled' ? (
+                                      <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0 text-[10px] py-0 px-1.5">
+                                        <CheckCircle2 className="h-2.5 w-2.5 me-0.5" />
+                                        {isRTL ? 'مجدول' : 'Scheduled'}
+                                      </Badge>
+                                    ) : (
+                                      <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-0 text-[10px] py-0 px-1.5">
+                                        <Clock className="h-2.5 w-2.5 me-0.5" />
+                                        {isRTL ? 'في الانتظار' : 'Awaiting'}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Bottom info row */}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {c.exam_scheduled_at && (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 rounded-md px-2 py-0.5">
+                                    <CalendarClock className="h-3 w-3" />
+                                    {formatExamDate(c.exam_scheduled_at)}
+                                  </span>
+                                )}
+                                {waitDays > 0 && (
+                                  <span className={`inline-flex items-center gap-1 text-[11px] rounded-md px-2 py-0.5 ${
+                                    isOverdue
+                                      ? 'bg-destructive/10 text-destructive'
+                                      : 'bg-muted/50 text-muted-foreground'
+                                  }`}>
+                                    <Timer className="h-3 w-3" />
+                                    {waitDays} {isRTL ? 'يوم' : 'd'}
+                                  </span>
+                                )}
+                                {c.final_exam_quiz_id ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    {isRTL ? 'كويز' : 'Quiz'}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-destructive">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    {isRTL ? 'بدون كويز' : 'No quiz'}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Grade button */}
+                              {isAdmin && c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1.5 mt-2.5 w-full"
+                                  onClick={(e) => { e.stopPropagation(); setGradingCandidate(c); setShowGradingDialog(true); }}
+                                >
+                                  <FileText className="h-3.5 w-3.5" />
+                                  {isRTL ? 'تصحيح الامتحان' : 'Grade Exam'}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
             ))}
           </div>
         ) : (
-          /* ─── Desktop: Table View ─── */
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-0 pt-4 px-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {isRTL ? `عرض ${filtered.length} من ${candidates.length} طالب` : `Showing ${filtered.length} of ${candidates.length} students`}
-                </CardTitle>
+          /* ─── Desktop: Clean Table View ─── */
+          <Card className="overflow-hidden shadow-sm">
+            <div className="flex items-center justify-between px-5 py-3 border-b bg-muted/30">
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {isRTL
+                    ? `${filtered.length} طالب`
+                    : `${filtered.length} student${filtered.length !== 1 ? 's' : ''}`}
+                </p>
                 {selectedCandidates.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    {isRTL ? `${selectedCandidates.length} محدد` : `${selectedCandidates.length} selected`}
-                  </Badge>
+                  <>
+                    <Separator orientation="vertical" className="h-4" />
+                    <Badge className="bg-primary/10 text-primary border-0 text-xs gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      {isRTL ? `${selectedCandidates.length} محدد` : `${selectedCandidates.length} selected`}
+                    </Badge>
+                  </>
                 )}
               </div>
-            </CardHeader>
-            <CardContent className="p-0 pt-3">
+              {isAdmin && filtered.some(c => c.status === 'awaiting_exam') && (
+                <Button variant="ghost" size="sm" className="text-xs h-7" onClick={handleSelectAll}>
+                  {filtered.filter(c => c.status === 'awaiting_exam').every(c => selectedIds.has(c.progress_id))
+                    ? (isRTL ? 'إلغاء تحديد الكل' : 'Deselect All')
+                    : (isRTL ? 'تحديد الكل' : 'Select All')}
+                </Button>
+              )}
+            </div>
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent">
+                  <TableRow className="hover:bg-transparent bg-muted/20">
                     {isAdmin && <TableHead className="w-10"></TableHead>}
                     <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
                     <TableHead>{isRTL ? 'المجموعة' : 'Group'}</TableHead>
                     <TableHead>{isRTL ? 'المستوى' : 'Level'}</TableHead>
                     <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                    <TableHead className="text-center">{isRTL ? 'موعد الامتحان' : 'Exam Date'}</TableHead>
-                    <TableHead className="text-center">{isRTL ? 'أيام الانتظار' : 'Wait Days'}</TableHead>
-                    <TableHead className="text-center">{isRTL ? 'كويز نهائي' : 'Final Quiz'}</TableHead>
-                    {isAdmin && <TableHead className="text-center">{isRTL ? 'إجراءات' : 'Actions'}</TableHead>}
+                    <TableHead className="text-center">{isRTL ? 'الموعد' : 'Date'}</TableHead>
+                    <TableHead className="text-center">{isRTL ? 'الانتظار' : 'Wait'}</TableHead>
+                    <TableHead className="text-center">{isRTL ? 'الكويز' : 'Quiz'}</TableHead>
+                    {isAdmin && <TableHead className="text-center w-28">{isRTL ? 'إجراءات' : 'Actions'}</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map(c => (
-                    <TableRow
-                      key={c.progress_id}
-                      className={`transition-colors ${
-                        selectedIds.has(c.progress_id)
-                          ? 'bg-primary/5 hover:bg-primary/10'
-                          : 'hover:bg-muted/50'
-                      }`}
-                    >
-                      {isAdmin && (
-                        <TableCell onClick={e => e.stopPropagation()}>
-                          {c.status === 'awaiting_exam' && (
-                            <Checkbox
-                              checked={selectedIds.has(c.progress_id)}
-                              onCheckedChange={() => handleToggleSelect(c.progress_id)}
-                            />
-                          )}
-                        </TableCell>
-                      )}
-                      <TableCell
-                        className="cursor-pointer"
-                        onClick={() => navigate(`/student/${c.student_id}`)}
+                  {filtered.map(c => {
+                    const waitDays = getWaitDays(c);
+                    const slaThreshold = c.status === 'awaiting_exam' ? 7 : 14;
+                    const isOverdue = waitDays >= slaThreshold;
+                    const isSelected = selectedIds.has(c.progress_id);
+
+                    return (
+                      <TableRow
+                        key={c.progress_id}
+                        className={`transition-colors group ${
+                          isSelected
+                            ? 'bg-primary/[0.04] hover:bg-primary/[0.07]'
+                            : 'hover:bg-muted/40'
+                        }`}
                       >
-                        <div className="flex items-center gap-2.5">
-                          <Avatar className="h-8 w-8 ring-2 ring-border">
-                            <AvatarImage src={c.avatar_url || undefined} />
-                            <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
-                              {getName(c)?.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm font-medium hover:underline">{getName(c)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell
-                        className="cursor-pointer text-sm hover:underline"
-                        onClick={() => navigate(`/group/${c.group_id}`)}
-                      >
-                        {getGroupName(c)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs font-normal">
-                          {getLevelName(c)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {c.status === 'exam_scheduled' ? (
-                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0 text-xs">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            {isRTL ? 'مجدول' : 'Scheduled'}
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-0 text-xs">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {isRTL ? 'في الانتظار' : 'Awaiting'}
-                          </Badge>
+                        {isAdmin && (
+                          <TableCell onClick={e => e.stopPropagation()} className="pe-0">
+                            {c.status === 'awaiting_exam' && (
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => handleToggleSelect(c.progress_id)}
+                              />
+                            )}
+                          </TableCell>
                         )}
-                      </TableCell>
-                      <TableCell className="text-center text-sm text-muted-foreground">
-                        {c.exam_scheduled_at ? (
-                          <span className="flex items-center justify-center gap-1">
-                            <CalendarClock className="h-3.5 w-3.5" />
-                            {new Date(c.exam_scheduled_at).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-                              month: 'short', day: 'numeric',
-                              hour: '2-digit', minute: '2-digit',
-                            })}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/50">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {(() => {
-                          const days = getWaitDays(c);
-                          const slaThreshold = c.status === 'awaiting_exam' ? 7 : 14;
-                          return (
-                            <span className={`text-xs font-medium ${days >= slaThreshold ? 'text-destructive' : 'text-muted-foreground'}`}>
-                              {days > 0 ? `${days} ${isRTL ? 'يوم' : 'd'}` : '—'}
+                        <TableCell>
+                          <div
+                            className="flex items-center gap-2.5 cursor-pointer group/name"
+                            onClick={() => navigate(`/student/${c.student_id}`)}
+                          >
+                            <Avatar className="h-8 w-8 ring-1 ring-border shadow-sm">
+                              <AvatarImage src={c.avatar_url || undefined} />
+                              <AvatarFallback className="text-[11px] font-bold bg-primary/10 text-primary">
+                                {getName(c)?.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm font-medium group-hover/name:text-primary transition-colors">
+                              {getName(c)}
                             </span>
-                          );
-                        })()}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {c.final_exam_quiz_id ? (
-                          <div className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            {isRTL ? 'مربوط' : 'Linked'}
                           </div>
-                        ) : (
-                          <div className="inline-flex items-center gap-1 text-xs text-destructive">
-                            <AlertTriangle className="h-3.5 w-3.5" />
-                            {isRTL ? 'غير مربوط' : 'Missing'}
-                          </div>
-                        )}
-                      </TableCell>
-                      {isAdmin && (
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className="text-sm text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                            onClick={() => navigate(`/group/${c.group_id}`)}
+                          >
+                            {getGroupName(c)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs font-normal px-2">
+                            {getLevelName(c)}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-center">
-                          {c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1.5"
-                              onClick={() => { setGradingCandidate(c); setShowGradingDialog(true); }}
-                            >
-                              <FileText className="h-3.5 w-3.5" />
-                              {isRTL ? 'تصحيح' : 'Grade'}
-                            </Button>
+                          {c.status === 'exam_scheduled' ? (
+                            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0 text-xs gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              {isRTL ? 'مجدول' : 'Scheduled'}
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-0 text-xs gap-1">
+                              <Clock className="h-3 w-3" />
+                              {isRTL ? 'في الانتظار' : 'Awaiting'}
+                            </Badge>
                           )}
                         </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
+                        <TableCell className="text-center">
+                          {c.exam_scheduled_at ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <CalendarClock className="h-3.5 w-3.5" />
+                              {formatExamDate(c.exam_scheduled_at)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/30">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {waitDays > 0 ? (
+                            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                              isOverdue
+                                ? 'bg-destructive/10 text-destructive'
+                                : 'text-muted-foreground'
+                            }`}>
+                              {isOverdue && <AlertTriangle className="h-3 w-3" />}
+                              {waitDays} {isRTL ? 'يوم' : 'd'}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/30">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {c.final_exam_quiz_id ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs text-destructive">
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                            </span>
+                          )}
+                        </TableCell>
+                        {isAdmin && (
+                          <TableCell className="text-center">
+                            {c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1.5 h-7 text-xs"
+                                onClick={() => { setGradingCandidate(c); setShowGradingDialog(true); }}
+                              >
+                                <FileText className="h-3 w-3" />
+                                {isRTL ? 'تصحيح' : 'Grade'}
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground/20">—</span>
+                            )}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
-            </CardContent>
+            </div>
           </Card>
         )}
 
@@ -575,8 +634,10 @@ export default function FinalExams() {
         <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <CalendarClock className="h-5 w-5 text-primary" />
+              <DialogTitle className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <CalendarClock className="h-5 w-5 text-primary" />
+                </div>
                 {isRTL ? 'جدولة الامتحان النهائي' : 'Schedule Final Exam'}
               </DialogTitle>
               <DialogDescription>
@@ -589,58 +650,76 @@ export default function FinalExams() {
               {/* Selected students list */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">{isRTL ? 'الطلاب المختارون' : 'Selected Students'}</Label>
-                <div className="max-h-32 overflow-y-auto border rounded-lg p-2.5 space-y-1.5 bg-muted/30">
+                <div className="max-h-32 overflow-y-auto border rounded-xl p-3 space-y-2 bg-muted/20">
                   {selectedCandidates.map(c => (
-                    <div key={c.progress_id} className="flex items-center gap-2 text-sm">
-                      <Avatar className="h-5 w-5">
+                    <div key={c.progress_id} className="flex items-center gap-2.5 text-sm">
+                      <Avatar className="h-6 w-6">
                         <AvatarImage src={c.avatar_url || undefined} />
-                        <AvatarFallback className="text-[10px]">{getName(c)?.charAt(0)}</AvatarFallback>
+                        <AvatarFallback className="text-[10px] font-semibold bg-primary/10 text-primary">{getName(c)?.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      <span>{getName(c)}</span>
+                      <span className="font-medium">{getName(c)}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="exam-date">{isRTL ? 'تاريخ الامتحان' : 'Exam Date'}</Label>
-                <Input
-                  id="exam-date"
-                  type="date"
-                  value={scheduleDate}
-                  onChange={e => setScheduleDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                />
-              </div>
+              <Separator />
 
-              <div className="grid gap-2">
-                <Label htmlFor="exam-time">{isRTL ? 'وقت الامتحان' : 'Exam Time'}</Label>
-                <Input
-                  id="exam-time"
-                  type="time"
-                  value={scheduleTime}
-                  onChange={e => setScheduleTime(e.target.value)}
-                />
-              </div>
+              <div className="grid gap-3">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="exam-date" className="text-sm">{isRTL ? 'تاريخ الامتحان' : 'Exam Date'}</Label>
+                  <Input
+                    id="exam-date"
+                    type="date"
+                    value={scheduleDate}
+                    onChange={e => setScheduleDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="bg-card"
+                  />
+                </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="exam-duration">{isRTL ? 'المدة (بالدقائق)' : 'Duration (minutes)'}</Label>
-                <Input
-                  id="exam-duration"
-                  type="number"
-                  min={5}
-                  max={180}
-                  value={scheduleDuration}
-                  onChange={e => setScheduleDuration(Number(e.target.value))}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="exam-time" className="text-sm">{isRTL ? 'الوقت' : 'Time'}</Label>
+                    <Input
+                      id="exam-time"
+                      type="time"
+                      value={scheduleTime}
+                      onChange={e => setScheduleTime(e.target.value)}
+                      className="bg-card"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="exam-duration" className="text-sm">{isRTL ? 'المدة (دقيقة)' : 'Duration (min)'}</Label>
+                    <Input
+                      id="exam-duration"
+                      type="number"
+                      min={5}
+                      max={180}
+                      value={scheduleDuration}
+                      onChange={e => setScheduleDuration(Number(e.target.value))}
+                      className="bg-card"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={() => setShowScheduleDialog(false)}>
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </Button>
-              <Button onClick={handleSchedule} disabled={scheduling || !scheduleDate || !scheduleTime}>
-                {scheduling ? (isRTL ? 'جاري الجدولة...' : 'Scheduling...') : (isRTL ? 'تأكيد الجدولة' : 'Confirm Schedule')}
+              <Button onClick={handleSchedule} disabled={scheduling || !scheduleDate || !scheduleTime} className="gap-2">
+                {scheduling ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {isRTL ? 'جاري الجدولة...' : 'Scheduling...'}
+                  </>
+                ) : (
+                  <>
+                    <CalendarClock className="h-4 w-4" />
+                    {isRTL ? 'تأكيد الجدولة' : 'Confirm Schedule'}
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
