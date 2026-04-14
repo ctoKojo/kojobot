@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, XCircle, AlertTriangle, Calendar, Filter } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Calendar, Filter, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -56,6 +56,62 @@ export default function LeaveRequests() {
     return isRTL ? (p.full_name_ar || p.full_name) : p.full_name;
   };
 
+  const createMakeupSessionsForLeave = async (req: any) => {
+    // Find student's active groups
+    const { data: groupStudents } = await supabase
+      .from('group_students')
+      .select('group_id, groups(id, name, name_ar, instructor_id, duration_minutes, schedule_day, schedule_time, attendance_mode, session_link)')
+      .eq('student_id', req.student_id)
+      .eq('is_active', true);
+
+    if (!groupStudents?.length) return 0;
+
+    const startDate = req.request_date;
+    const endDate = req.end_date || req.request_date;
+
+    // Find scheduled sessions in the date range for these groups
+    const groupIds = groupStudents.map((gs: any) => gs.group_id);
+    const { data: sessions } = await supabase
+      .from('sessions')
+      .select('id, group_id, session_date, session_time, content_number, session_number')
+      .in('group_id', groupIds)
+      .gte('session_date', startDate)
+      .lte('session_date', endDate)
+      .in('status', ['scheduled', 'completed']);
+
+    if (!sessions?.length) return 0;
+
+    let created = 0;
+    for (const session of sessions) {
+      const group = groupStudents.find((gs: any) => gs.group_id === session.group_id)?.groups as any;
+      if (!group) continue;
+
+      // Check if makeup already exists for this student+session
+      const { data: existing } = await supabase
+        .from('makeup_sessions')
+        .select('id')
+        .eq('student_id', req.student_id)
+        .eq('original_session_id', session.id)
+        .maybeSingle();
+
+      if (existing) continue;
+
+      // Create makeup session
+      const { error } = await supabase.from('makeup_sessions').insert({
+        student_id: req.student_id,
+        group_id: session.group_id,
+        original_session_id: session.id,
+        reason: isRTL ? 'إجازة/عذر معتمد' : 'Approved leave/excuse',
+        status: 'pending',
+        attendance_mode: group.attendance_mode || 'offline',
+        session_link: group.session_link || null,
+      } as any);
+
+      if (!error) created++;
+    }
+    return created;
+  };
+
   const handleReview = async (status: 'approved' | 'rejected') => {
     if (!reviewDialog) return;
     setSubmitting(true);
@@ -66,19 +122,35 @@ export default function LeaveRequests() {
         .eq('id', reviewDialog.id);
       if (error) throw error;
 
+      // If approved, create makeup sessions
+      let makeupCount = 0;
+      if (status === 'approved') {
+        makeupCount = await createMakeupSessionsForLeave(reviewDialog);
+      }
+
       // Notify parent
+      const typeLabel = reviewDialog.request_type === 'absence_excuse' ? 'Absence Excuse' : 'Leave';
+      const typeLabelAr = reviewDialog.request_type === 'absence_excuse' ? 'عذر الغياب' : 'الإجازة';
+      
+      const makeupMsg = makeupCount > 0
+        ? (isRTL ? ` وتم إنشاء ${makeupCount} جلسة تعويضية` : ` and ${makeupCount} makeup session(s) created`)
+        : '';
+
       await notificationService.create({
         user_id: reviewDialog.parent_id,
-        title: status === 'approved' ? 'Leave Request Approved' : 'Leave Request Rejected',
-        title_ar: status === 'approved' ? 'تمت الموافقة على طلب الإجازة' : 'تم رفض طلب الإجازة',
-        message: `Your leave request for ${reviewDialog.request_date} has been ${status}`,
-        message_ar: `طلب الإجازة بتاريخ ${reviewDialog.request_date} تم ${status === 'approved' ? 'الموافقة عليه' : 'رفضه'}`,
+        title: status === 'approved' ? `${typeLabel} Approved` : `${typeLabel} Rejected`,
+        title_ar: status === 'approved' ? `تمت الموافقة على ${typeLabelAr}` : `تم رفض ${typeLabelAr}`,
+        message: `Your ${typeLabel.toLowerCase()} request for ${reviewDialog.request_date} has been ${status}${makeupMsg}`,
+        message_ar: `طلب ${typeLabelAr} بتاريخ ${reviewDialog.request_date} تم ${status === 'approved' ? 'الموافقة عليه' : 'رفضه'}${makeupMsg}`,
         type: status === 'approved' ? 'success' : 'warning',
         category: 'leave_request',
         action_url: '/parent-leave-requests',
       });
 
-      toast({ title: isRTL ? 'تم التحديث' : 'Updated' });
+      const successMsg = makeupCount > 0
+        ? (isRTL ? `تم التحديث وإنشاء ${makeupCount} جلسة تعويضية` : `Updated & created ${makeupCount} makeup session(s)`)
+        : (isRTL ? 'تم التحديث' : 'Updated');
+      toast({ title: successMsg });
       setReviewDialog(null);
       setAdminNotes('');
       fetchRequests();
@@ -98,10 +170,16 @@ export default function LeaveRequests() {
     }
   };
 
+  const getTypeBadge = (type: string) => {
+    return type === 'absence_excuse'
+      ? <Badge variant="outline" className="border-orange-300 text-orange-700 dark:text-orange-300">{isRTL ? 'عذر غياب' : 'Absence Excuse'}</Badge>
+      : <Badge variant="outline" className="border-blue-300 text-blue-700 dark:text-blue-300">{isRTL ? 'إجازة' : 'Leave'}</Badge>;
+  };
+
   const filtered = filter === 'all' ? requests : requests.filter(r => r.status === filter);
 
   return (
-    <DashboardLayout title={isRTL ? 'طلبات الإجازة' : 'Leave Requests'}>
+    <DashboardLayout title={isRTL ? 'طلبات الإجازة والأعذار' : 'Leave & Absence Requests'}>
       <div className="space-y-6">
         {/* Stats */}
         <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
@@ -150,6 +228,7 @@ export default function LeaveRequests() {
                   <TableRow>
                     <TableHead>{isRTL ? 'ولي الأمر' : 'Parent'}</TableHead>
                     <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                    <TableHead>{isRTL ? 'النوع' : 'Type'}</TableHead>
                     <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
                     <TableHead>{isRTL ? 'السبب' : 'Reason'}</TableHead>
                     <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
@@ -161,6 +240,7 @@ export default function LeaveRequests() {
                     <TableRow key={req.id}>
                       <TableCell>{getName(req.parent_id)}</TableCell>
                       <TableCell className="font-medium">{getName(req.student_id)}</TableCell>
+                      <TableCell>{getTypeBadge(req.request_type || 'leave')}</TableCell>
                       <TableCell>
                         {req.request_date}
                         {req.end_date && ` → ${req.end_date}`}
@@ -186,18 +266,24 @@ export default function LeaveRequests() {
         <Dialog open={!!reviewDialog} onOpenChange={() => setReviewDialog(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{isRTL ? 'مراجعة طلب الإجازة' : 'Review Leave Request'}</DialogTitle>
+              <DialogTitle>{isRTL ? 'مراجعة الطلب' : 'Review Request'}</DialogTitle>
             </DialogHeader>
             {reviewDialog && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div><span className="text-muted-foreground">{isRTL ? 'الطالب:' : 'Student:'}</span> <span className="font-medium">{getName(reviewDialog.student_id)}</span></div>
                   <div><span className="text-muted-foreground">{isRTL ? 'ولي الأمر:' : 'Parent:'}</span> <span className="font-medium">{getName(reviewDialog.parent_id)}</span></div>
+                  <div><span className="text-muted-foreground">{isRTL ? 'النوع:' : 'Type:'}</span> {getTypeBadge(reviewDialog.request_type || 'leave')}</div>
                   <div><span className="text-muted-foreground">{isRTL ? 'التاريخ:' : 'Date:'}</span> {reviewDialog.request_date}{reviewDialog.end_date && ` → ${reviewDialog.end_date}`}</div>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">{isRTL ? 'السبب:' : 'Reason:'}</p>
                   <p className="text-sm bg-muted p-3 rounded">{reviewDialog.reason}</p>
+                </div>
+                <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                  {isRTL
+                    ? '⚡ في حالة الموافقة، سيتم تلقائياً إنشاء جلسات تعويضية للسيشنات خلال فترة الإجازة/العذر.'
+                    : '⚡ On approval, makeup sessions will be auto-created for sessions during the leave/excuse period.'}
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">{isRTL ? 'ملاحظات (اختياري):' : 'Notes (optional):'}</p>
@@ -207,11 +293,11 @@ export default function LeaveRequests() {
             )}
             <DialogFooter className="flex gap-2">
               <Button variant="destructive" onClick={() => handleReview('rejected')} disabled={submitting}>
-                <XCircle className="h-4 w-4 mr-1" />
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4 mr-1" />}
                 {isRTL ? 'رفض' : 'Reject'}
               </Button>
               <Button onClick={() => handleReview('approved')} disabled={submitting}>
-                <CheckCircle className="h-4 w-4 mr-1" />
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
                 {isRTL ? 'موافقة' : 'Approve'}
               </Button>
             </DialogFooter>
