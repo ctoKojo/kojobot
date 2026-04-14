@@ -82,12 +82,21 @@ export default function Auth() {
     }
   }, [searchParams]);
 
+  // Check parent approval status
+  const [parentApproved, setParentApproved] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!user || role !== 'parent') { setParentApproved(null); return; }
+    supabase.from('profiles').select('is_approved').eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => setParentApproved(data?.is_approved ?? false));
+  }, [user, role]);
+
   // Handle auth state changes
   useEffect(() => {
     if (loading || roleLoading) return;
 
     if (user && role === 'parent') {
-      navigate('/dashboard', { replace: true });
+      if (parentApproved === null) return; // still loading
+      navigate(parentApproved ? '/dashboard' : '/parent-pending', { replace: true });
     } else if (user && role && role !== 'parent') {
       navigate('/dashboard', { replace: true });
     } else if (user && !role && userType === 'parent') {
