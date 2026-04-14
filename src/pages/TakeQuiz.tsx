@@ -227,7 +227,16 @@ export default function TakeQuiz() {
   }, [currentIndex, answeredCount, quizStatus, assignment?.id, user?.id, questions.length]);
 
   const handleAnswerChange = (questionId: string, answer: string) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: answer }));
+    setAnswers((prev) => {
+      const next = { ...prev, [questionId]: answer };
+      sessionStorage.setItem(`quiz-${assignmentId}-answers`, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleIndexChange = (idx: number) => {
+    setCurrentIndex(idx);
+    sessionStorage.setItem(`quiz-${assignmentId}-index`, String(idx));
   };
 
   const handleSubmit = async () => {
