@@ -230,8 +230,8 @@ export default function MySessions() {
     if (!s.curriculum) return false;
     return (
       s.curriculum.student_pdf_available ||
-      (s.curriculum.can_view_summary_video && s.curriculum.summary_video_url) ||
-      (s.curriculum.can_view_full_video && s.curriculum.full_video_url)
+      s.curriculum.summary_video_url ||
+      s.curriculum.full_video_url
     );
   };
 
