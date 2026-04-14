@@ -63,10 +63,11 @@ export default function ParentLeaveRequests() {
       const { error } = await supabase.from('leave_requests').insert({
         student_id: form.student_id,
         parent_id: user!.id,
+        request_type: form.request_type,
         request_date: form.request_date,
         end_date: form.end_date || null,
         reason: form.reason,
-      });
+      } as any);
       if (error) throw error;
 
       // Get student name for notification
@@ -83,12 +84,14 @@ export default function ParentLeaveRequests() {
 
       if (adminRoles) {
         for (const admin of adminRoles) {
+          const typeLabel = form.request_type === 'leave' ? 'Leave' : 'Absence Excuse';
+          const typeLabelAr = form.request_type === 'leave' ? 'إجازة' : 'عذر غياب';
           await notificationService.create({
             user_id: admin.user_id,
-            title: 'New Leave Request',
-            title_ar: 'طلب إجازة جديد',
-            message: `Leave request for "${studentName}" on ${form.request_date}`,
-            message_ar: `طلب إجازة للطالب "${studentName}" بتاريخ ${form.request_date}`,
+            title: `New ${typeLabel} Request`,
+            title_ar: `طلب ${typeLabelAr} جديد`,
+            message: `${typeLabel} request for "${studentName}" on ${form.request_date}`,
+            message_ar: `طلب ${typeLabelAr} للطالب "${studentName}" بتاريخ ${form.request_date}`,
             type: 'info',
             category: 'leave_request',
             action_url: '/leave-requests',
@@ -98,7 +101,7 @@ export default function ParentLeaveRequests() {
 
       toast({ title: isRTL ? 'تم إرسال الطلب' : 'Request Submitted' });
       setDialogOpen(false);
-      setForm({ student_id: '', request_date: '', end_date: '', reason: '' });
+      setForm({ student_id: '', request_type: 'leave', request_date: '', end_date: '', reason: '' });
       fetchData();
     } catch (error: any) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: error.message });
