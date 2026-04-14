@@ -28,7 +28,9 @@ export default function ParentLeaveRequests() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ student_id: '', request_type: 'leave' as 'leave' | 'absence_excuse', request_date: '', end_date: '', reason: '' });
+  const [form, setForm] = useState({ student_id: '', request_type: 'leave' as 'leave' | 'absence_excuse', request_date: '', end_date: '', reason: '', session_id: '' });
+  const [upcomingSessions, setUpcomingSessions] = useState<any[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
   useEffect(() => {
     if (user) {
