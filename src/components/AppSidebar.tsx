@@ -193,21 +193,26 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'My Learning', labelAr: 'دراستي',
+            label: 'Sessions & Content', labelAr: 'الحصص والمحتوى',
             items: [
-              { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileCheck, roles: ['student'] },
-              { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['student'] },
-              { title: isRTL ? 'موادي التعليمية' : 'My Materials', url: '/my-materials', icon: BookMarked, roles: ['student'] },
               { title: isRTL ? 'سيشناتي' : 'My Sessions', url: '/my-sessions', icon: BookOpen, roles: ['student'] },
-              { title: isRTL ? 'شهاداتي' : 'My Certificates', url: '/my-certificates', icon: AcademicCap, roles: ['student'] },
-              { title: isRTL ? 'الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3, roles: ['student'] },
+              { title: isRTL ? 'موادي التعليمية' : 'My Materials', url: '/my-materials', icon: BookMarked, roles: ['student'] },
+              { title: isRTL ? 'سيشناتي التعويضية' : 'Makeup Sessions', url: '/my-makeup-sessions', icon: RefreshCw, roles: ['student'] },
             ],
           },
           {
-            label: 'Support', labelAr: 'الدعم',
+            label: 'Assessments', labelAr: 'التقييمات',
             items: [
-              { title: isRTL ? 'سيشناتي التعويضية' : 'My Makeup Sessions', url: '/my-makeup-sessions', icon: RefreshCw, roles: ['student'] },
-              { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['student'] },
+              { title: isRTL ? 'كويزاتي' : 'My Quizzes', url: '/my-quizzes', icon: FileCheck, roles: ['student'] },
+              { title: t.nav.assignments, url: '/assignments', icon: ClipboardList, roles: ['student'] },
+              { title: isRTL ? 'شهاداتي' : 'My Certificates', url: '/my-certificates', icon: AcademicCap, roles: ['student'] },
+            ],
+          },
+          {
+            label: 'Progress', labelAr: 'التقدم',
+            items: [
+              { title: isRTL ? 'الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3, roles: ['student'] },
+              { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: TrendingUp, roles: ['student'] },
               { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-warnings', icon: AlertTriangle, roles: ['student'] },
             ],
           },
