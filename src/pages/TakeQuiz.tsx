@@ -682,7 +682,7 @@ export default function TakeQuiz() {
         <div className="flex justify-between">
           <Button
             variant="outline"
-            onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+            onClick={() => handleIndexChange(Math.max(0, currentIndex - 1))}
             disabled={currentIndex === 0}
           >
             {isRTL ? <ArrowRight className="w-4 h-4 ml-2" /> : <ArrowLeft className="w-4 h-4 mr-2" />}
@@ -699,7 +699,7 @@ export default function TakeQuiz() {
             </Button>
           ) : (
             <Button
-              onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
+              onClick={() => handleIndexChange(Math.min(questions.length - 1, currentIndex + 1))}
             >
               {isRTL ? 'التالي' : 'Next'}
               {isRTL ? <ArrowLeft className="w-4 h-4 mr-2" /> : <ArrowRight className="w-4 h-4 ml-2" />}
@@ -720,7 +720,7 @@ export default function TakeQuiz() {
                   variant={currentIndex === idx ? 'default' : answers[q.id] ? 'secondary' : 'outline'}
                   size="sm"
                   className={`w-10 h-10 ${answers[q.id] && currentIndex !== idx ? 'bg-green-100 text-green-700 border-green-300' : ''}`}
-                  onClick={() => setCurrentIndex(idx)}
+                  onClick={() => handleIndexChange(idx)}
                 >
                   {idx + 1}
                 </Button>
