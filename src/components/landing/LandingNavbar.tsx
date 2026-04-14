@@ -72,7 +72,7 @@ export const LandingNavbar = ({ language, isRTL, scrolled, ctaUrl, ctaText }: La
             className="grad-btn hidden sm:inline-flex"
             style={{ borderRadius: 10, padding: "0 18px", height: 36, fontSize: 14 }}
           >
-            <Link to={ctaUrl}>{ctaText}</Link>
+            <Link to="/auth">{ctaText}</Link>
           </Button>
         </div>
       </nav>
