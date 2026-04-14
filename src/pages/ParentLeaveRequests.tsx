@@ -103,7 +103,7 @@ export default function ParentLeaveRequests() {
 
       toast({ title: isRTL ? 'تم إرسال الطلب' : 'Request Submitted' });
       setDialogOpen(false);
-      setForm({ student_id: '', request_type: 'leave', request_date: '', end_date: '', reason: '' });
+      setForm({ student_id: '', request_type: 'leave', request_date: '', end_date: '', reason: '', session_id: '' });
       fetchData();
     } catch (error: any) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: error.message });
