@@ -28,7 +28,9 @@ export default function ParentLeaveRequests() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ student_id: '', request_type: 'leave' as 'leave' | 'absence_excuse', request_date: '', end_date: '', reason: '' });
+  const [form, setForm] = useState({ student_id: '', request_type: 'leave' as 'leave' | 'absence_excuse', request_date: '', end_date: '', reason: '', session_id: '' });
+  const [upcomingSessions, setUpcomingSessions] = useState<any[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -53,19 +55,67 @@ export default function ParentLeaveRequests() {
     setLoading(false);
   };
 
+  // Fetch upcoming sessions when student changes and type is absence_excuse
+  const fetchUpcomingSessions = async (studentId: string) => {
+    if (!studentId) { setUpcomingSessions([]); return; }
+    setLoadingSessions(true);
+    // Get student's active groups
+    const { data: gs } = await supabase
+      .from('group_students')
+      .select('group_id')
+      .eq('student_id', studentId)
+      .eq('is_active', true);
+    
+    if (!gs?.length) { setUpcomingSessions([]); setLoadingSessions(false); return; }
+
+    const today = new Date().toISOString().split('T')[0];
+    const { data: sessions } = await supabase
+      .from('sessions')
+      .select('id, session_date, session_time, content_number, session_number, group_id, groups(name, name_ar)')
+      .in('group_id', gs.map(g => g.group_id))
+      .gte('session_date', today)
+      .eq('status', 'scheduled')
+      .order('session_date', { ascending: true })
+      .limit(20);
+
+    setUpcomingSessions(sessions || []);
+    setLoadingSessions(false);
+  };
+
+  useEffect(() => {
+    if (form.request_type === 'absence_excuse' && form.student_id) {
+      fetchUpcomingSessions(form.student_id);
+    }
+  }, [form.student_id, form.request_type]);
+
   const handleSubmit = async () => {
-    if (!form.student_id || !form.request_date || !form.reason) {
-      toast({ variant: 'destructive', title: isRTL ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields' });
-      return;
+    if (form.request_type === 'absence_excuse') {
+      if (!form.student_id || !form.session_id || !form.reason) {
+        toast({ variant: 'destructive', title: isRTL ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields' });
+        return;
+      }
+    } else {
+      if (!form.student_id || !form.request_date || !form.reason) {
+        toast({ variant: 'destructive', title: isRTL ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields' });
+        return;
+      }
     }
     setSubmitting(true);
     try {
+      // For absence excuse, get date from the selected session
+      let requestDate = form.request_date;
+      if (form.request_type === 'absence_excuse') {
+        const selectedSession = upcomingSessions.find(s => s.id === form.session_id);
+        requestDate = selectedSession?.session_date || form.request_date;
+      }
+
       const { error } = await supabase.from('leave_requests').insert({
         student_id: form.student_id,
         parent_id: user!.id,
         request_type: form.request_type,
-        request_date: form.request_date,
-        end_date: form.end_date || null,
+        request_date: requestDate,
+        end_date: form.request_type === 'leave' ? (form.end_date || null) : null,
+        session_id: form.request_type === 'absence_excuse' ? form.session_id : null,
         reason: form.reason,
       } as any);
       if (error) throw error;
@@ -101,7 +151,7 @@ export default function ParentLeaveRequests() {
 
       toast({ title: isRTL ? 'تم إرسال الطلب' : 'Request Submitted' });
       setDialogOpen(false);
-      setForm({ student_id: '', request_type: 'leave', request_date: '', end_date: '', reason: '' });
+      setForm({ student_id: '', request_type: 'leave', request_date: '', end_date: '', reason: '', session_id: '' });
       fetchData();
     } catch (error: any) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: error.message });
@@ -222,7 +272,7 @@ export default function ParentLeaveRequests() {
               </div>
               <div>
                 <Label>{isRTL ? 'الطالب' : 'Student'}</Label>
-                <Select value={form.student_id} onValueChange={v => setForm(f => ({ ...f, student_id: v }))}>
+                <Select value={form.student_id} onValueChange={v => setForm(f => ({ ...f, student_id: v, session_id: '' }))}>
                   <SelectTrigger><SelectValue placeholder={isRTL ? 'اختر الطالب' : 'Select student'} /></SelectTrigger>
                   <SelectContent>
                     {children.map((child: any) => (
@@ -233,20 +283,55 @@ export default function ParentLeaveRequests() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>{isRTL ? 'من تاريخ' : 'From Date'}</Label>
-                  <Input type="date" value={form.request_date} onChange={e => setForm(f => ({ ...f, request_date: e.target.value }))} />
+
+              {/* Leave: date range */}
+              {form.request_type === 'leave' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>{isRTL ? 'من تاريخ' : 'From Date'}</Label>
+                    <Input type="date" value={form.request_date} onChange={e => setForm(f => ({ ...f, request_date: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label>{isRTL ? 'إلى تاريخ (اختياري)' : 'To Date (optional)'}</Label>
+                    <Input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
+                  </div>
                 </div>
+              )}
+
+              {/* Absence excuse: session dropdown */}
+              {form.request_type === 'absence_excuse' && form.student_id && (
                 <div>
-                  <Label>{isRTL ? 'إلى تاريخ (اختياري)' : 'To Date (optional)'}</Label>
-                  <Input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
+                  <Label>{isRTL ? 'اختر الجلسة' : 'Select Session'}</Label>
+                  {loadingSessions ? (
+                    <p className="text-sm text-muted-foreground py-2">{isRTL ? 'جاري تحميل الجلسات...' : 'Loading sessions...'}</p>
+                  ) : upcomingSessions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground py-2">{isRTL ? 'لا توجد جلسات قادمة' : 'No upcoming sessions'}</p>
+                  ) : (
+                    <Select value={form.session_id} onValueChange={v => setForm(f => ({ ...f, session_id: v }))}>
+                      <SelectTrigger><SelectValue placeholder={isRTL ? 'اختر جلسة' : 'Select a session'} /></SelectTrigger>
+                      <SelectContent>
+                        {upcomingSessions.map((s: any) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.session_date} — {isRTL ? (s.groups?.name_ar || s.groups?.name) : s.groups?.name} ({isRTL ? `محتوى ${s.content_number}` : `Content ${s.content_number}`})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
-              </div>
+              )}
 
               {/* 24h Warning */}
-              {form.request_date && (() => {
-                const requestDate = new Date(form.request_date + 'T00:00:00');
+              {(() => {
+                let checkDate = '';
+                if (form.request_type === 'leave' && form.request_date) {
+                  checkDate = form.request_date;
+                } else if (form.request_type === 'absence_excuse' && form.session_id) {
+                  const s = upcomingSessions.find(s => s.id === form.session_id);
+                  checkDate = s?.session_date || '';
+                }
+                if (!checkDate) return null;
+                const requestDate = new Date(checkDate + 'T00:00:00');
                 const now = new Date();
                 const hoursUntil = (requestDate.getTime() - now.getTime()) / (1000 * 60 * 60);
                 if (hoursUntil < 24 && hoursUntil > -24) {

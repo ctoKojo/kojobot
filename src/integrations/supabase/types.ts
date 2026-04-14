@@ -1761,6 +1761,7 @@ export type Database = {
           request_type: string
           reviewed_at: string | null
           reviewed_by: string | null
+          session_id: string | null
           status: string
           student_id: string
         }
@@ -1775,6 +1776,7 @@ export type Database = {
           request_type?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          session_id?: string | null
           status?: string
           student_id: string
         }
@@ -1789,10 +1791,26 @@ export type Database = {
           request_type?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          session_id?: string | null
           status?: string
           student_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["session_id"]
+          },
+          {
+            foreignKeyName: "leave_requests_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       level_grades: {
         Row: {

@@ -57,7 +57,40 @@ export default function LeaveRequests() {
   };
 
   const createMakeupSessionsForLeave = async (req: any) => {
-    // Find student's active groups
+    // If absence_excuse with specific session_id, just create one makeup
+    if (req.request_type === 'absence_excuse' && req.session_id) {
+      const { data: session } = await supabase
+        .from('sessions')
+        .select('id, group_id, groups(attendance_mode, session_link)')
+        .eq('id', req.session_id)
+        .maybeSingle();
+      
+      if (!session) return 0;
+
+      const { data: existing } = await supabase
+        .from('makeup_sessions')
+        .select('id')
+        .eq('student_id', req.student_id)
+        .eq('original_session_id', session.id)
+        .maybeSingle();
+
+      if (existing) return 0;
+
+      const group = session.groups as any;
+      const { error } = await supabase.from('makeup_sessions').insert({
+        student_id: req.student_id,
+        group_id: session.group_id,
+        original_session_id: session.id,
+        reason: isRTL ? 'عذر غياب معتمد' : 'Approved absence excuse',
+        status: 'pending',
+        attendance_mode: group?.attendance_mode || 'offline',
+        session_link: group?.session_link || null,
+      } as any);
+
+      return error ? 0 : 1;
+    }
+
+    // Leave request: find sessions in date range
     const { data: groupStudents } = await supabase
       .from('group_students')
       .select('group_id, groups(id, name, name_ar, instructor_id, duration_minutes, schedule_day, schedule_time, attendance_mode, session_link)')
@@ -69,7 +102,6 @@ export default function LeaveRequests() {
     const startDate = req.request_date;
     const endDate = req.end_date || req.request_date;
 
-    // Find scheduled sessions in the date range for these groups
     const groupIds = groupStudents.map((gs: any) => gs.group_id);
     const { data: sessions } = await supabase
       .from('sessions')
@@ -86,7 +118,6 @@ export default function LeaveRequests() {
       const group = groupStudents.find((gs: any) => gs.group_id === session.group_id)?.groups as any;
       if (!group) continue;
 
-      // Check if makeup already exists for this student+session
       const { data: existing } = await supabase
         .from('makeup_sessions')
         .select('id')
@@ -96,12 +127,11 @@ export default function LeaveRequests() {
 
       if (existing) continue;
 
-      // Create makeup session
       const { error } = await supabase.from('makeup_sessions').insert({
         student_id: req.student_id,
         group_id: session.group_id,
         original_session_id: session.id,
-        reason: isRTL ? 'إجازة/عذر معتمد' : 'Approved leave/excuse',
+        reason: isRTL ? 'إجازة معتمدة' : 'Approved leave',
         status: 'pending',
         attendance_mode: group.attendance_mode || 'offline',
         session_link: group.session_link || null,
