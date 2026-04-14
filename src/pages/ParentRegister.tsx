@@ -92,13 +92,7 @@ export default function ParentRegister() {
     }
   };
 
-  const handleLinkCodes = async () => {
-    const validCodes = codes.filter(c => c.trim().length >= 8);
-    if (validCodes.length === 0) {
-      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'أدخل كود واحد على الأقل' : 'Enter at least one valid code' });
-      return;
-    }
-
+  const handleRegister = async () => {
     if (!fullName.trim()) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'أدخل الاسم بالكامل' : 'Please enter your full name' });
       return;
@@ -115,6 +109,7 @@ export default function ParentRegister() {
         return;
       }
 
+      const validCodes = codes.filter(c => c.trim().length >= 8);
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/register-parent`, {
         method: 'POST',
@@ -141,14 +136,17 @@ export default function ParentRegister() {
         }
         toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: data.error || (isRTL ? 'حدث خطأ' : 'Something went wrong') });
       } else {
-        setResults(data.details);
-        toast({ title: isRTL ? 'تم بنجاح!' : 'Success!', description: isRTL ? `تم ربط ${data.linked} طالب` : `Linked ${data.linked} student(s)` });
+        if (data.details) setResults(data.details);
+        const msg = validCodes.length > 0
+          ? (isRTL ? `تم التسجيل وربط ${data.linked} طالب` : `Registered & linked ${data.linked} student(s)`)
+          : (isRTL ? 'تم التسجيل بنجاح! الإدارة هتربط أولادك قريباً' : 'Registered! Admin will link your children soon.');
+        toast({ title: isRTL ? 'تم بنجاح!' : 'Success!', description: msg });
         setTimeout(() => {
           window.location.href = '/dashboard';
         }, 2000);
       }
     } catch (error) {
-      console.error('Link error:', error);
+      console.error('Register error:', error);
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'خطأ في الاتصال' : 'Connection error' });
     } finally {
       setIsLinking(false);
