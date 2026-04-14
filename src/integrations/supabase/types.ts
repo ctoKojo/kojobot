@@ -4996,6 +4996,14 @@ export type Database = {
           total_count: number
         }[]
       }
+      get_parent_auth_info: {
+        Args: { parent_ids: string[] }
+        Returns: {
+          email: string
+          full_name: string
+          user_id: string
+        }[]
+      }
       get_student_group_ids: {
         Args: { _student_id: string }
         Returns: string[]
