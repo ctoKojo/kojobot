@@ -402,15 +402,29 @@ export function InstructorDashboard() {
                   <div 
                     key={session.id} 
                     className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer gap-2"
-                    onClick={() => navigate(`/session/${session.id}`)}
+                    onClick={() => !session.is_makeup && navigate(`/session/${session.id}`)}
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-sm sm:text-base truncate">
-                        {language === 'ar' ? session.groups?.name_ar : session.groups?.name}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm sm:text-base truncate">
+                          {language === 'ar' ? session.groups?.name_ar : session.groups?.name}
+                        </p>
+                        {session.is_makeup && (
+                          <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 dark:text-purple-400 dark:border-purple-700">
+                            {isRTL ? 'تعويضية' : 'Makeup'}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">
-                        {isRTL ? `سيشن ${session.session_number || '-'}` : `Session ${session.session_number || '-'}`}
-                        {session.topic && ` - ${language === 'ar' && session.topic_ar ? session.topic_ar : session.topic}`}
+                        {session.is_makeup
+                          ? (isRTL ? `طالب: ${session.student_name}` : `Student: ${session.student_name}`)
+                          : (
+                            <>
+                              {isRTL ? `سيشن ${session.session_number || '-'}` : `Session ${session.session_number || '-'}`}
+                              {session.topic && ` - ${language === 'ar' && session.topic_ar ? session.topic_ar : session.topic}`}
+                            </>
+                          )
+                        }
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
