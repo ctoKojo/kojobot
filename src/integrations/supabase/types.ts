@@ -5076,7 +5076,7 @@ export type Database = {
           p_notes?: string
           p_payment_date: string
           p_payment_method: string
-          p_payment_type: string
+          p_payment_type?: string
           p_recorded_by?: string
           p_student_id: string
           p_subscription_id: string
