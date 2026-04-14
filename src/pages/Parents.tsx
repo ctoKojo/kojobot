@@ -38,37 +38,51 @@ export default function Parents() {
       .from('parent_students')
       .select('parent_id, student_id, relationship');
 
-    if (!links?.length) {
+    // Also get ALL users with parent role (including unlinked ones)
+    const { data: parentRoles } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'parent');
+
+    const linkedParentIds = [...new Set((links || []).map(l => l.parent_id))];
+    const allParentIds = [...new Set((parentRoles || []).map(r => r.user_id))];
+    // Merge both sets
+    const mergedParentIds = [...new Set([...linkedParentIds, ...allParentIds])];
+    const studentIds = [...new Set((links || []).map(l => l.student_id))];
+
+    if (!mergedParentIds.length) {
       setParents([]);
       setLoading(false);
       return;
     }
 
-    const parentIds = [...new Set(links.map(l => l.parent_id))];
-    const studentIds = [...new Set(links.map(l => l.student_id))];
-
     const [{ data: parentProfiles }, { data: studentProfiles }] = await Promise.all([
-      supabase.from('profiles').select('user_id, full_name, full_name_ar, email, phone, is_approved').in('user_id', parentIds),
-      supabase.from('profiles').select('user_id, full_name, full_name_ar').in('user_id', studentIds),
+      supabase.from('profiles').select('user_id, full_name, full_name_ar, email, phone, is_approved').in('user_id', mergedParentIds),
+      studentIds.length > 0
+        ? supabase.from('profiles').select('user_id, full_name, full_name_ar').in('user_id', studentIds)
+        : Promise.resolve({ data: [] as any[] }),
     ]);
 
     const grouped: Record<string, LinkedParent> = {};
 
-    for (const link of links) {
-      if (!grouped[link.parent_id]) {
-        const profile = parentProfiles?.find(p => p.user_id === link.parent_id);
-        grouped[link.parent_id] = {
-          parent_id: link.parent_id,
-          full_name: profile?.full_name || '',
-          full_name_ar: profile?.full_name_ar || null,
-          email: profile?.email || '',
-          phone: profile?.phone || null,
-          is_approved: profile?.is_approved ?? false,
-          children: [],
-        };
-      }
+    // Initialize all parents (including unlinked)
+    for (const pid of mergedParentIds) {
+      const profile = parentProfiles?.find(p => p.user_id === pid);
+      grouped[pid] = {
+        parent_id: pid,
+        full_name: profile?.full_name || '',
+        full_name_ar: profile?.full_name_ar || null,
+        email: profile?.email || '',
+        phone: profile?.phone || null,
+        is_approved: profile?.is_approved ?? false,
+        children: [],
+      };
+    }
+
+    // Add children links
+    for (const link of (links || [])) {
       const student = studentProfiles?.find(p => p.user_id === link.student_id);
-      grouped[link.parent_id].children.push({
+      grouped[link.parent_id]?.children.push({
         student_id: link.student_id,
         student_name: student?.full_name || '',
         student_name_ar: student?.full_name_ar || null,
