@@ -490,7 +490,7 @@ export default function FinalExams() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent bg-muted/20">
-                    {isAdmin && <TableHead className="w-10"></TableHead>}
+                    {isAdmin && <TableHead className="w-12 text-center"></TableHead>}
                     <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
                     <TableHead>{isRTL ? 'المجموعة' : 'Group'}</TableHead>
                     <TableHead>{isRTL ? 'المستوى' : 'Level'}</TableHead>
@@ -518,7 +518,7 @@ export default function FinalExams() {
                         }`}
                       >
                         {isAdmin && (
-                          <TableCell onClick={e => e.stopPropagation()} className="pe-0">
+                          <TableCell onClick={e => e.stopPropagation()} className="text-center px-3">
                             {c.status === 'awaiting_exam' && (
                               <Checkbox
                                 checked={isSelected}
