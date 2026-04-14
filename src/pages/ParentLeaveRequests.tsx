@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Calendar, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Plus, Calendar, Clock, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -27,7 +28,7 @@ export default function ParentLeaveRequests() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ student_id: '', request_date: '', end_date: '', reason: '' });
+  const [form, setForm] = useState({ student_id: '', request_type: 'leave' as 'leave' | 'absence_excuse', request_date: '', end_date: '', reason: '' });
 
   useEffect(() => {
     if (user) {
@@ -62,10 +63,11 @@ export default function ParentLeaveRequests() {
       const { error } = await supabase.from('leave_requests').insert({
         student_id: form.student_id,
         parent_id: user!.id,
+        request_type: form.request_type,
         request_date: form.request_date,
         end_date: form.end_date || null,
         reason: form.reason,
-      });
+      } as any);
       if (error) throw error;
 
       // Get student name for notification
@@ -82,12 +84,14 @@ export default function ParentLeaveRequests() {
 
       if (adminRoles) {
         for (const admin of adminRoles) {
+          const typeLabel = form.request_type === 'leave' ? 'Leave' : 'Absence Excuse';
+          const typeLabelAr = form.request_type === 'leave' ? 'إجازة' : 'عذر غياب';
           await notificationService.create({
             user_id: admin.user_id,
-            title: 'New Leave Request',
-            title_ar: 'طلب إجازة جديد',
-            message: `Leave request for "${studentName}" on ${form.request_date}`,
-            message_ar: `طلب إجازة للطالب "${studentName}" بتاريخ ${form.request_date}`,
+            title: `New ${typeLabel} Request`,
+            title_ar: `طلب ${typeLabelAr} جديد`,
+            message: `${typeLabel} request for "${studentName}" on ${form.request_date}`,
+            message_ar: `طلب ${typeLabelAr} للطالب "${studentName}" بتاريخ ${form.request_date}`,
             type: 'info',
             category: 'leave_request',
             action_url: '/leave-requests',
@@ -97,7 +101,7 @@ export default function ParentLeaveRequests() {
 
       toast({ title: isRTL ? 'تم إرسال الطلب' : 'Request Submitted' });
       setDialogOpen(false);
-      setForm({ student_id: '', request_date: '', end_date: '', reason: '' });
+      setForm({ student_id: '', request_type: 'leave', request_date: '', end_date: '', reason: '' });
       fetchData();
     } catch (error: any) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: error.message });
@@ -123,13 +127,13 @@ export default function ParentLeaveRequests() {
   };
 
   return (
-    <DashboardLayout title={isRTL ? 'طلبات الإجازة' : 'Leave Requests'}>
+    <DashboardLayout title={isRTL ? 'طلبات الإجازة والأعذار' : 'Leave & Absence Requests'}>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-semibold">{isRTL ? 'طلبات الإجازة' : 'Leave Requests'}</h2>
+          <h2 className="text-lg font-semibold">{isRTL ? 'طلبات الإجازة والأعذار' : 'Leave & Absence Requests'}</h2>
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-1" />
-            {isRTL ? 'طلب إجازة جديد' : 'New Leave Request'}
+            {isRTL ? 'طلب جديد' : 'New Request'}
           </Button>
         </div>
 
@@ -163,17 +167,23 @@ export default function ParentLeaveRequests() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                    <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
-                    <TableHead>{isRTL ? 'السبب' : 'Reason'}</TableHead>
-                    <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                    <TableHead>{isRTL ? 'ملاحظات الإدارة' : 'Admin Notes'}</TableHead>
+                     <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                     <TableHead>{isRTL ? 'النوع' : 'Type'}</TableHead>
+                     <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
+                     <TableHead>{isRTL ? 'السبب' : 'Reason'}</TableHead>
+                     <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                     <TableHead>{isRTL ? 'ملاحظات الإدارة' : 'Admin Notes'}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {requests.map(req => (
                     <TableRow key={req.id}>
                       <TableCell className="font-medium">{getChildName(req.student_id)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {req.request_type === 'absence_excuse' ? (isRTL ? 'عذر غياب' : 'Absence Excuse') : (isRTL ? 'إجازة' : 'Leave')}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
@@ -196,9 +206,20 @@ export default function ParentLeaveRequests() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{isRTL ? 'طلب إجازة جديد' : 'New Leave Request'}</DialogTitle>
+              <DialogTitle>{isRTL ? 'طلب جديد' : 'New Request'}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Request Type */}
+              <div>
+                <Label>{isRTL ? 'نوع الطلب' : 'Request Type'}</Label>
+                <Select value={form.request_type} onValueChange={(v: 'leave' | 'absence_excuse') => setForm(f => ({ ...f, request_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="leave">{isRTL ? 'طلب إجازة' : 'Leave Request'}</SelectItem>
+                    <SelectItem value="absence_excuse">{isRTL ? 'عذر غياب' : 'Absence Excuse'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Label>{isRTL ? 'الطالب' : 'Student'}</Label>
                 <Select value={form.student_id} onValueChange={v => setForm(f => ({ ...f, student_id: v }))}>
@@ -222,9 +243,30 @@ export default function ParentLeaveRequests() {
                   <Input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
                 </div>
               </div>
+
+              {/* 24h Warning */}
+              {form.request_date && (() => {
+                const requestDate = new Date(form.request_date + 'T00:00:00');
+                const now = new Date();
+                const hoursUntil = (requestDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+                if (hoursUntil < 24 && hoursUntil > -24) {
+                  return (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        {isRTL
+                          ? 'يُنصح بتقديم الطلب قبل موعد الجلسة بـ 24 ساعة على الأقل لضمان المعالجة في الوقت المناسب.'
+                          : 'It is recommended to submit requests at least 24 hours before the session for timely processing.'}
+                      </AlertDescription>
+                    </Alert>
+                  );
+                }
+                return null;
+              })()}
+
               <div>
                 <Label>{isRTL ? 'السبب' : 'Reason'}</Label>
-                <Textarea value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} placeholder={isRTL ? 'اكتب سبب الإجازة...' : 'Write the reason...'} />
+                <Textarea value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} placeholder={isRTL ? 'اكتب السبب...' : 'Write the reason...'} />
               </div>
             </div>
             <DialogFooter>
