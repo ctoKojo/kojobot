@@ -139,13 +139,33 @@ serve(async (req) => {
         email: user.email,
         phone: profilePhone,
         role: 'parent',
+        is_approved: false,
       })
     } else {
       await adminClient.from('profiles').update({
         full_name: profileName,
         full_name_ar: profileNameAr,
         phone: profilePhone,
+        is_approved: false,
       }).eq('user_id', user.id)
+    }
+
+    // Notify admins about new parent registration
+    const { data: adminRoles } = await adminClient
+      .from('user_roles')
+      .select('user_id')
+      .in('role', ['admin', 'reception'])
+
+    if (adminRoles?.length) {
+      const notifications = adminRoles.map((r: any) => ({
+        user_id: r.user_id,
+        title: 'New Parent Registration',
+        title_ar: 'طلب تسجيل ولي أمر جديد',
+        message: `A new parent (${profileName}) has registered and is awaiting approval.`,
+        message_ar: `قام ولي أمر جديد (${profileNameAr}) بالتسجيل وينتظر الموافقة.`,
+        type: 'system',
+      }))
+      await adminClient.from('notifications').insert(notifications)
     }
 
     // Link each valid code

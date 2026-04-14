@@ -2803,6 +2803,7 @@ export type Database = {
           full_name_ar: string | null
           hourly_rate: number | null
           id: string
+          is_approved: boolean | null
           is_paid_trainee: boolean | null
           level_id: string | null
           needs_renewal: boolean | null
@@ -2833,6 +2834,7 @@ export type Database = {
           full_name_ar?: string | null
           hourly_rate?: number | null
           id?: string
+          is_approved?: boolean | null
           is_paid_trainee?: boolean | null
           level_id?: string | null
           needs_renewal?: boolean | null
@@ -2863,6 +2865,7 @@ export type Database = {
           full_name_ar?: string | null
           hourly_rate?: number | null
           id?: string
+          is_approved?: boolean | null
           is_paid_trainee?: boolean | null
           level_id?: string | null
           needs_renewal?: boolean | null

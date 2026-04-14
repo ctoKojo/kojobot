@@ -12,6 +12,7 @@ interface ProtectedRouteProps {
 // Routes students can access even without level_id (placement flow only)
 const STUDENT_ALLOWED_WITHOUT_LEVEL = ['/placement-gate', '/placement-test', '/account-suspended', '/renewal-required', '/profile'];
 const PARENT_PUBLIC_ROUTES = ['/parent-register', '/parent-login'];
+const PARENT_ALLOWED_WITHOUT_APPROVAL = ['/parent-pending', '/profile'];
 
 // Module-level cache shared across all ProtectedRoute instances
 const statusCache: {
@@ -20,8 +21,9 @@ const statusCache: {
   isTerminated: boolean;
   hasLevel: boolean;
   needsRenewal: boolean;
+  isParentApproved: boolean;
   fetchedAt: number;
-} = { userId: null, isSuspended: false, isTerminated: false, hasLevel: true, needsRenewal: false, fetchedAt: 0 };
+} = { userId: null, isSuspended: false, isTerminated: false, hasLevel: true, needsRenewal: false, isParentApproved: true, fetchedAt: 0 };
 
 const CACHE_TTL_MS = 60_000; // 1 minute
 
@@ -32,6 +34,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   const [isTerminated, setIsTerminated] = useState<boolean | null>(null);
   const [hasLevel, setHasLevel] = useState<boolean | null>(null);
   const [needsRenewal, setNeedsRenewal] = useState<boolean | null>(null);
+  const [isParentApproved, setIsParentApproved] = useState<boolean | null>(null);
   const fetchingRef = useRef(false);
 
   useEffect(() => {
@@ -40,6 +43,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       setIsTerminated(false);
       setHasLevel(true);
       setNeedsRenewal(false);
+      setIsParentApproved(true);
       return;
     }
 
@@ -50,6 +54,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
       setIsTerminated(statusCache.isTerminated);
       setHasLevel(statusCache.hasLevel);
       setNeedsRenewal(statusCache.needsRenewal);
+      setIsParentApproved(statusCache.isParentApproved);
       return;
     }
 
@@ -109,29 +114,41 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
         fetchingRef.current = false;
       });
     } else if (role === 'parent') {
-      // Parents don't need suspension/level checks
-      statusCache.userId = user.id;
-      statusCache.isSuspended = false;
-      statusCache.isTerminated = false;
-      statusCache.hasLevel = true;
-      statusCache.needsRenewal = false;
-      statusCache.fetchedAt = Date.now();
-      setIsSuspended(false);
-      setIsTerminated(false);
-      setHasLevel(true);
-      setNeedsRenewal(false);
-      fetchingRef.current = false;
+      // Parents need approval check
+      supabase
+        .from('profiles')
+        .select('is_approved')
+        .eq('user_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          const approved = data?.is_approved ?? false;
+          statusCache.userId = user.id;
+          statusCache.isSuspended = false;
+          statusCache.isTerminated = false;
+          statusCache.hasLevel = true;
+          statusCache.needsRenewal = false;
+          statusCache.isParentApproved = approved;
+          statusCache.fetchedAt = Date.now();
+          setIsSuspended(false);
+          setIsTerminated(false);
+          setHasLevel(true);
+          setNeedsRenewal(false);
+          setIsParentApproved(approved);
+          fetchingRef.current = false;
+        });
     } else {
       statusCache.userId = user.id;
       statusCache.isSuspended = false;
       statusCache.isTerminated = false;
       statusCache.hasLevel = true;
       statusCache.needsRenewal = false;
+      statusCache.isParentApproved = true;
       statusCache.fetchedAt = Date.now();
       setIsSuspended(false);
       setIsTerminated(false);
       setHasLevel(true);
       setNeedsRenewal(false);
+      setIsParentApproved(true);
       fetchingRef.current = false;
     }
   }, [user, role]);
@@ -177,6 +194,13 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     const isAllowed = STUDENT_ALLOWED_WITHOUT_LEVEL.some(path => location.pathname.startsWith(path));
     if (!isAllowed) {
       return <Navigate to="/placement-gate" replace />;
+    }
+  }
+
+  if (role === 'parent' && isParentApproved === false) {
+    const isAllowed = PARENT_ALLOWED_WITHOUT_APPROVAL.some(path => location.pathname.startsWith(path));
+    if (!isAllowed) {
+      return <Navigate to="/parent-pending" replace />;
     }
   }
 
