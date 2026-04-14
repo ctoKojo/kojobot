@@ -19,6 +19,7 @@ import {
   Loader2,
   RefreshCw,
   Users,
+  Lock,
 } from 'lucide-react';
 import { PdfDownloadButton } from '@/components/PdfDownloadButton';
 
@@ -229,8 +230,8 @@ export default function MySessions() {
     if (!s.curriculum) return false;
     return (
       s.curriculum.student_pdf_available ||
-      (s.curriculum.can_view_summary_video && s.curriculum.summary_video_url) ||
-      (s.curriculum.can_view_full_video && s.curriculum.full_video_url)
+      s.curriculum.summary_video_url ||
+      s.curriculum.full_video_url
     );
   };
 
@@ -344,23 +345,39 @@ export default function MySessions() {
                       {s.curriculum?.student_pdf_available && (
                         <PdfDownloadButton sessionId={s.id} sessionNumber={s.session_number} isRTL={isRTL} />
                       )}
-                      {s.curriculum?.can_view_summary_video && s.curriculum?.summary_video_url && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={s.curriculum.summary_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs">
-                            <PlayCircle className="h-3.5 w-3.5" />
+                      {/* Summary Video - locked if no access */}
+                      {s.curriculum?.summary_video_url && (
+                        s.curriculum.can_view_summary_video ? (
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={s.curriculum.summary_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs">
+                              <PlayCircle className="h-3.5 w-3.5" />
+                              {isRTL ? 'ملخص' : 'Summary'}
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button variant="outline" size="sm" disabled className="flex items-center gap-1.5 text-xs opacity-60">
+                            <Lock className="h-3.5 w-3.5" />
                             {isRTL ? 'ملخص' : 'Summary'}
-                            <ExternalLink className="h-2.5 w-2.5" />
-                          </a>
-                        </Button>
+                          </Button>
+                        )
                       )}
-                      {s.curriculum?.can_view_full_video && s.curriculum?.full_video_url && (
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={s.curriculum.full_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs">
-                            <Film className="h-3.5 w-3.5" />
+                      {/* Full Video - locked if no access */}
+                      {s.curriculum?.full_video_url && (
+                        s.curriculum.can_view_full_video ? (
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={s.curriculum.full_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs">
+                              <Film className="h-3.5 w-3.5" />
+                              {isRTL ? 'كامل' : 'Full'}
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button variant="outline" size="sm" disabled className="flex items-center gap-1.5 text-xs opacity-60">
+                            <Lock className="h-3.5 w-3.5" />
                             {isRTL ? 'كامل' : 'Full'}
-                            <ExternalLink className="h-2.5 w-2.5" />
-                          </a>
-                        </Button>
+                          </Button>
+                        )
                       )}
                     </div>
                   )}

@@ -78,6 +78,7 @@ import {
   CheckCircle,
   Loader2,
   RefreshCw,
+  Lock,
 } from 'lucide-react';
 
 interface CurriculumContent {
@@ -1433,7 +1434,7 @@ export default function SessionDetails() {
                 )}
 
                 {/* Admin & Instructor: Show slides link */}
-                {role !== 'student' && curriculumContent.can_view_slides && curriculumContent.slides_url && (
+                {role !== 'student' && curriculumContent.slides_url && (
                   <Button variant="outline" size="sm" asChild>
                     <a href={curriculumContent.slides_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                       <Presentation className="h-4 w-4" />
@@ -1443,23 +1444,44 @@ export default function SessionDetails() {
                   </Button>
                 )}
 
-                {curriculumContent.can_view_summary_video && curriculumContent.summary_video_url && (
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={curriculumContent.summary_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                      <PlayCircle className="h-4 w-4" />
-                      {isRTL ? 'فيديو ملخص' : 'Summary Video'}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </Button>
-                )}
-                {curriculumContent.can_view_full_video && curriculumContent.full_video_url && (
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={curriculumContent.full_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                      <Film className="h-4 w-4" />
-                      {isRTL ? 'فيديو كامل' : 'Full Video'}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </Button>
+                {/* Videos: Only for admin and students (NOT instructors) */}
+                {role !== 'instructor' && (
+                  <>
+                    {/* Summary Video */}
+                    {curriculumContent.summary_video_url && (
+                      curriculumContent.can_view_summary_video ? (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={curriculumContent.summary_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                            <PlayCircle className="h-4 w-4" />
+                            {isRTL ? 'فيديو ملخص' : 'Summary Video'}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm" disabled className="flex items-center gap-2 opacity-60">
+                          <Lock className="h-4 w-4" />
+                          {isRTL ? 'فيديو ملخص' : 'Summary Video'}
+                        </Button>
+                      )
+                    )}
+                    {/* Full Video */}
+                    {curriculumContent.full_video_url && (
+                      curriculumContent.can_view_full_video ? (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={curriculumContent.full_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                            <Film className="h-4 w-4" />
+                            {isRTL ? 'فيديو كامل' : 'Full Video'}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm" disabled className="flex items-center gap-2 opacity-60">
+                          <Lock className="h-4 w-4" />
+                          {isRTL ? 'فيديو كامل' : 'Full Video'}
+                        </Button>
+                      )
+                    )}
+                  </>
                 )}
               </div>
 
