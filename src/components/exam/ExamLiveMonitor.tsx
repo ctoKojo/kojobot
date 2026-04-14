@@ -236,6 +236,7 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
   const notStarted = progressList.filter(p => p.status === 'not_started').length;
 
   return (
+    <>
     <Card className="border-2 border-blue-400/30 dark:border-blue-500/20">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
