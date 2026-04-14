@@ -224,18 +224,28 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Operations', labelAr: 'العمليات',
+            label: 'People', labelAr: 'الأشخاص',
             items: [
               { title: t.nav.students, url: '/students', icon: GraduationCap, roles: ['reception'] },
               { title: isRTL ? 'أولياء الأمور' : 'Parents', url: '/parents', icon: Users, roles: ['reception'] },
+            ],
+          },
+          {
+            label: 'Academic', labelAr: 'الأكاديمي',
+            items: [
               { title: t.nav.groups, url: '/groups', icon: Calendar, roles: ['reception'] },
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen, roles: ['reception'] },
-              
               { title: isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions', url: '/makeup-sessions', icon: RefreshCw, roles: ['reception'] },
               { title: isRTL ? 'الامتحانات النهائية' : 'Final Exams', url: '/final-exams', icon: Target, roles: ['reception'] },
               { title: isRTL ? 'جدول العمل' : 'Schedule', url: '/instructor-schedule', icon: CalendarDays, roles: ['reception'] },
+            ],
+          },
+          {
+            label: 'Management', labelAr: 'الإدارة',
+            items: [
               { title: isRTL ? 'مراجعة تحديد المستوى' : 'Placement Review', url: '/placement-test-review', icon: ClipboardCheck, roles: ['reception'] },
               { title: isRTL ? 'طلبات الإجازة والأعذار' : 'Leave & Absence', url: '/leave-requests', icon: CalendarDays, roles: ['reception'] },
+              { title: isRTL ? 'لوحة الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3, roles: ['reception'] },
             ],
           },
           {
