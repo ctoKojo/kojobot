@@ -302,6 +302,24 @@ export default function FinalExams() {
           </Alert>
         )}
 
+        {/* Live Exam Monitor - show for groups with scheduled exams */}
+        {(() => {
+          const scheduledGroups = new Map<string, { groupId: string; quizId: string; groupName: string }>();
+          candidates.filter(c => c.status === 'exam_scheduled' && c.final_exam_quiz_id).forEach(c => {
+            if (!scheduledGroups.has(c.group_id)) {
+              scheduledGroups.set(c.group_id, { groupId: c.group_id, quizId: c.final_exam_quiz_id!, groupName: getGroupName(c) });
+            }
+          });
+          if (scheduledGroups.size === 0) return null;
+          return (
+            <div className="space-y-3">
+              {Array.from(scheduledGroups.values()).map(g => (
+                <ExamLiveMonitor key={g.groupId} quizId={g.quizId} groupId={g.groupId} />
+              ))}
+            </div>
+          );
+        })()}
+
         {/* Search Bar */}
         <div className="relative max-w-md">
           <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground`} />
