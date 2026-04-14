@@ -37,6 +37,18 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
   }, [studentId]);
 
   const fetchProgress = async () => {
+    // Check if student already has an in_progress record (already upgraded)
+    const { data: inProgressCheck } = await supabase
+      .from('group_student_progress')
+      .select('id')
+      .eq('student_id', studentId)
+      .eq('status', 'in_progress')
+      .limit(1)
+      .maybeSingle();
+
+    // If student is already in progress on a level, don't show the banner
+    if (inProgressCheck) return;
+
     // Get latest progress where student passed
     const { data: gsp } = await supabase
       .from('group_student_progress')
