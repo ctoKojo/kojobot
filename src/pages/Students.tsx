@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, UserPlus, AlertCircle, Check, GraduationCap, Users, TrendingUp } from 'lucide-react';
 import { AvatarUpload } from '@/components/AvatarUpload';
@@ -1318,11 +1319,17 @@ export default function StudentsPage() {
         {/* Mobile Cards View */}
         <div className="block lg:hidden space-y-3">
           {loading ? (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                {t.common.loading}
-              </CardContent>
-            </Card>
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="py-4 space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-3 w-1/4" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           ) : filteredStudents.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
@@ -1438,11 +1445,15 @@ export default function StudentsPage() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      {t.common.loading}
-                    </TableCell>
-                  </TableRow>
+                  <>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                        {Array.from({ length: 8 }).map((_, j) => (
+                          <TableCell key={j}><Skeleton className={`h-4 ${j === 0 ? 'w-32' : 'w-20'}`} /></TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </>
                 ) : filteredStudents.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
