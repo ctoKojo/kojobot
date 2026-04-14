@@ -99,6 +99,25 @@ export default function ParentLeaveRequests() {
         toast({ variant: 'destructive', title: isRTL ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields' });
         return;
       }
+      // Prevent today or past dates for leave requests
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const fromDate = new Date(form.request_date + 'T00:00:00');
+      if (fromDate <= today) {
+        toast({ variant: 'destructive', title: isRTL ? 'تاريخ الإجازة يجب أن يكون بعد اليوم' : 'Leave date must be after today' });
+        return;
+      }
+      if (form.end_date) {
+        const toDate = new Date(form.end_date + 'T00:00:00');
+        if (toDate <= today) {
+          toast({ variant: 'destructive', title: isRTL ? 'تاريخ النهاية يجب أن يكون بعد اليوم' : 'End date must be after today' });
+          return;
+        }
+        if (toDate < fromDate) {
+          toast({ variant: 'destructive', title: isRTL ? 'تاريخ النهاية يجب أن يكون بعد تاريخ البداية' : 'End date must be after start date' });
+          return;
+        }
+      }
     }
     setSubmitting(true);
     try {
