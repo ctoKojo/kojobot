@@ -863,6 +863,25 @@ export default function StudentProfile() {
                                   });
                                 }
                               }
+                              // Notify assigned instructor
+                              const { data: makeupData } = await supabase
+                                .from('makeup_sessions')
+                                .select('assigned_instructor_id, scheduled_date, scheduled_time, groups(name, name_ar)')
+                                .eq('id', ms.id)
+                                .single();
+                              if (makeupData?.assigned_instructor_id) {
+                                const gName = language === 'ar' ? ((makeupData as any).groups?.name_ar || (makeupData as any).groups?.name) : (makeupData as any).groups?.name;
+                                await notificationService.create({
+                                  user_id: makeupData.assigned_instructor_id,
+                                  title: 'Makeup Session Confirmed',
+                                  title_ar: 'تأكيد سيشن تعويضية',
+                                  message: `A makeup session for "${gName}" on ${makeupData.scheduled_date} at ${makeupData.scheduled_time} has been confirmed.`,
+                                  message_ar: `تم تأكيد السيشن التعويضية لمجموعة "${gName}" في ${makeupData.scheduled_date} الساعة ${makeupData.scheduled_time}.`,
+                                  type: 'success',
+                                  category: 'makeup_session',
+                                  action_url: '/makeup-sessions',
+                                });
+                              }
                               toast({ title: isRTL ? 'تم التأكيد' : 'Confirmed' });
                               fetchStudentData();
                             }}>
