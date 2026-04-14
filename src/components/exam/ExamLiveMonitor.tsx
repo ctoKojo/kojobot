@@ -36,11 +36,14 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
   const [progressList, setProgressList] = useState<(LiveProgress & { student?: StudentInfo })[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [examEndTime, setExamEndTime] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState('');
+
   const fetchProgress = async () => {
     // Get all quiz assignments for this quiz+group
     const { data: assignments } = await supabase
       .from('quiz_assignments')
-      .select('id, student_id')
+      .select('id, student_id, start_time, quizzes(duration_minutes)')
       .eq('quiz_id', quizId)
       .eq('group_id', groupId)
       .eq('is_active', true);
@@ -48,6 +51,14 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
     if (!assignments?.length) {
       setLoading(false);
       return;
+    }
+
+    // Calculate exam end time from first assignment with start_time
+    const firstWithStart = assignments.find(a => a.start_time);
+    if (firstWithStart?.start_time) {
+      const duration = (firstWithStart.quizzes as any)?.duration_minutes || 30;
+      const endMs = new Date(firstWithStart.start_time).getTime() + duration * 60 * 1000;
+      setExamEndTime(endMs);
     }
 
     const assignmentIds = assignments.map(a => a.id);
@@ -88,6 +99,27 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
     setProgressList(merged);
     setLoading(false);
   };
+
+  // Countdown timer
+  useEffect(() => {
+    if (!examEndTime) return;
+    const tick = () => {
+      const remaining = Math.max(0, examEndTime - Date.now());
+      if (remaining <= 0) {
+        setCountdown(isRTL ? 'انتهى الوقت' : 'Time\'s up');
+        return;
+      }
+      const totalSec = Math.floor(remaining / 1000);
+      const hrs = Math.floor(totalSec / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      setCountdown(hrs > 0 ? `${pad(hrs)}:${pad(mins)}:${pad(secs)}` : `${pad(mins)}:${pad(secs)}`);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [examEndTime, isRTL]);
 
   useEffect(() => {
     fetchProgress();
