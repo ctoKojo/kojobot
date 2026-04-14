@@ -84,9 +84,9 @@ export function KojoChatWidget() {
     loadLast();
   }, [isOpen, conversationId, isNewChat, session?.user?.id, loadConversation]);
 
-  // Periodic check to restore widget when AI balance is topped up
+  // Proactive check on mount + periodic recheck
   useEffect(() => {
-    if (aiAvailable || !session?.access_token) return;
+    if (!session?.access_token) return;
 
     const checkAvailability = async () => {
       try {
@@ -101,17 +101,19 @@ export function KojoChatWidget() {
             body: JSON.stringify({ message: 'ping', conversationId: null }),
           }
         );
-        if (res.status !== 402) {
-          setAiAvailable(true);
-        }
+        setAiAvailable(res.status !== 402);
       } catch {
-        // ignore
+        // on error, keep current state
       }
     };
 
+    // Check immediately on mount
+    checkAvailability();
+
+    // Re-check every 5 minutes
     const interval = setInterval(checkAvailability, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [aiAvailable, session?.access_token]);
+  }, [session?.access_token]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading || !session?.access_token) return;
@@ -164,11 +166,6 @@ export function KojoChatWidget() {
         if (response.status === 402) {
           setAiAvailable(false);
           setIsOpen(false);
-          toast({
-            title: isRTL ? 'رصيد الـ AI خلص' : 'AI Balance Exhausted',
-            description: isRTL ? 'الشات بوت مش متاح دلوقتي، هيرجع لما الرصيد يتجدد' : 'Chatbot unavailable until balance is topped up',
-            variant: 'destructive',
-          });
           return;
         }
 
