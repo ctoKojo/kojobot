@@ -1317,10 +1317,16 @@ export default function SessionDetails() {
               <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
               <div>
                 <p className="font-medium text-destructive">
-                  {isRTL ? 'انتهت فترة السماح' : 'Grace Period Expired'}
+                  {sessionNotStarted
+                    ? (isRTL ? 'السيشن لم تبدأ بعد' : 'Session Not Started Yet')
+                    : (isRTL ? 'انتهت فترة السماح' : 'Grace Period Expired')
+                  }
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {isRTL ? 'لا يمكنك تنفيذ إجراءات على هذه السيشن. تواصل مع الإدارة.' : 'You can no longer perform actions on this session. Contact admin.'}
+                  {sessionNotStarted
+                    ? (isRTL ? 'لا يمكنك تنفيذ إجراءات قبل بداية معاد السيشن.' : 'You cannot perform actions before the session starts.')
+                    : (isRTL ? 'لا يمكنك تنفيذ إجراءات على هذه السيشن. تواصل مع الإدارة.' : 'You can no longer perform actions on this session. Contact admin.')
+                  }
                 </p>
               </div>
             </CardContent>
