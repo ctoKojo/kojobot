@@ -285,6 +285,9 @@ export default function TakeQuiz() {
       setGradeResults(data.results || {});
       setSubmitted(true);
 
+      // Clear persisted quiz state
+      sessionStorage.removeItem(`quiz-${assignmentId}-answers`);
+      sessionStorage.removeItem(`quiz-${assignmentId}-index`);
       // Log quiz completion with results
       await logComplete('quiz_submission', assignment.id, { 
         quiz_title: assignment.quizzes.title,
