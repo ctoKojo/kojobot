@@ -118,11 +118,13 @@ export default function MySessions() {
         return;
       }
 
-      // 4. Fetch session data
+      // 4. Fetch session data — only for active groups
+      const activeGroupIds = Array.from(groupMap.keys());
       const { data: sessionsData } = await supabase
         .from('sessions')
         .select('id, session_number, content_number, session_date, session_time, status, group_id, is_makeup')
         .in('id', Array.from(attendedMap.keys()))
+        .in('group_id', activeGroupIds)
         .order('session_date', { ascending: false });
 
       if (!sessionsData?.length) {
