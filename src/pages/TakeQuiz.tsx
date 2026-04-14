@@ -188,26 +188,35 @@ export default function TakeQuiz() {
   };
 
   // Track live progress for exam monitoring
+  const answeredCount = Object.keys(answers).length;
   useEffect(() => {
     if (!assignment || !user || quizStatus !== 'available' || questions.length === 0) return;
 
     const upsertProgress = async () => {
-      const answeredCount = Object.keys(answers).length;
-      await supabase
-        .from('exam_live_progress')
-        .upsert({
-          student_id: user.id,
-          quiz_assignment_id: assignment.id,
-          current_question_index: currentIndex,
-          answered_count: answeredCount,
-          total_questions: questions.length,
-          last_activity_at: new Date().toISOString(),
-          status: 'in_progress',
-        }, { onConflict: 'student_id,quiz_assignment_id' });
+      try {
+        await supabase
+          .from('exam_live_progress')
+          .upsert({
+            student_id: user.id,
+            quiz_assignment_id: assignment.id,
+            current_question_index: currentIndex,
+            answered_count: answeredCount,
+            total_questions: questions.length,
+            last_activity_at: new Date().toISOString(),
+            status: 'in_progress',
+          }, { onConflict: 'student_id,quiz_assignment_id' });
+      } catch (e) {
+        console.error('Failed to update exam live progress:', e);
+      }
     };
 
+    // Immediately upsert on change
     upsertProgress();
-  }, [currentIndex, Object.keys(answers).length, quizStatus]);
+
+    // Also send heartbeat every 15 seconds so the monitor stays fresh
+    const heartbeat = setInterval(upsertProgress, 15_000);
+    return () => clearInterval(heartbeat);
+  }, [currentIndex, answeredCount, quizStatus, assignment?.id, user?.id, questions.length]);
 
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
