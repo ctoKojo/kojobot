@@ -19,6 +19,7 @@ import {
   Loader2,
   RefreshCw,
   Users,
+  Lock,
 } from 'lucide-react';
 import { PdfDownloadButton } from '@/components/PdfDownloadButton';
 
