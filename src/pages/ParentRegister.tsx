@@ -257,7 +257,7 @@ export default function ParentRegister() {
             </div>
           )}
 
-          {/* Step 3: Enter Codes */}
+          {/* Step 3: Enter Codes (Optional) */}
           {isSignedIn && (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -265,9 +265,13 @@ export default function ParentRegister() {
                   3
                 </div>
                 <span className="font-medium">
-                  {isRTL ? 'أدخل كود الربط' : 'Enter Linking Code'}
+                  {isRTL ? 'كود الربط (اختياري)' : 'Linking Code (Optional)'}
                 </span>
               </div>
+
+              <p className="text-xs text-muted-foreground px-10">
+                {isRTL ? 'لو عندك كود ربط من الأكاديمية، أدخله هنا. لو مش معاك كود، سجّل وهيتم ربط أولادك من الإدارة.' : "If you have a linking code from the academy, enter it. Otherwise, just register and admin will link your children."}
+              </p>
 
               <div className="space-y-2 px-10">
                 {codes.map((code, index) => (
@@ -300,15 +304,17 @@ export default function ParentRegister() {
               </div>
 
               <Button
-                onClick={handleLinkCodes}
-                disabled={isLinking || codes.every(c => c.trim().length < 8) || !fullName.trim()}
+                onClick={handleRegister}
+                disabled={isLinking || !fullName.trim()}
                 className="w-full"
                 size="lg"
               >
                 {isLinking ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isRTL ? 'جاري الربط...' : 'Linking...'}</>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isRTL ? 'جاري التسجيل...' : 'Registering...'}</>
                 ) : (
-                  isRTL ? 'ربط الأكواد' : 'Link Codes'
+                  codes.some(c => c.trim().length >= 8)
+                    ? (isRTL ? 'تسجيل وربط الأكواد' : 'Register & Link Codes')
+                    : (isRTL ? 'تسجيل بدون كود' : 'Register without Code')
                 )}
               </Button>
             </div>
