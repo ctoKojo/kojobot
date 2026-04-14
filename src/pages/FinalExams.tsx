@@ -55,7 +55,7 @@ export default function FinalExams() {
   const { role } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const isAdmin = role === 'admin';
+  const isAdmin = role === 'admin' || role === 'reception';
   const isMobile = useIsMobile();
 
   const [candidates, setCandidates] = useState<ExamCandidate[]>([]);
