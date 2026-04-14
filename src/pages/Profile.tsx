@@ -369,8 +369,8 @@ export default function Profile() {
           </Card>
         </div>
 
-        {/* Finance Section for Instructor/Reception */}
-        {(role === 'instructor' || role === 'reception') && profile && (
+        {/* Finance Section for Reception only */}
+        {role === 'reception' && profile && (
           <EmployeeFinanceSection profile={profile} />
         )}
 
