@@ -310,6 +310,8 @@ export function KojoChatWidget() {
     }
   };
 
+  if (!aiAvailable) return null;
+
   return (
     <>
       {/* Floating button - always bottom-right */}
