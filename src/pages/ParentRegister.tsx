@@ -18,7 +18,7 @@ import kojobotLogo from '@/assets/kojobot-main-logo.png';
 export default function ParentRegister() {
   const [codes, setCodes] = useState<string[]>(['']);
   const [fullName, setFullName] = useState('');
-  const [fullNameAr, setFullNameAr] = useState('');
+  
   const [phone, setPhone] = useState('');
   const [relationship, setRelationship] = useState<string>('parent');
   const [isLinking, setIsLinking] = useState(false);
@@ -126,7 +126,7 @@ export default function ParentRegister() {
           codes: validCodes,
           profile: {
             full_name: fullName.trim(),
-            full_name_ar: fullNameAr.trim() || fullName.trim(),
+            full_name_ar: fullName.trim(),
             phone: phone.trim() || null,
             relationship,
           },
@@ -225,20 +225,11 @@ export default function ParentRegister() {
 
               <div className="space-y-3 px-10">
                 <div className="space-y-1">
-                  <Label>{isRTL ? 'الاسم بالكامل (إنجليزي)' : 'Full Name (English)'} *</Label>
+                  <Label>{isRTL ? 'الاسم بالكامل' : 'Full Name'} *</Label>
                   <Input
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder={isRTL ? 'مثال: Ahmed Mohamed' : 'e.g. Ahmed Mohamed'}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>{isRTL ? 'الاسم بالكامل (عربي)' : 'Full Name (Arabic)'}</Label>
-                  <Input
-                    value={fullNameAr}
-                    onChange={(e) => setFullNameAr(e.target.value)}
-                    placeholder={isRTL ? 'مثال: أحمد محمد' : 'e.g. أحمد محمد'}
-                    dir="rtl"
+                    placeholder={isRTL ? 'مثال: أحمد محمد' : 'e.g. Ahmed Mohamed'}
                   />
                 </div>
                 <div className="space-y-1">
