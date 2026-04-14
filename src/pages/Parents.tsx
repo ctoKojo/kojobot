@@ -91,12 +91,17 @@ export default function Parents() {
       });
     }
 
-    // For parents missing profile data, show fallback
+    // For parents missing profile data, fetch from auth metadata
     const missingProfileIds = allParentIds.filter(id => !profileMap.has(id));
-    for (const pid of missingProfileIds) {
-      if (grouped[pid] && !grouped[pid].full_name && !grouped[pid].email) {
-        grouped[pid].full_name = isRTL ? 'ولي أمر (بدون بروفايل)' : 'Parent (no profile)';
-        grouped[pid].email = '—';
+    if (missingProfileIds.length > 0) {
+      const { data: authInfo } = await supabase.rpc('get_parent_auth_info', { parent_ids: missingProfileIds }) as any;
+      if (authInfo && Array.isArray(authInfo)) {
+        for (const info of authInfo) {
+          if (grouped[info.user_id]) {
+            grouped[info.user_id].full_name = info.full_name || '';
+            grouped[info.user_id].email = info.email || '';
+          }
+        }
       }
     }
 
