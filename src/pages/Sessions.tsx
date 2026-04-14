@@ -567,12 +567,12 @@ user_id: gs.student_id,
   };
   // Check if a group allows management (not frozen for non-admin)
   const canManageGroup = (group: Group) => {
-    if (role === 'admin') return true;
+    if (role === 'admin' || role === 'reception') return true;
     if (role === 'instructor' && group.status !== 'frozen') return true;
     return false;
   };
 
-  const canManage = role === 'admin' || role === 'instructor';
+  const canManage = role === 'admin' || role === 'instructor' || role === 'reception';
 
   // Get groups that have sessions matching the filter
   const filteredGroups = groups.filter(group => {
