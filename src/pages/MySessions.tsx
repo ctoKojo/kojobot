@@ -118,11 +118,13 @@ export default function MySessions() {
         return;
       }
 
-      // 4. Fetch session data
+      // 4. Fetch session data — only for active groups
+      const activeGroupIds = Array.from(groupMap.keys());
       const { data: sessionsData } = await supabase
         .from('sessions')
         .select('id, session_number, content_number, session_date, session_time, status, group_id, is_makeup')
         .in('id', Array.from(attendedMap.keys()))
+        .in('group_id', activeGroupIds)
         .order('session_date', { ascending: false });
 
       if (!sessionsData?.length) {
@@ -384,7 +386,7 @@ export default function MySessions() {
 
                   {!hasContent(s) && (
                     <p className="text-xs text-muted-foreground">
-                      {isRTL ? 'لا يوجد محتوى متاح حالياً' : 'No content available currently'}
+                      {isRTL ? 'المحتوى لسه مترفعش — هيتوفر قريباً' : 'Content not uploaded yet — coming soon'}
                     </p>
                   )}
                 </CardContent>
