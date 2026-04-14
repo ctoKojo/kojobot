@@ -46,20 +46,15 @@ serve(async (req) => {
     }
 
     const body = await req.json()
-    const { codes, profile: profileData } = body
-    if (!Array.isArray(codes) || codes.length === 0 || codes.length > 10) {
-      return new Response(JSON.stringify({ error: 'Provide 1-10 valid codes' }), {
+    const { codes = [], profile: profileData } = body
+    if (!Array.isArray(codes) || codes.length > 10) {
+      return new Response(JSON.stringify({ error: 'Provide 0-10 valid codes' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Sanitize codes
+    // Sanitize codes (may be empty — parent registers without codes)
     const sanitizedCodes = codes.map((c: string) => String(c).trim().toUpperCase()).filter(Boolean)
-    if (sanitizedCodes.length === 0) {
-      return new Response(JSON.stringify({ error: 'No valid codes provided' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey)
 
