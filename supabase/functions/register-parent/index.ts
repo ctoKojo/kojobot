@@ -71,41 +71,43 @@ serve(async (req) => {
       })
     }
 
-    // Validate all codes
-    const { data: validCodes, error: codesError } = await adminClient
-      .from('parent_link_codes')
-      .select('*')
-      .in('code', sanitizedCodes)
+    // Validate codes only if provided
+    let results: { code: string; status: string; studentId?: string }[] = []
+    let validEntries: { code: any; studentId: string }[] = []
 
-    if (codesError) {
-      console.error('Error fetching codes:', codesError)
-      return new Response(JSON.stringify({ error: 'Failed to validate codes' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    if (sanitizedCodes.length > 0) {
+      const { data: validCodes, error: codesError } = await adminClient
+        .from('parent_link_codes')
+        .select('*')
+        .in('code', sanitizedCodes)
 
-    // Check each code's status
-    const results: { code: string; status: string; studentId?: string }[] = []
-    const validEntries: { code: any; studentId: string }[] = []
-
-    for (const inputCode of sanitizedCodes) {
-      const found = validCodes?.find(c => c.code === inputCode)
-      if (!found) {
-        results.push({ code: inputCode, status: 'invalid' })
-      } else if (found.used_at) {
-        results.push({ code: inputCode, status: 'already_used' })
-      } else if (new Date(found.expires_at) < new Date()) {
-        results.push({ code: inputCode, status: 'expired' })
-      } else {
-        validEntries.push({ code: found, studentId: found.student_id })
-        results.push({ code: inputCode, status: 'success', studentId: found.student_id })
+      if (codesError) {
+        console.error('Error fetching codes:', codesError)
+        return new Response(JSON.stringify({ error: 'Failed to validate codes' }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
       }
-    }
 
-    if (validEntries.length === 0) {
-      return new Response(JSON.stringify({ error: 'No valid codes found', details: results }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      for (const inputCode of sanitizedCodes) {
+        const found = validCodes?.find(c => c.code === inputCode)
+        if (!found) {
+          results.push({ code: inputCode, status: 'invalid' })
+        } else if (found.used_at) {
+          results.push({ code: inputCode, status: 'already_used' })
+        } else if (new Date(found.expires_at) < new Date()) {
+          results.push({ code: inputCode, status: 'expired' })
+        } else {
+          validEntries.push({ code: found, studentId: found.student_id })
+          results.push({ code: inputCode, status: 'success', studentId: found.student_id })
+        }
+      }
+
+      // If codes were provided but none are valid, return error
+      if (validEntries.length === 0) {
+        return new Response(JSON.stringify({ error: 'No valid codes found', details: results }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
 
     // Assign parent role if not already assigned
