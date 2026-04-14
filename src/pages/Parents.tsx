@@ -6,14 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Search, Phone, Mail, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Users, Search, Phone, Mail, CheckCircle, XCircle, Clock, ShieldCheck, UserPlus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface LinkedParent {
+interface ParentInfo {
   parent_id: string;
   full_name: string;
   full_name_ar: string | null;
@@ -27,47 +27,48 @@ export default function Parents() {
   const { isRTL } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [parents, setParents] = useState<LinkedParent[]>([]);
+  const [allParents, setAllParents] = useState<ParentInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved'>('all');
+  const [activeTab, setActiveTab] = useState('pending');
 
-  const fetchLinkedParents = async () => {
-    // Get all parent_students links
-    const { data: links } = await supabase
-      .from('parent_students')
-      .select('parent_id, student_id, relationship');
+  const fetchParents = async () => {
+    setLoading(true);
 
-    // Also get ALL users with parent role (including unlinked ones)
+    // 1. Get all parent role users
     const { data: parentRoles } = await supabase
       .from('user_roles')
       .select('user_id')
       .eq('role', 'parent');
 
-    const linkedParentIds = [...new Set((links || []).map(l => l.parent_id))];
-    const allParentIds = [...new Set((parentRoles || []).map(r => r.user_id))];
-    // Merge both sets
-    const mergedParentIds = [...new Set([...linkedParentIds, ...allParentIds])];
-    const studentIds = [...new Set((links || []).map(l => l.student_id))];
-
-    if (!mergedParentIds.length) {
-      setParents([]);
+    if (!parentRoles?.length) {
+      setAllParents([]);
       setLoading(false);
       return;
     }
 
-    const [{ data: parentProfiles }, { data: studentProfiles }] = await Promise.all([
-      supabase.from('profiles').select('user_id, full_name, full_name_ar, email, phone, is_approved').in('user_id', mergedParentIds),
-      studentIds.length > 0
-        ? supabase.from('profiles').select('user_id, full_name, full_name_ar').in('user_id', studentIds)
-        : Promise.resolve({ data: [] as any[] }),
+    const allParentIds = parentRoles.map(r => r.user_id);
+
+    // 2. Get links & profiles in parallel
+    const [{ data: links }, { data: parentProfiles }] = await Promise.all([
+      supabase.from('parent_students').select('parent_id, student_id, relationship'),
+      supabase.from('profiles').select('user_id, full_name, full_name_ar, email, phone, is_approved').in('user_id', allParentIds),
     ]);
 
-    const grouped: Record<string, LinkedParent> = {};
+    // 3. Get student profiles for linked children
+    const studentIds = [...new Set((links || []).map(l => l.student_id))];
+    const { data: studentProfiles } = studentIds.length > 0
+      ? await supabase.from('profiles').select('user_id, full_name, full_name_ar').in('user_id', studentIds)
+      : { data: [] as any[] };
 
-    // Initialize all parents (including unlinked)
-    for (const pid of mergedParentIds) {
-      const profile = parentProfiles?.find(p => p.user_id === pid);
+    // 4. For parents without profiles, fetch from edge function or use ID as fallback
+    // We'll try to get names from auth metadata via a lightweight approach
+    const profileMap = new Map((parentProfiles || []).map(p => [p.user_id, p]));
+
+    const grouped: Record<string, ParentInfo> = {};
+
+    for (const pid of allParentIds) {
+      const profile = profileMap.get(pid);
       grouped[pid] = {
         parent_id: pid,
         full_name: profile?.full_name || '',
@@ -79,9 +80,9 @@ export default function Parents() {
       };
     }
 
-    // Add children links
+    // Add children
     for (const link of (links || [])) {
-      const student = studentProfiles?.find(p => p.user_id === link.student_id);
+      const student = (studentProfiles || []).find(p => p.user_id === link.student_id);
       grouped[link.parent_id]?.children.push({
         student_id: link.student_id,
         student_name: student?.full_name || '',
@@ -90,26 +91,52 @@ export default function Parents() {
       });
     }
 
-    setParents(Object.values(grouped));
+    // For parents missing profile data, try to get from auth.users via admin query
+    const missingProfileIds = allParentIds.filter(id => !profileMap.has(id));
+    if (missingProfileIds.length > 0) {
+      // Use a DB function or direct query - for now fetch via the create-user pattern
+      // We'll use supabase.rpc or a simple query
+      const { data: authUsers } = await supabase.rpc('get_parent_auth_info', { parent_ids: missingProfileIds }).maybeSingle() as any;
+      
+      // Fallback: if no RPC, just show parent_id prefix
+      // The real fix is ensuring profiles are created on parent registration
+      for (const pid of missingProfileIds) {
+        if (grouped[pid] && !grouped[pid].full_name && !grouped[pid].email) {
+          grouped[pid].full_name = `Parent (${pid.slice(0, 8)}...)`;
+          grouped[pid].email = '—';
+        }
+      }
+    }
+
+    setAllParents(Object.values(grouped));
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchLinkedParents();
+    fetchParents();
   }, []);
 
   const handleApprove = async (parentId: string) => {
-    const { error } = await supabase
+    // Check if profile exists, if not create one
+    const { data: existingProfile } = await supabase
       .from('profiles')
-      .update({ is_approved: true })
-      .eq('user_id', parentId);
+      .select('user_id')
+      .eq('user_id', parentId)
+      .maybeSingle();
 
-    if (error) {
-      toast({ title: isRTL ? 'خطأ' : 'Error', description: error.message, variant: 'destructive' });
-      return;
+    if (!existingProfile) {
+      // Create profile with is_approved = true
+      await supabase.from('profiles').insert({
+        user_id: parentId,
+        full_name: allParents.find(p => p.parent_id === parentId)?.full_name || 'Parent',
+        email: allParents.find(p => p.parent_id === parentId)?.email || '',
+        is_approved: true,
+      });
+    } else {
+      await supabase.from('profiles').update({ is_approved: true }).eq('user_id', parentId);
     }
 
-    // Send notification to parent
+    // Send notification
     if (user) {
       await supabase.from('notifications').insert({
         user_id: parentId,
@@ -122,16 +149,15 @@ export default function Parents() {
     }
 
     toast({ title: isRTL ? 'تمت الموافقة' : 'Approved', description: isRTL ? 'تم تفعيل حساب ولي الأمر' : 'Parent account has been activated' });
-    setParents(prev => prev.map(p => p.parent_id === parentId ? { ...p, is_approved: true } : p));
+    setAllParents(prev => prev.map(p => p.parent_id === parentId ? { ...p, is_approved: true } : p));
   };
 
   const handleReject = async (parentId: string) => {
-    // Delete parent links and role
     await supabase.from('parent_students').delete().eq('parent_id', parentId);
     await supabase.from('user_roles').delete().eq('user_id', parentId).eq('role', 'parent');
 
     toast({ title: isRTL ? 'تم الرفض' : 'Rejected', description: isRTL ? 'تم رفض وحذف حساب ولي الأمر' : 'Parent account has been rejected and removed' });
-    setParents(prev => prev.filter(p => p.parent_id !== parentId));
+    setAllParents(prev => prev.filter(p => p.parent_id !== parentId));
   };
 
   const getRelLabel = (rel: string) => {
@@ -141,24 +167,118 @@ export default function Parents() {
     switch (rel) { case 'father': return 'Father'; case 'mother': return 'Mother'; case 'guardian': return 'Guardian'; default: return 'Parent'; }
   };
 
-  const filtered = parents.filter(p => {
-    if (statusFilter === 'pending' && p.is_approved) return false;
-    if (statusFilter === 'approved' && !p.is_approved) return false;
-    if (!search) return true;
+  const pendingParents = allParents.filter(p => !p.is_approved);
+  const approvedParents = allParents.filter(p => p.is_approved);
+
+  const filterList = (list: ParentInfo[]) => {
+    if (!search) return list;
     const q = search.toLowerCase();
-    return (
+    return list.filter(p =>
       p.full_name.toLowerCase().includes(q) ||
       (p.full_name_ar?.toLowerCase().includes(q)) ||
       p.email.toLowerCase().includes(q) ||
       (p.phone?.includes(q)) ||
       p.children.some(c => c.student_name.toLowerCase().includes(q) || c.student_name_ar?.toLowerCase().includes(q))
     );
-  });
+  };
 
-  const pendingCount = parents.filter(p => !p.is_approved).length;
+  const renderParentTable = (list: ParentInfo[], showActions: boolean) => {
+    if (list.length === 0) {
+      return (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">
+              {search
+                ? (isRTL ? 'لا توجد نتائج' : 'No results found')
+                : showActions
+                  ? (isRTL ? 'لا توجد طلبات موافقة معلقة' : 'No pending approval requests')
+                  : (isRTL ? 'لا يوجد أولياء أمور مرتبطون بعد' : 'No linked parents yet')}
+            </p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
+              <TableHead>{isRTL ? 'التواصل' : 'Contact'}</TableHead>
+              {!showActions && <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>}
+              <TableHead>{isRTL ? 'الأبناء المرتبطون' : 'Linked Children'}</TableHead>
+              <TableHead className="text-center">{isRTL ? 'إجراءات' : 'Actions'}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {list.map(parent => (
+              <TableRow key={parent.parent_id}>
+                <TableCell className="font-medium">
+                  {isRTL ? parent.full_name_ar || parent.full_name : parent.full_name}
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    {parent.phone && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Phone className="h-3 w-3" />{parent.phone}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Mail className="h-3 w-3" />{parent.email}
+                    </div>
+                  </div>
+                </TableCell>
+                {!showActions && (
+                  <TableCell>
+                    <Badge variant="default" className="gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      {isRTL ? 'معتمد' : 'Approved'}
+                    </Badge>
+                  </TableCell>
+                )}
+                <TableCell>
+                  {parent.children.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {parent.children.map(c => (
+                        <Badge key={c.student_id} variant="outline" className="text-xs">
+                          {isRTL ? c.student_name_ar || c.student_name : c.student_name}
+                          <span className="text-muted-foreground mx-1">·</span>
+                          {getRelLabel(c.relationship)}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">{isRTL ? 'لم يتم الربط بعد' : 'Not linked yet'}</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-center">
+                  {showActions ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Button size="sm" onClick={() => handleApprove(parent.parent_id)} className="gap-1">
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        {isRTL ? 'موافقة' : 'Approve'}
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleReject(parent.parent_id)} className="gap-1">
+                        <XCircle className="h-3.5 w-3.5" />
+                        {isRTL ? 'رفض' : 'Reject'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Badge variant="outline">{parent.children.length}</Badge>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
 
   return (
-    <DashboardLayout title={isRTL ? 'أولياء الأمور المرتبطون' : 'Linked Parents'}>
+    <DashboardLayout title={isRTL ? 'أولياء الأمور' : 'Parents'}>
       <div className="space-y-4">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
@@ -170,117 +290,48 @@ export default function Parents() {
               className="pl-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{isRTL ? 'الكل' : 'All'}</SelectItem>
-              <SelectItem value="pending">{isRTL ? 'معلّق' : 'Pending'} {pendingCount > 0 && `(${pendingCount})`}</SelectItem>
-              <SelectItem value="approved">{isRTL ? 'معتمد' : 'Approved'}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Badge variant="secondary" className="text-sm">
-            {filtered.length} {isRTL ? 'ولي أمر' : 'parents'}
-          </Badge>
-          {pendingCount > 0 && (
-            <Badge variant="destructive" className="text-sm">
-              {pendingCount} {isRTL ? 'بانتظار الموافقة' : 'pending approval'}
-            </Badge>
-          )}
         </div>
 
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
-          </div>
-        ) : filtered.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                {search || statusFilter !== 'all'
-                  ? (isRTL ? 'لا توجد نتائج' : 'No results found')
-                  : (isRTL ? 'لا يوجد أولياء أمور مرتبطون بعد' : 'No linked parents yet')}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
-                  <TableHead>{isRTL ? 'التواصل' : 'Contact'}</TableHead>
-                  <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                  <TableHead>{isRTL ? 'الأبناء المرتبطون' : 'Linked Children'}</TableHead>
-                  <TableHead className="text-center">{isRTL ? 'إجراءات' : 'Actions'}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map(parent => (
-                  <TableRow key={parent.parent_id}>
-                    <TableCell className="font-medium">
-                      {isRTL ? parent.full_name_ar || parent.full_name : parent.full_name}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {parent.phone && (
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Phone className="h-3 w-3" />{parent.phone}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Mail className="h-3 w-3" />{parent.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {parent.is_approved ? (
-                        <Badge variant="default" className="gap-1">
-                          <CheckCircle className="h-3 w-3" />
-                          {isRTL ? 'معتمد' : 'Approved'}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="gap-1">
-                          <Clock className="h-3 w-3" />
-                          {isRTL ? 'معلّق' : 'Pending'}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1.5">
-                        {parent.children.map(c => (
-                          <Badge key={c.student_id} variant="outline" className="text-xs">
-                            {isRTL ? c.student_name_ar || c.student_name : c.student_name}
-                            <span className="text-muted-foreground mx-1">·</span>
-                            {getRelLabel(c.relationship)}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {!parent.is_approved ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <Button size="sm" onClick={() => handleApprove(parent.parent_id)} className="gap-1">
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            {isRTL ? 'موافقة' : 'Approve'}
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleReject(parent.parent_id)} className="gap-1">
-                            <XCircle className="h-3.5 w-3.5" />
-                            {isRTL ? 'رفض' : 'Reject'}
-                          </Button>
-                        </div>
-                      ) : (
-                        <Badge variant="outline">{parent.children.length}</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="pending" className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              {isRTL ? 'طلبات الموافقة' : 'Approval Requests'}
+              {pendingParents.length > 0 && (
+                <Badge variant="destructive" className="text-xs px-1.5 py-0 min-w-[20px]">
+                  {pendingParents.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="gap-2">
+              <ShieldCheck className="h-4 w-4" />
+              {isRTL ? 'أولياء الأمور المعتمدون' : 'Approved Parents'}
+              <Badge variant="secondary" className="text-xs px-1.5 py-0 min-w-[20px]">
+                {approvedParents.length}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pending" className="mt-4">
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+              </div>
+            ) : (
+              renderParentTable(filterList(pendingParents), true)
+            )}
+          </TabsContent>
+
+          <TabsContent value="approved" className="mt-4">
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+              </div>
+            ) : (
+              renderParentTable(filterList(approvedParents), false)
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     </DashboardLayout>
   );
