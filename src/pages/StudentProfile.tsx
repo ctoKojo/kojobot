@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   User, Calendar, Clock, Award, AlertTriangle, BookOpen, 
@@ -79,7 +79,6 @@ function MakeupCreditsDisplay({ studentId }: { studentId: string }) {
 function LevelProgressGrid({ studentId, attendance, makeupSessions }: { studentId: string; attendance: any[]; makeupSessions: any[] }) {
   const { isRTL, language } = useLanguage();
   
-  // Build a 1-12 session progress grid from attendance data
   const sessionMap = new Map<number, string>();
   
   attendance.forEach((a: any) => {
@@ -129,6 +128,7 @@ export default function StudentProfile() {
   const { role, roleLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<StudentData | null>(null);
   const [showWarningDialog, setShowWarningDialog] = useState(false);
   const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false);
@@ -136,21 +136,19 @@ export default function StudentProfile() {
   const [showEditSubscriptionDialog, setShowEditSubscriptionDialog] = useState(false);
   const [showPlacementSchedule, setShowPlacementSchedule] = useState(false);
 
-  useEffect(() => {
-    if (studentId) fetchStudentData();
-  }, [studentId]);
+  const isInstructor = role === 'instructor';
+  const isAdminOrReception = role === 'admin' || role === 'reception';
 
-
-  const fetchStudentData = async () => {
+  const fetchStudentData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
     try {
-      // Fetch profile
       const { data: profile } = await supabase
         .from('profiles')
         .select('*, age_groups(name, name_ar), levels(name, name_ar)')
         .eq('user_id', studentId)
         .single();
 
-      // Fetch subscription with pricing plan
       const { data: subscription } = await supabase
         .from('subscriptions')
         .select('*, pricing_plans(name, name_ar, attendance_mode)')
@@ -159,7 +157,6 @@ export default function StudentProfile() {
         .limit(1)
         .maybeSingle();
 
-      // Fetch group membership
       const { data: groupStudent } = await supabase
         .from('group_students')
         .select('*, groups(*)')
@@ -167,7 +164,6 @@ export default function StudentProfile() {
         .eq('is_active', true)
         .maybeSingle();
 
-      // Fetch attendance
       const { data: attendance } = await supabase
         .from('attendance')
         .select('*, sessions(session_date, session_time, session_number, topic, topic_ar)')
@@ -175,7 +171,6 @@ export default function StudentProfile() {
         .order('recorded_at', { ascending: false })
         .limit(50);
 
-      // Fetch quiz submissions
       const { data: quizSubmissions } = await supabase
         .from('quiz_submissions')
         .select('*, quiz_assignments(quizzes(title, title_ar))')
@@ -183,7 +178,6 @@ export default function StudentProfile() {
         .eq('is_auto_generated', false)
         .order('submitted_at', { ascending: false });
 
-      // Fetch assignment submissions
       const { data: assignmentSubmissions } = await supabase
         .from('assignment_submissions')
         .select('*, assignments(title, title_ar, max_score)')
@@ -191,49 +185,55 @@ export default function StudentProfile() {
         .eq('is_auto_generated', false)
         .order('submitted_at', { ascending: false });
 
-      // Fetch warnings
-      const { data: warnings } = await supabase
-        .from('warnings')
-        .select('*')
-        .eq('student_id', studentId)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      // Fetch makeup sessions
-      const { data: makeupSessions } = await supabase
-        .from('makeup_sessions')
-        .select('*, groups(name, name_ar), levels(name, name_ar)')
-        .eq('student_id', studentId!)
-        .order('created_at', { ascending: false });
-
-      // Fetch level progress (to check if student completed level + exam)
-      const { data: levelProgress } = await supabase
-        .from('group_student_progress')
-        .select('status, outcome, graded_at, exam_submitted_at')
-        .eq('student_id', studentId!)
-        .in('status', ['graded', 'awaiting_exam', 'exam_scheduled'])
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      // Fetch linked parents
-      const { data: parentLinks } = await supabase
-        .from('parent_students')
-        .select('relationship, created_at, parent_id')
-        .eq('student_id', studentId!);
-
+      // Skip fetching data instructor doesn't need
+      let warnings: any[] = [];
+      let makeupSessions: any[] = [];
+      let levelProgress: any = null;
       let parents: any[] = [];
-      if (parentLinks && parentLinks.length > 0) {
-        const parentIds = parentLinks.map(p => p.parent_id);
-        const { data: parentProfiles } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, full_name_ar, phone, email, avatar_url')
-          .in('user_id', parentIds);
 
-        parents = parentLinks.map(link => {
-          const profile = parentProfiles?.find(p => p.user_id === link.parent_id);
-          return { ...link, profile };
-        });
+      if (!isInstructor) {
+        const { data: w } = await supabase
+          .from('warnings')
+          .select('*')
+          .eq('student_id', studentId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
+        warnings = w || [];
+
+        const { data: ms } = await supabase
+          .from('makeup_sessions')
+          .select('*, groups(name, name_ar), levels(name, name_ar)')
+          .eq('student_id', studentId!)
+          .order('created_at', { ascending: false });
+        makeupSessions = ms || [];
+
+        const { data: lp } = await supabase
+          .from('group_student_progress')
+          .select('status, outcome, graded_at, exam_submitted_at')
+          .eq('student_id', studentId!)
+          .in('status', ['graded', 'awaiting_exam', 'exam_scheduled'])
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        levelProgress = lp;
+
+        const { data: parentLinks } = await supabase
+          .from('parent_students')
+          .select('relationship, created_at, parent_id')
+          .eq('student_id', studentId!);
+
+        if (parentLinks && parentLinks.length > 0) {
+          const parentIds = parentLinks.map(p => p.parent_id);
+          const { data: parentProfiles } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, full_name_ar, phone, email, avatar_url')
+            .in('user_id', parentIds);
+
+          parents = parentLinks.map(link => {
+            const profile = parentProfiles?.find(p => p.user_id === link.parent_id);
+            return { ...link, profile };
+          });
+        }
       }
 
       setData({
@@ -243,8 +243,8 @@ export default function StudentProfile() {
         attendance: attendance || [],
         quizSubmissions: quizSubmissions || [],
         assignmentSubmissions: assignmentSubmissions || [],
-        warnings: warnings || [],
-        makeupSessions: makeupSessions || [],
+        warnings,
+        makeupSessions,
         levelProgress,
         parents,
       });
@@ -252,8 +252,24 @@ export default function StudentProfile() {
       console.error('Error fetching student data:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [studentId, isInstructor]);
+
+  useEffect(() => {
+    if (studentId) fetchStudentData();
+  }, [studentId, fetchStudentData]);
+
+  // Auto-refresh when tab becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && studentId) {
+        fetchStudentData(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [studentId, fetchStudentData]);
 
   const getAttendanceStats = () => {
     const total = data?.attendance.length || 0;
@@ -271,8 +287,6 @@ export default function StudentProfile() {
       : 0;
     return { completed, avgScore };
   };
-
-  // SSOT: uses centralized formatDate from timeUtils.ts
 
   if (loading) {
     return (
@@ -301,19 +315,48 @@ export default function StudentProfile() {
   const attendanceStats = getAttendanceStats();
   const quizStats = getQuizStats();
 
+  // Stats cards: instructor sees 3, others see 4
+  const statsCards = [
+    { label: isRTL ? 'نسبة الحضور' : 'Attendance Rate', value: `${attendanceStats.rate}%`, icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bgGradient: 'from-emerald-500/10 to-emerald-600/5' },
+    { label: isRTL ? 'كويزات مكتملة' : 'Quizzes Completed', value: quizStats.completed, icon: BookOpen, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-500/10 to-blue-600/5' },
+    { label: isRTL ? 'متوسط الدرجات' : 'Avg. Score', value: `${quizStats.avgScore}%`, icon: Award, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-500/10 to-purple-600/5' },
+  ];
+
+  if (!isInstructor) {
+    statsCards.push({
+      label: isRTL ? 'إنذارات' : 'Warnings',
+      value: data.warnings.length,
+      icon: AlertTriangle,
+      gradient: data.warnings.length > 0 ? 'from-red-500 to-red-600' : 'from-amber-500 to-orange-500',
+      bgGradient: data.warnings.length > 0 ? 'from-red-500/10 to-red-600/5' : 'from-amber-500/10 to-orange-500/5',
+    });
+  }
+
   return (
     <DashboardLayout title={isRTL ? 'ملف الطالب' : 'Student Profile'}>
       <div className="space-y-6">
         {/* Back Button & Actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <Button variant="ghost" onClick={() => navigate('/students')}>
-            <ArrowLeft className={`h-4 w-4 ${isRTL ? "ms-2 rotate-180" : "me-2"}`} />
-            {isRTL ? 'رجوع' : 'Back'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => navigate('/students')}>
+              <ArrowLeft className={`h-4 w-4 ${isRTL ? "ms-2 rotate-180" : "me-2"}`} />
+              {isRTL ? 'رجوع' : 'Back'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchStudentData(true)}
+              disabled={refreshing}
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {isRTL ? 'تحديث' : 'Refresh'}
+            </Button>
+          </div>
           
-          {(role === 'admin' || role === 'instructor' || role === 'reception') && (
+          {/* Action buttons - hidden from instructor except PDF report */}
+          {(isAdminOrReception || isInstructor) && (
             <div className="flex flex-wrap gap-2">
-              {(role === 'admin' || role === 'reception') && !data?.subscription && (
+              {isAdminOrReception && !data?.subscription && (
                 <Button 
                   variant="outline"
                   onClick={() => setShowSubscriptionDialog(true)}
@@ -322,7 +365,7 @@ export default function StudentProfile() {
                   {isRTL ? 'إنشاء اشتراك' : 'Create Subscription'}
                 </Button>
               )}
-              {(role === 'admin' || role === 'reception') && data?.subscription && (
+              {isAdminOrReception && data?.subscription && (
                 <>
                   <Button 
                     variant="outline"
@@ -342,7 +385,7 @@ export default function StudentProfile() {
                   )}
                 </>
               )}
-              {(role === 'admin' || role === 'reception') && (
+              {isAdminOrReception && (
                 <ResetPasswordButton
                   userId={studentId!}
                   userName={data?.profile?.full_name || ''}
@@ -381,16 +424,17 @@ export default function StudentProfile() {
                 <Printer className="h-4 w-4 mr-2" />
                 {isRTL ? 'تقرير PDF' : 'PDF Report'}
               </Button>
-              <Button 
-                variant="outline" 
-                className="border-warning text-warning hover:bg-warning/10"
-                onClick={() => setShowWarningDialog(true)}
-              >
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                {isRTL ? 'إصدار إنذار' : 'Issue Warning'}
-              </Button>
-              {/* Schedule Placement Exam — only if student has no level */}
-              {!data?.profile?.level_id && (role === 'admin' || role === 'reception') && (
+              {!isInstructor && (
+                <Button 
+                  variant="outline" 
+                  className="border-warning text-warning hover:bg-warning/10"
+                  onClick={() => setShowWarningDialog(true)}
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  {isRTL ? 'إصدار إنذار' : 'Issue Warning'}
+                </Button>
+              )}
+              {!data?.profile?.level_id && isAdminOrReception && (
                 <Button
                   variant="outline"
                   onClick={() => setShowPlacementSchedule(true)}
@@ -399,14 +443,14 @@ export default function StudentProfile() {
                   {isRTL ? 'جدولة امتحان تحديد المستوى' : 'Schedule Placement Exam'}
                 </Button>
               )}
-              {(role === 'admin' || role === 'reception') && (!data?.parents || data.parents.length === 0) && (
+              {isAdminOrReception && (!data?.parents || data.parents.length === 0) && (
                 <LinkParentDialog
                   studentId={studentId!}
                   studentName={data?.profile?.full_name || ''}
                   onLinked={() => fetchStudentData()}
                 />
               )}
-              {(role === 'admin' || role === 'reception') && (
+              {isAdminOrReception && (
                 <GenerateParentCodeDialog
                   studentId={studentId!}
                   studentName={data?.profile?.full_name || ''}
@@ -416,8 +460,8 @@ export default function StudentProfile() {
           )}
         </div>
 
-        {/* No Parent Warning Banner */}
-        {(role === 'admin' || role === 'reception') && (!data?.parents || data.parents.length === 0) && (
+        {/* No Parent Warning Banner - admin/reception only */}
+        {isAdminOrReception && (!data?.parents || data.parents.length === 0) && (
           <div className="flex items-center gap-3 p-3 rounded-lg border border-warning/50 bg-warning/10">
             <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0" />
             <p className="text-sm font-medium flex-1">
@@ -468,7 +512,7 @@ export default function StudentProfile() {
                       {language === 'ar' ? data.profile.levels.name_ar : data.profile.levels.name}
                     </Badge>
                   )}
-                  {data.warnings.length > 0 && (
+                  {!isInstructor && data.warnings.length > 0 && (
                     <Badge variant="destructive" className="gap-1">
                       <AlertTriangle className="h-3 w-3" />
                       {data.warnings.length} {isRTL ? 'إنذار' : 'Warning(s)'}
@@ -488,8 +532,8 @@ export default function StudentProfile() {
                   )}
                 </div>
                 </div>
-                {/* Linked Parents */}
-                {data.parents && data.parents.length > 0 && (
+                {/* Linked Parents - hidden from instructor */}
+                {!isInstructor && data.parents && data.parents.length > 0 && (
                   <div className="flex flex-wrap gap-3 mt-3">
                     {data.parents.map((parent: any, idx: number) => (
                       <div key={idx} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-1.5">
@@ -511,54 +555,51 @@ export default function StudentProfile() {
                     ))}
                   </div>
                 )}
-              {/* Subscription Status */}
-              <div className="w-full sm:w-auto sm:text-right mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0">
-                {data.subscription ? (
-                  <div className="space-y-1">
-                    <Badge className="bg-green-100 text-green-800">
-                      {isRTL ? 'اشتراك فعال' : 'Active Subscription'}
-                    </Badge>
-                    {data.subscription.pricing_plans && (
-                      <p className="text-sm font-medium">
-                        {language === 'ar' ? data.subscription.pricing_plans.name_ar : data.subscription.pricing_plans.name}
+              {/* Subscription Status - hidden from instructor */}
+              {!isInstructor && (
+                <div className="w-full sm:w-auto sm:text-right mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0">
+                  {data.subscription ? (
+                    <div className="space-y-1">
+                      <Badge className="bg-green-100 text-green-800">
+                        {isRTL ? 'اشتراك فعال' : 'Active Subscription'}
+                      </Badge>
+                      {data.subscription.pricing_plans && (
+                        <p className="text-sm font-medium">
+                          {language === 'ar' ? data.subscription.pricing_plans.name_ar : data.subscription.pricing_plans.name}
+                        </p>
+                      )}
+                      <p className="text-sm text-muted-foreground">
+                        {isRTL ? 'ينتهي: ' : 'Ends: '}{formatDate(data.subscription.end_date)}
                       </p>
-                    )}
-                    <p className="text-sm text-muted-foreground">
-                      {isRTL ? 'ينتهي: ' : 'Ends: '}{formatDate(data.subscription.end_date)}
-                    </p>
-                    <Badge variant="outline" className="text-xs">
-                      {data.subscription.payment_type === 'installment' ? (isRTL ? 'تقسيط' : 'Installment') : (isRTL ? 'دفع كامل' : 'Full Payment')}
-                    </Badge>
-                    {Number(data.subscription.remaining_amount) > 0 && (
-                      <p className="text-sm text-orange-600">
-                        {isRTL ? 'متبقي: ' : 'Remaining: '}{data.subscription.remaining_amount} {isRTL ? 'ج.م' : 'EGP'}
-                      </p>
-                    )}
-                    {data.subscription.next_payment_date && (
-                      <p className="text-xs text-muted-foreground">
-                        {isRTL ? 'الدفع القادم: ' : 'Next: '}{formatDate(data.subscription.next_payment_date)}
-                      </p>
-                    )}
-                    {data.subscription.is_suspended && (
-                      <Badge variant="destructive">{isRTL ? 'موقوف' : 'Suspended'}</Badge>
-                    )}
-                  </div>
-                ) : (
-                  <Badge variant="destructive">{isRTL ? 'لا يوجد اشتراك' : 'No Subscription'}</Badge>
-                )}
-              </div>
+                      <Badge variant="outline" className="text-xs">
+                        {data.subscription.payment_type === 'installment' ? (isRTL ? 'تقسيط' : 'Installment') : (isRTL ? 'دفع كامل' : 'Full Payment')}
+                      </Badge>
+                      {Number(data.subscription.remaining_amount) > 0 && (
+                        <p className="text-sm text-orange-600">
+                          {isRTL ? 'متبقي: ' : 'Remaining: '}{data.subscription.remaining_amount} {isRTL ? 'ج.م' : 'EGP'}
+                        </p>
+                      )}
+                      {data.subscription.next_payment_date && (
+                        <p className="text-xs text-muted-foreground">
+                          {isRTL ? 'الدفع القادم: ' : 'Next: '}{formatDate(data.subscription.next_payment_date)}
+                        </p>
+                      )}
+                      {data.subscription.is_suspended && (
+                        <Badge variant="destructive">{isRTL ? 'موقوف' : 'Suspended'}</Badge>
+                      )}
+                    </div>
+                  ) : (
+                    <Badge variant="destructive">{isRTL ? 'لا يوجد اشتراك' : 'No Subscription'}</Badge>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Quick Stats */}
-        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          {[
-            { label: isRTL ? 'نسبة الحضور' : 'Attendance Rate', value: `${attendanceStats.rate}%`, icon: CheckCircle, gradient: 'from-emerald-500 to-emerald-600', bgGradient: 'from-emerald-500/10 to-emerald-600/5' },
-            { label: isRTL ? 'كويزات مكتملة' : 'Quizzes Completed', value: quizStats.completed, icon: BookOpen, gradient: 'from-blue-500 to-blue-600', bgGradient: 'from-blue-500/10 to-blue-600/5' },
-            { label: isRTL ? 'متوسط الدرجات' : 'Avg. Score', value: `${quizStats.avgScore}%`, icon: Award, gradient: 'from-purple-500 to-purple-600', bgGradient: 'from-purple-500/10 to-purple-600/5' },
-            { label: isRTL ? 'إنذارات' : 'Warnings', value: data.warnings.length, icon: AlertTriangle, gradient: data.warnings.length > 0 ? 'from-red-500 to-red-600' : 'from-amber-500 to-orange-500', bgGradient: data.warnings.length > 0 ? 'from-red-500/10 to-red-600/5' : 'from-amber-500/10 to-orange-500/5' },
-          ].map((stat) => (
+        <div className={`grid gap-3 ${isInstructor ? 'grid-cols-3' : 'grid-cols-2 md:grid-cols-4'}`}>
+          {statsCards.map((stat) => (
             <Card key={stat.label} className="relative overflow-hidden border-0 shadow-sm">
               <div className={`absolute inset-0 bg-gradient-to-br ${stat.bgGradient}`} />
               <CardContent className="relative p-4">
@@ -576,24 +617,25 @@ export default function StudentProfile() {
           ))}
         </div>
 
-        {/* Group Info */}
-        {/* Detailed Tabs - Action First */}
-        <Tabs defaultValue="payments" className="w-full">
+        {/* Detailed Tabs */}
+        <Tabs defaultValue="attendance" className="w-full" onValueChange={() => fetchStudentData(true)}>
           <TabsList className="flex w-full overflow-x-auto no-scrollbar">
-            <TabsTrigger value="payments" className="flex-shrink-0">{isRTL ? 'الدفعات' : 'Payments'}</TabsTrigger>
+            {!isInstructor && <TabsTrigger value="payments" className="flex-shrink-0">{isRTL ? 'الدفعات' : 'Payments'}</TabsTrigger>}
             <TabsTrigger value="attendance" className="flex-shrink-0">{isRTL ? 'الحضور' : 'Attendance'}</TabsTrigger>
-            <TabsTrigger value="warnings" className="flex-shrink-0">{isRTL ? 'الإنذارات' : 'Warnings'}</TabsTrigger>
+            {!isInstructor && <TabsTrigger value="warnings" className="flex-shrink-0">{isRTL ? 'الإنذارات' : 'Warnings'}</TabsTrigger>}
             <TabsTrigger value="quizzes" className="flex-shrink-0">{isRTL ? 'الكويزات' : 'Quizzes'}</TabsTrigger>
             <TabsTrigger value="assignments" className="flex-shrink-0">{isRTL ? 'الواجبات' : 'Assignments'}</TabsTrigger>
-            <TabsTrigger value="makeup" className="flex-shrink-0">{isRTL ? 'التعويضات' : 'Makeup'}</TabsTrigger>
-            <TabsTrigger value="certificates" className="flex-shrink-0">{isRTL ? 'الشهادات' : 'Certificates'}</TabsTrigger>
-            <TabsTrigger value="xp" className="flex-shrink-0">{isRTL ? 'نقاط XP' : 'XP'}</TabsTrigger>
+            {!isInstructor && <TabsTrigger value="makeup" className="flex-shrink-0">{isRTL ? 'التعويضات' : 'Makeup'}</TabsTrigger>}
+            {!isInstructor && <TabsTrigger value="certificates" className="flex-shrink-0">{isRTL ? 'الشهادات' : 'Certificates'}</TabsTrigger>}
+            {!isInstructor && <TabsTrigger value="xp" className="flex-shrink-0">{isRTL ? 'نقاط XP' : 'XP'}</TabsTrigger>}
           </TabsList>
 
           {/* Payments Tab */}
-          <TabsContent value="payments">
-            <PaymentsHistory studentId={studentId!} subscription={data.subscription} attendance={data.attendance} />
-          </TabsContent>
+          {!isInstructor && (
+            <TabsContent value="payments">
+              <PaymentsHistory studentId={studentId!} subscription={data.subscription} attendance={data.attendance} />
+            </TabsContent>
+          )}
 
           {/* Attendance Tab */}
           <TabsContent value="attendance">
@@ -642,50 +684,52 @@ export default function StudentProfile() {
           </TabsContent>
 
           {/* Warnings Tab */}
-          <TabsContent value="warnings">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-destructive">
-                  <AlertTriangle className="h-5 w-5" />
-                  {isRTL ? 'الإنذارات' : 'Warnings'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {data.warnings.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-2" />
-                    {isRTL ? 'لا توجد إنذارات' : 'No warnings'}
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {data.warnings.map((warning: any) => (
-                      <div key={warning.id} className="p-4 rounded-lg border border-destructive/20 bg-destructive/5">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <Badge variant="destructive" className="mb-2">
-                              {warning.warning_type === 'attendance' ? (isRTL ? 'غياب' : 'Attendance') : 
-                               warning.warning_type === 'behavior' ? (isRTL ? 'سلوك' : 'Behavior') :
-                               (isRTL ? 'عام' : 'General')}
-                            </Badge>
-                            <p className="font-medium">
-                              {language === 'ar' ? warning.reason_ar || warning.reason : warning.reason}
-                            </p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {isRTL ? 'بواسطة: ' : 'By: '}
-                              {warning.profiles?.full_name || '-'}
-                            </p>
+          {!isInstructor && (
+            <TabsContent value="warnings">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                    {isRTL ? 'الإنذارات' : 'Warnings'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {data.warnings.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-2" />
+                      {isRTL ? 'لا توجد إنذارات' : 'No warnings'}
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {data.warnings.map((warning: any) => (
+                        <div key={warning.id} className="p-4 rounded-lg border border-destructive/20 bg-destructive/5">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <Badge variant="destructive" className="mb-2">
+                                {warning.warning_type === 'attendance' ? (isRTL ? 'غياب' : 'Attendance') : 
+                                 warning.warning_type === 'behavior' ? (isRTL ? 'سلوك' : 'Behavior') :
+                                 (isRTL ? 'عام' : 'General')}
+                              </Badge>
+                              <p className="font-medium">
+                                {language === 'ar' ? warning.reason_ar || warning.reason : warning.reason}
+                              </p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {isRTL ? 'بواسطة: ' : 'By: '}
+                                {warning.profiles?.full_name || '-'}
+                              </p>
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                              {formatDate(warning.created_at)}
+                            </span>
                           </div>
-                          <span className="text-sm text-muted-foreground">
-                            {formatDate(warning.created_at)}
-                          </span>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {/* Quizzes Tab */}
           <TabsContent value="quizzes">
@@ -779,166 +823,169 @@ export default function StudentProfile() {
           </TabsContent>
 
           {/* Makeup Sessions Tab */}
-          <TabsContent value="makeup">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <RefreshCw className="h-5 w-5" />
-                  {isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions'}
-                </CardTitle>
-                <CardDescription>
-                  <MakeupCreditsDisplay studentId={studentId!} />
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {/* Level Progress Grid */}
-                <LevelProgressGrid studentId={studentId!} attendance={data.attendance} makeupSessions={data.makeupSessions} />
-                
-                <div className="mb-4 mt-4 p-3 rounded-lg border bg-muted/50">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">
-                      {isRTL ? 'السيشنات المعوضة' : 'Compensated sessions'}
-                    </span>
-                    <Badge variant="secondary">
-                      {data.makeupSessions.filter((m: any) => m.status === 'completed').length} / {data.makeupSessions.length}
-                    </Badge>
+          {!isInstructor && (
+            <TabsContent value="makeup">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <RefreshCw className="h-5 w-5" />
+                    {isRTL ? 'السيشنات التعويضية' : 'Makeup Sessions'}
+                  </CardTitle>
+                  <CardDescription>
+                    <MakeupCreditsDisplay studentId={studentId!} />
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <LevelProgressGrid studentId={studentId!} attendance={data.attendance} makeupSessions={data.makeupSessions} />
+                  
+                  <div className="mb-4 mt-4 p-3 rounded-lg border bg-muted/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">
+                        {isRTL ? 'السيشنات المعوضة' : 'Compensated sessions'}
+                      </span>
+                      <Badge variant="secondary">
+                        {data.makeupSessions.filter((m: any) => m.status === 'completed').length} / {data.makeupSessions.length}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-                {data.makeupSessions.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    <RefreshCw className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                    {isRTL ? 'لا توجد سيشنات تعويضية' : 'No makeup sessions'}
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {data.makeupSessions.map((ms: any) => (
-                      <div key={ms.id} className="p-4 rounded-lg border">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Badge className={ms.reason === 'group_cancelled' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'}>
-                              {ms.reason === 'group_cancelled' ? (isRTL ? 'إلغاء مجموعة' : 'Group Cancelled') : (isRTL ? 'غياب' : 'Absent')}
-                            </Badge>
-                            <Badge variant={ms.is_free ? 'secondary' : 'outline'}>
-                              {ms.is_free ? (isRTL ? 'مجانية' : 'Free') : (isRTL ? 'مدفوعة' : 'Paid')}
+                  {data.makeupSessions.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      <RefreshCw className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                      {isRTL ? 'لا توجد سيشنات تعويضية' : 'No makeup sessions'}
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {data.makeupSessions.map((ms: any) => (
+                        <div key={ms.id} className="p-4 rounded-lg border">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <Badge className={ms.reason === 'group_cancelled' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'}>
+                                {ms.reason === 'group_cancelled' ? (isRTL ? 'إلغاء مجموعة' : 'Group Cancelled') : (isRTL ? 'غياب' : 'Absent')}
+                              </Badge>
+                              <Badge variant={ms.is_free ? 'secondary' : 'outline'}>
+                                {ms.is_free ? (isRTL ? 'مجانية' : 'Free') : (isRTL ? 'مدفوعة' : 'Paid')}
+                              </Badge>
+                            </div>
+                            <Badge className={
+                              ms.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              ms.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                              ms.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              'bg-muted text-muted-foreground'
+                            }>
+                              {ms.status === 'pending' ? (isRTL ? 'معلق' : 'Pending') :
+                               ms.status === 'scheduled' ? (isRTL ? 'مجدول' : 'Scheduled') :
+                               ms.status === 'completed' ? (isRTL ? 'مكتمل' : 'Completed') :
+                               (isRTL ? 'منتهي' : 'Expired')}
                             </Badge>
                           </div>
-                          <Badge className={
-                            ms.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            ms.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                            ms.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            'bg-muted text-muted-foreground'
-                          }>
-                            {ms.status === 'pending' ? (isRTL ? 'معلق' : 'Pending') :
-                             ms.status === 'scheduled' ? (isRTL ? 'مجدول' : 'Scheduled') :
-                             ms.status === 'completed' ? (isRTL ? 'مكتمل' : 'Completed') :
-                             (isRTL ? 'منتهي' : 'Expired')}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-muted-foreground space-y-1">
-                          {ms.groups && (
-                            <p>{isRTL ? 'المجموعة: ' : 'Group: '}{language === 'ar' ? ms.groups.name_ar : ms.groups.name}</p>
-                          )}
-                          {ms.scheduled_date && (
-                            <p>{isRTL ? 'الموعد: ' : 'Scheduled: '}{formatDate(ms.scheduled_date)} {ms.scheduled_time}</p>
-                          )}
-                          <p>{isRTL ? 'تاريخ الإنشاء: ' : 'Created: '}{formatDate(ms.created_at)}</p>
-                        </div>
-                        {/* Student confirmation for scheduled sessions */}
-                        {ms.status === 'scheduled' && ms.student_confirmed === null && role === 'student' && (
-                          <div className="mt-3 flex gap-2 border-t pt-3">
-                            <Button size="sm" className="flex-1" onClick={async () => {
-                              await supabase.from('makeup_sessions').update({ student_confirmed: true }).eq('id', ms.id);
-                              const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
-                              if (adminRoles) {
-                                for (const admin of adminRoles) {
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            {ms.groups && (
+                              <p>{isRTL ? 'المجموعة: ' : 'Group: '}{language === 'ar' ? ms.groups.name_ar : ms.groups.name}</p>
+                            )}
+                            {ms.scheduled_date && (
+                              <p>{isRTL ? 'الموعد: ' : 'Scheduled: '}{formatDate(ms.scheduled_date)} {ms.scheduled_time}</p>
+                            )}
+                            <p>{isRTL ? 'تاريخ الإنشاء: ' : 'Created: '}{formatDate(ms.created_at)}</p>
+                          </div>
+                          {ms.status === 'scheduled' && ms.student_confirmed === null && role === 'student' && (
+                            <div className="mt-3 flex gap-2 border-t pt-3">
+                              <Button size="sm" className="flex-1" onClick={async () => {
+                                await supabase.from('makeup_sessions').update({ student_confirmed: true }).eq('id', ms.id);
+                                const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
+                                if (adminRoles) {
+                                  for (const admin of adminRoles) {
+                                    await notificationService.create({
+                                      user_id: admin.user_id,
+                                      title: 'Makeup Session Confirmed',
+                                      title_ar: 'تأكيد سيشن تعويضية',
+                                      message: `${data.profile.full_name} confirmed a makeup session`,
+                                      message_ar: `${data.profile.full_name_ar || data.profile.full_name} أكد السيشن التعويضية`,
+                                      type: 'success',
+                                      category: 'makeup_session',
+                                      action_url: '/makeup-sessions',
+                                    });
+                                  }
+                                }
+                                const { data: makeupData } = await supabase
+                                  .from('makeup_sessions')
+                                  .select('assigned_instructor_id, scheduled_date, scheduled_time, groups(name, name_ar)')
+                                  .eq('id', ms.id)
+                                  .single();
+                                if (makeupData?.assigned_instructor_id) {
+                                  const gName = language === 'ar' ? ((makeupData as any).groups?.name_ar || (makeupData as any).groups?.name) : (makeupData as any).groups?.name;
                                   await notificationService.create({
-                                    user_id: admin.user_id,
+                                    user_id: makeupData.assigned_instructor_id,
                                     title: 'Makeup Session Confirmed',
                                     title_ar: 'تأكيد سيشن تعويضية',
-                                    message: `${data.profile.full_name} confirmed a makeup session`,
-                                    message_ar: `${data.profile.full_name_ar || data.profile.full_name} أكد السيشن التعويضية`,
+                                    message: `A makeup session for "${gName}" on ${makeupData.scheduled_date} at ${makeupData.scheduled_time} has been confirmed.`,
+                                    message_ar: `تم تأكيد السيشن التعويضية لمجموعة "${gName}" في ${makeupData.scheduled_date} الساعة ${makeupData.scheduled_time}.`,
                                     type: 'success',
                                     category: 'makeup_session',
                                     action_url: '/makeup-sessions',
                                   });
                                 }
-                              }
-                              // Notify assigned instructor
-                              const { data: makeupData } = await supabase
-                                .from('makeup_sessions')
-                                .select('assigned_instructor_id, scheduled_date, scheduled_time, groups(name, name_ar)')
-                                .eq('id', ms.id)
-                                .single();
-                              if (makeupData?.assigned_instructor_id) {
-                                const gName = language === 'ar' ? ((makeupData as any).groups?.name_ar || (makeupData as any).groups?.name) : (makeupData as any).groups?.name;
-                                await notificationService.create({
-                                  user_id: makeupData.assigned_instructor_id,
-                                  title: 'Makeup Session Confirmed',
-                                  title_ar: 'تأكيد سيشن تعويضية',
-                                  message: `A makeup session for "${gName}" on ${makeupData.scheduled_date} at ${makeupData.scheduled_time} has been confirmed.`,
-                                  message_ar: `تم تأكيد السيشن التعويضية لمجموعة "${gName}" في ${makeupData.scheduled_date} الساعة ${makeupData.scheduled_time}.`,
-                                  type: 'success',
-                                  category: 'makeup_session',
-                                  action_url: '/makeup-sessions',
-                                });
-                              }
-                              toast({ title: isRTL ? 'تم التأكيد' : 'Confirmed' });
-                              fetchStudentData();
-                            }}>
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              {isRTL ? 'تأكيد' : 'Confirm'}
-                            </Button>
-                            <Button size="sm" variant="destructive" className="flex-1" onClick={async () => {
-                              await supabase.from('makeup_sessions').update({ student_confirmed: false }).eq('id', ms.id);
-                              const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
-                              if (adminRoles) {
-                                for (const admin of adminRoles) {
-                                  await notificationService.create({
-                                    user_id: admin.user_id,
-                                    title: 'Makeup Session Rejected',
-                                    title_ar: 'رفض سيشن تعويضية',
-                                    message: `${data.profile.full_name} rejected a makeup session`,
-                                    message_ar: `${data.profile.full_name_ar || data.profile.full_name} رفض السيشن التعويضية`,
-                                    type: 'warning',
-                                    category: 'makeup_session',
-                                    action_url: '/makeup-sessions',
-                                  });
+                                toast({ title: isRTL ? 'تم التأكيد' : 'Confirmed' });
+                                fetchStudentData();
+                              }}>
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                {isRTL ? 'تأكيد' : 'Confirm'}
+                              </Button>
+                              <Button size="sm" variant="destructive" className="flex-1" onClick={async () => {
+                                await supabase.from('makeup_sessions').update({ student_confirmed: false }).eq('id', ms.id);
+                                const { data: adminRoles } = await supabase.from('user_roles').select('user_id').eq('role', 'admin');
+                                if (adminRoles) {
+                                  for (const admin of adminRoles) {
+                                    await notificationService.create({
+                                      user_id: admin.user_id,
+                                      title: 'Makeup Session Rejected',
+                                      title_ar: 'رفض سيشن تعويضية',
+                                      message: `${data.profile.full_name} rejected a makeup session`,
+                                      message_ar: `${data.profile.full_name_ar || data.profile.full_name} رفض السيشن التعويضية`,
+                                      type: 'warning',
+                                      category: 'makeup_session',
+                                      action_url: '/makeup-sessions',
+                                    });
+                                  }
                                 }
-                              }
-                              toast({ title: isRTL ? 'تم الرفض' : 'Rejected' });
-                              fetchStudentData();
-                            }}>
-                              <XCircle className="h-3 w-3 mr-1" />
-                              {isRTL ? 'رفض' : 'Reject'}
-                            </Button>
-                          </div>
-                        )}
-                        {ms.status === 'scheduled' && ms.student_confirmed === true && (
-                          <div className="mt-2">
-                            <Badge className="bg-green-100 text-green-800">{isRTL ? 'تم التأكيد ✓' : 'Confirmed ✓'}</Badge>
-                          </div>
-                        )}
-                        {ms.status === 'scheduled' && ms.student_confirmed === false && (
-                          <div className="mt-2">
-                            <Badge variant="destructive">{isRTL ? 'مرفوض' : 'Rejected'}</Badge>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                                toast({ title: isRTL ? 'تم الرفض' : 'Rejected' });
+                                fetchStudentData();
+                              }}>
+                                <XCircle className="h-3 w-3 mr-1" />
+                                {isRTL ? 'رفض' : 'Reject'}
+                              </Button>
+                            </div>
+                          )}
+                          {ms.status === 'scheduled' && ms.student_confirmed === true && (
+                            <div className="mt-2">
+                              <Badge className="bg-green-100 text-green-800">{isRTL ? 'تم التأكيد ✓' : 'Confirmed ✓'}</Badge>
+                            </div>
+                          )}
+                          {ms.status === 'scheduled' && ms.student_confirmed === false && (
+                            <div className="mt-2">
+                              <Badge variant="destructive">{isRTL ? 'مرفوض' : 'Rejected'}</Badge>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {/* Certificates Tab */}
-          <TabsContent value="certificates">
-            <StudentCertificatesTab studentId={studentId!} />
-          </TabsContent>
+          {!isInstructor && (
+            <TabsContent value="certificates">
+              <StudentCertificatesTab studentId={studentId!} />
+            </TabsContent>
+          )}
 
-          <TabsContent value="xp">
-            <StudentXpBreakdown studentId={studentId!} />
-          </TabsContent>
+          {!isInstructor && (
+            <TabsContent value="xp">
+              <StudentXpBreakdown studentId={studentId!} />
+            </TabsContent>
+          )}
         </Tabs>
 
         {/* Reference Sections - Below Tabs */}
@@ -983,7 +1030,7 @@ export default function StudentProfile() {
         {/* Evaluation Summary */}
         <EvaluationSummary studentId={studentId!} />
 
-        {/* Performance Charts - Heaviest, last */}
+        {/* Performance Charts */}
         <StudentPerformanceCharts
           attendance={data.attendance}
           quizSubmissions={data.quizSubmissions}
@@ -994,55 +1041,55 @@ export default function StudentProfile() {
         />
       </div>
 
-      {/* Issue Warning Dialog */}
-      <IssueWarningDialog
-        open={showWarningDialog}
-        onOpenChange={setShowWarningDialog}
-        studentId={studentId!}
-        studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
-        onSuccess={fetchStudentData}
-      />
+      {/* Dialogs - only render for non-instructor */}
+      {!isInstructor && (
+        <>
+          <IssueWarningDialog
+            open={showWarningDialog}
+            onOpenChange={setShowWarningDialog}
+            studentId={studentId!}
+            studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+            onSuccess={fetchStudentData}
+          />
 
-      {/* Create Subscription Dialog */}
-      <CreateSubscriptionDialog
-        open={showSubscriptionDialog}
-        onOpenChange={setShowSubscriptionDialog}
-        studentId={studentId!}
-        studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
-        onSuccess={fetchStudentData}
-      />
+          <CreateSubscriptionDialog
+            open={showSubscriptionDialog}
+            onOpenChange={setShowSubscriptionDialog}
+            studentId={studentId!}
+            studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+            onSuccess={fetchStudentData}
+          />
 
-      {/* Renewal Subscription Dialog */}
-      <CreateSubscriptionDialog
-        open={showRenewalDialog}
-        onOpenChange={setShowRenewalDialog}
-        studentId={studentId!}
-        studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
-        onSuccess={fetchStudentData}
-        isRenewal={true}
-        previousSubscriptionId={data.subscription?.id}
-      />
+          <CreateSubscriptionDialog
+            open={showRenewalDialog}
+            onOpenChange={setShowRenewalDialog}
+            studentId={studentId!}
+            studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+            onSuccess={fetchStudentData}
+            isRenewal={true}
+            previousSubscriptionId={data.subscription?.id}
+          />
 
-      {/* Edit Subscription Dialog */}
-      {data.subscription && (
-        <EditSubscriptionDialog
-          open={showEditSubscriptionDialog}
-          onOpenChange={setShowEditSubscriptionDialog}
-          subscription={data.subscription}
-          studentId={studentId!}
-          studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
-          onSuccess={fetchStudentData}
-        />
+          {data.subscription && (
+            <EditSubscriptionDialog
+              open={showEditSubscriptionDialog}
+              onOpenChange={setShowEditSubscriptionDialog}
+              subscription={data.subscription}
+              studentId={studentId!}
+              studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+              onSuccess={fetchStudentData}
+            />
+          )}
+
+          <SchedulePlacementDialog
+            open={showPlacementSchedule}
+            onOpenChange={setShowPlacementSchedule}
+            studentId={studentId!}
+            studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
+            onScheduled={fetchStudentData}
+          />
+        </>
       )}
-
-      {/* Schedule Placement Exam Dialog */}
-      <SchedulePlacementDialog
-        open={showPlacementSchedule}
-        onOpenChange={setShowPlacementSchedule}
-        studentId={studentId!}
-        studentName={language === 'ar' ? data.profile.full_name_ar || data.profile.full_name : data.profile.full_name}
-        onScheduled={fetchStudentData}
-      />
     </DashboardLayout>
   );
 }
