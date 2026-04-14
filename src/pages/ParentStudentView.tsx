@@ -11,7 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/lib/notificationService';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, ArrowRight, CheckCircle, XCircle, Clock, CreditCard, BookOpen, UserCheck, FileText, Award, RefreshCw, Calendar, Download, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, XCircle, Clock, CreditCard, BookOpen, UserCheck, FileText, Award, RefreshCw, Calendar, Download, AlertTriangle, Printer } from 'lucide-react';
+import { generateStudentReport } from '@/lib/pdfReports';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
