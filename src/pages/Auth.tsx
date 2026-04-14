@@ -130,6 +130,39 @@ export default function Auth() {
       const { error } = await signIn(data.email, data.password);
       if (error) {
         toast({ variant: 'destructive', title: t.common.error, description: t.auth.loginError });
+        return;
+      }
+
+      // Verify role matches selected user type
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '')
+        .single();
+
+      const fetchedRole = roleData?.role as string | null;
+      const staffRoles = ['admin', 'instructor', 'reception'];
+      const isStaffRole = fetchedRole && staffRoles.includes(fetchedRole);
+      const isStudentRole = fetchedRole === 'student';
+
+      if (userType === 'student' && !isStudentRole) {
+        await supabase.auth.signOut();
+        toast({
+          variant: 'destructive',
+          title: isRTL ? 'خطأ' : 'Error',
+          description: isRTL ? 'هذا الحساب ليس حساب طالب' : 'This is not a student account',
+        });
+        return;
+      }
+
+      if (userType === 'staff' && !isStaffRole) {
+        await supabase.auth.signOut();
+        toast({
+          variant: 'destructive',
+          title: isRTL ? 'خطأ' : 'Error',
+          description: isRTL ? 'هذا الحساب ليس حساب موظف' : 'This is not a staff account',
+        });
+        return;
       }
     } catch {
       toast({ variant: 'destructive', title: t.common.error, description: t.auth.loginError });
