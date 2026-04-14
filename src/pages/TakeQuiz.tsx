@@ -69,6 +69,20 @@ export default function TakeQuiz() {
     if (assignmentId) fetchQuizData();
   }, [assignmentId]);
 
+  // Auto-refresh when quiz is not_started — re-check every second until start time arrives
+  useEffect(() => {
+    if (quizStatus !== 'not_started' || !assignment?.start_time) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const startTime = new Date(assignment.start_time!).getTime();
+      if (now >= startTime) {
+        clearInterval(interval);
+        fetchQuizData(); // Re-fetch to transition to 'available'
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [quizStatus, assignment?.start_time]);
+
   useEffect(() => {
     if (timeLeft > 0 && !submitted) {
       const timer = setInterval(() => {
