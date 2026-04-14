@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuestion, CheckCircle, Play, BookOpen, Video, ExternalLink, Snowflake, RefreshCw, ClipboardCheck, ChevronRight, UserPlus } from 'lucide-react';
 import { LevelPassedBanner } from '@/components/student/LevelPassedBanner';
+import { FinalExamBanner } from '@/components/student/FinalExamBanner';
 import { PendingGroupBanner } from '@/components/student/PendingGroupBanner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
