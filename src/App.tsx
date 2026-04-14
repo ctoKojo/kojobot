@@ -74,7 +74,7 @@ const ProgressionMetrics = React.lazy(() => import("./pages/ProgressionMetrics")
 const MyCertificates = React.lazy(() => import("./pages/MyCertificates"));
 const RenewalRequired = React.lazy(() => import("./pages/RenewalRequired"));
 const ParentStudentView = React.lazy(() => import("./pages/ParentStudentView"));
-const ParentRegister = React.lazy(() => import("./pages/ParentRegister"));
+
 const ParentLogin = React.lazy(() => import("./pages/ParentLogin"));
 const Parents = React.lazy(() => import("./pages/Parents"));
 const ParentLeaveRequests = React.lazy(() => import("./pages/ParentLeaveRequests"));
