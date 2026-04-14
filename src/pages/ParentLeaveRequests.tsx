@@ -99,6 +99,25 @@ export default function ParentLeaveRequests() {
         toast({ variant: 'destructive', title: isRTL ? 'يرجى ملء جميع الحقول المطلوبة' : 'Please fill all required fields' });
         return;
       }
+      // Prevent today or past dates for leave requests
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const fromDate = new Date(form.request_date + 'T00:00:00');
+      if (fromDate <= today) {
+        toast({ variant: 'destructive', title: isRTL ? 'تاريخ الإجازة يجب أن يكون بعد اليوم' : 'Leave date must be after today' });
+        return;
+      }
+      if (form.end_date) {
+        const toDate = new Date(form.end_date + 'T00:00:00');
+        if (toDate <= today) {
+          toast({ variant: 'destructive', title: isRTL ? 'تاريخ النهاية يجب أن يكون بعد اليوم' : 'End date must be after today' });
+          return;
+        }
+        if (toDate < fromDate) {
+          toast({ variant: 'destructive', title: isRTL ? 'تاريخ النهاية يجب أن يكون بعد تاريخ البداية' : 'End date must be after start date' });
+          return;
+        }
+      }
     }
     setSubmitting(true);
     try {
@@ -289,11 +308,11 @@ export default function ParentLeaveRequests() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>{isRTL ? 'من تاريخ' : 'From Date'}</Label>
-                    <Input type="date" value={form.request_date} onChange={e => setForm(f => ({ ...f, request_date: e.target.value }))} />
+                    <Input type="date" value={form.request_date} min={new Date(Date.now() + 86400000).toISOString().split('T')[0]} onChange={e => setForm(f => ({ ...f, request_date: e.target.value }))} />
                   </div>
                   <div>
                     <Label>{isRTL ? 'إلى تاريخ (اختياري)' : 'To Date (optional)'}</Label>
-                    <Input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
+                    <Input type="date" value={form.end_date} min={form.request_date || new Date(Date.now() + 86400000).toISOString().split('T')[0]} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
                   </div>
                 </div>
               )}
