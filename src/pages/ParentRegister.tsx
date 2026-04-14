@@ -92,13 +92,7 @@ export default function ParentRegister() {
     }
   };
 
-  const handleLinkCodes = async () => {
-    const validCodes = codes.filter(c => c.trim().length >= 8);
-    if (validCodes.length === 0) {
-      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'أدخل كود واحد على الأقل' : 'Enter at least one valid code' });
-      return;
-    }
-
+  const handleRegister = async () => {
     if (!fullName.trim()) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'أدخل الاسم بالكامل' : 'Please enter your full name' });
       return;
@@ -115,6 +109,7 @@ export default function ParentRegister() {
         return;
       }
 
+      const validCodes = codes.filter(c => c.trim().length >= 8);
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const response = await fetch(`https://${projectId}.supabase.co/functions/v1/register-parent`, {
         method: 'POST',
@@ -141,14 +136,17 @@ export default function ParentRegister() {
         }
         toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: data.error || (isRTL ? 'حدث خطأ' : 'Something went wrong') });
       } else {
-        setResults(data.details);
-        toast({ title: isRTL ? 'تم بنجاح!' : 'Success!', description: isRTL ? `تم ربط ${data.linked} طالب` : `Linked ${data.linked} student(s)` });
+        if (data.details) setResults(data.details);
+        const msg = validCodes.length > 0
+          ? (isRTL ? `تم التسجيل وربط ${data.linked} طالب` : `Registered & linked ${data.linked} student(s)`)
+          : (isRTL ? 'تم التسجيل بنجاح! الإدارة هتربط أولادك قريباً' : 'Registered! Admin will link your children soon.');
+        toast({ title: isRTL ? 'تم بنجاح!' : 'Success!', description: msg });
         setTimeout(() => {
           window.location.href = '/dashboard';
         }, 2000);
       }
     } catch (error) {
-      console.error('Link error:', error);
+      console.error('Register error:', error);
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'خطأ في الاتصال' : 'Connection error' });
     } finally {
       setIsLinking(false);
@@ -259,7 +257,7 @@ export default function ParentRegister() {
             </div>
           )}
 
-          {/* Step 3: Enter Codes */}
+          {/* Step 3: Enter Codes (Optional) */}
           {isSignedIn && (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -267,9 +265,13 @@ export default function ParentRegister() {
                   3
                 </div>
                 <span className="font-medium">
-                  {isRTL ? 'أدخل كود الربط' : 'Enter Linking Code'}
+                  {isRTL ? 'كود الربط (اختياري)' : 'Linking Code (Optional)'}
                 </span>
               </div>
+
+              <p className="text-xs text-muted-foreground px-10">
+                {isRTL ? 'لو عندك كود ربط من الأكاديمية، أدخله هنا. لو مش معاك كود، سجّل وهيتم ربط أولادك من الإدارة.' : "If you have a linking code from the academy, enter it. Otherwise, just register and admin will link your children."}
+              </p>
 
               <div className="space-y-2 px-10">
                 {codes.map((code, index) => (
@@ -302,15 +304,17 @@ export default function ParentRegister() {
               </div>
 
               <Button
-                onClick={handleLinkCodes}
-                disabled={isLinking || codes.every(c => c.trim().length < 8) || !fullName.trim()}
+                onClick={handleRegister}
+                disabled={isLinking || !fullName.trim()}
                 className="w-full"
                 size="lg"
               >
                 {isLinking ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isRTL ? 'جاري الربط...' : 'Linking...'}</>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{isRTL ? 'جاري التسجيل...' : 'Registering...'}</>
                 ) : (
-                  isRTL ? 'ربط الأكواد' : 'Link Codes'
+                  codes.some(c => c.trim().length >= 8)
+                    ? (isRTL ? 'تسجيل وربط الأكواد' : 'Register & Link Codes')
+                    : (isRTL ? 'تسجيل بدون كود' : 'Register without Code')
                 )}
               </Button>
             </div>
