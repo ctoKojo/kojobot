@@ -55,8 +55,16 @@ export default function TakeQuiz() {
 
   const [assignment, setAssignment] = useState<QuizAssignment | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const saved = sessionStorage.getItem(`quiz-${assignmentId}-index`);
+    return saved ? Number(saved) : 0;
+  });
+  const [answers, setAnswers] = useState<Record<string, string>>(() => {
+    try {
+      const saved = sessionStorage.getItem(`quiz-${assignmentId}-answers`);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -219,7 +227,16 @@ export default function TakeQuiz() {
   }, [currentIndex, answeredCount, quizStatus, assignment?.id, user?.id, questions.length]);
 
   const handleAnswerChange = (questionId: string, answer: string) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: answer }));
+    setAnswers((prev) => {
+      const next = { ...prev, [questionId]: answer };
+      sessionStorage.setItem(`quiz-${assignmentId}-answers`, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleIndexChange = (idx: number) => {
+    setCurrentIndex(idx);
+    sessionStorage.setItem(`quiz-${assignmentId}-index`, String(idx));
   };
 
   const handleSubmit = async () => {
@@ -268,6 +285,9 @@ export default function TakeQuiz() {
       setGradeResults(data.results || {});
       setSubmitted(true);
 
+      // Clear persisted quiz state
+      sessionStorage.removeItem(`quiz-${assignmentId}-answers`);
+      sessionStorage.removeItem(`quiz-${assignmentId}-index`);
       // Log quiz completion with results
       await logComplete('quiz_submission', assignment.id, { 
         quiz_title: assignment.quizzes.title,
@@ -665,7 +685,7 @@ export default function TakeQuiz() {
         <div className="flex justify-between">
           <Button
             variant="outline"
-            onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
+            onClick={() => handleIndexChange(Math.max(0, currentIndex - 1))}
             disabled={currentIndex === 0}
           >
             {isRTL ? <ArrowRight className="w-4 h-4 ml-2" /> : <ArrowLeft className="w-4 h-4 mr-2" />}
@@ -682,7 +702,7 @@ export default function TakeQuiz() {
             </Button>
           ) : (
             <Button
-              onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
+              onClick={() => handleIndexChange(Math.min(questions.length - 1, currentIndex + 1))}
             >
               {isRTL ? 'التالي' : 'Next'}
               {isRTL ? <ArrowLeft className="w-4 h-4 mr-2" /> : <ArrowRight className="w-4 h-4 ml-2" />}
@@ -703,7 +723,7 @@ export default function TakeQuiz() {
                   variant={currentIndex === idx ? 'default' : answers[q.id] ? 'secondary' : 'outline'}
                   size="sm"
                   className={`w-10 h-10 ${answers[q.id] && currentIndex !== idx ? 'bg-green-100 text-green-700 border-green-300' : ''}`}
-                  onClick={() => setCurrentIndex(idx)}
+                  onClick={() => handleIndexChange(idx)}
                 >
                   {idx + 1}
                 </Button>
