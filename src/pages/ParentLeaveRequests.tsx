@@ -127,13 +127,13 @@ export default function ParentLeaveRequests() {
   };
 
   return (
-    <DashboardLayout title={isRTL ? 'طلبات الإجازة' : 'Leave Requests'}>
+    <DashboardLayout title={isRTL ? 'طلبات الإجازة والأعذار' : 'Leave & Absence Requests'}>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-semibold">{isRTL ? 'طلبات الإجازة' : 'Leave Requests'}</h2>
+          <h2 className="text-lg font-semibold">{isRTL ? 'طلبات الإجازة والأعذار' : 'Leave & Absence Requests'}</h2>
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-1" />
-            {isRTL ? 'طلب إجازة جديد' : 'New Leave Request'}
+            {isRTL ? 'طلب جديد' : 'New Request'}
           </Button>
         </div>
 
@@ -167,17 +167,23 @@ export default function ParentLeaveRequests() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                    <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
-                    <TableHead>{isRTL ? 'السبب' : 'Reason'}</TableHead>
-                    <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                    <TableHead>{isRTL ? 'ملاحظات الإدارة' : 'Admin Notes'}</TableHead>
+                     <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                     <TableHead>{isRTL ? 'النوع' : 'Type'}</TableHead>
+                     <TableHead>{isRTL ? 'التاريخ' : 'Date'}</TableHead>
+                     <TableHead>{isRTL ? 'السبب' : 'Reason'}</TableHead>
+                     <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                     <TableHead>{isRTL ? 'ملاحظات الإدارة' : 'Admin Notes'}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {requests.map(req => (
                     <TableRow key={req.id}>
                       <TableCell className="font-medium">{getChildName(req.student_id)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {req.request_type === 'absence_excuse' ? (isRTL ? 'عذر غياب' : 'Absence Excuse') : (isRTL ? 'إجازة' : 'Leave')}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
