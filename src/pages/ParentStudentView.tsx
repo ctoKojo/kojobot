@@ -169,14 +169,37 @@ export default function ParentStudentView() {
     <DashboardLayout title={studentName || ''}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-            {isRTL ? <ArrowRight className="h-5 w-5" /> : <ArrowLeft className="h-5 w-5" />}
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{studentName}</h1>
-            <p className="text-muted-foreground">{profile?.email}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+              {isRTL ? <ArrowRight className="h-5 w-5" /> : <ArrowLeft className="h-5 w-5" />}
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">{studentName}</h1>
+              <p className="text-muted-foreground">{profile?.email}</p>
+            </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const totalSessions = attendance.length;
+              const presentSessions = attendance.filter(a => a.status === 'present').length;
+              const quizScores = quizResults.filter((q: any) => q.percentage != null).map((q: any) => q.percentage);
+              const quizAvg = quizScores.length > 0 ? Math.round(quizScores.reduce((a: number, b: number) => a + b, 0) / quizScores.length) : 0;
+              const assignScores = submissions.filter(a => a.score != null).map(a => a.score);
+              const assignAvg = assignScores.length > 0 ? Math.round(assignScores.reduce((a: number, b: number) => a + b, 0) / assignScores.length) : 0;
+
+              generateStudentReport(
+                { name: studentName || '', email: profile?.email || '' },
+                { attendanceRate, quizAvg, assignmentAvg: assignAvg, totalSessions, presentSessions, warningsCount: 0 },
+                isRTL,
+              );
+            }}
+          >
+            <Printer className="h-4 w-4" />
+            <span className="hidden sm:inline ms-2">{isRTL ? 'تقرير PDF' : 'PDF Report'}</span>
+          </Button>
         </div>
 
         {/* Pending makeup alert */}
