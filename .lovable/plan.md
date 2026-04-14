@@ -1,60 +1,35 @@
 
 
-# خطة: تأكيد الأدمن لحسابات أولياء الأمور لمنع السبام
+## خطة: توحيد صفحة تسجيل الدخول
 
-## الفكرة
-حالياً أي شخص يملك رابط التسجيل (`/parent-login`) يقدر يسجل حساب ولي أمر عبر Google OAuth ويربط أبنائه بأكواد الربط فوراً. الخطة تضيف طبقة تأكيد من الأدمن بحيث ولي الأمر الجديد يبقى "معلّق" حتى يوافق عليه الأدمن/الريسيبشن.
+### الفكرة
+دمج `/auth` و `/parent-login` في صفحة واحدة `/auth` تعرض 3 خيارات للمستخدم قبل تسجيل الدخول:
+- **طالب** (Student) → إيميل + باسورد
+- **موظف** (Staff) → إيميل + باسورد  
+- **ولي أمر** (Parent) → Google OAuth
 
----
+### التغييرات المطلوبة
 
-## 1. Database Migration
+**1. تعديل `src/pages/Auth.tsx`**
+- إضافة state للاختيار: `userType: 'student' | 'staff' | 'parent' | null`
+- عرض 3 كروت اختيار (بأيقونات مميزة) كخطوة أولى
+- عند اختيار "طالب" أو "موظف" → عرض فورم الإيميل والباسورد الحالي
+- عند اختيار "ولي أمر" → عرض زر Google Sign-in (نفس منطق ParentLogin)
+- زر "رجوع" للعودة للاختيار
+- بعد تسجيل دخول ولي أمر بنجاح → redirect لـ `/parent-register` (نفس السلوك الحالي)
 
-- إضافة عمود `is_approved` (boolean, default `false`) إلى جدول `profiles` — يُستخدم فقط لأولياء الأمور.
-- تعديل RLS على `profiles` لو لزم (الأدمن فقط يقدر يغير `is_approved`).
+**2. تعديل `src/components/landing/LandingNavbar.tsx`**
+- تحديث رابط تسجيل الدخول ليشير لـ `/auth` فقط
 
----
+**3. تعديل `src/App.tsx`**
+- إبقاء route `/parent-login` يعمل redirect لـ `/auth` (backward compatibility)
 
-## 2. Edge Function `register-parent` — تعديل
+**4. تعديل `src/pages/Index.tsx`**
+- تحديث أي روابط تشير لـ `/parent-login` لتشير لـ `/auth`
 
-- عند إنشاء بروفايل ولي أمر جديد، يُضبط `is_approved = false` تلقائياً.
-- إرسال إشعار للأدمن/الريسيبشن عبر `notifications` (عنوان: "طلب تسجيل ولي أمر جديد").
-- ولي الأمر لا يزال يقدر يربط الأكواد ويكمل التسجيل لكن حسابه يبقى معلّق.
-
----
-
-## 3. ProtectedRoute — حظر ولي الأمر غير المعتمد
-
-- في قسم `role === 'parent'` داخل `ProtectedRoute.tsx`:
-  - جلب `is_approved` من `profiles`.
-  - لو `is_approved === false` → توجيه لصفحة جديدة `/parent-pending`.
-- إضافة صفحة `ParentPending.tsx` تعرض رسالة: "حسابك قيد المراجعة من الإدارة. سيتم إخطارك عند التفعيل."
-
----
-
-## 4. صفحة Parents.tsx — أزرار الموافقة
-
-- إضافة عمود "الحالة" في الجدول (معتمد / معلّق).
-- أزرار "موافقة" / "رفض" لكل ولي أمر معلّق.
-- عند الموافقة: `UPDATE profiles SET is_approved = true`.
-- عند الموافقة: إرسال إشعار لولي الأمر.
-- فلتر بالحالة (الكل / معلّق / معتمد).
-
----
-
-## 5. إشعار لولي الأمر عند الموافقة
-
-- عند تأكيد الأدمن → إشعار لولي الأمر: "تم تفعيل حسابك! يمكنك الدخول الآن."
-
----
-
-## الملفات المتأثرة
-
-| ملف | تغيير |
-|---|---|
-| Migration جديد | إضافة `is_approved` لـ `profiles` |
-| `supabase/functions/register-parent/index.ts` | ضبط `is_approved = false` + إشعار أدمن |
-| `src/components/ProtectedRoute.tsx` | فحص `is_approved` لأولياء الأمور |
-| `src/pages/ParentPending.tsx` | **جديد** — صفحة انتظار الموافقة |
-| `src/pages/Parents.tsx` | أزرار موافقة/رفض + فلتر الحالة |
-| `src/App.tsx` | Route `/parent-pending` |
+### التفاصيل التقنية
+- الكروت الثلاثة تكون بنفس تصميم الصفحة الحالية (glass effect، gradient background)
+- استخدام `lovable.auth.signInWithOAuth('google')` لولي الأمر
+- ال redirect logic بعد الدخول: ولي أمر بدون role → `/parent-register`، باقي المستخدمين → `/dashboard`
+- دعم RTL/LTR كامل
 
