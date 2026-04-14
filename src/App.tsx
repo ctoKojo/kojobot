@@ -74,8 +74,8 @@ const ProgressionMetrics = React.lazy(() => import("./pages/ProgressionMetrics")
 const MyCertificates = React.lazy(() => import("./pages/MyCertificates"));
 const RenewalRequired = React.lazy(() => import("./pages/RenewalRequired"));
 const ParentStudentView = React.lazy(() => import("./pages/ParentStudentView"));
-const ParentRegister = React.lazy(() => import("./pages/ParentRegister"));
-const ParentLogin = React.lazy(() => import("./pages/ParentLogin"));
+
+
 const Parents = React.lazy(() => import("./pages/Parents"));
 const ParentLeaveRequests = React.lazy(() => import("./pages/ParentLeaveRequests"));
 const LeaveRequests = React.lazy(() => import("./pages/LeaveRequests"));
@@ -166,7 +166,7 @@ const App = () => (
                   <Route path="/account-terminated" element={<AccountTerminated />} />
                   <Route path="/renewal-required" element={<RenewalRequired />} />
                   <Route path="/parent-login" element={<Navigate to="/auth" replace />} />
-                  <Route path="/parent-register" element={<ParentRegister />} />
+                  <Route path="/parent-register" element={<Navigate to="/auth" replace />} />
                   <Route path="/parent/student/:studentId" element={<ProtectedRoute allowedRoles={['parent']}><ParentStudentView /></ProtectedRoute>} />
                   <Route path="/parent-leave-requests" element={<ProtectedRoute allowedRoles={['parent']}><ParentLeaveRequests /></ProtectedRoute>} />
                   <Route path="/leave-requests" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><LeaveRequests /></ProtectedRoute>} />

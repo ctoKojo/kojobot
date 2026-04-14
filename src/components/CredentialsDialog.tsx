@@ -56,7 +56,7 @@ export function CredentialsDialog({ open, onClose, email, password, userName, av
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const parentRegisterLink = linkCode ? `${window.location.origin}/parent-register?code=${linkCode}` : '';
+  const parentRegisterLink = linkCode ? `${window.location.origin}/auth?code=${linkCode}` : '';
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
