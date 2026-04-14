@@ -198,7 +198,7 @@ export default function Parents() {
     }
 
     return (
-      <div className="rounded-md border">
+      <div className="rounded-md border" dir={isRTL ? 'rtl' : 'ltr'}>
         <Table>
           <TableHeader>
             <TableRow>
