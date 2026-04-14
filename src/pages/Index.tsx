@@ -1551,7 +1551,7 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                       marginBottom: 20,
                       minHeight: 60
                     }}>
-                      {l(t.content_en, t.content_ar)}
+                      {t.content_en || t.content_ar}
                     </p>
 
                     {/* Author */}
@@ -1574,11 +1574,11 @@ const Index = ({ lang: routeLang }: IndexProps) => {
                         fontWeight: 700,
                         color: "rgba(240,240,255,.8)"
                       }}>
-                        {(language === "ar" ? t.parent_name_ar || t.parent_name : t.parent_name).charAt(0)}
+                        {t.parent_name.charAt(0)}
                       </div>
                       <div>
                         <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(240,240,255,.85)", margin: 0 }}>
-                          {language === "ar" ? t.parent_name_ar || t.parent_name : t.parent_name}
+                          {t.parent_name}
                         </p>
                         <p style={{ fontSize: 12, color: "rgba(240,240,255,.35)", margin: 0 }}>
                           {language === "ar" ? "ولي أمر" : "Parent"}

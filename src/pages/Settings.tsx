@@ -855,9 +855,7 @@ function TestimonialsSettings({ isRTL }: { isRTL: boolean }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    parent_name: '', parent_name_ar: '', content_en: '', content_ar: '', rating: 5
-  });
+  const [form, setForm] = useState({ parent_name: '', content: '', rating: 5 });
 
   const loadTestimonials = async () => {
     const { data } = await supabase
@@ -871,24 +869,24 @@ function TestimonialsSettings({ isRTL }: { isRTL: boolean }) {
   useEffect(() => { loadTestimonials(); }, []);
 
   const handleAdd = async () => {
-    if (!form.parent_name.trim()) {
-      toast.error(isRTL ? 'ادخل اسم ولي الأمر' : 'Enter parent name');
+    if (!form.parent_name.trim() || !form.content.trim()) {
+      toast.error(isRTL ? 'ادخل الاسم والمحتوى' : 'Enter name and content');
       return;
     }
     setSaving(true);
     try {
       const { error } = await supabase.from('testimonials').insert({
         parent_name: form.parent_name,
-        parent_name_ar: form.parent_name_ar || null,
-        content_en: form.content_en || null,
-        content_ar: form.content_ar || null,
+        parent_name_ar: form.parent_name,
+        content_en: form.content,
+        content_ar: form.content,
         rating: form.rating,
         is_approved: true,
         show_on_landing: true,
         sort_order: testimonials.length
       });
       if (error) throw error;
-      setForm({ parent_name: '', parent_name_ar: '', content_en: '', content_ar: '', rating: 5 });
+      setForm({ parent_name: '', content: '', rating: 5 });
       setShowForm(false);
       await loadTestimonials();
       toast.success(isRTL ? 'تمت الإضافة' : 'Added successfully');
@@ -931,23 +929,13 @@ function TestimonialsSettings({ isRTL }: { isRTL: boolean }) {
       <CardContent className="space-y-4">
         {showForm && (
           <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">{isRTL ? 'الاسم (EN)' : 'Name (EN)'}</Label>
-                <Input value={form.parent_name} onChange={(e) => setForm({...form, parent_name: e.target.value})} />
-              </div>
-              <div>
-                <Label className="text-xs">{isRTL ? 'الاسم (AR)' : 'Name (AR)'}</Label>
-                <Input value={form.parent_name_ar} onChange={(e) => setForm({...form, parent_name_ar: e.target.value})} dir="rtl" />
-              </div>
+            <div>
+              <Label className="text-xs">{isRTL ? 'اسم ولي الأمر' : 'Parent Name'}</Label>
+              <Input value={form.parent_name} onChange={(e) => setForm({...form, parent_name: e.target.value})} placeholder={isRTL ? 'مثال: أحمد محمد' : 'e.g. Ahmed Mohamed'} />
             </div>
             <div>
-              <Label className="text-xs">{isRTL ? 'المحتوى (EN)' : 'Content (EN)'}</Label>
-              <Input value={form.content_en} onChange={(e) => setForm({...form, content_en: e.target.value})} />
-            </div>
-            <div>
-              <Label className="text-xs">{isRTL ? 'المحتوى (AR)' : 'Content (AR)'}</Label>
-              <Input value={form.content_ar} onChange={(e) => setForm({...form, content_ar: e.target.value})} dir="rtl" />
+              <Label className="text-xs">{isRTL ? 'المحتوى' : 'Content'}</Label>
+              <Input value={form.content} onChange={(e) => setForm({...form, content: e.target.value})} placeholder={isRTL ? 'رأي ولي الأمر...' : 'Parent feedback...'} />
             </div>
             <div className="flex items-center gap-3">
               <Label className="text-xs">{isRTL ? 'التقييم' : 'Rating'}</Label>
@@ -978,7 +966,7 @@ function TestimonialsSettings({ isRTL }: { isRTL: boolean }) {
               <div key={t.id} className="flex items-start justify-between gap-3 p-3 border rounded-lg">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm">{isRTL ? t.parent_name_ar || t.parent_name : t.parent_name}</span>
+                    <span className="font-medium text-sm">{t.parent_name}</span>
                     <div className="flex gap-0.5">
                       {Array.from({ length: t.rating }).map((_, i) => (
                         <Star key={i} size={12} fill="#f59e0b" color="#f59e0b" />
@@ -986,7 +974,7 @@ function TestimonialsSettings({ isRTL }: { isRTL: boolean }) {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground truncate">
-                    {isRTL ? t.content_ar || t.content_en : t.content_en || t.content_ar}
+                    {t.content_en || t.content_ar}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
