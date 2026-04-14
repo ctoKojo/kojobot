@@ -386,7 +386,7 @@ export default function MySessions() {
 
                   {!hasContent(s) && (
                     <p className="text-xs text-muted-foreground">
-                      {isRTL ? 'لا يوجد محتوى متاح حالياً' : 'No content available currently'}
+                      {isRTL ? 'المحتوى لسه مترفعش — هيتوفر قريباً' : 'Content not uploaded yet — coming soon'}
                     </p>
                   )}
                 </CardContent>
