@@ -1,0 +1,1 @@
+ALTER TABLE public.quiz_assignments ADD COLUMN extra_minutes integer NOT NULL DEFAULT 0;
