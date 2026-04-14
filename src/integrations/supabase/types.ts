@@ -3004,6 +3004,7 @@ export type Database = {
           created_at: string
           curriculum_snapshot: Json | null
           due_date: string | null
+          extra_minutes: number
           group_id: string | null
           id: string
           is_active: boolean | null
@@ -3018,6 +3019,7 @@ export type Database = {
           created_at?: string
           curriculum_snapshot?: Json | null
           due_date?: string | null
+          extra_minutes?: number
           group_id?: string | null
           id?: string
           is_active?: boolean | null
@@ -3032,6 +3034,7 @@ export type Database = {
           created_at?: string
           curriculum_snapshot?: Json | null
           due_date?: string | null
+          extra_minutes?: number
           group_id?: string | null
           id?: string
           is_active?: boolean | null

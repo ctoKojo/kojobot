@@ -3,9 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Eye, Clock, CheckCircle2, User, Activity } from 'lucide-react';
+import { Eye, Clock, CheckCircle2, User, Activity, TimerReset } from 'lucide-react';
 
 interface LiveProgress {
   id: string;
@@ -33,17 +37,63 @@ interface ExamLiveMonitorProps {
 
 export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
   const { isRTL, language } = useLanguage();
+  const { toast } = useToast();
   const [progressList, setProgressList] = useState<(LiveProgress & { student?: StudentInfo })[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [examEndTime, setExamEndTime] = useState<number | null>(null);
   const [countdown, setCountdown] = useState('');
 
+  // Extend time state
+  const [showExtendDialog, setShowExtendDialog] = useState(false);
+  const [extendMinutes, setExtendMinutes] = useState(30);
+  const [extending, setExtending] = useState(false);
+
+  const handleExtendTime = async () => {
+    if (extendMinutes <= 0) return;
+    setExtending(true);
+    try {
+      // Get all active assignments for this quiz+group
+      const { data: assignments, error } = await supabase
+        .from('quiz_assignments')
+        .select('id, extra_minutes')
+        .eq('quiz_id', quizId)
+        .eq('group_id', groupId)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      if (!assignments?.length) throw new Error('No assignments found');
+
+      // Update each assignment's extra_minutes
+      for (const a of assignments) {
+        const currentExtra = (a as any).extra_minutes || 0;
+        await supabase
+          .from('quiz_assignments')
+          .update({ extra_minutes: currentExtra + extendMinutes } as any)
+          .eq('id', a.id);
+      }
+
+      toast({
+        title: isRTL ? 'تم تمديد الوقت' : 'Time Extended',
+        description: isRTL
+          ? `تم إضافة ${extendMinutes} دقيقة للامتحان`
+          : `Added ${extendMinutes} minutes to the exam`,
+      });
+
+      setShowExtendDialog(false);
+      fetchProgress(); // Refresh to recalculate end time
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: err.message });
+    } finally {
+      setExtending(false);
+    }
+  };
+
   const fetchProgress = async () => {
     // Get all quiz assignments for this quiz+group
     const { data: assignments } = await supabase
       .from('quiz_assignments')
-      .select('id, student_id, start_time, quizzes(duration_minutes)')
+      .select('id, student_id, start_time, extra_minutes, quizzes(duration_minutes)')
       .eq('quiz_id', quizId)
       .eq('group_id', groupId)
       .eq('is_active', true);
@@ -53,12 +103,18 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
       return;
     }
 
-    // Calculate exam end time from first assignment with start_time
-    const firstWithStart = assignments.find(a => a.start_time);
-    if (firstWithStart?.start_time) {
-      const duration = (firstWithStart.quizzes as any)?.duration_minutes || 30;
-      const endMs = new Date(firstWithStart.start_time).getTime() + duration * 60 * 1000;
-      setExamEndTime(endMs);
+    // Calculate exam end time - use max of all students' end times (accounting for individual extra_minutes)
+    let maxEndMs = 0;
+    for (const a of assignments) {
+      if (a.start_time) {
+        const baseDuration = (a.quizzes as any)?.duration_minutes || 30;
+        const extra = (a as any).extra_minutes || 0;
+        const endMs = new Date(a.start_time).getTime() + (baseDuration + extra) * 60 * 1000;
+        if (endMs > maxEndMs) maxEndMs = endMs;
+      }
+    }
+    if (maxEndMs > 0) {
+      setExamEndTime(maxEndMs);
     }
 
     const assignmentIds = assignments.map(a => a.id);
@@ -180,6 +236,7 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
   const notStarted = progressList.filter(p => p.status === 'not_started').length;
 
   return (
+    <>
     <Card className="border-2 border-blue-400/30 dark:border-blue-500/20">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
@@ -197,17 +254,30 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
             </span>
           </div>
         </CardTitle>
-        {/* Countdown timer */}
-        {examEndTime && countdown && (
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-mono text-sm font-bold tabular-nums ${
-            examEndTime - Date.now() <= 5 * 60 * 1000
-              ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 animate-pulse'
-              : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
-          }`}>
-            <Clock className="h-4 w-4" />
-            {isRTL ? `متبقي: ${countdown}` : `Remaining: ${countdown}`}
-          </div>
-        )}
+        {/* Countdown timer + extend button */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {examEndTime && countdown && (
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-mono text-sm font-bold tabular-nums ${
+              examEndTime - Date.now() <= 5 * 60 * 1000
+                ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 animate-pulse'
+                : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+            }`}>
+              <Clock className="h-4 w-4" />
+              {isRTL ? `متبقي: ${countdown}` : `Remaining: ${countdown}`}
+            </div>
+          )}
+          {inProgress > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setShowExtendDialog(true)}
+            >
+              <TimerReset className="h-3.5 w-3.5" />
+              {isRTL ? 'تمديد الوقت' : 'Extend Time'}
+            </Button>
+          )}
+        </div>
         {/* Summary stats */}
         <div className="flex gap-4 text-sm">
           <span className="text-blue-600 dark:text-blue-400 font-medium">{isRTL ? `${inProgress} يحل` : `${inProgress} active`}</span>
@@ -267,5 +337,43 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
         ))}
       </CardContent>
     </Card>
+
+    {/* Extend Time Dialog */}
+    <Dialog open={showExtendDialog} onOpenChange={setShowExtendDialog}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{isRTL ? 'تمديد وقت الامتحان' : 'Extend Exam Time'}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <p className="text-sm text-muted-foreground">
+            {isRTL
+              ? 'أدخل عدد الدقائق الإضافية. سيتم تمديد الوقت لجميع الطلاب في هذه المجموعة.'
+              : 'Enter additional minutes. Time will be extended for all students in this group.'}
+          </p>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              max={120}
+              value={extendMinutes}
+              onChange={e => setExtendMinutes(Number(e.target.value))}
+              className="w-24"
+            />
+            <span className="text-sm text-muted-foreground">{isRTL ? 'دقيقة' : 'minutes'}</span>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setShowExtendDialog(false)}>
+            {isRTL ? 'إلغاء' : 'Cancel'}
+          </Button>
+          <Button onClick={handleExtendTime} disabled={extending || extendMinutes <= 0}>
+            {extending
+              ? (isRTL ? 'جاري التمديد...' : 'Extending...')
+              : (isRTL ? 'تمديد الوقت' : 'Extend Time')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

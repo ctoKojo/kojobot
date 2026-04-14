@@ -107,6 +107,28 @@ export default function TakeQuiz() {
     }
   }, [timeLeft, submitted]);
 
+  // Listen for extra_minutes updates (time extension) in realtime
+  useEffect(() => {
+    if (!assignmentId || submitted) return;
+    const channel = supabase
+      .channel(`quiz-assignment-extend-${assignmentId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'quiz_assignments',
+        filter: `id=eq.${assignmentId}`,
+      }, (payload) => {
+        const newExtra = (payload.new as any).extra_minutes || 0;
+        const oldExtra = (payload.old as any).extra_minutes || 0;
+        const addedMinutes = newExtra - oldExtra;
+        if (addedMinutes > 0) {
+          setTimeLeft(prev => prev + addedMinutes * 60);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [assignmentId, submitted]);
+
   const fetchQuizData = async () => {
     try {
       const { data: assignmentData, error: assignmentError } = await supabase
@@ -134,7 +156,9 @@ export default function TakeQuiz() {
       
       // Calculate quiz status and remaining time based on start_time
       const now = new Date().getTime();
-      const duration = assignmentData.quizzes?.duration_minutes || 30;
+      const baseDuration = assignmentData.quizzes?.duration_minutes || 30;
+      const extraMinutes = (assignmentData as any).extra_minutes || 0;
+      const duration = baseDuration + extraMinutes;
       const durationMs = duration * 60 * 1000;
       
       if (assignmentData.start_time) {
