@@ -63,7 +63,7 @@ interface Instructor {
 export default function MakeupSessionsPage() {
   const { isRTL, language } = useLanguage();
   const { toast } = useToast();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [makeupSessions, setMakeupSessions] = useState<EnrichedMakeupSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
