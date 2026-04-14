@@ -198,7 +198,7 @@ export default function Auth() {
           ? (isRTL ? `تم التسجيل وربط ${data.linked} طالب` : `Registered & linked ${data.linked} student(s)`)
           : (isRTL ? 'تم التسجيل بنجاح! الإدارة هتربط أولادك قريباً' : 'Registered! Admin will link your children soon.');
         toast({ title: isRTL ? 'تم بنجاح!' : 'Success!', description: msg });
-        setTimeout(() => { window.location.href = '/dashboard'; }, 2000);
+        setTimeout(() => { window.location.href = '/parent-pending'; }, 2000);
       }
     } catch {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'خطأ في الاتصال' : 'Connection error' });
