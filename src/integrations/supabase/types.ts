@@ -1030,6 +1030,57 @@ export type Database = {
           },
         ]
       }
+      exam_live_progress: {
+        Row: {
+          answered_count: number
+          current_question_index: number
+          id: string
+          last_activity_at: string
+          quiz_assignment_id: string
+          started_at: string
+          status: string
+          student_id: string
+          total_questions: number
+        }
+        Insert: {
+          answered_count?: number
+          current_question_index?: number
+          id?: string
+          last_activity_at?: string
+          quiz_assignment_id: string
+          started_at?: string
+          status?: string
+          student_id: string
+          total_questions?: number
+        }
+        Update: {
+          answered_count?: number
+          current_question_index?: number
+          id?: string
+          last_activity_at?: string
+          quiz_assignment_id?: string
+          started_at?: string
+          status?: string
+          student_id?: string
+          total_questions?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_live_progress_quiz_assignment_id_fkey"
+            columns: ["quiz_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_live_progress_quiz_assignment_id_fkey"
+            columns: ["quiz_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["quiz_assignment_id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
