@@ -53,12 +53,18 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
       return;
     }
 
-    // Calculate exam end time from first assignment with start_time
-    const firstWithStart = assignments.find(a => a.start_time);
-    if (firstWithStart?.start_time) {
-      const duration = (firstWithStart.quizzes as any)?.duration_minutes || 30;
-      const endMs = new Date(firstWithStart.start_time).getTime() + duration * 60 * 1000;
-      setExamEndTime(endMs);
+    // Calculate exam end time - use max of all students' end times (accounting for individual extra_minutes)
+    let maxEndMs = 0;
+    for (const a of assignments) {
+      if (a.start_time) {
+        const baseDuration = (a.quizzes as any)?.duration_minutes || 30;
+        const extra = (a as any).extra_minutes || 0;
+        const endMs = new Date(a.start_time).getTime() + (baseDuration + extra) * 60 * 1000;
+        if (endMs > maxEndMs) maxEndMs = endMs;
+      }
+    }
+    if (maxEndMs > 0) {
+      setExamEndTime(maxEndMs);
     }
 
     const assignmentIds = assignments.map(a => a.id);
