@@ -168,9 +168,6 @@ export function KojoChatWidget() {
           setIsOpen(false);
           return;
         }
-          });
-          return;
-        }
 
         throw new Error(errData.error || 'Request failed');
       }
