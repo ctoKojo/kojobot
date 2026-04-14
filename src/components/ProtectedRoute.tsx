@@ -161,6 +161,16 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/auth" replace />;
   }
 
+  // Wait for status checks to finish before rendering
+  const statusStillLoading =
+    (role === 'parent' && isParentApproved === null) ||
+    (role === 'student' && (isSuspended === null || hasLevel === null || needsRenewal === null)) ||
+    ((role === 'instructor' || role === 'reception') && isTerminated === null);
+
+  if (statusStillLoading) {
+    return <LoadingScreen />;
+  }
+
   // User is authenticated but has no role
   if (!role) {
     const isGoogleUser = user?.app_metadata?.provider === 'google';
