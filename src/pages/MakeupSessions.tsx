@@ -63,7 +63,7 @@ interface Instructor {
 export default function MakeupSessionsPage() {
   const { isRTL, language } = useLanguage();
   const { toast } = useToast();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [makeupSessions, setMakeupSessions] = useState<EnrichedMakeupSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -151,10 +151,19 @@ export default function MakeupSessionsPage() {
 
   const fetchMakeupSessions = async () => {
     try {
-      const { data: msData, error } = await supabase
+      let query = supabase
         .from('makeup_sessions')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // Instructors only see confirmed makeup sessions assigned to them
+      if (role === 'instructor' && user?.id) {
+        query = query
+          .eq('assigned_instructor_id', user.id)
+          .eq('student_confirmed', true);
+      }
+
+      const { data: msData, error } = await query;
 
       if (error) throw error;
       if (!msData || msData.length === 0) {

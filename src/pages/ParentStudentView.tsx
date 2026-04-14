@@ -108,6 +108,28 @@ export default function ParentStudentView() {
         }
       }
 
+      // Notify assigned instructor when confirmed
+      if (confirmed) {
+        const { data: makeupData } = await supabase
+          .from('makeup_sessions')
+          .select('assigned_instructor_id, scheduled_date, scheduled_time')
+          .eq('id', session.id)
+          .single();
+
+        if (makeupData?.assigned_instructor_id) {
+          await notificationService.create({
+            user_id: makeupData.assigned_instructor_id,
+            title: 'Makeup Session Confirmed',
+            title_ar: 'تأكيد سيشن تعويضية',
+            message: `A makeup session for "${groupName}" on ${makeupData.scheduled_date} at ${makeupData.scheduled_time} has been confirmed.`,
+            message_ar: `تم تأكيد السيشن التعويضية لمجموعة "${groupName}" في ${makeupData.scheduled_date} الساعة ${makeupData.scheduled_time}.`,
+            type: 'success',
+            category: 'makeup_session',
+            action_url: '/makeup-sessions',
+          });
+        }
+      }
+
       toast({ title: confirmed ? (isRTL ? 'تم التأكيد' : 'Confirmed') : (isRTL ? 'تم الرفض' : 'Rejected') });
       // Update local state
       setMakeupSessions(prev => prev.map(s => s.id === session.id ? { ...s, student_confirmed: confirmed } : s));
