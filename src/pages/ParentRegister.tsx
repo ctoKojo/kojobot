@@ -18,7 +18,7 @@ import kojobotLogo from '@/assets/kojobot-main-logo.png';
 export default function ParentRegister() {
   const [codes, setCodes] = useState<string[]>(['']);
   const [fullName, setFullName] = useState('');
-  const [fullNameAr, setFullNameAr] = useState('');
+  
   const [phone, setPhone] = useState('');
   const [relationship, setRelationship] = useState<string>('parent');
   const [isLinking, setIsLinking] = useState(false);
