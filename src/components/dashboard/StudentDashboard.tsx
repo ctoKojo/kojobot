@@ -341,6 +341,9 @@ export function StudentDashboard() {
       {/* Level Passed - Track Selection Banner */}
       {user && <LevelPassedBanner studentId={user.id} onUpgraded={fetchStats} />}
 
+      {/* Final Exam Scheduled Banner */}
+      {user && <FinalExamBanner studentId={user.id} />}
+
       {/* Pending Group Assignment Banner */}
       {user && <PendingGroupBanner studentId={user.id} isRTL={isRTL} />}
 
