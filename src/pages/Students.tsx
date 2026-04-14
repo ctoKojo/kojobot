@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, Eye, UserPlus, AlertCircle, Check, GraduationCap, Users, TrendingUp } from 'lucide-react';
 import { AvatarUpload } from '@/components/AvatarUpload';
