@@ -217,6 +217,17 @@ export default function TakeQuiz() {
     if (!user || !assignment || submitting) return;
     setSubmitting(true);
 
+    // Mark live progress as submitted
+    supabase.from('exam_live_progress').upsert({
+      student_id: user.id,
+      quiz_assignment_id: assignment.id,
+      current_question_index: currentIndex,
+      answered_count: Object.keys(answers).length,
+      total_questions: questions.length,
+      last_activity_at: new Date().toISOString(),
+      status: 'submitted',
+    }, { onConflict: 'student_id,quiz_assignment_id' }).then(() => {});
+
     try {
       // Log quiz start if first submission
       await logStart('quiz_submission', assignment.id, { 
