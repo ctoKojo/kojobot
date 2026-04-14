@@ -197,6 +197,17 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
             </span>
           </div>
         </CardTitle>
+        {/* Countdown timer */}
+        {examEndTime && countdown && (
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-mono text-sm font-bold tabular-nums ${
+            examEndTime - Date.now() <= 5 * 60 * 1000
+              ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 animate-pulse'
+              : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+          }`}>
+            <Clock className="h-4 w-4" />
+            {isRTL ? `متبقي: ${countdown}` : `Remaining: ${countdown}`}
+          </div>
+        )}
         {/* Summary stats */}
         <div className="flex gap-4 text-sm">
           <span className="text-blue-600 dark:text-blue-400 font-medium">{isRTL ? `${inProgress} يحل` : `${inProgress} active`}</span>
