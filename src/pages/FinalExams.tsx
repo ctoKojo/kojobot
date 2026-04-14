@@ -27,6 +27,7 @@ import {
 import { PageHeader } from '@/components/shared/PageHeader';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { QuizResultsDialog } from '@/components/session/QuizResultsDialog';
+import { ExamLiveMonitor } from '@/components/exam/ExamLiveMonitor';
 
 interface ExamCandidate {
   progress_id: string;
