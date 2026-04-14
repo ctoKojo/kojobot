@@ -91,20 +91,12 @@ export default function Parents() {
       });
     }
 
-    // For parents missing profile data, try to get from auth.users via admin query
+    // For parents missing profile data, show fallback
     const missingProfileIds = allParentIds.filter(id => !profileMap.has(id));
-    if (missingProfileIds.length > 0) {
-      // Use a DB function or direct query - for now fetch via the create-user pattern
-      // We'll use supabase.rpc or a simple query
-      const { data: authUsers } = await supabase.rpc('get_parent_auth_info', { parent_ids: missingProfileIds }).maybeSingle() as any;
-      
-      // Fallback: if no RPC, just show parent_id prefix
-      // The real fix is ensuring profiles are created on parent registration
-      for (const pid of missingProfileIds) {
-        if (grouped[pid] && !grouped[pid].full_name && !grouped[pid].email) {
-          grouped[pid].full_name = `Parent (${pid.slice(0, 8)}...)`;
-          grouped[pid].email = '—';
-        }
+    for (const pid of missingProfileIds) {
+      if (grouped[pid] && !grouped[pid].full_name && !grouped[pid].email) {
+        grouped[pid].full_name = isRTL ? 'ولي أمر (بدون بروفايل)' : 'Parent (no profile)';
+        grouped[pid].email = '—';
       }
     }
 
