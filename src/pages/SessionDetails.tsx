@@ -78,6 +78,7 @@ import {
   CheckCircle,
   Loader2,
   RefreshCw,
+  Lock,
 } from 'lucide-react';
 
 interface CurriculumContent {
