@@ -134,7 +134,9 @@ export default function TakeQuiz() {
       
       // Calculate quiz status and remaining time based on start_time
       const now = new Date().getTime();
-      const duration = assignmentData.quizzes?.duration_minutes || 30;
+      const baseDuration = assignmentData.quizzes?.duration_minutes || 30;
+      const extraMinutes = (assignmentData as any).extra_minutes || 0;
+      const duration = baseDuration + extraMinutes;
       const durationMs = duration * 60 * 1000;
       
       if (assignmentData.start_time) {

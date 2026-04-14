@@ -43,7 +43,7 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
     // Get all quiz assignments for this quiz+group
     const { data: assignments } = await supabase
       .from('quiz_assignments')
-      .select('id, student_id, start_time, quizzes(duration_minutes)')
+      .select('id, student_id, start_time, extra_minutes, quizzes(duration_minutes)')
       .eq('quiz_id', quizId)
       .eq('group_id', groupId)
       .eq('is_active', true);
