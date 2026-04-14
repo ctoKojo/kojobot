@@ -24,6 +24,7 @@ export function KojoChatWidget() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [aiAvailable, setAiAvailable] = useState(true);
   const [isNewChat, setIsNewChat] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -83,6 +84,35 @@ export function KojoChatWidget() {
     loadLast();
   }, [isOpen, conversationId, isNewChat, session?.user?.id, loadConversation]);
 
+  // Periodic check to restore widget when AI balance is topped up
+  useEffect(() => {
+    if (aiAvailable || !session?.access_token) return;
+
+    const checkAvailability = async () => {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-with-kojo`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ message: 'ping', conversationId: null }),
+          }
+        );
+        if (res.status !== 402) {
+          setAiAvailable(true);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    const interval = setInterval(checkAvailability, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [aiAvailable, session?.access_token]);
+
   const handleSend = async () => {
     if (!input.trim() || isLoading || !session?.access_token) return;
 
@@ -132,9 +162,11 @@ export function KojoChatWidget() {
         }
 
         if (response.status === 402) {
+          setAiAvailable(false);
+          setIsOpen(false);
           toast({
-            title: isRTL ? 'خطأ' : 'Error',
-            description: isRTL ? 'الخدمة غير متاحة حالياً' : 'Service unavailable',
+            title: isRTL ? 'رصيد الـ AI خلص' : 'AI Balance Exhausted',
+            description: isRTL ? 'الشات بوت مش متاح دلوقتي، هيرجع لما الرصيد يتجدد' : 'Chatbot unavailable until balance is topped up',
             variant: 'destructive',
           });
           return;
