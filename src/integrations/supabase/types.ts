@@ -1758,6 +1758,7 @@ export type Database = {
           parent_id: string
           reason: string
           request_date: string
+          request_type: string
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
@@ -1771,6 +1772,7 @@ export type Database = {
           parent_id: string
           reason: string
           request_date: string
+          request_type?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -1784,6 +1786,7 @@ export type Database = {
           parent_id?: string
           reason?: string
           request_date?: string
+          request_type?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
