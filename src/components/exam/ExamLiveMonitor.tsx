@@ -273,7 +273,10 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
     );
   }
 
-  if (!progressList.length) return null;
+  // Only show monitor when there's active exam activity (someone in progress or recently active)
+  const hasActiveActivity = progressList.some(p => p.status === 'in_progress');
+  const hasRecentSubmission = progressList.some(p => p.status === 'submitted' && p.last_activity_at && (Date.now() - new Date(p.last_activity_at).getTime()) < 30 * 60 * 1000); // within 30 min
+  if (!progressList.length || (!hasActiveActivity && !hasRecentSubmission)) return null;
 
   const inProgress = progressList.filter(p => p.status === 'in_progress').length;
   const submitted = progressList.filter(p => p.status === 'submitted').length;
