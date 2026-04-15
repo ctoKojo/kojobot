@@ -124,6 +124,9 @@ export default function FinalExams() {
 
   const canSchedule = selectedCandidates.length > 0 && selectedGroupIds.size === 1;
 
+  // Reschedule state
+  const [rescheduleCandidate, setRescheduleCandidate] = useState<ExamCandidate | null>(null);
+
   const handleToggleSelect = (progressId: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
