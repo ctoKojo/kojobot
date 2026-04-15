@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Sparkles, Undo2 } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, Undo2, Clock, Target, Loader2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,6 +35,9 @@ interface Quiz {
   id: string;
   title: string;
   title_ar: string;
+  duration_minutes: number;
+  passing_score: number;
+  updated_at: string;
 }
 
 export default function QuizEditor() {
@@ -43,14 +48,10 @@ export default function QuizEditor() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
 
-  // Smart back navigation
   const getBackDestination = () => {
     const state = location.state as any;
     const origin = state?.origin || searchParams.get('origin');
-    if (origin === 'curriculum') {
-      return '/curriculum';
-    }
-    return '/quizzes';
+    return origin === 'curriculum' ? '/curriculum' : '/quizzes';
   };
 
   const sessionId = searchParams.get('sessionId') || '';
@@ -62,6 +63,13 @@ export default function QuizEditor() {
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [undoSnapshot, setUndoSnapshot] = useState<SimplifiedQuestion[] | null>(null);
 
+  // Quiz settings state
+  const [duration, setDuration] = useState(30);
+  const [passingScore, setPassingScore] = useState(60);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsChanged, setSettingsChanged] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string>('');
+
   // Session context for AI generation
   const [sessionHasDescription, setSessionHasDescription] = useState(false);
   const [sessionHasPdfText, setSessionHasPdfText] = useState(false);
@@ -70,7 +78,6 @@ export default function QuizEditor() {
     if (quizId) fetchData();
   }, [quizId]);
 
-  // Auto-open AI dialog if openAi=true in URL
   useEffect(() => {
     if (searchParams.get('openAi') === 'true' && !loading && sessionId) {
       setAiDialogOpen(true);
@@ -81,12 +88,16 @@ export default function QuizEditor() {
     try {
       const { data: quizData, error: quizError } = await supabase
         .from('quizzes')
-        .select('id, title, title_ar')
+        .select('id, title, title_ar, duration_minutes, passing_score, updated_at')
         .eq('id', quizId)
         .single();
 
       if (quizError) throw quizError;
       setQuiz(quizData);
+      setDuration(quizData.duration_minutes);
+      setPassingScore(quizData.passing_score);
+      setLastUpdatedAt(quizData.updated_at);
+      setSettingsChanged(false);
 
       const { data: questionsData, error: questionsError } = await supabase
         .from('quiz_questions')
@@ -122,7 +133,6 @@ export default function QuizEditor() {
       
       setQuestions(formattedQuestions);
 
-      // Fetch session info for AI context
       if (sessionId) {
         const [sessionRes, assetRes] = await Promise.all([
           supabase.from('curriculum_sessions').select('description_ar').eq('id', sessionId).single(),
@@ -150,10 +160,7 @@ export default function QuizEditor() {
   };
 
   const handleAiQuestionsGenerated = (aiQuestions: any[]) => {
-    // Save undo snapshot
     setUndoSnapshot([...questions]);
-    
-    // Convert AI format to SimplifiedQuestion format
     const converted: SimplifiedQuestion[] = aiQuestions.map((q, idx) => ({
       question_text: q.question_text_ar,
       question_text_ar: q.question_text_ar,
@@ -163,7 +170,6 @@ export default function QuizEditor() {
       order_index: questions.length + idx,
       code_snippet: q.code_snippet || undefined,
     }));
-
     setQuestions(prev => [...prev, ...converted]);
     toast({
       title: isRTL ? 'تمت الإضافة' : 'Added',
@@ -182,7 +188,56 @@ export default function QuizEditor() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSaveSettings = async () => {
+    if (!quizId || savingSettings) return;
+    setSavingSettings(true);
+    try {
+      // Conflict detection: check updated_at
+      const { data: current } = await supabase
+        .from('quizzes')
+        .select('updated_at')
+        .eq('id', quizId)
+        .single();
+
+      if (current && lastUpdatedAt && current.updated_at !== lastUpdatedAt) {
+        toast({
+          variant: 'destructive',
+          title: isRTL ? 'تعارض!' : 'Conflict!',
+          description: isRTL
+            ? 'تم تعديل الإعدادات من مكان آخر. سيتم تحديث البيانات.'
+            : 'Settings were modified elsewhere. Refreshing data.',
+        });
+        await fetchData();
+        setSavingSettings(false);
+        return;
+      }
+
+      const newUpdatedAt = new Date().toISOString();
+      const { error } = await supabase
+        .from('quizzes')
+        .update({
+          duration_minutes: duration,
+          passing_score: passingScore,
+          updated_at: newUpdatedAt,
+        } as any)
+        .eq('id', quizId);
+      if (error) throw error;
+
+      setLastUpdatedAt(newUpdatedAt);
+      setSettingsChanged(false);
+      toast({ title: isRTL ? 'تم حفظ الإعدادات' : 'Settings saved' });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: error.message,
+      });
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const handleSaveQuestions = async () => {
     if (!quizId || saving) return;
     setSaving(true);
 
@@ -219,10 +274,7 @@ export default function QuizEditor() {
 
       setUndoSnapshot(null);
       logUpdate('quiz', quizId, { questions_count: questions.length });
-
-      // Navigate back - if coming from curriculum, go back to curriculum
-      const backDest = getBackDestination();
-      navigate(backDest);
+      navigate(getBackDestination());
     } catch (error) {
       console.error('Error saving questions:', error);
       toast({
@@ -233,6 +285,16 @@ export default function QuizEditor() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDurationChange = (val: number) => {
+    setDuration(val);
+    setSettingsChanged(true);
+  };
+
+  const handlePassingScoreChange = (val: number) => {
+    setPassingScore(val);
+    setSettingsChanged(true);
   };
 
   if (loading) {
@@ -280,12 +342,56 @@ export default function QuizEditor() {
                 {isRTL ? 'تراجع' : 'Undo'}
               </Button>
             )}
-            <Button className="kojo-gradient" onClick={handleSave} disabled={saving}>
+            <Button className="kojo-gradient" onClick={handleSaveQuestions} disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
-              {saving ? t.common.loading : t.common.save}
+              {saving ? t.common.loading : (isRTL ? 'حفظ الأسئلة' : 'Save Questions')}
             </Button>
           </div>
         </div>
+
+        {/* Quiz Settings Card */}
+        <Card className="border-primary/20">
+          <CardContent className="py-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+              <div className="flex items-center gap-4 flex-1 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <Label className="text-sm whitespace-nowrap">{isRTL ? 'المدة (دقيقة)' : 'Duration (min)'}</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={300}
+                    value={duration}
+                    onChange={(e) => handleDurationChange(Number(e.target.value) || 1)}
+                    className="w-20 h-8"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4 text-muted-foreground" />
+                  <Label className="text-sm whitespace-nowrap">{isRTL ? 'درجة النجاح (%)' : 'Pass Score (%)'}</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={passingScore}
+                    onChange={(e) => handlePassingScoreChange(Number(e.target.value) || 0)}
+                    className="w-20 h-8"
+                  />
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSaveSettings}
+                disabled={!settingsChanged || savingSettings}
+                className="gap-2"
+              >
+                {savingSettings ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                {isRTL ? 'حفظ الإعدادات' : 'Save Settings'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Questions Editor */}
         <SimplifiedQuestionEditor
