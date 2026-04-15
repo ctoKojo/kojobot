@@ -765,38 +765,6 @@ export default function FinalExams() {
                     />
                   </div>
                 </div>
-
-                {/* Quiz actual duration */}
-                <Separator />
-                <div className="grid gap-1.5">
-                  <Label htmlFor="quiz-duration" className="text-sm font-medium flex items-center gap-1.5">
-                    <Timer className="h-3.5 w-3.5 text-primary" />
-                    {isRTL ? 'مدة الامتحان الفعلية (دقيقة)' : 'Actual Exam Duration (min)'}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {isRTL ? 'هذه المدة هي التي يراها الطالب كتايمر أثناء الامتحان' : 'This is the timer duration the student sees during the exam'}
-                  </p>
-                  {loadingQuizDuration ? (
-                    <div className="h-9 bg-muted animate-pulse rounded-md" />
-                  ) : (
-                    <Input
-                      id="quiz-duration"
-                      type="number"
-                      min={5}
-                      max={300}
-                      value={quizDuration ?? ''}
-                      onChange={e => setQuizDuration(Number(e.target.value) || 5)}
-                      className="bg-card"
-                    />
-                  )}
-                  {quizDuration != null && originalQuizDuration != null && quizDuration !== originalQuizDuration && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                      {isRTL
-                        ? `سيتم تحديث المدة من ${originalQuizDuration} إلى ${quizDuration} دقيقة`
-                        : `Duration will be updated from ${originalQuizDuration} to ${quizDuration} min`}
-                    </p>
-                  )}
-                </div>
               </div>
             </div>
             <DialogFooter className="gap-2 sm:gap-0">
