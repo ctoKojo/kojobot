@@ -17,6 +17,7 @@ import { LanguageToggle } from '@/components/LanguageToggle';
 import { lovable } from '@/integrations/lovable/index';
 import { supabase } from '@/integrations/supabase/client';
 import { resetStatusCache } from '@/components/ProtectedRoute';
+import { clearPendingStudentLogin, markPendingStudentLogin, markStudentSession } from '@/lib/studentSession';
 import kojobotLogo from '@/assets/kojobot-main-logo.png';
 
 const loginSchema = z.object({
@@ -132,10 +133,13 @@ export default function Auth() {
       if (userType === 'student') {
         await supabase.auth.signOut();
         resetStatusCache();
+        clearPendingStudentLogin();
+        markPendingStudentLogin();
       }
 
       const { error } = await signIn(data.email, data.password);
       if (error) {
+        clearPendingStudentLogin();
         toast({ variant: 'destructive', title: t.common.error, description: t.auth.loginError });
         return;
       }
@@ -155,6 +159,7 @@ export default function Auth() {
       if (userType === 'student' && !isStudentRole) {
         await supabase.auth.signOut();
         resetStatusCache();
+        clearPendingStudentLogin();
         toast({
           variant: 'destructive',
           title: isRTL ? 'خطأ' : 'Error',
@@ -163,9 +168,18 @@ export default function Auth() {
         return;
       }
 
+      if (isStudentRole) {
+        const signedInUserId = (await supabase.auth.getUser()).data.user?.id;
+        if (signedInUserId) {
+          markStudentSession(signedInUserId);
+        }
+        clearPendingStudentLogin();
+      }
+
       if (userType === 'staff' && !isStaffRole) {
         await supabase.auth.signOut();
         resetStatusCache();
+        clearPendingStudentLogin();
         toast({
           variant: 'destructive',
           title: isRTL ? 'خطأ' : 'Error',
@@ -174,6 +188,7 @@ export default function Auth() {
         return;
       }
     } catch {
+      clearPendingStudentLogin();
       toast({ variant: 'destructive', title: t.common.error, description: t.auth.loginError });
     } finally {
       setIsLoading(false);

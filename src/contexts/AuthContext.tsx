@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logLogin, logLogout } from '@/lib/activityLogger';
 import { resetStatusCache } from '@/components/ProtectedRoute';
+import { clearPendingStudentLogin, clearStudentSessionState, hasActiveStudentSession, hasPendingStudentLogin, markStudentSession } from '@/lib/studentSession';
 
 type AppRole = 'admin' | 'instructor' | 'student' | 'reception' | 'parent';
 
@@ -63,6 +64,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(nextUser);
 
       if (!nextUser) {
+        clearStudentSessionState();
         setRole(null);
         setRoleLoading(false);
         setLoading(false);
@@ -73,6 +75,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const fetchedRole = await fetchUserRole(nextUser.id);
 
       if (!isMounted || authRequestRef.current !== requestId) return;
+
+      if (fetchedRole === 'student') {
+        const hasStudentTabSession = hasActiveStudentSession(nextUser.id);
+        const isFreshStudentLogin = hasPendingStudentLogin();
+
+        if (!hasStudentTabSession && !isFreshStudentLogin) {
+          clearPendingStudentLogin();
+          clearStudentSessionState();
+          resetStatusCache();
+          await supabase.auth.signOut();
+
+          if (!isMounted || authRequestRef.current !== requestId) return;
+
+          setSession(null);
+          setUser(null);
+          setRole(null);
+          setRoleLoading(false);
+          setLoading(false);
+          return;
+        }
+
+        markStudentSession(nextUser.id);
+        clearPendingStudentLogin();
+      } else {
+        clearStudentSessionState();
+      }
 
       setRole(fetchedRole);
       setRoleLoading(false);
@@ -103,6 +131,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await logLogout();
     await supabase.auth.signOut();
     resetStatusCache();
+    clearStudentSessionState();
     setUser(null);
     setSession(null);
     setRole(null);
