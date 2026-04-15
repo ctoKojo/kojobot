@@ -253,20 +253,24 @@ serve(async (req) => {
 
     // ── Save submission (UNIQUE constraint prevents duplicates) ──────
     const studentId = force ? assignment.student_id : userId
+    const submissionPayload = {
+      quiz_assignment_id,
+      student_id: studentId,
+      answers: validatedAnswers,
+      score,
+      max_score: maxScore,
+      status: 'submitted',
+      submitted_at: new Date().toISOString(),
+      grading_status: gradingStatus,
+      manual_score: 0,
+    }
+
+    console.log('quiz_submissions insert payload keys:', Object.keys(submissionPayload))
+
     const { data: submission, error: submissionError } = await adminSupabase
       .from('quiz_submissions')
-      .insert({
-        quiz_assignment_id,
-        student_id: studentId,
-        answers: validatedAnswers,
-        score,
-        max_score: maxScore,
-        status: 'submitted',
-        submitted_at: new Date().toISOString(),
-        grading_status: gradingStatus,
-        manual_score: 0,
-      })
-      .select()
+      .insert(submissionPayload)
+      .select('id, score, max_score, percentage, grading_status')
       .single()
 
     if (submissionError) {
