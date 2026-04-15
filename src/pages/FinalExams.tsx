@@ -72,10 +72,6 @@ export default function FinalExams() {
   const [scheduleDuration, setScheduleDuration] = useState(30);
   const [scheduling, setScheduling] = useState(false);
 
-  // Quiz duration editing
-  const [quizDuration, setQuizDuration] = useState<number | null>(null);
-  const [originalQuizDuration, setOriginalQuizDuration] = useState<number | null>(null);
-  const [loadingQuizDuration, setLoadingQuizDuration] = useState(false);
 
   // Grading dialog
   const [showGradingDialog, setShowGradingDialog] = useState(false);
