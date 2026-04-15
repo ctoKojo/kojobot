@@ -151,6 +151,18 @@ export default function FinalExams() {
     }
   };
 
+  const fetchQuizDuration = async (quizId: string) => {
+    setLoadingQuizDuration(true);
+    try {
+      const { data } = await supabase.from('quizzes').select('duration_minutes').eq('id', quizId).single();
+      if (data) {
+        setQuizDuration(data.duration_minutes);
+        setOriginalQuizDuration(data.duration_minutes);
+      }
+    } catch { /* ignore */ }
+    finally { setLoadingQuizDuration(false); }
+  };
+
   const handleOpenScheduleDialog = () => {
     if (!canSchedule) return;
     const firstCandidate = selectedCandidates[0];
@@ -165,6 +177,7 @@ export default function FinalExams() {
       return;
     }
     setRescheduleCandidate(null);
+    fetchQuizDuration(firstCandidate.final_exam_quiz_id);
     setShowScheduleDialog(true);
   };
 
