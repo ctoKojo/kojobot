@@ -281,6 +281,10 @@ export default function QuizzesPage() {
                             <ListChecks className="h-4 w-4 mr-2" />
                             {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleOpenSettings(quiz)}>
+                            <Settings2 className="h-4 w-4 mr-2" />
+                            {isRTL ? 'إعدادات الكويز' : 'Quiz Settings'}
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
@@ -366,6 +370,10 @@ export default function QuizzesPage() {
                               <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
                                 <ListChecks className="h-4 w-4 mr-2" />
                                 {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenSettings(quiz)}>
+                                <Settings2 className="h-4 w-4 mr-2" />
+                                {isRTL ? 'إعدادات الكويز' : 'Quiz Settings'}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
