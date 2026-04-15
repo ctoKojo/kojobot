@@ -472,7 +472,7 @@ export default function FinalExams() {
                                 )}
                               </div>
 
-                              {/* Grade button */}
+                              {/* Action buttons */}
                               {isAdmin && c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id && (
                                 <Button
                                   variant="outline"
@@ -482,6 +482,17 @@ export default function FinalExams() {
                                 >
                                   <FileText className="h-3.5 w-3.5" />
                                   {isRTL ? 'تصحيح الامتحان' : 'Grade Exam'}
+                                </Button>
+                              )}
+                              {isAdmin && c.status === 'exam_scheduled' && !c.exam_submitted_at && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="gap-1.5 mt-2.5 w-full"
+                                  onClick={(e) => { e.stopPropagation(); handleOpenReschedule(c); }}
+                                >
+                                  <CalendarClock className="h-3.5 w-3.5" />
+                                  {isRTL ? 'إعادة جدولة' : 'Reschedule'}
                                 </Button>
                               )}
                             </div>
