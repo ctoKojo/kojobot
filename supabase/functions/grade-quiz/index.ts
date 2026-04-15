@@ -260,7 +260,6 @@ serve(async (req) => {
         answers: validatedAnswers,
         score,
         max_score: maxScore,
-        percentage: hasOpenEnded ? null : percentage,
         status: 'submitted',
         submitted_at: new Date().toISOString(),
         grading_status: gradingStatus,
