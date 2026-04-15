@@ -128,6 +128,31 @@ export default function QuizzesPage() {
     return level ? (language === 'ar' ? level.name_ar : level.name) : '-';
   };
 
+  const handleOpenSettings = (quiz: Quiz) => {
+    setEditQuiz(quiz);
+    setEditDuration(quiz.duration_minutes);
+    setEditPassingScore(quiz.passing_score);
+  };
+
+  const handleSaveSettings = async () => {
+    if (!editQuiz) return;
+    setSavingSettings(true);
+    try {
+      const { error } = await supabase
+        .from('quizzes')
+        .update({ duration_minutes: editDuration, passing_score: editPassingScore } as any)
+        .eq('id', editQuiz.id);
+      if (error) throw error;
+      setQuizzes(prev => prev.map(q => q.id === editQuiz.id ? { ...q, duration_minutes: editDuration, passing_score: editPassingScore } : q));
+      setEditQuiz(null);
+      toast({ title: isRTL ? 'تم الحفظ' : 'Saved' });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: err.message });
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   const totalQuizzes = quizzes.length;
   const linkedCount = quizzes.filter(q => curriculumMap.has(q.id)).length;
   const unlinkedCount = totalQuizzes - linkedCount;
