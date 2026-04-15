@@ -91,11 +91,15 @@ export function SchedulePlacementDialog({
     setLoading(true);
     try {
       // Cancel any existing active v2 schedules
-      await supabase
+      const { error: cancelError } = await supabase
         .from('placement_v2_schedules')
-        .update({ status: 'expired' } as any)
+        .update({ status: 'expired' })
         .eq('student_id', studentId)
         .in('status', ['scheduled', 'open']);
+
+      if (cancelError) {
+        console.error('Cancel old schedules error:', cancelError);
+      }
 
       // Create new v2 schedule
       const { error } = await supabase
@@ -107,7 +111,7 @@ export function SchedulePlacementDialog({
           closes_at: closesAt.toISOString(),
           notes: notes || null,
           status: 'scheduled',
-        } as any);
+        });
 
       if (error) throw error;
 
