@@ -128,13 +128,14 @@ export default function Auth() {
   const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
+      // First sign-in to verify credentials and fetch server-side role
       const { error } = await signIn(data.email, data.password);
       if (error) {
         toast({ variant: 'destructive', title: t.common.error, description: t.auth.loginError });
         return;
       }
 
-      // Verify role matches selected user type
+      // Verify role from server (not from UI userType)
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('role')
@@ -146,6 +147,7 @@ export default function Auth() {
       const isStaffRole = fetchedRole && staffRoles.includes(fetchedRole);
       const isStudentRole = fetchedRole === 'student';
 
+      // Role mismatch checks
       if (userType === 'student' && !isStudentRole) {
         await supabase.auth.signOut();
         toast({
@@ -164,6 +166,19 @@ export default function Auth() {
           description: isRTL ? 'هذا الحساب ليس حساب موظف' : 'This is not a staff account',
         });
         return;
+      }
+
+      // If server confirmed this is a student, clear stale session & re-authenticate
+      // This ensures shared academy devices start fresh for each student
+      if (isStudentRole) {
+        await supabase.auth.signOut();
+        resetStatusCache();
+        // Re-sign in with clean state
+        const { error: reSignInError } = await signIn(data.email, data.password);
+        if (reSignInError) {
+          toast({ variant: 'destructive', title: t.common.error, description: t.auth.loginError });
+          return;
+        }
       }
     } catch {
       toast({ variant: 'destructive', title: t.common.error, description: t.auth.loginError });
