@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Eye, Clock, CheckCircle2, User, Activity, TimerReset } from 'lucide-react';
+import { Eye, Clock, CheckCircle2, User, Activity, TimerReset, Send, AlertTriangle } from 'lucide-react';
 
 interface LiveProgress {
   id: string;
@@ -21,6 +22,7 @@ interface LiveProgress {
   started_at: string;
   last_activity_at: string;
   status: string;
+  draft_answers?: Record<string, unknown>;
 }
 
 interface StudentInfo {
@@ -38,6 +40,7 @@ interface ExamLiveMonitorProps {
 export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
   const { isRTL, language } = useLanguage();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [progressList, setProgressList] = useState<(LiveProgress & { student?: StudentInfo })[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,11 +52,13 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
   const [extendMinutes, setExtendMinutes] = useState(30);
   const [extending, setExtending] = useState(false);
 
+  // Force submit state
+  const [forceSubmitting, setForceSubmitting] = useState<string | null>(null);
+
   const handleExtendTime = async () => {
     if (extendMinutes <= 0) return;
     setExtending(true);
     try {
-      // Get all active assignments for this quiz+group
       const { data: assignments, error } = await supabase
         .from('quiz_assignments')
         .select('id, extra_minutes')
@@ -64,7 +69,6 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
       if (error) throw error;
       if (!assignments?.length) throw new Error('No assignments found');
 
-      // Update each assignment's extra_minutes
       for (const a of assignments) {
         const currentExtra = (a as any).extra_minutes || 0;
         await supabase
@@ -81,7 +85,7 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
       });
 
       setShowExtendDialog(false);
-      fetchProgress(); // Refresh to recalculate end time
+      fetchProgress();
     } catch (err: any) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: err.message });
     } finally {
@@ -89,8 +93,40 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
     }
   };
 
+  const handleForceSubmit = async (studentId: string, assignmentId: string) => {
+    if (forceSubmitting) return; // Prevent double-click
+    setForceSubmitting(studentId);
+    try {
+      const { data, error } = await supabase.functions.invoke('grade-quiz', {
+        body: {
+          quiz_assignment_id: assignmentId,
+          answers: {}, // Empty — server will use draft_answers
+          force: true,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: isRTL ? 'تم تسليم الامتحان' : 'Exam Submitted',
+        description: isRTL
+          ? `تم تسليم الامتحان بنجاح. الدرجة: ${data?.score ?? '?'}/${data?.maxScore ?? '?'}`
+          : `Exam submitted successfully. Score: ${data?.score ?? '?'}/${data?.maxScore ?? '?'}`,
+      });
+
+      fetchProgress();
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: isRTL ? 'خطأ' : 'Error',
+        description: err.message || (isRTL ? 'فشل في تسليم الامتحان' : 'Failed to submit exam'),
+      });
+    } finally {
+      setForceSubmitting(null);
+    }
+  };
+
   const fetchProgress = async () => {
-    // Get all quiz assignments for this quiz+group
     const { data: assignments } = await supabase
       .from('quiz_assignments')
       .select('id, student_id, start_time, extra_minutes, quizzes(duration_minutes)')
@@ -103,7 +139,6 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
       return;
     }
 
-    // Calculate exam end time - use max of all students' end times (accounting for individual extra_minutes)
     let maxEndMs = 0;
     for (const a of assignments) {
       if (a.start_time) {
@@ -113,20 +148,16 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
         if (endMs > maxEndMs) maxEndMs = endMs;
       }
     }
-    if (maxEndMs > 0) {
-      setExamEndTime(maxEndMs);
-    }
+    if (maxEndMs > 0) setExamEndTime(maxEndMs);
 
     const assignmentIds = assignments.map(a => a.id);
     const studentIds = assignments.map(a => a.student_id);
 
-    // Get live progress
     const { data: progress } = await supabase
       .from('exam_live_progress')
       .select('*')
       .in('quiz_assignment_id', assignmentIds);
 
-    // Get student profiles
     const { data: profiles } = await supabase
       .from('profiles')
       .select('user_id, full_name, full_name_ar, avatar_url')
@@ -134,10 +165,20 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
 
     const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-    // Merge: show all assigned students, with progress if available
+    // Check existing submissions
+    const { data: submissions } = await supabase
+      .from('quiz_submissions')
+      .select('quiz_assignment_id')
+      .in('quiz_assignment_id', assignmentIds);
+
+    const submittedAssignments = new Set(submissions?.map(s => s.quiz_assignment_id) || []);
+
     const merged = assignments.map(a => {
       const prog = progress?.find(p => p.quiz_assignment_id === a.id);
       const student = profileMap.get(a.student_id);
+      const hasSubmission = submittedAssignments.has(a.id);
+      const draftAnswers = (prog as any)?.draft_answers || {};
+
       return {
         id: prog?.id || a.id,
         student_id: a.student_id,
@@ -147,7 +188,8 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
         total_questions: prog?.total_questions || 0,
         started_at: prog?.started_at || '',
         last_activity_at: prog?.last_activity_at || '',
-        status: prog?.status || 'not_started',
+        status: hasSubmission ? 'submitted' : (prog?.status || 'not_started'),
+        draft_answers: draftAnswers,
         student,
       };
     });
@@ -180,7 +222,6 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
   useEffect(() => {
     fetchProgress();
 
-    // Subscribe to realtime updates
     const channel = supabase
       .channel('exam-live-progress')
       .on('postgres_changes', {
@@ -218,6 +259,9 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
         return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />{isRTL ? 'لم يبدأ' : 'Not Started'}</Badge>;
     }
   };
+
+  // Check if time is up (for showing force submit)
+  const isTimeUp = examEndTime ? Date.now() > examEndTime : false;
 
   if (loading) {
     return (
@@ -291,50 +335,88 @@ export function ExamLiveMonitor({ quizId, groupId }: ExamLiveMonitorProps) {
             const order = { in_progress: 0, not_started: 1, submitted: 2 };
             return (order[a.status as keyof typeof order] ?? 1) - (order[b.status as keyof typeof order] ?? 1);
           })
-          .map((p) => (
-          <div
-            key={p.quiz_assignment_id}
-            className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-              p.status === 'in_progress' ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800' :
-              p.status === 'submitted' ? 'bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-800' :
-              'bg-muted/30 border-border'
-            }`}
-          >
-            <Avatar className="h-9 w-9 flex-shrink-0">
-              <AvatarImage src={p.student?.avatar_url || undefined} />
-              <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
-                {getName(p.student)?.charAt(0) || <User className="h-4 w-4" />}
-              </AvatarFallback>
-            </Avatar>
+          .map((p) => {
+            const draftCount = p.draft_answers ? Object.keys(p.draft_answers).length : 0;
+            const canForceSubmit = isTimeUp && p.status !== 'submitted' && draftCount > 0;
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-medium text-sm truncate">{getName(p.student)}</span>
-                {getStatusBadge(p.status)}
-              </div>
+            return (
+              <div
+                key={p.quiz_assignment_id}
+                className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                  p.status === 'in_progress' ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800' :
+                  p.status === 'submitted' ? 'bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-800' :
+                  'bg-muted/30 border-border'
+                }`}
+              >
+                <Avatar className="h-9 w-9 flex-shrink-0">
+                  <AvatarImage src={p.student?.avatar_url || undefined} />
+                  <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
+                    {getName(p.student)?.charAt(0) || <User className="h-4 w-4" />}
+                  </AvatarFallback>
+                </Avatar>
 
-              {p.status === 'in_progress' && p.total_questions > 0 && (
-                <div className="flex items-center gap-2">
-                  <Progress value={(p.answered_count / p.total_questions) * 100} className="h-2 flex-1" />
-                  <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums">
-                    {p.answered_count}/{p.total_questions}
-                  </span>
-                  {p.last_activity_at && (
-                    <span className="text-[10px] text-muted-foreground/60">
-                      {getTimeSinceActivity(p.last_activity_at)}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-sm truncate">{getName(p.student)}</span>
+                    {getStatusBadge(p.status)}
+                  </div>
+
+                  {p.status === 'in_progress' && p.total_questions > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Progress value={(p.answered_count / p.total_questions) * 100} className="h-2 flex-1" />
+                      <span className="text-xs text-muted-foreground whitespace-nowrap tabular-nums">
+                        {p.answered_count}/{p.total_questions}
+                        {draftCount > 0 && (
+                          <span className="text-green-600 dark:text-green-400 ms-1" title={isRTL ? 'محفوظ على السيرفر' : 'Saved on server'}>
+                            (💾{draftCount})
+                          </span>
+                        )}
+                      </span>
+                      {p.last_activity_at && (
+                        <span className="text-[10px] text-muted-foreground/60">
+                          {getTimeSinceActivity(p.last_activity_at)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {p.status === 'submitted' && p.total_questions > 0 && (
+                    <span className="text-xs text-green-600 dark:text-green-400">
+                      {isRTL ? `أجاب على ${p.answered_count} من ${p.total_questions}` : `Answered ${p.answered_count}/${p.total_questions}`}
                     </span>
                   )}
-                </div>
-              )}
 
-              {p.status === 'submitted' && p.total_questions > 0 && (
-                <span className="text-xs text-green-600 dark:text-green-400">
-                  {isRTL ? `أجاب على ${p.answered_count} من ${p.total_questions}` : `Answered ${p.answered_count}/${p.total_questions}`}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
+                  {/* Force Submit button */}
+                  {canForceSubmit && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="mt-2 gap-1.5 text-xs h-7"
+                      onClick={() => handleForceSubmit(p.student_id, p.quiz_assignment_id)}
+                      disabled={forceSubmitting === p.student_id}
+                    >
+                      {forceSubmitting === p.student_id ? (
+                        <>{isRTL ? 'جاري التسليم...' : 'Submitting...'}</>
+                      ) : (
+                        <>
+                          <Send className="h-3 w-3" />
+                          {isRTL ? `تسليم إجباري (${draftCount} إجابة)` : `Force Submit (${draftCount} answers)`}
+                        </>
+                      )}
+                    </Button>
+                  )}
+
+                  {/* Warning: time up, no draft */}
+                  {isTimeUp && p.status !== 'submitted' && draftCount === 0 && (
+                    <div className="flex items-center gap-1 mt-1 text-xs text-red-500">
+                      <AlertTriangle className="h-3 w-3" />
+                      {isRTL ? 'لا توجد إجابات محفوظة' : 'No saved answers'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
       </CardContent>
     </Card>
 
