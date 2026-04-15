@@ -159,6 +159,20 @@ export default function FinalExams() {
       });
       return;
     }
+    setRescheduleCandidate(null);
+    setShowScheduleDialog(true);
+  };
+
+  const handleOpenReschedule = (candidate: ExamCandidate) => {
+    if (!candidate.final_exam_quiz_id) return;
+    setRescheduleCandidate(candidate);
+    // Pre-fill with existing schedule
+    if (candidate.exam_scheduled_at) {
+      const d = new Date(candidate.exam_scheduled_at);
+      setScheduleDate(d.toISOString().split('T')[0]);
+      setScheduleTime(d.toTimeString().slice(0, 5));
+    }
+    setSelectedIds(new Set([candidate.progress_id]));
     setShowScheduleDialog(true);
   };
 
