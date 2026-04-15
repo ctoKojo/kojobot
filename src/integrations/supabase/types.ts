@@ -5117,6 +5117,10 @@ export type Database = {
         }
         Returns: number
       }
+      pg_advisory_xact_lock_wrapper: {
+        Args: { lock_key: string }
+        Returns: undefined
+      }
       publish_curriculum: {
         Args: { p_age_group_id: string; p_level_id: string }
         Returns: Json
