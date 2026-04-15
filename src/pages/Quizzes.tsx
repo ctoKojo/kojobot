@@ -62,6 +62,13 @@ export default function QuizzesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [linkFilter, setLinkFilter] = useState<'all' | 'linked' | 'unlinked'>('all');
 
+  // Quiz settings edit
+  const [editQuiz, setEditQuiz] = useState<Quiz | null>(null);
+  const [editDuration, setEditDuration] = useState(30);
+  const [editPassingScore, setEditPassingScore] = useState(60);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const { toast } = useToast();
+
   useEffect(() => {
     fetchData();
   }, []);
