@@ -139,6 +139,7 @@ export default function Auth() {
 
       const { error } = await signIn(data.email, data.password);
       if (error) {
+        clearPendingStudentLogin();
         toast({ variant: 'destructive', title: t.common.error, description: t.auth.loginError });
         return;
       }
