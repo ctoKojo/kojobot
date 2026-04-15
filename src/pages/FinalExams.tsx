@@ -124,6 +124,9 @@ export default function FinalExams() {
 
   const canSchedule = selectedCandidates.length > 0 && selectedGroupIds.size === 1;
 
+  // Reschedule state
+  const [rescheduleCandidate, setRescheduleCandidate] = useState<ExamCandidate | null>(null);
+
   const handleToggleSelect = (progressId: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -156,6 +159,20 @@ export default function FinalExams() {
       });
       return;
     }
+    setRescheduleCandidate(null);
+    setShowScheduleDialog(true);
+  };
+
+  const handleOpenReschedule = (candidate: ExamCandidate) => {
+    if (!candidate.final_exam_quiz_id) return;
+    setRescheduleCandidate(candidate);
+    // Pre-fill with existing schedule
+    if (candidate.exam_scheduled_at) {
+      const d = new Date(candidate.exam_scheduled_at);
+      setScheduleDate(d.toISOString().split('T')[0]);
+      setScheduleTime(d.toTimeString().slice(0, 5));
+    }
+    setSelectedIds(new Set([candidate.progress_id]));
     setShowScheduleDialog(true);
   };
 
@@ -455,7 +472,7 @@ export default function FinalExams() {
                                 )}
                               </div>
 
-                              {/* Grade button */}
+                              {/* Action buttons */}
                               {isAdmin && c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id && (
                                 <Button
                                   variant="outline"
@@ -465,6 +482,17 @@ export default function FinalExams() {
                                 >
                                   <FileText className="h-3.5 w-3.5" />
                                   {isRTL ? 'تصحيح الامتحان' : 'Grade Exam'}
+                                </Button>
+                              )}
+                              {isAdmin && c.status === 'exam_scheduled' && !c.exam_submitted_at && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="gap-1.5 mt-2.5 w-full"
+                                  onClick={(e) => { e.stopPropagation(); handleOpenReschedule(c); }}
+                                >
+                                  <CalendarClock className="h-3.5 w-3.5" />
+                                  {isRTL ? 'إعادة جدولة' : 'Reschedule'}
                                 </Button>
                               )}
                             </div>
@@ -635,6 +663,16 @@ export default function FinalExams() {
                                 <FileText className="h-3 w-3" />
                                 {isRTL ? 'تصحيح' : 'Grade'}
                               </Button>
+                            ) : c.status === 'exam_scheduled' && !c.exam_submitted_at ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1.5 h-7 text-xs"
+                                onClick={() => handleOpenReschedule(c)}
+                              >
+                                <CalendarClock className="h-3 w-3" />
+                                {isRTL ? 'إعادة جدولة' : 'Reschedule'}
+                              </Button>
                             ) : (
                               <span className="text-muted-foreground/20">—</span>
                             )}
@@ -657,7 +695,9 @@ export default function FinalExams() {
                 <div className="p-2 rounded-lg bg-primary/10">
                   <CalendarClock className="h-5 w-5 text-primary" />
                 </div>
-                {isRTL ? 'جدولة الامتحان النهائي' : 'Schedule Final Exam'}
+                {rescheduleCandidate
+                  ? (isRTL ? 'إعادة جدولة الامتحان النهائي' : 'Reschedule Final Exam')
+                  : (isRTL ? 'جدولة الامتحان النهائي' : 'Schedule Final Exam')}
               </DialogTitle>
               <DialogDescription>
                 {isRTL
