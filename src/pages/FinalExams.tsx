@@ -184,6 +184,7 @@ export default function FinalExams() {
   const handleOpenReschedule = (candidate: ExamCandidate) => {
     if (!candidate.final_exam_quiz_id) return;
     setRescheduleCandidate(candidate);
+    fetchQuizDuration(candidate.final_exam_quiz_id);
     // Pre-fill with existing schedule
     if (candidate.exam_scheduled_at) {
       const d = new Date(candidate.exam_scheduled_at);
