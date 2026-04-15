@@ -27,6 +27,16 @@ const statusCache: {
 
 const CACHE_TTL_MS = 60_000; // 1 minute
 
+export function resetStatusCache() {
+  statusCache.userId = null;
+  statusCache.isSuspended = false;
+  statusCache.isTerminated = false;
+  statusCache.hasLevel = true;
+  statusCache.needsRenewal = false;
+  statusCache.isParentApproved = true;
+  statusCache.fetchedAt = 0;
+}
+
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, role, loading, roleLoading } = useAuth();
   const location = useLocation();

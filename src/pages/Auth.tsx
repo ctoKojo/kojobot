@@ -16,6 +16,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { lovable } from '@/integrations/lovable/index';
 import { supabase } from '@/integrations/supabase/client';
+import { resetStatusCache } from '@/components/ProtectedRoute';
 import kojobotLogo from '@/assets/kojobot-main-logo.png';
 
 const loginSchema = z.object({

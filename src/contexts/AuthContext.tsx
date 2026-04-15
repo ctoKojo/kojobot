@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logLogin, logLogout } from '@/lib/activityLogger';
+import { resetStatusCache } from '@/components/ProtectedRoute';
 
 type AppRole = 'admin' | 'instructor' | 'student' | 'reception' | 'parent';
 
@@ -101,6 +102,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = async () => {
     await logLogout();
     await supabase.auth.signOut();
+    resetStatusCache();
     setUser(null);
     setSession(null);
     setRole(null);
