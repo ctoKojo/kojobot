@@ -207,6 +207,16 @@ export default function FinalExams() {
       const studentIds = selectedCandidates.map(c => c.student_id);
       const dateTime = `${scheduleDate}T${scheduleTime}:00+02:00`;
 
+      // Update quiz duration if changed
+      const quizId = selectedCandidates[0]?.final_exam_quiz_id;
+      if (quizId && quizDuration != null && quizDuration !== originalQuizDuration) {
+        const { error: durErr } = await supabase
+          .from('quizzes')
+          .update({ duration_minutes: quizDuration } as any)
+          .eq('id', quizId);
+        if (durErr) throw durErr;
+      }
+
       const { data, error } = await supabase.rpc('schedule_final_exam_for_students', {
         p_group_id: groupId,
         p_student_ids: studentIds,
@@ -228,6 +238,8 @@ export default function FinalExams() {
       setSelectedIds(new Set());
       setScheduleDate('');
       setScheduleTime('');
+      setQuizDuration(null);
+      setOriginalQuizDuration(null);
       fetchCandidates();
     } catch (err: any) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: err.message });
