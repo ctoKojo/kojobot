@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MoreHorizontal, FileQuestion, ListChecks, BarChart3, Info, Settings2, Save, Loader2 } from 'lucide-react';
+import { Search, MoreHorizontal, FileQuestion, ListChecks, BarChart3 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -13,12 +12,12 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
-import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -61,12 +60,6 @@ export default function QuizzesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [linkFilter, setLinkFilter] = useState<'all' | 'linked' | 'unlinked'>('all');
-
-  // Quiz settings edit
-  const [editQuiz, setEditQuiz] = useState<Quiz | null>(null);
-  const [editDuration, setEditDuration] = useState(30);
-  const [editPassingScore, setEditPassingScore] = useState(60);
-  const [savingSettings, setSavingSettings] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -128,34 +121,11 @@ export default function QuizzesPage() {
     return level ? (language === 'ar' ? level.name_ar : level.name) : '-';
   };
 
-  const handleOpenSettings = (quiz: Quiz) => {
-    setEditQuiz(quiz);
-    setEditDuration(quiz.duration_minutes);
-    setEditPassingScore(quiz.passing_score);
-  };
-
-  const handleSaveSettings = async () => {
-    if (!editQuiz) return;
-    setSavingSettings(true);
-    try {
-      const { error } = await supabase
-        .from('quizzes')
-        .update({ duration_minutes: editDuration, passing_score: editPassingScore } as any)
-        .eq('id', editQuiz.id);
-      if (error) throw error;
-      setQuizzes(prev => prev.map(q => q.id === editQuiz.id ? { ...q, duration_minutes: editDuration, passing_score: editPassingScore } : q));
-      setEditQuiz(null);
-      toast({ title: isRTL ? 'تم الحفظ' : 'Saved' });
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: err.message });
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
   const totalQuizzes = quizzes.length;
   const linkedCount = quizzes.filter(q => curriculumMap.has(q.id)).length;
   const unlinkedCount = totalQuizzes - linkedCount;
+
+  const settingsHint = isRTL ? 'يمكن التعديل من محرر الأسئلة' : 'Edit in Quiz Editor';
 
   return (
     <DashboardLayout title={t.nav.questionBank}>
@@ -270,32 +240,38 @@ export default function QuizzesPage() {
                       })()}
                     </div>
                     {role === 'admin' && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="flex-shrink-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                          <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
-                            <ListChecks className="h-4 w-4 mr-2" />
-                            {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleOpenSettings(quiz)}>
-                            <Settings2 className="h-4 w-4 mr-2" />
-                            {isRTL ? 'إعدادات الكويز' : 'Quiz Settings'}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-shrink-0"
+                        onClick={() => navigate(`/quiz-editor/${quiz.id}`)}
+                      >
+                        <ListChecks className="h-4 w-4 mr-1" />
+                        {isRTL ? 'تعديل' : 'Edit'}
+                      </Button>
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-3">
-                    <Badge variant="outline" className="text-xs">
-                      {quiz.duration_minutes} {isRTL ? 'دقيقة' : 'min'}
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      {quiz.passing_score}% {isRTL ? 'للنجاح' : 'to pass'}
-                    </Badge>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="outline" className="text-xs cursor-help">
+                            {quiz.duration_minutes} {isRTL ? 'دقيقة' : 'min'}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent><p>{settingsHint}</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="secondary" className="text-xs cursor-help">
+                            {quiz.passing_score}% {isRTL ? 'للنجاح' : 'to pass'}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent><p>{settingsHint}</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </CardContent>
               </Card>
@@ -312,8 +288,26 @@ export default function QuizzesPage() {
                   <TableHead>{t.quizzes.quizName}</TableHead>
                   <TableHead>{t.students.level}</TableHead>
                   <TableHead>{isRTL ? 'المنهج' : 'Curriculum'}</TableHead>
-                  <TableHead>{t.quizzes.duration}</TableHead>
-                  <TableHead>{isRTL ? 'درجة النجاح' : 'Pass Score'}</TableHead>
+                  <TableHead>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger className="cursor-help underline decoration-dotted underline-offset-4">
+                          {t.quizzes.duration}
+                        </TooltipTrigger>
+                        <TooltipContent><p>{settingsHint}</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableHead>
+                  <TableHead>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger className="cursor-help underline decoration-dotted underline-offset-4">
+                          {isRTL ? 'درجة النجاح' : 'Pass Score'}
+                        </TooltipTrigger>
+                        <TooltipContent><p>{settingsHint}</p></TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableHead>
                   {role === 'admin' && <TableHead className="w-[100px]">{t.common.actions}</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -360,23 +354,14 @@ export default function QuizzesPage() {
                       <TableCell>{quiz.passing_score}%</TableCell>
                       {role === 'admin' && (
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align={isRTL ? 'start' : 'end'}>
-                              <DropdownMenuItem onClick={() => navigate(`/quiz-editor/${quiz.id}`)}>
-                                <ListChecks className="h-4 w-4 mr-2" />
-                                {isRTL ? 'إدارة الأسئلة' : 'Manage Questions'}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleOpenSettings(quiz)}>
-                                <Settings2 className="h-4 w-4 mr-2" />
-                                {isRTL ? 'إعدادات الكويز' : 'Quiz Settings'}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/quiz-editor/${quiz.id}`)}
+                          >
+                            <ListChecks className="h-4 w-4 mr-1" />
+                            {isRTL ? 'تعديل' : 'Edit'}
+                          </Button>
                         </TableCell>
                       )}
                     </TableRow>
@@ -386,56 +371,6 @@ export default function QuizzesPage() {
             </Table>
           </CardContent>
         </Card>
-
-        {/* Quiz Settings Dialog */}
-        <Dialog open={!!editQuiz} onOpenChange={(open) => { if (!open) setEditQuiz(null); }}>
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Settings2 className="h-5 w-5 text-primary" />
-                {isRTL ? 'إعدادات الكويز' : 'Quiz Settings'}
-              </DialogTitle>
-            </DialogHeader>
-            {editQuiz && (
-              <div className="grid gap-4 py-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {language === 'ar' ? editQuiz.title_ar : editQuiz.title}
-                </p>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-duration">{isRTL ? 'مدة الامتحان (دقيقة)' : 'Exam Duration (min)'}</Label>
-                  <Input
-                    id="edit-duration"
-                    type="number"
-                    min={1}
-                    max={300}
-                    value={editDuration}
-                    onChange={e => setEditDuration(Number(e.target.value) || 1)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-passing">{isRTL ? 'درجة النجاح (%)' : 'Passing Score (%)'}</Label>
-                  <Input
-                    id="edit-passing"
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={editPassingScore}
-                    onChange={e => setEditPassingScore(Number(e.target.value) || 0)}
-                  />
-                </div>
-              </div>
-            )}
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setEditQuiz(null)}>
-                {isRTL ? 'إلغاء' : 'Cancel'}
-              </Button>
-              <Button onClick={handleSaveSettings} disabled={savingSettings} className="gap-2">
-                {savingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {isRTL ? 'حفظ' : 'Save'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </DashboardLayout>
   );
