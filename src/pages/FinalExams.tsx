@@ -72,6 +72,11 @@ export default function FinalExams() {
   const [scheduleDuration, setScheduleDuration] = useState(30);
   const [scheduling, setScheduling] = useState(false);
 
+  // Quiz duration editing
+  const [quizDuration, setQuizDuration] = useState<number | null>(null);
+  const [originalQuizDuration, setOriginalQuizDuration] = useState<number | null>(null);
+  const [loadingQuizDuration, setLoadingQuizDuration] = useState(false);
+
   // Grading dialog
   const [showGradingDialog, setShowGradingDialog] = useState(false);
   const [gradingCandidate, setGradingCandidate] = useState<ExamCandidate | null>(null);
@@ -146,6 +151,18 @@ export default function FinalExams() {
     }
   };
 
+  const fetchQuizDuration = async (quizId: string) => {
+    setLoadingQuizDuration(true);
+    try {
+      const { data } = await supabase.from('quizzes').select('duration_minutes').eq('id', quizId).single();
+      if (data) {
+        setQuizDuration(data.duration_minutes);
+        setOriginalQuizDuration(data.duration_minutes);
+      }
+    } catch { /* ignore */ }
+    finally { setLoadingQuizDuration(false); }
+  };
+
   const handleOpenScheduleDialog = () => {
     if (!canSchedule) return;
     const firstCandidate = selectedCandidates[0];
@@ -160,12 +177,14 @@ export default function FinalExams() {
       return;
     }
     setRescheduleCandidate(null);
+    fetchQuizDuration(firstCandidate.final_exam_quiz_id);
     setShowScheduleDialog(true);
   };
 
   const handleOpenReschedule = (candidate: ExamCandidate) => {
     if (!candidate.final_exam_quiz_id) return;
     setRescheduleCandidate(candidate);
+    fetchQuizDuration(candidate.final_exam_quiz_id);
     // Pre-fill with existing schedule
     if (candidate.exam_scheduled_at) {
       const d = new Date(candidate.exam_scheduled_at);
@@ -188,6 +207,16 @@ export default function FinalExams() {
       const studentIds = selectedCandidates.map(c => c.student_id);
       const dateTime = `${scheduleDate}T${scheduleTime}:00+02:00`;
 
+      // Update quiz duration if changed
+      const quizId = selectedCandidates[0]?.final_exam_quiz_id;
+      if (quizId && quizDuration != null && quizDuration !== originalQuizDuration) {
+        const { error: durErr } = await supabase
+          .from('quizzes')
+          .update({ duration_minutes: quizDuration } as any)
+          .eq('id', quizId);
+        if (durErr) throw durErr;
+      }
+
       const { data, error } = await supabase.rpc('schedule_final_exam_for_students', {
         p_group_id: groupId,
         p_student_ids: studentIds,
@@ -209,6 +238,8 @@ export default function FinalExams() {
       setSelectedIds(new Set());
       setScheduleDate('');
       setScheduleTime('');
+      setQuizDuration(null);
+      setOriginalQuizDuration(null);
       fetchCandidates();
     } catch (err: any) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: err.message });
@@ -760,6 +791,38 @@ export default function FinalExams() {
                       className="bg-card"
                     />
                   </div>
+                </div>
+
+                {/* Quiz actual duration */}
+                <Separator />
+                <div className="grid gap-1.5">
+                  <Label htmlFor="quiz-duration" className="text-sm font-medium flex items-center gap-1.5">
+                    <Timer className="h-3.5 w-3.5 text-primary" />
+                    {isRTL ? 'مدة الامتحان الفعلية (دقيقة)' : 'Actual Exam Duration (min)'}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {isRTL ? 'هذه المدة هي التي يراها الطالب كتايمر أثناء الامتحان' : 'This is the timer duration the student sees during the exam'}
+                  </p>
+                  {loadingQuizDuration ? (
+                    <div className="h-9 bg-muted animate-pulse rounded-md" />
+                  ) : (
+                    <Input
+                      id="quiz-duration"
+                      type="number"
+                      min={5}
+                      max={300}
+                      value={quizDuration ?? ''}
+                      onChange={e => setQuizDuration(Number(e.target.value) || 5)}
+                      className="bg-card"
+                    />
+                  )}
+                  {quizDuration != null && originalQuizDuration != null && quizDuration !== originalQuizDuration && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      {isRTL
+                        ? `سيتم تحديث المدة من ${originalQuizDuration} إلى ${quizDuration} دقيقة`
+                        : `Duration will be updated from ${originalQuizDuration} to ${quizDuration} min`}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
