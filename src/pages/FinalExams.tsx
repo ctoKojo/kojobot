@@ -69,7 +69,6 @@ export default function FinalExams() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
-  const [scheduleDuration, setScheduleDuration] = useState(30);
   const [scheduling, setScheduling] = useState(false);
 
 
@@ -192,11 +191,19 @@ export default function FinalExams() {
       const studentIds = selectedCandidates.map(c => c.student_id);
       const dateTime = `${scheduleDate}T${scheduleTime}:00+02:00`;
 
+      // Fetch quiz duration to use as submission window
+      const quizId = selectedCandidates[0]?.final_exam_quiz_id;
+      let examDuration = 60; // fallback
+      if (quizId) {
+        const { data: quizData } = await supabase.from('quizzes').select('duration_minutes').eq('id', quizId).single();
+        if (quizData) examDuration = quizData.duration_minutes;
+      }
+
       const { data, error } = await supabase.rpc('schedule_final_exam_for_students', {
         p_group_id: groupId,
         p_student_ids: studentIds,
         p_date: dateTime,
-        p_duration: scheduleDuration,
+        p_duration: examDuration,
       });
 
       if (error) throw error;
@@ -749,18 +756,6 @@ export default function FinalExams() {
                       type="time"
                       value={scheduleTime}
                       onChange={e => setScheduleTime(e.target.value)}
-                      className="bg-card"
-                    />
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="exam-duration" className="text-sm">{isRTL ? 'المدة (دقيقة)' : 'Duration (min)'}</Label>
-                    <Input
-                      id="exam-duration"
-                      type="number"
-                      min={5}
-                      max={180}
-                      value={scheduleDuration}
-                      onChange={e => setScheduleDuration(Number(e.target.value))}
                       className="bg-card"
                     />
                   </div>
