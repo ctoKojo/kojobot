@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { formatDateTime } from '@/lib/timeUtils';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Clock, CheckCircle, XCircle, AlertTriangle, FileText } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Clock, CheckCircle, XCircle, AlertTriangle, FileText, WifiOff } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -46,6 +46,26 @@ interface QuizAssignment {
   };
 }
 
+// ── Retry helper with exponential backoff ────────────────────────────
+async function retryAsync<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelayMs = 2000
+): Promise<T> {
+  let lastError: unknown;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (i < maxRetries - 1) {
+        await new Promise(r => setTimeout(r, baseDelayMs * Math.pow(2, i)));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export default function TakeQuiz() {
   const { assignmentId } = useParams();
   const navigate = useNavigate();
@@ -72,12 +92,21 @@ export default function TakeQuiz() {
   const [result, setResult] = useState<{ score: number; maxScore: number; percentage: number | null; passed: boolean; hasOpenEnded?: boolean } | null>(null);
   const [gradeResults, setGradeResults] = useState<Record<string, { correct: boolean; correctAnswer: string; questionType?: string }>>({});
   const [quizStatus, setQuizStatus] = useState<'loading' | 'not_started' | 'expired' | 'available' | 'frozen'>('loading');
+  const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  // ── Refs for stale-closure protection ──────────────────────────────
+  const answersRef = useRef(answers);
+  const isSubmittingRef = useRef(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep ref in sync
+  useEffect(() => { answersRef.current = answers; }, [answers]);
 
   useEffect(() => {
     if (assignmentId) fetchQuizData();
   }, [assignmentId]);
 
-  // Auto-refresh when quiz is not_started — re-check every second until start time arrives
+  // Auto-refresh when quiz is not_started
   useEffect(() => {
     if (quizStatus !== 'not_started' || !assignment?.start_time) return;
     const interval = setInterval(() => {
@@ -85,19 +114,21 @@ export default function TakeQuiz() {
       const startTime = new Date(assignment.start_time!).getTime();
       if (now >= startTime) {
         clearInterval(interval);
-        fetchQuizData(); // Re-fetch to transition to 'available'
+        fetchQuizData();
       }
     }, 1000);
     return () => clearInterval(interval);
   }, [quizStatus, assignment?.start_time]);
 
+  // ── Timer: when it hits 0, auto-submit via ref ─────────────────────
   useEffect(() => {
     if (timeLeft > 0 && !submitted) {
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            handleSubmit();
+            // Use ref-based submit to avoid stale closure
+            handleSubmitFromRef();
             return 0;
           }
           return prev - 1;
@@ -107,7 +138,7 @@ export default function TakeQuiz() {
     }
   }, [timeLeft, submitted]);
 
-  // Listen for extra_minutes updates (time extension) in realtime
+  // Listen for extra_minutes updates in realtime
   useEffect(() => {
     if (!assignmentId || submitted) return;
     const channel = supabase
@@ -140,7 +171,7 @@ export default function TakeQuiz() {
       if (assignmentError) throw assignmentError;
       setAssignment(assignmentData);
 
-      // Check if student's group is frozen
+      // Check frozen group
       if (assignmentData.group_id) {
         const { data: groupData } = await supabase
           .from('groups')
@@ -153,47 +184,46 @@ export default function TakeQuiz() {
           return;
         }
       }
-      
-      // Calculate quiz status and remaining time based on start_time
-      const now = new Date().getTime();
+
+      const now = Date.now();
       const baseDuration = assignmentData.quizzes?.duration_minutes || 30;
       const extraMinutes = (assignmentData as any).extra_minutes || 0;
       const duration = baseDuration + extraMinutes;
       const durationMs = duration * 60 * 1000;
-      
+
       if (assignmentData.start_time) {
         const startTime = new Date(assignmentData.start_time).getTime();
-        
-        // Quiz hasn't started yet
+
         if (now < startTime) {
           setQuizStatus('not_started');
-          setTimeLeft(duration * 60); // Full duration
+          setTimeLeft(duration * 60);
           setLoading(false);
           return;
         }
-        
-        // Calculate remaining time from start_time
+
         const elapsed = now - startTime;
         const remainingMs = durationMs - elapsed;
-        
-        // Quiz time window has expired
+
         if (remainingMs <= 0) {
+          // Instead of showing "expired" immediately, try auto-submit
+          // The server will decide if it accepts or rejects
           setQuizStatus('expired');
           setTimeLeft(0);
+          // Try to auto-submit with whatever we have (server has draft_answers)
+          if (!submitted && !isSubmittingRef.current) {
+            handleSubmitFromRef();
+          }
           setLoading(false);
           return;
         }
-        
-        // Quiz is available, set remaining time
+
         setTimeLeft(Math.floor(remainingMs / 1000));
         setQuizStatus('available');
       } else {
-        // No start_time set, use full duration
         setTimeLeft(duration * 60);
         setQuizStatus('available');
       }
 
-      // Use secure view that excludes correct_answer - answers are fetched separately after submission
       const { data: questionsData, error: questionsError } = await supabase
         .from('quiz_questions_student_view')
         .select('*')
@@ -201,10 +231,9 @@ export default function TakeQuiz() {
         .order('order_index');
 
       if (questionsError) throw questionsError;
-      // Add empty correct_answer since view doesn't include it
       const questionsWithPlaceholder = (questionsData || []).map(q => ({
         ...q,
-        correct_answer: '' // Will be calculated server-side or fetched after submission
+        correct_answer: ''
       }));
       setQuestions(questionsWithPlaceholder);
     } catch (error) {
@@ -219,7 +248,39 @@ export default function TakeQuiz() {
     }
   };
 
-  // Track live progress for exam monitoring
+  // ── Server-side answer saving (debounced 3s) ───────────────────────
+  const saveAnswersToServer = useCallback(async (currentAnswers: Record<string, string>) => {
+    if (!assignment || !user || submitted) return;
+    setSavingStatus('saving');
+    try {
+      const timestampedAnswers: Record<string, { answer: string; t: number }> = {};
+      for (const [qid, ans] of Object.entries(currentAnswers)) {
+        timestampedAnswers[qid] = { answer: ans, t: Date.now() };
+      }
+
+      await supabase.functions.invoke('save-quiz-answer', {
+        body: {
+          quiz_assignment_id: assignment.id,
+          answers: timestampedAnswers,
+        },
+      });
+      setSavingStatus('saved');
+      // Reset to idle after 2s
+      setTimeout(() => setSavingStatus(prev => prev === 'saved' ? 'idle' : prev), 2000);
+    } catch (err) {
+      console.error('Failed to save answers to server:', err);
+      setSavingStatus('error');
+    }
+  }, [assignment?.id, user?.id, submitted]);
+
+  const debouncedSave = useCallback((newAnswers: Record<string, string>) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveAnswersToServer(newAnswers);
+    }, 3000);
+  }, [saveAnswersToServer]);
+
+  // ── Heartbeat: presence only (no answers) ──────────────────────────
   const answeredCount = Object.keys(answers).length;
   useEffect(() => {
     if (!assignment || !user || quizStatus !== 'available' || questions.length === 0) return;
@@ -242,10 +303,7 @@ export default function TakeQuiz() {
       }
     };
 
-    // Immediately upsert on change
     upsertProgress();
-
-    // Also send heartbeat every 15 seconds so the monitor stays fresh
     const heartbeat = setInterval(upsertProgress, 15_000);
     return () => clearInterval(heartbeat);
   }, [currentIndex, answeredCount, quizStatus, assignment?.id, user?.id, questions.length]);
@@ -253,7 +311,10 @@ export default function TakeQuiz() {
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers((prev) => {
       const next = { ...prev, [questionId]: answer };
+      // sessionStorage as fallback only
       sessionStorage.setItem(`quiz-${assignmentId}-answers`, JSON.stringify(next));
+      // Debounced server save (primary)
+      debouncedSave(next);
       return next;
     });
   };
@@ -263,41 +324,58 @@ export default function TakeQuiz() {
     sessionStorage.setItem(`quiz-${assignmentId}-index`, String(idx));
   };
 
+  // ── Submit using ref (for timer/auto-submit to avoid stale closures)
+  const handleSubmitFromRef = useCallback(() => {
+    if (isSubmittingRef.current) return;
+    // Call handleSubmitCore with latest answers from ref
+    handleSubmitCore(answersRef.current);
+  }, []);
+
   const handleSubmit = async () => {
-    if (!user || !assignment || submitting) return;
+    if (isSubmittingRef.current) return;
+    handleSubmitCore(answers);
+  };
+
+  const handleSubmitCore = async (currentAnswers: Record<string, string>) => {
+    if (!user || !assignment || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setSubmitting(true);
 
-    // Mark live progress as submitted
+    // Flush any pending save first
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
+    // Update live progress to submitted
     supabase.from('exam_live_progress').upsert({
       student_id: user.id,
       quiz_assignment_id: assignment.id,
       current_question_index: currentIndex,
-      answered_count: Object.keys(answers).length,
+      answered_count: Object.keys(currentAnswers).length,
       total_questions: questions.length,
       last_activity_at: new Date().toISOString(),
       status: 'submitted',
     }, { onConflict: 'student_id,quiz_assignment_id' }).then(() => {});
 
     try {
-      // Log quiz start if first submission
-      await logStart('quiz_submission', assignment.id, { 
+      await logStart('quiz_submission', assignment.id, {
         quiz_title: assignment.quizzes.title,
-        quiz_id: assignment.quiz_id 
+        quiz_id: assignment.quiz_id
       });
 
-      // Use edge function for secure grading (correct answers are server-side only)
-      const { data, error } = await supabase.functions.invoke('grade-quiz', {
-        body: {
-          quiz_assignment_id: assignment.id,
-          answers: answers
-        }
-      });
-
-      if (error) throw error;
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to grade quiz');
-      }
+      // Retry with exponential backoff
+      const data = await retryAsync(async () => {
+        const { data, error } = await supabase.functions.invoke('grade-quiz', {
+          body: {
+            quiz_assignment_id: assignment.id,
+            answers: currentAnswers
+          }
+        });
+        if (error) throw error;
+        if (!data.success) throw new Error(data.error || 'Failed to grade quiz');
+        return data;
+      }, 3, 2000);
 
       setResult({
         score: data.score,
@@ -309,16 +387,16 @@ export default function TakeQuiz() {
       setGradeResults(data.results || {});
       setSubmitted(true);
 
-      // Clear persisted quiz state
       sessionStorage.removeItem(`quiz-${assignmentId}-answers`);
       sessionStorage.removeItem(`quiz-${assignmentId}-index`);
-      // Log quiz completion with results
-      await logComplete('quiz_submission', assignment.id, { 
+
+      await logComplete('quiz_submission', assignment.id, {
         quiz_title: assignment.quizzes.title,
         score: data.score,
         maxScore: data.maxScore,
         percentage: data.percentage,
-        passed: data.passed
+        passed: data.passed,
+        usedFallback: data.usedFallback,
       });
 
       toast({
@@ -330,9 +408,12 @@ export default function TakeQuiz() {
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: isRTL ? 'فشل في تسليم الكويز' : 'Failed to submit quiz',
+        description: isRTL
+          ? 'فشل في تسليم الكويز. إجاباتك محفوظة على السيرفر. حاول تاني.'
+          : 'Failed to submit quiz. Your answers are saved on the server. Please try again.',
       });
     } finally {
+      isSubmittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -343,10 +424,24 @@ export default function TakeQuiz() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // SSOT: using centralized formatDateTime from timeUtils.ts
-
   const currentQuestion = questions[currentIndex];
   const progress = ((currentIndex + 1) / questions.length) * 100;
+
+  // ── Saving indicator component ─────────────────────────────────────
+  const SaveIndicator = () => {
+    if (savingStatus === 'idle') return null;
+    return (
+      <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${
+        savingStatus === 'saving' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+        savingStatus === 'saved' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+      }`}>
+        {savingStatus === 'saving' && <>{isRTL ? 'جاري الحفظ...' : 'Saving...'}</>}
+        {savingStatus === 'saved' && <>{isRTL ? '✓ تم الحفظ' : '✓ Saved'}</>}
+        {savingStatus === 'error' && <><WifiOff className="w-3 h-3" />{isRTL ? 'فشل الحفظ' : 'Save failed'}</>}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -358,7 +453,6 @@ export default function TakeQuiz() {
     );
   }
 
-  // Show message if quiz hasn't started yet
   if (quizStatus === 'not_started' && assignment?.start_time) {
     return (
       <DashboardLayout title={isRTL ? 'حل الكويز' : 'Take Quiz'}>
@@ -398,7 +492,6 @@ export default function TakeQuiz() {
     );
   }
 
-  // Show message if group is frozen
   if (quizStatus === 'frozen') {
     return (
       <DashboardLayout title={isRTL ? 'حل الكويز' : 'Take Quiz'}>
@@ -417,7 +510,7 @@ export default function TakeQuiz() {
           <CardContent className="space-y-6">
             <div className="p-4 rounded-lg bg-sky-50 text-center">
               <p className="text-sm text-sky-700">
-                {isRTL 
+                {isRTL
                   ? 'مجموعتك مجمدة حالياً ولا يمكنك حل كويزات جديدة. تواصل مع الإدارة لمزيد من المعلومات.'
                   : 'Your group is currently frozen and you cannot take new quizzes. Contact administration for more information.'}
               </p>
@@ -431,30 +524,32 @@ export default function TakeQuiz() {
     );
   }
 
-  // Show message if quiz time has expired
-  if (quizStatus === 'expired') {
+  // Show expired with auto-submit attempt info
+  if (quizStatus === 'expired' && !submitted && !submitting) {
     return (
       <DashboardLayout title={isRTL ? 'حل الكويز' : 'Take Quiz'}>
         <Card className="max-w-md mx-auto">
           <CardHeader className="text-center">
-            <div className="mx-auto w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
-              <XCircle className="w-10 h-10 text-red-600" />
+            <div className="mx-auto w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center">
+              <Clock className="w-10 h-10 text-amber-600" />
             </div>
             <CardTitle className="mt-4">
-              {isRTL ? 'انتهى وقت الكويز' : 'Quiz Time Expired'}
+              {isRTL ? 'جاري تسليم الإجابات...' : 'Submitting your answers...'}
             </CardTitle>
             <CardDescription>
-              {language === 'ar' ? assignment?.quizzes?.title_ar : assignment?.quizzes?.title}
+              {isRTL
+                ? 'إجاباتك محفوظة على السيرفر. جاري التسليم التلقائي.'
+                : 'Your answers are saved on the server. Auto-submitting now.'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="p-4 rounded-lg bg-red-50 text-center">
-              <p className="text-sm text-red-700">
-                {isRTL 
-                  ? 'للأسف انتهت المدة المحددة لهذا الكويز ولم يعد بإمكانك حله.'
-                  : 'Unfortunately, the time window for this quiz has passed and you can no longer take it.'}
-              </p>
-            </div>
+          <CardContent className="space-y-4">
+            <Button
+              className="w-full"
+              onClick={handleSubmit}
+              disabled={submitting}
+            >
+              {isRTL ? 'حاول التسليم يدوياً' : 'Try Manual Submit'}
+            </Button>
             <Button className="w-full" variant="outline" onClick={() => navigate('/my-quizzes')}>
               {isRTL ? 'العودة لقائمة الكويزات' : 'Back to My Quizzes'}
             </Button>
@@ -535,32 +630,24 @@ export default function TakeQuiz() {
               </div>
             </div>
 
-            {/* Show correct answers - using server-provided results */}
+            {/* Review answers */}
             <div className="space-y-4 mt-6">
               <h3 className="font-semibold">{isRTL ? 'مراجعة الإجابات' : 'Review Answers'}</h3>
               {questions.map((q, idx) => {
-                // Support both formats
                 const optionsData = q.options as any;
                 let optionsList: string[] = [];
-                
                 if (optionsData?.en && Array.isArray(optionsData.en)) {
                   optionsList = language === 'ar' && optionsData.ar ? optionsData.ar : optionsData.en;
                 } else if (optionsData?.options && Array.isArray(optionsData.options)) {
-                  optionsList = optionsData.options.map((opt: any) => 
-                    language === 'ar' ? opt.text_ar : opt.text
-                  );
+                  optionsList = optionsData.options.map((opt: any) => language === 'ar' ? opt.text_ar : opt.text);
                 }
-                
                 const userAnswerIdx = answers[q.id] ? parseInt(answers[q.id]) : -1;
                 const selectedOptionText = optionsList[userAnswerIdx] || null;
                 const questionResult = gradeResults[q.id];
                 const isCorrect = questionResult?.correct || false;
                 const correctAnswerText = questionResult?.correctAnswer || '';
-                
-                // Server now returns correctIndex directly, or we can parse from correctAnswer
                 let correctAnswerIdx = (questionResult as any)?.correctIndex ?? -1;
                 if (correctAnswerIdx < 0) {
-                  // Fallback: try to parse as index or find by text
                   const parsedIdx = parseInt(correctAnswerText);
                   if (!isNaN(parsedIdx) && parsedIdx >= 0 && parsedIdx < optionsList.length) {
                     correctAnswerIdx = parsedIdx;
@@ -568,7 +655,6 @@ export default function TakeQuiz() {
                     correctAnswerIdx = optionsList.findIndex(opt => opt === correctAnswerText);
                   }
                 }
-                
                 return (
                   <div key={q.id} className={`p-4 rounded-lg border ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
                     <div className="flex items-start gap-2">
@@ -613,9 +699,12 @@ export default function TakeQuiz() {
               <Badge variant="outline" className="text-lg px-4 py-2">
                 {isRTL ? `سؤال ${currentIndex + 1} من ${questions.length}` : `Question ${currentIndex + 1} of ${questions.length}`}
               </Badge>
-              <div className={`flex items-center gap-2 text-lg font-mono ${timeLeft < 60 ? 'text-red-600 animate-pulse' : ''}`}>
-                <Clock className="w-5 h-5" />
-                {formatTime(timeLeft)}
+              <div className="flex items-center gap-3">
+                <SaveIndicator />
+                <div className={`flex items-center gap-2 text-lg font-mono ${timeLeft < 60 ? 'text-red-600 animate-pulse' : ''}`}>
+                  <Clock className="w-5 h-5" />
+                  {formatTime(timeLeft)}
+                </div>
               </div>
             </div>
             <Progress value={progress} className="h-2" />
@@ -630,17 +719,11 @@ export default function TakeQuiz() {
                 {language === 'ar' ? currentQuestion.question_text_ar : currentQuestion.question_text}
               </CardTitle>
               <Badge variant="secondary">{currentQuestion.points} {isRTL ? 'درجة' : 'points'}</Badge>
-              {/* Question Image */}
               {currentQuestion.image_url && (
                 <div className="mt-4 rounded-lg overflow-hidden border">
-                  <img
-                    src={currentQuestion.image_url}
-                    alt={`Question ${currentIndex + 1}`}
-                    className="w-full max-h-80 object-contain bg-muted"
-                  />
+                  <img src={currentQuestion.image_url} alt={`Question ${currentIndex + 1}`} className="w-full max-h-80 object-contain bg-muted" />
                 </div>
               )}
-              {/* Code Snippet */}
               {currentQuestion.code_snippet && (
                 <div className="mt-4">
                   <CodeBlock code={currentQuestion.code_snippet} />
@@ -649,7 +732,6 @@ export default function TakeQuiz() {
             </CardHeader>
             <CardContent>
               {currentQuestion.question_type === 'open_ended' ? (
-                /* Open-Ended: Textarea */
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                     <FileText className="w-4 h-4" />
@@ -665,7 +747,6 @@ export default function TakeQuiz() {
                   />
                 </div>
               ) : (
-                /* MCQ: RadioGroup */
                 <RadioGroup
                   value={answers[currentQuestion.id] || ''}
                   onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
@@ -674,15 +755,11 @@ export default function TakeQuiz() {
                   {(() => {
                     const optionsData = currentQuestion.options as any;
                     let optionsList: string[] = [];
-                    
                     if (optionsData?.en && Array.isArray(optionsData.en)) {
                       optionsList = language === 'ar' && optionsData.ar ? optionsData.ar : optionsData.en;
                     } else if (optionsData?.options && Array.isArray(optionsData.options)) {
-                      optionsList = optionsData.options.map((opt: any) => 
-                        language === 'ar' ? opt.text_ar : opt.text
-                      );
+                      optionsList = optionsData.options.map((opt: any) => language === 'ar' ? opt.text_ar : opt.text);
                     }
-                    
                     return optionsList.map((optionText, idx) => (
                       <div
                         key={idx}
