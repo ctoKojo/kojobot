@@ -695,7 +695,9 @@ export default function FinalExams() {
                 <div className="p-2 rounded-lg bg-primary/10">
                   <CalendarClock className="h-5 w-5 text-primary" />
                 </div>
-                {isRTL ? 'جدولة الامتحان النهائي' : 'Schedule Final Exam'}
+                {rescheduleCandidate
+                  ? (isRTL ? 'إعادة جدولة الامتحان النهائي' : 'Reschedule Final Exam')
+                  : (isRTL ? 'جدولة الامتحان النهائي' : 'Schedule Final Exam')}
               </DialogTitle>
               <DialogDescription>
                 {isRTL
