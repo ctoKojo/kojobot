@@ -209,12 +209,25 @@ export default function FinalExams() {
       if (error) throw error;
 
       const result = data as any;
-      toast({
-        title: isRTL ? 'تمت الجدولة' : 'Scheduled',
-        description: isRTL
-          ? `تم جدولة الامتحان النهائي لـ ${result?.scheduled_count || studentIds.length} طالب`
-          : `Final exam scheduled for ${result?.scheduled_count || studentIds.length} student(s)`,
-      });
+      const scheduledCount = result?.scheduled ?? result?.scheduled_count ?? 0;
+      const skippedCount = result?.skipped ?? 0;
+
+      if (scheduledCount === 0) {
+        toast({
+          variant: 'destructive',
+          title: isRTL ? 'لم يتم جدولة أي طالب' : 'No students scheduled',
+          description: isRTL
+            ? `الطلاب المحددون لم يستوفوا شرط عدد الحصص المكتملة المطلوبة للامتحان النهائي`
+            : `Selected students have not completed the required number of sessions for the final exam`,
+        });
+      } else {
+        toast({
+          title: isRTL ? 'تمت الجدولة' : 'Scheduled',
+          description: isRTL
+            ? `تم جدولة الامتحان النهائي لـ ${scheduledCount} طالب${skippedCount > 0 ? ` (تم تخطي ${skippedCount})` : ''}`
+            : `Final exam scheduled for ${scheduledCount} student(s)${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`,
+        });
+      }
 
       setShowScheduleDialog(false);
       setSelectedIds(new Set());
