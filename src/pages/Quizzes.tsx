@@ -386,6 +386,56 @@ export default function QuizzesPage() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Quiz Settings Dialog */}
+        <Dialog open={!!editQuiz} onOpenChange={(open) => { if (!open) setEditQuiz(null); }}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5 text-primary" />
+                {isRTL ? 'إعدادات الكويز' : 'Quiz Settings'}
+              </DialogTitle>
+            </DialogHeader>
+            {editQuiz && (
+              <div className="grid gap-4 py-2">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {language === 'ar' ? editQuiz.title_ar : editQuiz.title}
+                </p>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-duration">{isRTL ? 'مدة الامتحان (دقيقة)' : 'Exam Duration (min)'}</Label>
+                  <Input
+                    id="edit-duration"
+                    type="number"
+                    min={1}
+                    max={300}
+                    value={editDuration}
+                    onChange={e => setEditDuration(Number(e.target.value) || 1)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-passing">{isRTL ? 'درجة النجاح (%)' : 'Passing Score (%)'}</Label>
+                  <Input
+                    id="edit-passing"
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={editPassingScore}
+                    onChange={e => setEditPassingScore(Number(e.target.value) || 0)}
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setEditQuiz(null)}>
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </Button>
+              <Button onClick={handleSaveSettings} disabled={savingSettings} className="gap-2">
+                {savingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {isRTL ? 'حفظ' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
