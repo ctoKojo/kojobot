@@ -652,6 +652,16 @@ export default function FinalExams() {
                                 <FileText className="h-3 w-3" />
                                 {isRTL ? 'تصحيح' : 'Grade'}
                               </Button>
+                            ) : c.status === 'exam_scheduled' && !c.exam_submitted_at ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1.5 h-7 text-xs"
+                                onClick={() => handleOpenReschedule(c)}
+                              >
+                                <CalendarClock className="h-3 w-3" />
+                                {isRTL ? 'إعادة جدولة' : 'Reschedule'}
+                              </Button>
                             ) : (
                               <span className="text-muted-foreground/20">—</span>
                             )}
