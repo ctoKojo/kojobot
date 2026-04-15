@@ -68,9 +68,10 @@ serve(async (req) => {
 
     // ── Advisory lock to prevent concurrent grading ──────────────────
     const lockKey = `${quiz_assignment_id}${userId}`
-    await adminSupabase.rpc('pg_advisory_xact_lock_wrapper', { lock_key: lockKey }).catch(() => {
-      // Fallback: advisory lock function might not exist; proceed without it
-    })
+    const { error: lockError } = await adminSupabase.rpc('pg_advisory_xact_lock_wrapper', { lock_key: lockKey })
+    if (lockError) {
+      console.warn('Advisory lock unavailable, continuing without it:', lockError.message)
+    }
 
     // ── Idempotency: check for existing submission ───────────────────
     const { data: existingSub } = await adminSupabase
