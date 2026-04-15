@@ -94,6 +94,17 @@ export default function TakeQuiz() {
   const [quizStatus, setQuizStatus] = useState<'loading' | 'not_started' | 'expired' | 'available' | 'frozen'>('loading');
   const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
+  const getStoredAnswers = useCallback((): Record<string, string> => {
+    try {
+      const saved = sessionStorage.getItem(`quiz-${assignmentId}-answers`);
+      if (!saved) return {};
+      const parsed = JSON.parse(saved);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }, [assignmentId]);
+
   // ── Refs for stale-closure protection ──────────────────────────────
   const answersRef = useRef(answers);
   const isSubmittingRef = useRef(false);
@@ -250,7 +261,7 @@ export default function TakeQuiz() {
 
   // ── Server-side answer saving (debounced 3s) ───────────────────────
   const saveAnswersToServer = useCallback(async (currentAnswers: Record<string, string>) => {
-    if (!assignment || !user || submitted) return;
+    if (!assignment || !user || submitted) return false;
     setSavingStatus('saving');
     try {
       const timestampedAnswers: Record<string, { answer: string; t: number }> = {};
@@ -267,9 +278,11 @@ export default function TakeQuiz() {
       setSavingStatus('saved');
       // Reset to idle after 2s
       setTimeout(() => setSavingStatus(prev => prev === 'saved' ? 'idle' : prev), 2000);
+      return true;
     } catch (err) {
       console.error('Failed to save answers to server:', err);
       setSavingStatus('error');
+      return false;
     }
   }, [assignment?.id, user?.id, submitted]);
 
@@ -341,10 +354,17 @@ export default function TakeQuiz() {
     isSubmittingRef.current = true;
     setSubmitting(true);
 
+    const storedAnswers = getStoredAnswers();
+    const answersForSubmit = Object.keys(currentAnswers).length > 0 ? currentAnswers : storedAnswers;
+
     // Flush any pending save first
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
+    }
+
+    if (Object.keys(answersForSubmit).length > 0) {
+      await saveAnswersToServer(answersForSubmit);
     }
 
     // Update live progress to submitted
@@ -352,7 +372,7 @@ export default function TakeQuiz() {
       student_id: user.id,
       quiz_assignment_id: assignment.id,
       current_question_index: currentIndex,
-      answered_count: Object.keys(currentAnswers).length,
+      answered_count: Object.keys(answersForSubmit).length,
       total_questions: questions.length,
       last_activity_at: new Date().toISOString(),
       status: 'submitted',
@@ -369,7 +389,7 @@ export default function TakeQuiz() {
         const { data, error } = await supabase.functions.invoke('grade-quiz', {
           body: {
             quiz_assignment_id: assignment.id,
-            answers: currentAnswers
+            answers: answersForSubmit
           }
         });
         if (error) throw error;
