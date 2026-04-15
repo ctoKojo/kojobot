@@ -69,7 +69,6 @@ export default function FinalExams() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
-  const [scheduleDuration, setScheduleDuration] = useState(30);
   const [scheduling, setScheduling] = useState(false);
 
 
