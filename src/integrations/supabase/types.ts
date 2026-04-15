@@ -1034,6 +1034,9 @@ export type Database = {
         Row: {
           answered_count: number
           current_question_index: number
+          draft_answers: Json
+          draft_updated_at: string | null
+          draft_version: number
           id: string
           last_activity_at: string
           quiz_assignment_id: string
@@ -1045,6 +1048,9 @@ export type Database = {
         Insert: {
           answered_count?: number
           current_question_index?: number
+          draft_answers?: Json
+          draft_updated_at?: string | null
+          draft_version?: number
           id?: string
           last_activity_at?: string
           quiz_assignment_id: string
@@ -1056,6 +1062,9 @@ export type Database = {
         Update: {
           answered_count?: number
           current_question_index?: number
+          draft_answers?: Json
+          draft_updated_at?: string | null
+          draft_version?: number
           id?: string
           last_activity_at?: string
           quiz_assignment_id?: string
@@ -5107,6 +5116,10 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      pg_advisory_xact_lock_wrapper: {
+        Args: { lock_key: string }
+        Returns: undefined
       }
       publish_curriculum: {
         Args: { p_age_group_id: string; p_level_id: string }
