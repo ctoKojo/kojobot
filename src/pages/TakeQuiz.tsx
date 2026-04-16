@@ -584,11 +584,25 @@ export default function TakeQuiz() {
   }
 
   if (submitted && result) {
+    const isFinalExam = !assignment?.session_id;
+
     return (
       <DashboardLayout title={isRTL ? 'نتيجة الكويز' : 'Quiz Result'}>
         <Card className="max-w-2xl mx-auto">
           <CardHeader className="text-center">
-            {result.hasOpenEnded ? (
+            {isFinalExam ? (
+              <>
+                <div className="mx-auto w-20 h-20 rounded-full flex items-center justify-center bg-green-100">
+                  <CheckCircle className="w-10 h-10 text-green-600" />
+                </div>
+                <CardTitle className="mt-4">
+                  {isRTL ? 'تم تسليم الامتحان بنجاح' : 'Exam Submitted Successfully'}
+                </CardTitle>
+                <CardDescription>
+                  {isRTL ? 'ستظهر النتيجة النهائية بعد مراجعة المدرب.' : 'Final results will appear after instructor review.'}
+                </CardDescription>
+              </>
+            ) : result.hasOpenEnded ? (
               <>
                 <div className="mx-auto w-20 h-20 rounded-full flex items-center justify-center bg-amber-100">
                   <Clock className="w-10 h-10 text-amber-600" />
@@ -619,90 +633,94 @@ export default function TakeQuiz() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="text-center">
-              {result.percentage !== null ? (
-                <>
-                  <div className="text-5xl font-bold">{result.percentage}%</div>
-                  <p className="text-muted-foreground mt-2">
-                    {result.score} / {result.maxScore} {isRTL ? 'درجة' : 'points'}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="text-3xl font-bold text-amber-600">
-                    {isRTL ? 'في انتظار التصحيح' : 'Pending Grading'}
-                  </div>
-                  <p className="text-muted-foreground mt-2">
-                    {isRTL ? `الأسئلة الاختيارية: ${result.score} درجة` : `MCQ Score: ${result.score} points`}
-                  </p>
-                </>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="p-4 rounded-lg bg-green-50 border border-green-200">
-                <div className="text-2xl font-bold text-green-600">
-                  {Object.values(gradeResults).filter(r => r.correct).length}
-                </div>
-                <p className="text-sm text-green-700">{isRTL ? 'إجابات صحيحة' : 'Correct'}</p>
-              </div>
-              <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-                <div className="text-2xl font-bold text-red-600">
-                  {Object.values(gradeResults).filter(r => !r.correct).length}
-                </div>
-                <p className="text-sm text-red-700">{isRTL ? 'إجابات خاطئة' : 'Wrong'}</p>
-              </div>
-            </div>
-
-            {/* Review answers */}
-            <div className="space-y-4 mt-6">
-              <h3 className="font-semibold">{isRTL ? 'مراجعة الإجابات' : 'Review Answers'}</h3>
-              {questions.map((q, idx) => {
-                const optionsData = q.options as any;
-                let optionsList: string[] = [];
-                if (optionsData?.en && Array.isArray(optionsData.en)) {
-                  optionsList = language === 'ar' && optionsData.ar ? optionsData.ar : optionsData.en;
-                } else if (optionsData?.options && Array.isArray(optionsData.options)) {
-                  optionsList = optionsData.options.map((opt: any) => language === 'ar' ? opt.text_ar : opt.text);
-                }
-                const userAnswerIdx = answers[q.id] ? parseInt(answers[q.id]) : -1;
-                const selectedOptionText = optionsList[userAnswerIdx] || null;
-                const questionResult = gradeResults[q.id];
-                const isCorrect = questionResult?.correct || false;
-                const correctAnswerText = questionResult?.correctAnswer || '';
-                let correctAnswerIdx = (questionResult as any)?.correctIndex ?? -1;
-                if (correctAnswerIdx < 0) {
-                  const parsedIdx = parseInt(correctAnswerText);
-                  if (!isNaN(parsedIdx) && parsedIdx >= 0 && parsedIdx < optionsList.length) {
-                    correctAnswerIdx = parsedIdx;
-                  } else {
-                    correctAnswerIdx = optionsList.findIndex(opt => opt === correctAnswerText);
-                  }
-                }
-                return (
-                  <div key={q.id} className={`p-4 rounded-lg border ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-                    <div className="flex items-start gap-2">
-                      {isCorrect ? <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" /> : <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />}
-                      <div className="flex-1">
-                        <p className="font-medium" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>{idx + 1}. {language === 'ar' ? q.question_text_ar : q.question_text}</p>
-                        <p className="text-sm mt-1">
-                          <span className="text-muted-foreground">{isRTL ? 'إجابتك: ' : 'Your answer: '}</span>
-                          <span className={isCorrect ? 'text-green-700' : 'text-red-700'}>
-                            {selectedOptionText || (isRTL ? 'لم تجب' : 'No answer')}
-                          </span>
-                        </p>
-                        {!isCorrect && correctAnswerIdx >= 0 && optionsList[correctAnswerIdx] && (
-                          <p className="text-sm text-green-700 mt-1">
-                            {isRTL ? 'الإجابة الصحيحة: ' : 'Correct answer: '}
-                            {optionsList[correctAnswerIdx]}
-                          </p>
-                        )}
+            {!isFinalExam && (
+              <>
+                <div className="text-center">
+                  {result.percentage !== null ? (
+                    <>
+                      <div className="text-5xl font-bold">{result.percentage}%</div>
+                      <p className="text-muted-foreground mt-2">
+                        {result.score} / {result.maxScore} {isRTL ? 'درجة' : 'points'}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-3xl font-bold text-amber-600">
+                        {isRTL ? 'في انتظار التصحيح' : 'Pending Grading'}
                       </div>
+                      <p className="text-muted-foreground mt-2">
+                        {isRTL ? `الأسئلة الاختيارية: ${result.score} درجة` : `MCQ Score: ${result.score} points`}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div className="p-4 rounded-lg bg-green-50 border border-green-200">
+                    <div className="text-2xl font-bold text-green-600">
+                      {Object.values(gradeResults).filter(r => r.correct).length}
                     </div>
+                    <p className="text-sm text-green-700">{isRTL ? 'إجابات صحيحة' : 'Correct'}</p>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+                    <div className="text-2xl font-bold text-red-600">
+                      {Object.values(gradeResults).filter(r => !r.correct).length}
+                    </div>
+                    <p className="text-sm text-red-700">{isRTL ? 'إجابات خاطئة' : 'Wrong'}</p>
+                  </div>
+                </div>
+
+                {/* Review answers */}
+                <div className="space-y-4 mt-6">
+                  <h3 className="font-semibold">{isRTL ? 'مراجعة الإجابات' : 'Review Answers'}</h3>
+                  {questions.map((q, idx) => {
+                    const optionsData = q.options as any;
+                    let optionsList: string[] = [];
+                    if (optionsData?.en && Array.isArray(optionsData.en)) {
+                      optionsList = language === 'ar' && optionsData.ar ? optionsData.ar : optionsData.en;
+                    } else if (optionsData?.options && Array.isArray(optionsData.options)) {
+                      optionsList = optionsData.options.map((opt: any) => language === 'ar' ? opt.text_ar : opt.text);
+                    }
+                    const userAnswerIdx = answers[q.id] ? parseInt(answers[q.id]) : -1;
+                    const selectedOptionText = optionsList[userAnswerIdx] || null;
+                    const questionResult = gradeResults[q.id];
+                    const isCorrect = questionResult?.correct || false;
+                    const correctAnswerText = questionResult?.correctAnswer || '';
+                    let correctAnswerIdx = (questionResult as any)?.correctIndex ?? -1;
+                    if (correctAnswerIdx < 0) {
+                      const parsedIdx = parseInt(correctAnswerText);
+                      if (!isNaN(parsedIdx) && parsedIdx >= 0 && parsedIdx < optionsList.length) {
+                        correctAnswerIdx = parsedIdx;
+                      } else {
+                        correctAnswerIdx = optionsList.findIndex(opt => opt === correctAnswerText);
+                      }
+                    }
+                    return (
+                      <div key={q.id} className={`p-4 rounded-lg border ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                        <div className="flex items-start gap-2">
+                          {isCorrect ? <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" /> : <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />}
+                          <div className="flex-1">
+                            <p className="font-medium" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>{idx + 1}. {language === 'ar' ? q.question_text_ar : q.question_text}</p>
+                            <p className="text-sm mt-1">
+                              <span className="text-muted-foreground">{isRTL ? 'إجابتك: ' : 'Your answer: '}</span>
+                              <span className={isCorrect ? 'text-green-700' : 'text-red-700'}>
+                                {selectedOptionText || (isRTL ? 'لم تجب' : 'No answer')}
+                              </span>
+                            </p>
+                            {!isCorrect && correctAnswerIdx >= 0 && optionsList[correctAnswerIdx] && (
+                              <p className="text-sm text-green-700 mt-1">
+                                {isRTL ? 'الإجابة الصحيحة: ' : 'Correct answer: '}
+                                {optionsList[correctAnswerIdx]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
 
             <Button className="w-full kojo-gradient" onClick={() => navigate('/dashboard')}>
               {isRTL ? 'العودة للوحة التحكم' : 'Back to Dashboard'}
