@@ -10,6 +10,7 @@ import { Star, TrendingUp, Tag, Loader2, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/timeUtils';
 import { CurrentLevelStatus } from '@/components/student/CurrentLevelStatus';
+import { useStudentLifecycle } from '@/hooks/useStudentLifecycle';
 
 interface EvaluationSummaryProps {
   studentId: string;
