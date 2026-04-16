@@ -809,13 +809,14 @@ export default function FinalExams() {
           <QuizResultsDialog
             open={showGradingDialog}
             onOpenChange={(open) => { setShowGradingDialog(open); if (!open) setGradingCandidate(null); }}
-            quizAssignmentId=""
+            quizAssignmentId={undefined}
             quizId={gradingCandidate.final_exam_quiz_id}
             quizTitle={`Final Exam - ${gradingCandidate.level_name}`}
             quizTitleAr={`الامتحان النهائي - ${gradingCandidate.level_name_ar || gradingCandidate.level_name}`}
             groupId={gradingCandidate.group_id}
             passingScore={60}
             isFinalExam
+            selectedStudentId={gradingCandidate.student_id}
           />
         )}
       </div>
