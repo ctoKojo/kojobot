@@ -57,6 +57,7 @@ export function EvaluationSummary({ studentId }: EvaluationSummaryProps) {
   const { isRTL, language } = useLanguage();
   const [evaluations, setEvaluations] = useState<EvalRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const lifecycle = useStudentLifecycle(studentId);
 
   useEffect(() => {
     fetchEvaluations();
