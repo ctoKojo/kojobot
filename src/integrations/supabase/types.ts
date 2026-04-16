@@ -5137,6 +5137,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      heal_orphan_users: {
+        Args: never
+        Returns: {
+          action_taken: string
+          healed_email: string
+          healed_user_id: string
+        }[]
+      }
       init_salary_month: { Args: { p_month?: string }; Returns: Json }
       is_conversation_participant: {
         Args: { _conversation_id: string; _user_id: string }
