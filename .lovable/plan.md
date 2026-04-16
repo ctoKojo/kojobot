@@ -1,23 +1,26 @@
 
 
-## خطة: إخفاء شات بوت Kojo عند نفاد رصيد الـ AI
+## Run `compute_level_grades_batch` for Group T10
 
-### الفكرة
-عند نفاد رصيد AI (أي أن الـ edge function بترجع 402)، نخفي زرار الشات بوت بالكامل بدل ما نعرض رسالة خطأ. الويدجت يظهر تاني لما الرصيد يتجدد.
+### Current State
+- **Rawan** (`status: graded`, `outcome: null`) — no `level_grades` record yet
+- **Mohamed** has a `level_grades` record already (25%, failed) but `outcome` on progress is still null
 
-### التنفيذ
+### What Will Happen
+Running `compute_level_grades_batch` for Group T10 will:
+1. Create/update `level_grades` records for all students in the group
+2. Calculate weighted score: (evaluation_avg * 60%) + (final_exam_score * 40%)
+3. Set `outcome` to `passed` or `failed` based on 50% threshold
+4. Update `group_student_progress.outcome` accordingly
 
-**1. إضافة state للـ AI availability في `KojoChatWidget.tsx`:**
-- إضافة `aiAvailable` state (default: `true`)
-- عند استلام 402 من الـ edge function → `setAiAvailable(false)`
-- فحص دوري (كل 5 دقائق) بـ HEAD request أو رسالة بسيطة للـ edge function للتأكد إن الرصيد رجع
-- لو `aiAvailable === false` → الكومبوننت يرجع `null` (مش بيظهر خالص)
+### Implementation
+One simple call via the Supabase client or edge function:
 
-**2. التفاصيل التقنية:**
-- في `handleSend`، عند 402: بدل التوست، هنعمل `setAiAvailable(false)` + نعرض توست مرة واحدة يوضح إن الخدمة مش متاحة
-- نضيف `useEffect` بـ interval كل 5 دقائق يعمل lightweight check (مثلاً OPTIONS أو ping endpoint) — أو ببساطة نعتمد على إعادة فتح الصفحة
-- لو `!aiAvailable` → return `null` قبل أي render
+```typescript
+await supabase.rpc('compute_level_grades_batch', { 
+  p_group_id: 'a9714b0b-efac-47a7-975a-74f3ae3d42a5' 
+});
+```
 
-### الملفات المتأثرة
-- `src/components/KojoChatWidget.tsx` — إضافة logic الإخفاء
+This will be executed as a one-off database RPC call to complete Rawan's flow.
 
