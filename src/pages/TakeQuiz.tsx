@@ -341,8 +341,8 @@ export default function TakeQuiz() {
   // ── Submit using ref (for timer/auto-submit to avoid stale closures)
   const handleSubmitFromRef = useCallback(() => {
     if (isSubmittingRef.current) return;
-    // Call handleSubmitCore with latest answers from ref
-    handleSubmitCore(answersRef.current);
+    // Always call the latest version of submitCore via ref
+    submitCoreRef.current?.(answersRef.current);
   }, []);
 
   const handleSubmit = async () => {
