@@ -318,7 +318,7 @@ export default function FinalExams() {
             { key: 'all' as FilterType, label: isRTL ? 'الإجمالي' : 'Total', count: filterCounts.all, icon: Users, color: 'text-primary', bgColor: 'bg-primary/10', borderColor: 'border-primary/20' },
             { key: 'awaiting_exam' as FilterType, label: isRTL ? 'في الانتظار' : 'Awaiting', count: filterCounts.awaiting_exam, icon: Clock, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20' },
             { key: 'exam_scheduled' as FilterType, label: isRTL ? 'مجدول' : 'Scheduled', count: filterCounts.exam_scheduled, icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20' },
-            { key: 'graded' as FilterType, label: isRTL ? 'تصحيح يدوي' : 'Needs Grading', count: filterCounts.graded, icon: FileText, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/20' },
+            { key: 'graded' as FilterType, label: isRTL ? 'تم التصحيح' : 'Graded', count: filterCounts.graded, icon: FileText, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/20' },
           ].map(stat => (
             <button
               key={stat.key}
@@ -426,6 +426,7 @@ export default function FinalExams() {
                     const waitDays = getWaitDays(c);
                     const slaThreshold = c.status === 'awaiting_exam' ? 7 : 14;
                     const isOverdue = waitDays >= slaThreshold;
+                    const canGrade = isAdmin && c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id;
 
                     return (
                       <Card
@@ -462,8 +463,8 @@ export default function FinalExams() {
                                     </Badge>
                                     {c.status === 'graded' ? (
                                       <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-0 text-[10px] py-0 px-1.5">
-                                        <FileText className="h-2.5 w-2.5 me-0.5" />
-                                        {isRTL ? 'تصحيح يدوي' : 'Needs Grading'}
+                                        <CheckCircle2 className="h-2.5 w-2.5 me-0.5" />
+                                        {isRTL ? 'تم التصحيح' : 'Graded'}
                                       </Badge>
                                     ) : c.status === 'exam_scheduled' ? (
                                       <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0 text-[10px] py-0 px-1.5">
@@ -512,7 +513,7 @@ export default function FinalExams() {
                               </div>
 
                               {/* Action buttons */}
-                              {isAdmin && (c.status === 'exam_scheduled' || c.status === 'graded') && c.exam_submitted_at && c.final_exam_quiz_id && (
+                              {canGrade && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -593,6 +594,7 @@ export default function FinalExams() {
                     const slaThreshold = c.status === 'awaiting_exam' ? 7 : 14;
                     const isOverdue = waitDays >= slaThreshold;
                     const isSelected = selectedIds.has(c.progress_id);
+                    const canGrade = c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id;
 
                     return (
                       <TableRow
@@ -643,7 +645,12 @@ export default function FinalExams() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          {c.status === 'exam_scheduled' ? (
+                          {c.status === 'graded' ? (
+                            <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-0 text-xs gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              {isRTL ? 'تم التصحيح' : 'Graded'}
+                            </Badge>
+                          ) : c.status === 'exam_scheduled' ? (
                             <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0 text-xs gap-1">
                               <CheckCircle2 className="h-3 w-3" />
                               {isRTL ? 'مجدول' : 'Scheduled'}
@@ -692,7 +699,7 @@ export default function FinalExams() {
                         </TableCell>
                         {isAdmin && (
                           <TableCell className="text-center">
-                            {c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id ? (
+                            {canGrade ? (
                               <Button
                                 variant="outline"
                                 size="sm"
