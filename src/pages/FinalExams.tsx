@@ -453,7 +453,12 @@ export default function FinalExams() {
                                     <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal">
                                       {getLevelName(c)}
                                     </Badge>
-                                    {c.status === 'exam_scheduled' ? (
+                                    {c.status === 'graded' ? (
+                                      <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-0 text-[10px] py-0 px-1.5">
+                                        <FileText className="h-2.5 w-2.5 me-0.5" />
+                                        {isRTL ? 'تصحيح يدوي' : 'Needs Grading'}
+                                      </Badge>
+                                    ) : c.status === 'exam_scheduled' ? (
                                       <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0 text-[10px] py-0 px-1.5">
                                         <CheckCircle2 className="h-2.5 w-2.5 me-0.5" />
                                         {isRTL ? 'مجدول' : 'Scheduled'}
