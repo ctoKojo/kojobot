@@ -1,32 +1,11 @@
-import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
 import { UserPlus } from 'lucide-react';
 
 interface PendingGroupBannerProps {
-  studentId: string;
   isRTL: boolean;
 }
 
-export function PendingGroupBanner({ studentId, isRTL }: PendingGroupBannerProps) {
-  const [pending, setPending] = useState(false);
-
-  useEffect(() => {
-    const check = async () => {
-      const { data } = await supabase
-        .from('group_student_progress')
-        .select('id')
-        .eq('student_id', studentId)
-        .eq('status', 'pending_group_assignment')
-        .limit(1)
-        .maybeSingle();
-      setPending(!!data);
-    };
-    check();
-  }, [studentId]);
-
-  if (!pending) return null;
-
+export function PendingGroupBanner({ isRTL }: PendingGroupBannerProps) {
   return (
     <Card className="border-blue-300 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800">
       <CardContent className="py-4 sm:py-6">

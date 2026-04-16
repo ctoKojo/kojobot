@@ -10,6 +10,7 @@ import { Star, TrendingUp, Tag, Loader2, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/lib/timeUtils';
 import { CurrentLevelStatus } from '@/components/student/CurrentLevelStatus';
+import { useStudentLifecycle } from '@/hooks/useStudentLifecycle';
 
 interface EvaluationSummaryProps {
   studentId: string;
@@ -56,6 +57,7 @@ export function EvaluationSummary({ studentId }: EvaluationSummaryProps) {
   const { isRTL, language } = useLanguage();
   const [evaluations, setEvaluations] = useState<EvalRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const lifecycle = useStudentLifecycle(studentId);
 
   useEffect(() => {
     fetchEvaluations();
@@ -166,7 +168,14 @@ export function EvaluationSummary({ studentId }: EvaluationSummaryProps) {
   return (
     <div className="space-y-6">
       {/* Current Level Status */}
-      <CurrentLevelStatus studentId={studentId} />
+      {lifecycle.currentLevel && (
+        <CurrentLevelStatus
+          levelName={language === 'ar' ? lifecycle.currentLevel.name_ar : lifecycle.currentLevel.name}
+          status={lifecycle.status}
+          outcome={lifecycle.outcome}
+          grade={lifecycle.grade}
+        />
+      )}
 
       {/* Overview Card */}
       <Card className="border-2 border-primary/20">
