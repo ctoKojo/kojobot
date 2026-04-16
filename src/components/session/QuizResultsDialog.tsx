@@ -729,50 +729,95 @@ export function QuizResultsDialog({
                       </div>
                     </div>
                   ) : (
-                    /* MCQ Options Display */
+                    /* MCQ / True-False Options Display */
                     <div className="space-y-2">
-                      {question.options.map((option, optIndex) => {
-                        const isCorrect = option === question.correct_answer;
-                        const isStudentAnswer = option === question.student_answer;
+                      {question.question_type === 'true_false' ? (
+                        ['True', 'False'].map((option) => {
+                          const isCorrectAnswer = question.correct_answer?.toLowerCase?.() === option.toLowerCase();
+                          const isStudentAnswer = question.student_answer?.toLowerCase?.() === option.toLowerCase();
+                          const displayOption = language === 'ar' ? (option === 'True' ? 'صح' : 'خطأ') : option;
 
-                        return (
-                          <div
-                            key={optIndex}
-                            className={`p-2 rounded-md text-sm ${
-                              isCorrect && isStudentAnswer
-                                ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400'
-                                : isCorrect
-                                  ? 'bg-green-100 dark:bg-green-900/30 border border-green-300'
-                                  : isStudentAnswer
-                                    ? 'bg-red-100 dark:bg-red-900/30 border-2 border-red-400'
-                                    : 'bg-muted/50'
-                            }`}
-                          >
-                            <div className="flex items-start gap-2 flex-wrap">
-                              <div className="flex items-center gap-1.5 flex-shrink-0">
-                                {isCorrect && isStudentAnswer && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                                {isCorrect && !isStudentAnswer && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                                {isStudentAnswer && !isCorrect && <XCircle className="h-4 w-4 text-red-600" />}
-                              </div>
-                              <span className="flex-1 break-words" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>{option}</span>
-                              <div className="flex flex-wrap gap-1">
-                                {isStudentAnswer && (
-                                  <Badge variant="outline" className={`text-xs whitespace-nowrap ${isCorrect ? 'text-green-600 border-green-300' : 'text-red-600 border-red-300'}`}>
-                                    {isRTL ? 'اختيار الطالب' : 'Student Pick'}
-                                  </Badge>
-                                )}
-                                {isCorrect && !isStudentAnswer && (
-                                  <Badge variant="outline" className="text-xs text-green-600 border-green-300 whitespace-nowrap">
-                                    {isRTL ? 'الإجابة الصحيحة' : 'Correct'}
-                                  </Badge>
-                                )}
+                          return (
+                            <div
+                              key={option}
+                              className={`p-2.5 rounded-md text-sm ${
+                                isCorrectAnswer && isStudentAnswer
+                                  ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400'
+                                  : isCorrectAnswer
+                                    ? 'bg-green-100 dark:bg-green-900/30 border border-green-300'
+                                    : isStudentAnswer
+                                      ? 'bg-red-100 dark:bg-red-900/30 border-2 border-red-400'
+                                      : 'bg-muted/50 border border-transparent'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5">
+                                  {isCorrectAnswer && <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />}
+                                  {isStudentAnswer && !isCorrectAnswer && <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />}
+                                  <span>{displayOption}</span>
+                                </div>
+                                <div className="flex gap-1">
+                                  {isStudentAnswer && (
+                                    <Badge variant="outline" className={`text-xs ${isCorrectAnswer ? 'text-green-600 border-green-300' : 'text-red-600 border-red-300'}`}>
+                                      {isRTL ? 'اختيار الطالب' : 'Student Pick'}
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      ) : (
+                        /* Multiple Choice */
+                        (() => {
+                          const displayOptions = language === 'ar' ? question.options_ar : question.options_en;
+                          return displayOptions.map((option, optIndex) => {
+                            const optionLetter = String.fromCharCode(65 + optIndex); // A, B, C, D
+                            // Support both letter-based answers and full-text answers
+                            const isCorrectAnswer = question.correct_answer === optionLetter || question.correct_answer === option;
+                            const isStudentAnswer = question.student_answer === optionLetter || question.student_answer === option;
+
+                            return (
+                              <div
+                                key={optIndex}
+                                className={`p-2.5 rounded-md text-sm ${
+                                  isCorrectAnswer && isStudentAnswer
+                                    ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400'
+                                    : isCorrectAnswer
+                                      ? 'bg-green-100 dark:bg-green-900/30 border border-green-300'
+                                      : isStudentAnswer
+                                        ? 'bg-red-100 dark:bg-red-900/30 border-2 border-red-400'
+                                        : 'bg-muted/50 border border-transparent'
+                                }`}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                                    {isCorrectAnswer && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                                    {isStudentAnswer && !isCorrectAnswer && <XCircle className="h-4 w-4 text-red-600" />}
+                                    {!isCorrectAnswer && !isStudentAnswer && <span className="w-4 h-4 inline-block" />}
+                                    <span className="font-medium text-muted-foreground">{optionLetter}.</span>
+                                  </div>
+                                  <span className="flex-1 break-words" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>{option}</span>
+                                  <div className="flex flex-wrap gap-1 flex-shrink-0">
+                                    {isStudentAnswer && (
+                                      <Badge variant="outline" className={`text-xs whitespace-nowrap ${isCorrectAnswer ? 'text-green-600 border-green-300' : 'text-red-600 border-red-300'}`}>
+                                        {isRTL ? 'اختيار الطالب' : 'Student Pick'}
+                                      </Badge>
+                                    )}
+                                    {isCorrectAnswer && !isStudentAnswer && (
+                                      <Badge variant="outline" className="text-xs text-green-600 border-green-300 whitespace-nowrap">
+                                        {isRTL ? 'الإجابة الصحيحة' : 'Correct'}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()
+                      )}
                       {!question.student_answer && (
-                        <div className="p-2 rounded-md text-sm bg-muted/50 text-muted-foreground italic">
+                        <div className="p-2.5 rounded-md text-sm bg-muted/50 text-muted-foreground italic border border-dashed">
                           {isRTL ? 'لم يجب الطالب على هذا السؤال' : 'Student did not answer this question'}
                         </div>
                       )}
