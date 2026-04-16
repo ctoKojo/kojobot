@@ -406,7 +406,7 @@ export function QuizResultsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto w-[95vw] sm:w-full p-3 sm:p-6">
         <DialogHeader>
           <div className="flex items-center gap-2">
             {selectedStudent && (
@@ -434,26 +434,26 @@ export function QuizResultsDialog({
         {!selectedStudent ? (
           <>
             {/* Stats Bar */}
-            <div className={`grid ${needsGradingCount > 0 ? 'grid-cols-5' : 'grid-cols-4'} gap-3 py-3 border-b`}>
+            <div className={`grid grid-cols-2 sm:${needsGradingCount > 0 ? 'grid-cols-5' : 'grid-cols-4'} gap-2 sm:gap-3 py-3 border-b`}>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{completedCount}/{results.length}</div>
+                <div className="text-lg sm:text-2xl font-bold text-green-600">{completedCount}/{results.length}</div>
                 <div className="text-xs text-muted-foreground">{isRTL ? 'مكتمل' : 'Completed'}</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-600">{inProgressCount}</div>
+                <div className="text-lg sm:text-2xl font-bold text-yellow-600">{inProgressCount}</div>
                 <div className="text-xs text-muted-foreground">{isRTL ? 'جاري' : 'In Progress'}</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{avgPercentage.toFixed(0)}%</div>
+                <div className="text-lg sm:text-2xl font-bold text-blue-600">{avgPercentage.toFixed(0)}%</div>
                 <div className="text-xs text-muted-foreground">{isRTL ? 'المتوسط' : 'Average'}</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{passedCount}</div>
+                <div className="text-lg sm:text-2xl font-bold text-primary">{passedCount}</div>
                 <div className="text-xs text-muted-foreground">{isRTL ? 'ناجحين' : 'Passed'}</div>
               </div>
               {needsGradingCount > 0 && (
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-amber-600">{needsGradingCount}</div>
+                <div className="text-center col-span-2 sm:col-span-1">
+                  <div className="text-lg sm:text-2xl font-bold text-amber-600">{needsGradingCount}</div>
                   <div className="text-xs text-muted-foreground">{isRTL ? 'يحتاج تصحيح' : 'Needs Grading'}</div>
                 </div>
               )}
@@ -467,36 +467,24 @@ export function QuizResultsDialog({
                 ))}
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                    <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                    <TableHead className="text-center">{isRTL ? 'الدرجة' : 'Score'}</TableHead>
-                    <TableHead className="text-center">{isRTL ? 'النسبة' : 'Percentage'}</TableHead>
-                    <TableHead className="text-center">{isRTL ? 'الإجراءات' : 'Actions'}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {results.map(student => (
-                    <TableRow key={student.student_id}>
-                      <TableCell className="font-medium">
+              {/* Mobile: Card layout */}
+              <div className="sm:hidden space-y-2">
+                {results.map(student => (
+                  <div key={student.student_id} className="p-3 rounded-lg border bg-card space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">
                         {language === 'ar' ? student.student_name_ar : student.student_name}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {getStatusIcon(student.status, student.grading_status)}
-                          <span className="text-sm">{getStatusText(student.status, student.grading_status)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {student.score !== null ? (
-                          <span>{student.score}/{student.max_score}</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {getStatusIcon(student.status, student.grading_status)}
+                        <span className="text-xs text-muted-foreground">{getStatusText(student.status, student.grading_status)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {student.score !== null && (
+                          <span className="text-sm">{student.score}/{student.max_score}</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-center">
                         {student.percentage !== null ? (
                           <Badge className={(student.percentage >= passingScore) ? 'bg-green-500' : 'bg-red-500'}>
                             {student.percentage.toFixed(0)}%
@@ -505,38 +493,93 @@ export function QuizResultsDialog({
                           <Badge variant="outline" className="text-amber-600 border-amber-300">
                             {isRTL ? 'معلق' : 'Pending'}
                           </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {student.answers ? (
-                          <Button
-                            variant={student.grading_status === 'needs_manual_grading' ? 'default' : 'ghost'}
-                            size="sm"
-                            onClick={() => fetchStudentAnswers(student)}
-                            className="h-8"
-                          >
-                            {student.grading_status === 'needs_manual_grading' ? (
-                              <>
-                                <FileText className="h-4 w-4 mr-1" />
-                                {isRTL ? 'تصحيح' : 'Grade'}
-                              </>
-                            ) : (
-                              <>
-                                <Eye className="h-4 w-4 mr-1" />
-                                {isRTL ? 'معاينة' : 'Preview'}
-                              </>
-                            )}
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </TableCell>
+                        ) : null}
+                      </div>
+                      {student.answers && (
+                        <Button
+                          variant={student.grading_status === 'needs_manual_grading' ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => fetchStudentAnswers(student)}
+                          className="h-7 text-xs"
+                        >
+                          {student.grading_status === 'needs_manual_grading' ? (
+                            <><FileText className="h-3 w-3 mr-1" />{isRTL ? 'تصحيح' : 'Grade'}</>
+                          ) : (
+                            <><Eye className="h-3 w-3 mr-1" />{isRTL ? 'معاينة' : 'Preview'}</>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop: Table layout */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                      <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                      <TableHead className="text-center">{isRTL ? 'الدرجة' : 'Score'}</TableHead>
+                      <TableHead className="text-center">{isRTL ? 'النسبة' : 'Percentage'}</TableHead>
+                      <TableHead className="text-center">{isRTL ? 'الإجراءات' : 'Actions'}</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {results.map(student => (
+                      <TableRow key={student.student_id}>
+                        <TableCell className="font-medium">
+                          {language === 'ar' ? student.student_name_ar : student.student_name}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {getStatusIcon(student.status, student.grading_status)}
+                            <span className="text-sm">{getStatusText(student.status, student.grading_status)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {student.score !== null ? (
+                            <span>{student.score}/{student.max_score}</span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {student.percentage !== null ? (
+                            <Badge className={(student.percentage >= passingScore) ? 'bg-green-500' : 'bg-red-500'}>
+                              {student.percentage.toFixed(0)}%
+                            </Badge>
+                          ) : student.grading_status === 'needs_manual_grading' ? (
+                            <Badge variant="outline" className="text-amber-600 border-amber-300">
+                              {isRTL ? 'معلق' : 'Pending'}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {student.answers ? (
+                            <Button
+                              variant={student.grading_status === 'needs_manual_grading' ? 'default' : 'ghost'}
+                              size="sm"
+                              onClick={() => fetchStudentAnswers(student)}
+                              className="h-8"
+                            >
+                              {student.grading_status === 'needs_manual_grading' ? (
+                                <><FileText className="h-4 w-4 mr-1" />{isRTL ? 'تصحيح' : 'Grade'}</>
+                              ) : (
+                                <><Eye className="h-4 w-4 mr-1" />{isRTL ? 'معاينة' : 'Preview'}</>
+                              )}
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </>
         ) : (
@@ -627,21 +670,23 @@ export function QuizResultsDialog({
                       )}
 
                       {/* Manual Grade Input */}
-                      <div className="flex items-end gap-3 pt-2 border-t">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2 sm:gap-3 pt-2 border-t">
                         <div className="space-y-1">
                           <Label className="text-xs">{isRTL ? 'الدرجة' : 'Score'}</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={question.points}
-                            value={manualGrades[question.id]?.score ?? 0}
-                            onChange={(e) => setManualGrades(prev => ({
-                              ...prev,
-                              [question.id]: { ...prev[question.id], score: Math.min(parseInt(e.target.value) || 0, question.points) }
-                            }))}
-                            className="w-20 h-8"
-                          />
-                          <span className="text-xs text-muted-foreground">/ {question.points}</span>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={question.points}
+                              value={manualGrades[question.id]?.score ?? 0}
+                              onChange={(e) => setManualGrades(prev => ({
+                                ...prev,
+                                [question.id]: { ...prev[question.id], score: Math.min(parseInt(e.target.value) || 0, question.points) }
+                              }))}
+                              className="w-20 h-8"
+                            />
+                            <span className="text-xs text-muted-foreground">/ {question.points}</span>
+                          </div>
                         </div>
                         <div className="flex-1 space-y-1">
                           <Label className="text-xs">{isRTL ? 'ملاحظات' : 'Feedback'}</Label>
@@ -670,27 +715,34 @@ export function QuizResultsDialog({
                           <div
                             key={optIndex}
                             className={`p-2 rounded-md text-sm ${
-                              isCorrect
-                                ? 'bg-green-100 dark:bg-green-900/30 border border-green-300'
-                                : isStudentAnswer
-                                  ? 'bg-red-100 dark:bg-red-900/30 border border-red-300'
-                                  : 'bg-muted/50'
+                              isCorrect && isStudentAnswer
+                                ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400'
+                                : isCorrect
+                                  ? 'bg-green-100 dark:bg-green-900/30 border border-green-300'
+                                  : isStudentAnswer
+                                    ? 'bg-red-100 dark:bg-red-900/30 border-2 border-red-400'
+                                    : 'bg-muted/50'
                             }`}
                           >
-                            <div className="flex items-center gap-2">
-                              {isCorrect && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                              {isStudentAnswer && !isCorrect && <XCircle className="h-4 w-4 text-red-600" />}
-                              <span>{option}</span>
-                              {isCorrect && (
-                                <Badge variant="outline" className="ml-auto text-xs text-green-600 border-green-300">
-                                  {isRTL ? 'الإجابة الصحيحة' : 'Correct Answer'}
-                                </Badge>
-                              )}
-                              {isStudentAnswer && !isCorrect && (
-                                <Badge variant="outline" className="ml-auto text-xs text-red-600 border-red-300">
-                                  {isRTL ? 'إجابة الطالب' : 'Student Answer'}
-                                </Badge>
-                              )}
+                            <div className="flex items-start gap-2 flex-wrap">
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                {isCorrect && isStudentAnswer && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                                {isCorrect && !isStudentAnswer && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                                {isStudentAnswer && !isCorrect && <XCircle className="h-4 w-4 text-red-600" />}
+                              </div>
+                              <span className="flex-1 break-words" dir="rtl" style={{ unicodeBidi: 'plaintext' }}>{option}</span>
+                              <div className="flex flex-wrap gap-1">
+                                {isStudentAnswer && (
+                                  <Badge variant="outline" className={`text-xs whitespace-nowrap ${isCorrect ? 'text-green-600 border-green-300' : 'text-red-600 border-red-300'}`}>
+                                    {isRTL ? 'اختيار الطالب' : 'Student Pick'}
+                                  </Badge>
+                                )}
+                                {isCorrect && !isStudentAnswer && (
+                                  <Badge variant="outline" className="text-xs text-green-600 border-green-300 whitespace-nowrap">
+                                    {isRTL ? 'الإجابة الصحيحة' : 'Correct'}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
