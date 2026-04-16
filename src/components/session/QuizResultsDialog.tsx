@@ -248,7 +248,19 @@ export function QuizResultsDialog({
         
         const details: QuestionDetail[] = questions.map(q => {
           const studentAnswer = student.answers?.[q.id] || null;
-          const options = Array.isArray(q.options) ? q.options as string[] : [];
+          
+          // Parse options - handle both {en: [], ar: []} and plain array formats
+          let optionsEn: string[] = [];
+          let optionsAr: string[] = [];
+          if (q.options && typeof q.options === 'object' && !Array.isArray(q.options) && 'en' in (q.options as any)) {
+            const opts = q.options as { en: string[]; ar: string[] };
+            optionsEn = opts.en || [];
+            optionsAr = opts.ar || opts.en || [];
+          } else if (Array.isArray(q.options)) {
+            optionsEn = q.options as string[];
+            optionsAr = q.options as string[];
+          }
+          
           const attempt = attempts.find(a => a.question_id === q.id);
           const questionType = q.question_type || 'multiple_choice';
 
@@ -260,14 +272,23 @@ export function QuizResultsDialog({
             };
           }
 
+          // Determine correctness - handle letter answers (A, B, C, D)
+          let isCorrect = false;
+          if (questionType === 'multiple_choice') {
+            isCorrect = studentAnswer === q.correct_answer;
+          } else if (questionType === 'true_false') {
+            isCorrect = studentAnswer?.toLowerCase?.()?.trim() === q.correct_answer?.toLowerCase?.()?.trim();
+          }
+
           return {
             id: q.id,
             question_text: q.question_text,
             question_text_ar: q.question_text_ar,
-            options,
+            options_en: optionsEn,
+            options_ar: optionsAr,
             correct_answer: q.correct_answer,
             student_answer: studentAnswer,
-            is_correct: questionType === 'multiple_choice' ? studentAnswer === q.correct_answer : false,
+            is_correct: isCorrect,
             points: q.points,
             image_url: q.image_url,
             code_snippet: (q as any).code_snippet || null,
