@@ -15,7 +15,7 @@ interface LevelPassedBannerProps {
   onUpgraded?: () => void;
 }
 
-interface TrackOption {
+interface BranchOption {
   id: string;
   name: string;
   name_ar: string;
