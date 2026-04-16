@@ -808,7 +808,7 @@ export default function FinalExams() {
         {gradingCandidate && gradingCandidate.final_exam_quiz_id && (
           <QuizResultsDialog
             open={showGradingDialog}
-            onOpenChange={(open) => { setShowGradingDialog(open); if (!open) setGradingCandidate(null); }}
+            onOpenChange={(open) => { setShowGradingDialog(open); if (!open) { setGradingCandidate(null); fetchCandidates(); } }}
             quizAssignmentId={undefined}
             quizId={gradingCandidate.final_exam_quiz_id}
             quizTitle={`Final Exam - ${gradingCandidate.level_name}`}
