@@ -50,7 +50,6 @@ export function StudentDashboard() {
   const { isRTL, language } = useLanguage();
   const navigate = useNavigate();
   const lifecycle = useStudentLifecycle(user?.id);
-  const navigate = useNavigate();
   const [stats, setStats] = useState<StudentStats>({
     groupInfo: null,
     subscription: null,
