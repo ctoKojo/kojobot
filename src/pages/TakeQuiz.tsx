@@ -109,6 +109,7 @@ export default function TakeQuiz() {
   const answersRef = useRef(answers);
   const isSubmittingRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const submitCoreRef = useRef<(currentAnswers: Record<string, string>) => Promise<void>>();
 
   // Keep ref in sync
   useEffect(() => { answersRef.current = answers; }, [answers]);
@@ -340,8 +341,8 @@ export default function TakeQuiz() {
   // ── Submit using ref (for timer/auto-submit to avoid stale closures)
   const handleSubmitFromRef = useCallback(() => {
     if (isSubmittingRef.current) return;
-    // Call handleSubmitCore with latest answers from ref
-    handleSubmitCore(answersRef.current);
+    // Always call the latest version of submitCore via ref
+    submitCoreRef.current?.(answersRef.current);
   }, []);
 
   const handleSubmit = async () => {
@@ -437,6 +438,9 @@ export default function TakeQuiz() {
       setSubmitting(false);
     }
   };
+
+  // Keep submitCore ref always pointing to latest closure
+  useEffect(() => { submitCoreRef.current = handleSubmitCore; });
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
