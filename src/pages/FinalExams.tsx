@@ -186,6 +186,13 @@ export default function FinalExams() {
       return;
     }
 
+    // Prevent scheduling in the past
+    const selectedDateTime = new Date(`${scheduleDate}T${scheduleTime}:00`);
+    if (selectedDateTime < new Date()) {
+      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'لا يمكن جدولة امتحان في وقت ماضي' : 'Cannot schedule an exam in the past' });
+      return;
+    }
+
     setScheduling(true);
     try {
       const groupId = Array.from(selectedGroupIds)[0];
