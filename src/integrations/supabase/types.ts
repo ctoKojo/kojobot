@@ -4998,9 +4998,11 @@ export type Database = {
       detect_orphan_users: {
         Args: never
         Returns: {
-          issue: string
-          orphan_email: string
-          orphan_user_id: string
+          classification: string
+          created_at: string
+          email: string
+          provider: string
+          user_id: string
         }[]
       }
       enqueue_email: {
