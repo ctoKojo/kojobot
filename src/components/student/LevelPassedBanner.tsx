@@ -86,7 +86,7 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
 
   const handleUpgrade = async () => {
     if (!progress) return;
-    if (hasBranching && !chosenTrackId) {
+    if (hasBranching && !chosenBranchId) {
       toast({
         variant: 'destructive',
         title: isRTL ? 'خطأ' : 'Error',
@@ -99,7 +99,7 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
     try {
       const { data, error } = await supabase.rpc('student_choose_track_and_upgrade', {
         p_group_id: progress.group_id,
-        p_chosen_track_id: hasBranching ? chosenTrackId : null,
+        p_chosen_track_id: hasBranching ? chosenBranchId : null,
       });
       if (error) throw error;
       const result = data as any;
@@ -144,27 +144,27 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
             </p>
           </div>
 
-          {hasBranching && tracks.length > 0 ? (
+          {hasBranching && branches.length > 0 ? (
             <div className="w-full max-w-sm space-y-3">
               <p className="text-sm font-medium">
                 {isRTL ? 'اختر المسار التخصصي للمستوى القادم:' : 'Choose your specialization track for the next level:'}
               </p>
               <div className="grid gap-2">
-                {tracks.map(track => (
+                {branches.map(branch => (
                   <Button
-                    key={track.id}
-                    variant={chosenTrackId === track.id ? 'default' : 'outline'}
+                    key={branch.id}
+                    variant={chosenBranchId === branch.id ? 'default' : 'outline'}
                     className="w-full justify-start gap-2"
-                    onClick={() => setChosenTrackId(track.id)}
+                    onClick={() => setChosenBranchId(branch.id)}
                   >
                     <GraduationCap className="h-4 w-4" />
-                    {language === 'ar' ? track.name_ar : track.name}
+                    {language === 'ar' ? branch.name_ar : branch.name}
                   </Button>
                 ))}
               </div>
               <Button
                 onClick={handleUpgrade}
-                disabled={loading || !chosenTrackId}
+                disabled={loading || !chosenBranchId}
                 className="w-full"
               >
                 <ArrowUpCircle className="h-4 w-4 mr-2" />
