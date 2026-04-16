@@ -95,7 +95,7 @@ export function useStudentLifecycle(studentId: string | undefined): StudentLifec
         .maybeSingle()
         .then(r => r);
 
-      let branchPromise: Promise<any> = Promise.resolve({ data: null });
+      let branchPromise: PromiseLike<any> = Promise.resolve({ data: null });
       if (outcome === 'passed' && status === 'graded') {
         branchPromise = supabase
           .from('levels')
