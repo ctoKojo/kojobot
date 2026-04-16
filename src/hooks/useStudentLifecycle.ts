@@ -105,7 +105,7 @@ export function useStudentLifecycle(studentId: string | undefined): StudentLifec
           .then(r => r);
       }
 
-      let examPromise: Promise<any> = Promise.resolve({ data: null });
+      let examPromise: PromiseLike<any> = Promise.resolve({ data: null });
       if (status === 'exam_scheduled' && gsp.exam_scheduled_at && level?.final_exam_quiz_id) {
         examPromise = supabase
           .from('quiz_assignments')
