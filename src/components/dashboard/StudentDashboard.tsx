@@ -3,6 +3,7 @@ import { Calendar, GraduationCap, Clock, AlertTriangle, ClipboardList, FileQuest
 import { LevelPassedBanner } from '@/components/student/LevelPassedBanner';
 import { FinalExamBanner } from '@/components/student/FinalExamBanner';
 import { PendingGroupBanner } from '@/components/student/PendingGroupBanner';
+import { useStudentLifecycle } from '@/hooks/useStudentLifecycle';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -47,6 +48,8 @@ interface StudentStats {
 export function StudentDashboard() {
   const { user } = useAuth();
   const { isRTL, language } = useLanguage();
+  const navigate = useNavigate();
+  const lifecycle = useStudentLifecycle(user?.id);
   const navigate = useNavigate();
   const [stats, setStats] = useState<StudentStats>({
     groupInfo: null,
@@ -339,13 +342,25 @@ export function StudentDashboard() {
       {user && <ClosureBanner role="student" userId={user.id} isRTL={isRTL} language={language} />}
 
       {/* Level Passed - Track Selection Banner */}
-      {user && <LevelPassedBanner studentId={user.id} onUpgraded={fetchStats} />}
+      {lifecycle.status === 'graded' && lifecycle.outcome === 'passed' && lifecycle.groupId && lifecycle.currentLevel && (
+        <LevelPassedBanner
+          groupId={lifecycle.groupId}
+          levelName={language === 'ar' ? lifecycle.currentLevel.name_ar : lifecycle.currentLevel.name}
+          percentage={lifecycle.grade?.percentage != null ? Math.round(lifecycle.grade.percentage) : null}
+          branches={lifecycle.branches}
+          onUpgraded={() => { lifecycle.refetch(); fetchStats(); }}
+        />
+      )}
 
       {/* Final Exam Scheduled Banner */}
-      {user && <FinalExamBanner studentId={user.id} />}
+      {lifecycle.status === 'exam_scheduled' && lifecycle.examInfo && (
+        <FinalExamBanner examInfo={lifecycle.examInfo} />
+      )}
 
       {/* Pending Group Assignment Banner */}
-      {user && <PendingGroupBanner studentId={user.id} isRTL={isRTL} />}
+      {lifecycle.isPendingGroup && (
+        <PendingGroupBanner isRTL={isRTL} />
+      )}
 
       {/* Welcome Banner */}
       {stats.profile && (
