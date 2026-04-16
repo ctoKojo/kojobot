@@ -27,8 +27,8 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
   const [progress, setProgress] = useState<any>(null);
   const [levelName, setLevelName] = useState('');
   const [percentage, setPercentage] = useState<number | null>(null);
-  const [tracks, setTracks] = useState<TrackOption[]>([]);
-  const [chosenTrackId, setChosenTrackId] = useState<string>('');
+  const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [chosenBranchId, setChosenBranchId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [hasBranching, setHasBranching] = useState(false);
 
@@ -37,7 +37,6 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
   }, [studentId]);
 
   const fetchProgress = async () => {
-    // Check if student already has an in_progress record (already upgraded)
     const { data: inProgressCheck } = await supabase
       .from('group_student_progress')
       .select('id')
@@ -46,10 +45,8 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
       .limit(1)
       .maybeSingle();
 
-    // If student is already in progress on a level, don't show the banner
     if (inProgressCheck) return;
 
-    // Get latest progress where student passed
     const { data: gsp } = await supabase
       .from('group_student_progress')
       .select('*, levels!group_student_progress_current_level_id_fkey(name, name_ar)')
@@ -64,7 +61,6 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
     setProgress(gsp);
     setLevelName(language === 'ar' ? gsp.levels?.name_ar || gsp.levels?.name : gsp.levels?.name || '');
 
-    // Get grade percentage
     const { data: grade } = await supabase
       .from('level_grades')
       .select('percentage')
@@ -75,24 +71,16 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
 
     if (grade?.percentage != null) setPercentage(Math.round(grade.percentage));
 
-    // Check if next level has branching (children with tracks)
+    // Detect branching: multiple active children = branch point
     const { data: children } = await supabase
       .from('levels')
-      .select('id, track_id')
+      .select('id, name, name_ar, track_id')
       .eq('parent_level_id', gsp.current_level_id)
-      .eq('is_active', true)
-      .not('track_id', 'is', null);
+      .eq('is_active', true);
 
-    if (children && children.length > 0) {
+    if (children && children.length > 1) {
       setHasBranching(true);
-      // Fetch track details
-      const trackIds = children.map(c => c.track_id!);
-      const { data: trackData } = await supabase
-        .from('tracks')
-        .select('id, name, name_ar')
-        .in('id', trackIds)
-        .eq('is_active', true);
-      setTracks(trackData || []);
+      setBranches(children.map(c => ({ id: c.id, name: c.name, name_ar: c.name_ar })));
     }
   };
 
