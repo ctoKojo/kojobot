@@ -184,6 +184,29 @@ export default function TakeQuiz() {
       if (assignmentError) throw assignmentError;
       setAssignment(assignmentData);
 
+      // Check if already submitted
+      const { data: existingSub } = await supabase
+        .from('quiz_submissions')
+        .select('id, status, score, max_score, submitted_at')
+        .eq('quiz_assignment_id', assignmentData.id)
+        .eq('student_id', user?.id || '')
+        .maybeSingle();
+
+      if (existingSub && (existingSub.status === 'submitted' || existingSub.status === 'graded')) {
+        const pct = existingSub.max_score ? Math.round((existingSub.score / existingSub.max_score) * 100) : null;
+        const isFinalExam = !assignmentData.session_id;
+        setResult({
+          score: existingSub.score || 0,
+          maxScore: existingSub.max_score || 0,
+          percentage: isFinalExam ? null : pct,
+          passed: pct !== null ? pct >= (assignmentData.quizzes?.passing_score || 60) : false,
+          hasOpenEnded: isFinalExam,
+        });
+        setSubmitted(true);
+        setLoading(false);
+        return;
+      }
+
       // Check frozen group
       if (assignmentData.group_id) {
         const { data: groupData } = await supabase
