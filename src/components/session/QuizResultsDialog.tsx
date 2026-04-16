@@ -434,7 +434,7 @@ export function QuizResultsDialog({
         {!selectedStudent ? (
           <>
             {/* Stats Bar */}
-            <div className={`grid grid-cols-2 sm:${needsGradingCount > 0 ? 'grid-cols-5' : 'grid-cols-4'} gap-2 sm:gap-3 py-3 border-b`}>
+            <div className={`grid grid-cols-2 gap-2 sm:gap-3 py-3 border-b ${needsGradingCount > 0 ? 'sm:grid-cols-5' : 'sm:grid-cols-4'}`}>
               <div className="text-center">
                 <div className="text-lg sm:text-2xl font-bold text-green-600">{completedCount}/{results.length}</div>
                 <div className="text-xs text-muted-foreground">{isRTL ? 'مكتمل' : 'Completed'}</div>
