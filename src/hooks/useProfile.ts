@@ -1,20 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getProfileByUserId, updateProfileByUserId, type ProfileData } from '@/lib/profileService';
 
-interface ProfileData {
-  id: string;
-  full_name: string;
-  full_name_ar: string | null;
-  email: string;
-  phone: string | null;
-  avatar_url: string | null;
-  date_of_birth: string | null;
-  specialization: string | null;
-  specialization_ar: string | null;
-  is_paid_trainee: boolean | null;
-  hourly_rate: number | null;
-}
+export type { ProfileData };
 
 export function useProfile() {
   const { user } = useAuth();
@@ -29,12 +18,7 @@ export function useProfile() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
+      const { data, error } = await getProfileByUserId(user.id);
       if (error) throw error;
       setProfile(data);
     } catch (error) {
@@ -46,14 +30,10 @@ export function useProfile() {
   }, [user?.id]);
 
   const updateProfile = useCallback(async (updates: Partial<ProfileData>) => {
-    if (!profile?.id) return { error: new Error('No profile found') };
+    if (!user?.id) return { error: new Error('No user found') };
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', profile.id);
-
+      const { data, error } = await updateProfileByUserId(user.id, updates);
       if (error) throw error;
 
       // Update local state
@@ -63,7 +43,7 @@ export function useProfile() {
       console.error('Error updating profile:', error);
       return { error };
     }
-  }, [profile?.id]);
+  }, [user?.id]);
 
   const refreshProfile = useCallback(() => {
     setLoading(true);
