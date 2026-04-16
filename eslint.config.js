@@ -37,6 +37,18 @@ export default tseslint.config(
           message: "Use ATTENDANCE_MODES from '@/lib/constants' instead of defining locally.",
         },
       ],
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            {
+              group: ["**/integrations/supabase/client"],
+              importNames: ["supabase"],
+              message: "For profile operations, use '@/lib/profileService' instead of querying profiles directly.",
+            },
+          ],
+        },
+      ],
     },
   },
 );
