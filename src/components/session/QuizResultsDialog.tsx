@@ -467,84 +467,25 @@ export function QuizResultsDialog({
                 ))}
               </div>
             ) : (
-              {/* Mobile: Card layout */}
-              <div className="sm:hidden space-y-2">
-                {results.map(student => (
-                  <div key={student.student_id} className="p-3 rounded-lg border bg-card space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">
-                        {language === 'ar' ? student.student_name_ar : student.student_name}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        {getStatusIcon(student.status, student.grading_status)}
-                        <span className="text-xs text-muted-foreground">{getStatusText(student.status, student.grading_status)}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {student.score !== null && (
-                          <span className="text-sm">{student.score}/{student.max_score}</span>
-                        )}
-                        {student.percentage !== null ? (
-                          <Badge className={(student.percentage >= passingScore) ? 'bg-green-500' : 'bg-red-500'}>
-                            {student.percentage.toFixed(0)}%
-                          </Badge>
-                        ) : student.grading_status === 'needs_manual_grading' ? (
-                          <Badge variant="outline" className="text-amber-600 border-amber-300">
-                            {isRTL ? 'معلق' : 'Pending'}
-                          </Badge>
-                        ) : null}
-                      </div>
-                      {student.answers && (
-                        <Button
-                          variant={student.grading_status === 'needs_manual_grading' ? 'default' : 'ghost'}
-                          size="sm"
-                          onClick={() => fetchStudentAnswers(student)}
-                          className="h-7 text-xs"
-                        >
-                          {student.grading_status === 'needs_manual_grading' ? (
-                            <><FileText className="h-3 w-3 mr-1" />{isRTL ? 'تصحيح' : 'Grade'}</>
-                          ) : (
-                            <><Eye className="h-3 w-3 mr-1" />{isRTL ? 'معاينة' : 'Preview'}</>
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {/* Desktop: Table layout */}
-              <div className="hidden sm:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                      <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                      <TableHead className="text-center">{isRTL ? 'الدرجة' : 'Score'}</TableHead>
-                      <TableHead className="text-center">{isRTL ? 'النسبة' : 'Percentage'}</TableHead>
-                      <TableHead className="text-center">{isRTL ? 'الإجراءات' : 'Actions'}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.map(student => (
-                      <TableRow key={student.student_id}>
-                        <TableCell className="font-medium">
+              <>
+                {/* Mobile: Card layout */}
+                <div className="sm:hidden space-y-2">
+                  {results.map(student => (
+                    <div key={student.student_id} className="p-3 rounded-lg border bg-card space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-sm">
                           {language === 'ar' ? student.student_name_ar : student.student_name}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            {getStatusIcon(student.status, student.grading_status)}
-                            <span className="text-sm">{getStatusText(student.status, student.grading_status)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {student.score !== null ? (
-                            <span>{student.score}/{student.max_score}</span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {getStatusIcon(student.status, student.grading_status)}
+                          <span className="text-xs text-muted-foreground">{getStatusText(student.status, student.grading_status)}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {student.score !== null && (
+                            <span className="text-sm">{student.score}/{student.max_score}</span>
                           )}
-                        </TableCell>
-                        <TableCell className="text-center">
                           {student.percentage !== null ? (
                             <Badge className={(student.percentage >= passingScore) ? 'bg-green-500' : 'bg-red-500'}>
                               {student.percentage.toFixed(0)}%
@@ -553,36 +494,95 @@ export function QuizResultsDialog({
                             <Badge variant="outline" className="text-amber-600 border-amber-300">
                               {isRTL ? 'معلق' : 'Pending'}
                             </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {student.answers ? (
-                            <Button
-                              variant={student.grading_status === 'needs_manual_grading' ? 'default' : 'ghost'}
-                              size="sm"
-                              onClick={() => fetchStudentAnswers(student)}
-                              className="h-8"
-                            >
-                              {student.grading_status === 'needs_manual_grading' ? (
-                                <><FileText className="h-4 w-4 mr-1" />{isRTL ? 'تصحيح' : 'Grade'}</>
-                              ) : (
-                                <><Eye className="h-4 w-4 mr-1" />{isRTL ? 'معاينة' : 'Preview'}</>
-                              )}
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </TableCell>
+                          ) : null}
+                        </div>
+                        {student.answers && (
+                          <Button
+                            variant={student.grading_status === 'needs_manual_grading' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => fetchStudentAnswers(student)}
+                            className="h-7 text-xs"
+                          >
+                            {student.grading_status === 'needs_manual_grading' ? (
+                              <><FileText className="h-3 w-3 mr-1" />{isRTL ? 'تصحيح' : 'Grade'}</>
+                            ) : (
+                              <><Eye className="h-3 w-3 mr-1" />{isRTL ? 'معاينة' : 'Preview'}</>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop: Table layout */}
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'الحالة' : 'Status'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'الدرجة' : 'Score'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'النسبة' : 'Percentage'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'الإجراءات' : 'Actions'}</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </>
-        ) : (
+                    </TableHeader>
+                    <TableBody>
+                      {results.map(student => (
+                        <TableRow key={student.student_id}>
+                          <TableCell className="font-medium">
+                            {language === 'ar' ? student.student_name_ar : student.student_name}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              {getStatusIcon(student.status, student.grading_status)}
+                              <span className="text-sm">{getStatusText(student.status, student.grading_status)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {student.score !== null ? (
+                              <span>{student.score}/{student.max_score}</span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {student.percentage !== null ? (
+                              <Badge className={(student.percentage >= passingScore) ? 'bg-green-500' : 'bg-red-500'}>
+                                {student.percentage.toFixed(0)}%
+                              </Badge>
+                            ) : student.grading_status === 'needs_manual_grading' ? (
+                              <Badge variant="outline" className="text-amber-600 border-amber-300">
+                                {isRTL ? 'معلق' : 'Pending'}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {student.answers ? (
+                              <Button
+                                variant={student.grading_status === 'needs_manual_grading' ? 'default' : 'ghost'}
+                                size="sm"
+                                onClick={() => fetchStudentAnswers(student)}
+                                className="h-8"
+                              >
+                                {student.grading_status === 'needs_manual_grading' ? (
+                                  <><FileText className="h-4 w-4 mr-1" />{isRTL ? 'تصحيح' : 'Grade'}</>
+                                ) : (
+                                  <><Eye className="h-4 w-4 mr-1" />{isRTL ? 'معاينة' : 'Preview'}</>
+                                )}
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )
           /* Student Answers View */
           loadingAnswers ? (
             <div className="space-y-3 p-4">
