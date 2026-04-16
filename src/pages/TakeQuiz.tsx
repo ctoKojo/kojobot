@@ -109,6 +109,7 @@ export default function TakeQuiz() {
   const answersRef = useRef(answers);
   const isSubmittingRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const submitCoreRef = useRef<(currentAnswers: Record<string, string>) => Promise<void>>();
 
   // Keep ref in sync
   useEffect(() => { answersRef.current = answers; }, [answers]);
