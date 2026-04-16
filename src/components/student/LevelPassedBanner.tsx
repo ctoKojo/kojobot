@@ -1,91 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { GraduationCap, ArrowUpCircle, PartyPopper } from 'lucide-react';
+import type { BranchOption, GradeInfo } from '@/hooks/useStudentLifecycle';
 
 interface LevelPassedBannerProps {
-  studentId: string;
+  groupId: string;
+  levelName: string;
+  percentage: number | null;
+  branches: BranchOption[] | null;
   onUpgraded?: () => void;
 }
 
-interface BranchOption {
-  id: string;
-  name: string;
-  name_ar: string;
-}
-
-export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerProps) {
+export function LevelPassedBanner({ groupId, levelName, percentage, branches, onUpgraded }: LevelPassedBannerProps) {
   const { isRTL, language } = useLanguage();
   const { toast } = useToast();
-  const [progress, setProgress] = useState<any>(null);
-  const [levelName, setLevelName] = useState('');
-  const [percentage, setPercentage] = useState<number | null>(null);
-  const [branches, setBranches] = useState<BranchOption[]>([]);
   const [chosenBranchId, setChosenBranchId] = useState<string>('');
   const [loading, setLoading] = useState(false);
-  const [hasBranching, setHasBranching] = useState(false);
 
-  useEffect(() => {
-    fetchProgress();
-  }, [studentId]);
-
-  const fetchProgress = async () => {
-    const { data: inProgressCheck } = await supabase
-      .from('group_student_progress')
-      .select('id')
-      .eq('student_id', studentId)
-      .eq('status', 'in_progress')
-      .limit(1)
-      .maybeSingle();
-
-    if (inProgressCheck) return;
-
-    const { data: gsp } = await supabase
-      .from('group_student_progress')
-      .select('*, levels!group_student_progress_current_level_id_fkey(name, name_ar)')
-      .eq('student_id', studentId)
-      .eq('outcome', 'passed')
-      .eq('status', 'graded')
-      .order('graded_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!gsp) return;
-    setProgress(gsp);
-    setLevelName(language === 'ar' ? gsp.levels?.name_ar || gsp.levels?.name : gsp.levels?.name || '');
-
-    const { data: grade } = await supabase
-      .from('level_grades')
-      .select('percentage')
-      .eq('student_id', studentId)
-      .eq('group_id', gsp.group_id)
-      .eq('level_id', gsp.current_level_id)
-      .maybeSingle();
-
-    if (grade?.percentage != null) setPercentage(Math.round(grade.percentage));
-
-    // Detect branching: multiple active children = branch point
-    const { data: children } = await supabase
-      .from('levels')
-      .select('id, name, name_ar, track_id')
-      .eq('parent_level_id', gsp.current_level_id)
-      .eq('is_active', true);
-
-    if (children && children.length > 1) {
-      setHasBranching(true);
-      setBranches(children.map(c => ({ id: c.id, name: c.name, name_ar: c.name_ar })));
-    }
-  };
+  const hasBranching = branches && branches.length > 0;
 
   const handleUpgrade = async () => {
-    if (!progress) return;
     if (hasBranching && !chosenBranchId) {
       toast({
         variant: 'destructive',
@@ -98,7 +36,7 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc('student_choose_track_and_upgrade', {
-        p_group_id: progress.group_id,
+        p_group_id: groupId,
         p_chosen_track_id: hasBranching ? chosenBranchId : null,
       });
       if (error) throw error;
@@ -116,7 +54,6 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
           title: isRTL ? '🎉 مبروك!' : '🎉 Congratulations!',
           description: isRTL ? 'تم ترقيتك — الإدارة هتعينك في جروب قريباً' : 'You have been promoted! Admin will assign you to a group soon.',
         });
-        setProgress(null);
         onUpgraded?.();
       }
     } catch (err: any) {
@@ -125,8 +62,6 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
       setLoading(false);
     }
   };
-
-  if (!progress) return null;
 
   return (
     <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
@@ -144,13 +79,13 @@ export function LevelPassedBanner({ studentId, onUpgraded }: LevelPassedBannerPr
             </p>
           </div>
 
-          {hasBranching && branches.length > 0 ? (
+          {hasBranching ? (
             <div className="w-full max-w-sm space-y-3">
               <p className="text-sm font-medium">
                 {isRTL ? 'اختر المسار التخصصي للمستوى القادم:' : 'Choose your specialization track for the next level:'}
               </p>
               <div className="grid gap-2">
-                {branches.map(branch => (
+                {branches!.map(branch => (
                   <Button
                     key={branch.id}
                     variant={chosenBranchId === branch.id ? 'default' : 'outline'}
