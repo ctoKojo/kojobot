@@ -356,7 +356,7 @@ export function QuizResultsDialog({
       const totalMaxScore = questionDetails.reduce((sum, q) => sum + q.points, 0);
       const newPercentage = totalMaxScore > 0 ? Math.round((totalScore / totalMaxScore) * 100) : 0;
 
-      // Update submission
+      // Update submission - mark as graded with timestamp
       await supabase
         .from('quiz_submissions')
         .update({
@@ -364,17 +364,40 @@ export function QuizResultsDialog({
           percentage: newPercentage,
           grading_status: 'fully_graded',
           manual_score: manualScore,
+          status: 'graded',
+          graded_at: new Date().toISOString(),
         })
         .eq('id', selectedStudent.submission_id);
 
+      // If this is a final exam, automatically compute level grades
+      if (isFinalExam && groupId) {
+        try {
+          const { data: gradeResult, error: gradeError } = await supabase.rpc('compute_level_grades_batch', { p_group_id: groupId });
+          if (gradeError) {
+            console.error('Error computing level grades:', gradeError);
+          } else {
+            console.log('Level grades computed:', gradeResult);
+          }
+        } catch (e) {
+          console.error('Error in compute_level_grades_batch:', e);
+        }
+      }
+
       toast({
         title: isRTL ? 'تم الحفظ' : 'Saved',
-        description: isRTL ? `الدرجة النهائية: ${totalScore}/${totalMaxScore} (${newPercentage}%)` : `Final score: ${totalScore}/${totalMaxScore} (${newPercentage}%)`,
+        description: isRTL 
+          ? `الدرجة النهائية: ${totalScore}/${totalMaxScore} (${newPercentage}%)${isFinalExam ? ' - تم حساب نتيجة المستوى' : ''}`
+          : `Final score: ${totalScore}/${totalMaxScore} (${newPercentage}%)${isFinalExam ? ' - Level grade computed' : ''}`,
       });
 
       // Refresh results
       await fetchResults();
       goBack();
+      
+      // If final exam, close dialog and trigger parent refresh
+      if (isFinalExam) {
+        onOpenChange(false);
+      }
     } catch (error) {
       console.error('Error saving manual grades:', error);
       toast({
