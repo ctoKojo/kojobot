@@ -582,7 +582,8 @@ export function QuizResultsDialog({
                   </Table>
                 </div>
               </>
-            )
+            )}
+          </>
         ) : (
           /* Student Answers View */
           loadingAnswers ? (
