@@ -51,7 +51,7 @@ interface QuestionDetail {
 interface QuizResultsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  quizAssignmentId: string;
+  quizAssignmentId?: string;
   quizId: string;
   quizTitle: string;
   quizTitleAr: string;
@@ -59,6 +59,7 @@ interface QuizResultsDialogProps {
   passingScore: number;
   /** When true, fetches students from group_student_progress instead of group_students */
   isFinalExam?: boolean;
+  selectedStudentId?: string;
 }
 
 export function QuizResultsDialog({
@@ -71,6 +72,7 @@ export function QuizResultsDialog({
   groupId,
   passingScore,
   isFinalExam = false,
+  selectedStudentId,
 }: QuizResultsDialogProps) {
   const { isRTL, language } = useLanguage();
   const [loading, setLoading] = useState(true);
@@ -82,13 +84,41 @@ export function QuizResultsDialog({
   const [manualGrades, setManualGrades] = useState<Record<string, { score: number; feedback: string }>>({});
 
   useEffect(() => {
-    if (open && quizAssignmentId) {
+    const canFetch = isFinalExam ? Boolean(quizId && groupId) : Boolean(quizAssignmentId);
+
+    if (open && canFetch) {
       fetchResults();
     }
-  }, [open, quizAssignmentId]);
+  }, [open, quizAssignmentId, quizId, groupId, isFinalExam, selectedStudentId]);
+
+  useEffect(() => {
+    if (!open) {
+      setResults([]);
+      setSelectedStudent(null);
+      setQuestionDetails([]);
+      setManualGrades({});
+      setLoading(true);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !selectedStudentId || loading || selectedStudent) return;
+
+    const targetStudent = results.find(
+      (result) => result.student_id === selectedStudentId && Boolean(result.answers)
+    );
+
+    if (targetStudent) {
+      void fetchStudentAnswers(targetStudent);
+    }
+  }, [open, selectedStudentId, loading, results, selectedStudent]);
 
   const fetchResults = async () => {
     setLoading(true);
+    setSelectedStudent(null);
+    setQuestionDetails([]);
+    setManualGrades({});
+
     try {
       let studentIds: string[] = [];
 
@@ -99,7 +129,15 @@ export function QuizResultsDialog({
           .select('student_id')
           .eq('group_id', groupId)
           .in('status', ['exam_scheduled', 'graded']);
-        studentIds = progressStudents?.map(gs => gs.student_id) || [];
+
+        const progressStudentIds = progressStudents?.map(gs => gs.student_id) || [];
+        studentIds = selectedStudentId
+          ? progressStudentIds.filter(studentId => studentId === selectedStudentId)
+          : progressStudentIds;
+
+        if (selectedStudentId && studentIds.length === 0) {
+          studentIds = [selectedStudentId];
+        }
       } else {
         const { data: groupStudents } = await supabase
           .from('group_students')
@@ -119,9 +157,10 @@ export function QuizResultsDialog({
         // For final exams: each student has their own quiz_assignment, fetch by quiz_id + group
         const { data: assignments } = await supabase
           .from('quiz_assignments')
-          .select('id')
+          .select('id, student_id')
           .eq('quiz_id', quizId)
-          .eq('group_id', groupId);
+          .eq('group_id', groupId)
+          .in('student_id', studentIds);
         const assignmentIds = assignments?.map(a => a.id) || [];
         if (assignmentIds.length > 0) {
           const { data: subs } = await supabase
@@ -162,7 +201,11 @@ export function QuizResultsDialog({
         };
       });
 
-      setResults(combinedResults);
+      setResults(
+        selectedStudentId
+          ? combinedResults.sort((a, b) => Number(b.student_id === selectedStudentId) - Number(a.student_id === selectedStudentId))
+          : combinedResults
+      );
     } catch (error) {
       console.error('Error fetching quiz results:', error);
       toast({
