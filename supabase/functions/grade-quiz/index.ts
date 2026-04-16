@@ -341,12 +341,13 @@ serve(async (req) => {
         .maybeSingle()
 
       if (finalExamLevel && assignment.group_id) {
+        // Update exam_submitted_at regardless of current status (trigger may have changed it)
         await adminSupabase
           .from('group_student_progress')
           .update({ exam_submitted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
           .eq('group_id', assignment.group_id)
           .eq('student_id', studentId)
-          .eq('status', 'exam_scheduled')
+          .is('exam_submitted_at', null)
 
         const { data: pendingStudents } = await adminSupabase
           .from('group_student_progress')
