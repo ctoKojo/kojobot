@@ -168,7 +168,14 @@ export function EvaluationSummary({ studentId }: EvaluationSummaryProps) {
   return (
     <div className="space-y-6">
       {/* Current Level Status */}
-      <CurrentLevelStatus studentId={studentId} />
+      {lifecycle.currentLevel && (
+        <CurrentLevelStatus
+          levelName={language === 'ar' ? lifecycle.currentLevel.name_ar : lifecycle.currentLevel.name}
+          status={lifecycle.status}
+          outcome={lifecycle.outcome}
+          grade={lifecycle.grade}
+        />
+      )}
 
       {/* Overview Card */}
       <Card className="border-2 border-primary/20">
