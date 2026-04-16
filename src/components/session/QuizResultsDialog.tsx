@@ -583,6 +583,7 @@ export function QuizResultsDialog({
                 </div>
               </>
             )
+        ) : (
           /* Student Answers View */
           loadingAnswers ? (
             <div className="space-y-3 p-4">
