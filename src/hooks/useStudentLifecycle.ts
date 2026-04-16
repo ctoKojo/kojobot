@@ -86,30 +86,25 @@ export function useStudentLifecycle(studentId: string | undefined): StudentLifec
       const groupId = gsp.group_id;
 
       // Parallel fetches based on status
-      const promises: Promise<any>[] = [];
-
-      // Grade (needed for graded status or level passed banner)
       const gradePromise = supabase
         .from('level_grades')
         .select('percentage, evaluation_avg, final_exam_score')
         .eq('student_id', studentId)
         .eq('group_id', gsp.group_id)
         .eq('level_id', gsp.current_level_id)
-        .maybeSingle();
-      promises.push(gradePromise);
+        .maybeSingle()
+        .then(r => r);
 
-      // Branches (only if passed)
       let branchPromise: Promise<any> = Promise.resolve({ data: null });
       if (outcome === 'passed' && status === 'graded') {
         branchPromise = supabase
           .from('levels')
           .select('id, name, name_ar')
           .eq('parent_level_id', gsp.current_level_id)
-          .eq('is_active', true);
+          .eq('is_active', true)
+          .then(r => r);
       }
-      promises.push(branchPromise);
 
-      // Exam info (only if exam_scheduled)
       let examPromise: Promise<any> = Promise.resolve({ data: null });
       if (status === 'exam_scheduled' && gsp.exam_scheduled_at && level?.final_exam_quiz_id) {
         examPromise = supabase
@@ -118,11 +113,11 @@ export function useStudentLifecycle(studentId: string | undefined): StudentLifec
           .eq('quiz_id', level.final_exam_quiz_id)
           .eq('student_id', studentId)
           .eq('is_active', true)
-          .maybeSingle();
+          .maybeSingle()
+          .then(r => r);
       }
-      promises.push(examPromise);
 
-      const [gradeRes, branchRes, examRes] = await Promise.all(promises);
+      const [gradeRes, branchRes, examRes] = await Promise.all([gradePromise, branchPromise, examPromise]);
 
       const grade: GradeInfo | null = gradeRes.data
         ? {
