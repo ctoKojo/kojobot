@@ -275,7 +275,15 @@ export function QuizResultsDialog({
           // Determine correctness - handle letter answers (A, B, C, D)
           let isCorrect = false;
           if (questionType === 'multiple_choice') {
-            isCorrect = studentAnswer === q.correct_answer;
+            // Support letter (A,B,C,D), index (0,1,2,3), and full-text formats
+            const letterMatch = studentAnswer === q.correct_answer;
+            const indexToLetter = studentAnswer && /^\d+$/.test(studentAnswer)
+              ? String.fromCharCode(65 + parseInt(studentAnswer)) === q.correct_answer
+              : false;
+            const letterToIndex = q.correct_answer && /^\d+$/.test(q.correct_answer)
+              ? String.fromCharCode(65 + parseInt(q.correct_answer)) === studentAnswer
+              : false;
+            isCorrect = letterMatch || indexToLetter || letterToIndex;
           } else if (questionType === 'true_false') {
             isCorrect = studentAnswer?.toLowerCase?.()?.trim() === q.correct_answer?.toLowerCase?.()?.trim();
           }
@@ -773,9 +781,10 @@ export function QuizResultsDialog({
                           const displayOptions = language === 'ar' ? question.options_ar : question.options_en;
                           return displayOptions.map((option, optIndex) => {
                             const optionLetter = String.fromCharCode(65 + optIndex); // A, B, C, D
-                            // Support both letter-based answers and full-text answers
-                            const isCorrectAnswer = question.correct_answer === optionLetter || question.correct_answer === option;
-                            const isStudentAnswer = question.student_answer === optionLetter || question.student_answer === option;
+                            const optionIndex = String(optIndex); // "0", "1", "2", "3"
+                            // Support letter, index, and full-text answer formats
+                            const isCorrectAnswer = question.correct_answer === optionLetter || question.correct_answer === optionIndex || question.correct_answer === option;
+                            const isStudentAnswer = question.student_answer === optionLetter || question.student_answer === optionIndex || question.student_answer === option;
 
                             return (
                               <div
