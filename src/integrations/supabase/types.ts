@@ -4855,6 +4855,37 @@ export type Database = {
           },
         ]
       }
+      vw_user_identity: {
+        Row: {
+          avatar_url: string | null
+          date_of_birth: string | null
+          email: string | null
+          employment_status:
+            | Database["public"]["Enums"]["employment_status"]
+            | null
+          full_name: string | null
+          full_name_ar: string | null
+          hourly_rate: number | null
+          is_approved: boolean | null
+          is_paid_trainee: boolean | null
+          level_id: string | null
+          needs_renewal: boolean | null
+          phone: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          specialization: string | null
+          specialization_ar: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       archive_group: { Args: { p_group_id: string }; Returns: undefined }
@@ -4963,6 +4994,14 @@ export type Database = {
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
+      }
+      detect_orphan_users: {
+        Args: never
+        Returns: {
+          issue: string
+          orphan_email: string
+          orphan_user_id: string
+        }[]
       }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
