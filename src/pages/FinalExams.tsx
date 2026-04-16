@@ -49,7 +49,7 @@ interface ExamCandidate {
   final_exam_quiz_id: string | null;
 }
 
-type FilterType = 'all' | 'awaiting_exam' | 'exam_scheduled';
+type FilterType = 'all' | 'awaiting_exam' | 'exam_scheduled' | 'graded';
 
 export default function FinalExams() {
   const { isRTL, language } = useLanguage();
@@ -100,6 +100,7 @@ export default function FinalExams() {
     let result = candidates;
     if (filter === 'awaiting_exam') result = result.filter(c => c.status === 'awaiting_exam');
     if (filter === 'exam_scheduled') result = result.filter(c => c.status === 'exam_scheduled');
+    if (filter === 'graded') result = result.filter(c => c.status === 'graded');
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(c =>
@@ -245,6 +246,7 @@ export default function FinalExams() {
     all: candidates.length,
     awaiting_exam: candidates.filter(c => c.status === 'awaiting_exam').length,
     exam_scheduled: candidates.filter(c => c.status === 'exam_scheduled').length,
+    graded: candidates.filter(c => c.status === 'graded').length,
   };
 
   const getName = (c: ExamCandidate) => language === 'ar' ? c.full_name_ar || c.full_name : c.full_name;
@@ -309,6 +311,7 @@ export default function FinalExams() {
             { key: 'all' as FilterType, label: isRTL ? 'الإجمالي' : 'Total', count: filterCounts.all, icon: Users, color: 'text-primary', bgColor: 'bg-primary/10', borderColor: 'border-primary/20' },
             { key: 'awaiting_exam' as FilterType, label: isRTL ? 'في الانتظار' : 'Awaiting', count: filterCounts.awaiting_exam, icon: Clock, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20' },
             { key: 'exam_scheduled' as FilterType, label: isRTL ? 'مجدول' : 'Scheduled', count: filterCounts.exam_scheduled, icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20' },
+            { key: 'graded' as FilterType, label: isRTL ? 'تصحيح يدوي' : 'Needs Grading', count: filterCounts.graded, icon: FileText, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/20' },
           ].map(stat => (
             <button
               key={stat.key}
@@ -450,7 +453,12 @@ export default function FinalExams() {
                                     <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal">
                                       {getLevelName(c)}
                                     </Badge>
-                                    {c.status === 'exam_scheduled' ? (
+                                    {c.status === 'graded' ? (
+                                      <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-0 text-[10px] py-0 px-1.5">
+                                        <FileText className="h-2.5 w-2.5 me-0.5" />
+                                        {isRTL ? 'تصحيح يدوي' : 'Needs Grading'}
+                                      </Badge>
+                                    ) : c.status === 'exam_scheduled' ? (
                                       <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0 text-[10px] py-0 px-1.5">
                                         <CheckCircle2 className="h-2.5 w-2.5 me-0.5" />
                                         {isRTL ? 'مجدول' : 'Scheduled'}
@@ -497,7 +505,7 @@ export default function FinalExams() {
                               </div>
 
                               {/* Action buttons */}
-                              {isAdmin && c.status === 'exam_scheduled' && c.exam_submitted_at && c.final_exam_quiz_id && (
+                              {isAdmin && (c.status === 'exam_scheduled' || c.status === 'graded') && c.exam_submitted_at && c.final_exam_quiz_id && (
                                 <Button
                                   variant="outline"
                                   size="sm"
