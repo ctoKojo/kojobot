@@ -773,9 +773,10 @@ export function QuizResultsDialog({
                           const displayOptions = language === 'ar' ? question.options_ar : question.options_en;
                           return displayOptions.map((option, optIndex) => {
                             const optionLetter = String.fromCharCode(65 + optIndex); // A, B, C, D
-                            // Support both letter-based answers and full-text answers
-                            const isCorrectAnswer = question.correct_answer === optionLetter || question.correct_answer === option;
-                            const isStudentAnswer = question.student_answer === optionLetter || question.student_answer === option;
+                            const optionIndex = String(optIndex); // "0", "1", "2", "3"
+                            // Support letter, index, and full-text answer formats
+                            const isCorrectAnswer = question.correct_answer === optionLetter || question.correct_answer === optionIndex || question.correct_answer === option;
+                            const isStudentAnswer = question.student_answer === optionLetter || question.student_answer === optionIndex || question.student_answer === option;
 
                             return (
                               <div
