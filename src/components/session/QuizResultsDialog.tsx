@@ -32,7 +32,8 @@ interface QuestionDetail {
   id: string;
   question_text: string;
   question_text_ar: string;
-  options: string[];
+  options_en: string[];
+  options_ar: string[];
   correct_answer: string | null;
   student_answer: string | null;
   is_correct: boolean;
