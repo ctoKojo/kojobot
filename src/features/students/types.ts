@@ -13,13 +13,8 @@
 // Enums (stable string unions — never `string`)
 // ---------------------------------------------------------------------------
 
-export type SubscriptionType =
-  | 'kids_basic'
-  | 'kids_premium'
-  | 'teens_basic'
-  | 'teens_premium'
-  | 'adults_basic'
-  | 'adults_premium';
+/** Mirrors the DB enum (`group_type`). Single source of truth: `@/lib/constants`. */
+export type SubscriptionType = 'kojo_squad' | 'kojo_core' | 'kojo_x';
 
 export type AttendanceMode = 'online' | 'offline';
 
