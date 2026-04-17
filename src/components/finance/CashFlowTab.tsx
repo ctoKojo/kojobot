@@ -70,13 +70,14 @@ export function CashFlowTab() {
         supabase.from('group_student_progress').select(`
           student_id,
           group_id,
+          status,
           groups!group_student_progress_group_id_fkey (
             id, name, schedule_day, last_delivered_content_number, is_active, status
           ),
           levels!group_student_progress_current_level_id_fkey (
             expected_sessions_count
           )
-        `).eq('status', 'in_progress'),
+        `).in('status', ['in_progress', 'awaiting_exam', 'exam_scheduled', 'graded']),
       ]);
 
       const payments = paymentsRes.data || [];
