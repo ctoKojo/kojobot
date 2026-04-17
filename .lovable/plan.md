@@ -1,92 +1,77 @@
 
 
-The user reports the "Assign Curriculum Quiz" button is disabled, and wants to verify the entire quiz assignment flow works (timing, submission, question visibility for students).
+## التشخيص
 
-Let me investigate the SessionDetails page to find why the button is disabled.
-<lov-tool-use id="toolu_vrtx_01TfNZeUcAjUBzhMeHEpdQHG" name="code--search_files" integration-id="code" data="{\"query\": \"Assign Curriculum Quiz|handleAssignCurriculumQuiz|assignCurriculumQuiz\", \"include_patterns\": \"src/**/*.tsx,src/**/*.ts\"}">
-</lov-tool-use>
+**حالة النظام الحالية (3 طلاب نجحوا، 0 شهادة):**
 
-<lov-tool-use id="toolu_vrtx_01LDtii1HmR1eDtga4qcbwnM" name="code--search_files" integration-id="code" data="{\"query\": \"handleAssignCurriculumQuiz|Assign Curriculum Quiz|assignCurriculumQuiz\", \"include_patterns\": \"src/**/*.tsx,src/**/*.ts\"}">
-</lov-tool-use>
+| الطالب | المجموعة | المستوى | حالة الـ Lifecycle | شهادة؟ |
+|--------|----------|---------|-------------------|--------|
+| Elsayed mohamed | T9 | Level 2 Software | `graded` (passed) | ❌ |
+| Rawan mohamed | T10 | Level 1 | `graded` (passed) | ❌ |
+| Basil wael | T38 | Level 1 | `graded` (passed) | ❌ |
 
-<lov-tool-use id="toolu_vrtx_01Kez25TsKPD5u9Ubs7BCBmy" name="code--view" integration-id="code" data="{\"file_path\": \"src/pages/SessionDetails.tsx\", \"lines\": \"1-100\"}">
-</lov-tool-use>
+**سبب المشكلة (3 ثغرات في الفلو):**
 
-<lov-tool-use id="toolu_vrtx_01XzfLoL9qqdtk1nW8NJMowx" name="code--view" integration-id="code" data="{\"file_path\": \"src/pages/SessionDetails.tsx\", \"lines\": \"400-600\"}">
-</lov-tool-use>
+1. **الشهادة بتتعمل بس وقت الترقية، مش لما الطالب ينجح:** RPC `upgrade_student_level` و `student_choose_track_and_upgrade` هما الوحيدين اللي بيـ `INSERT INTO student_certificates`. لو المسؤول لسه ما عملش "Promote" من صفحة المجموعة، الشهادة مش بتتولد أصلاً. الطلاب التلاتة لسه `graded` ومش `pending_group_assignment`.
 
-<lov-tool-use id="toolu_vrtx_015xPQNxPZghR7mSEP7ta1GP" name="code--view" integration-id="code" data="{\"file_path\": \"src/pages/SessionDetails.tsx\", \"lines\": \"1450-1560\"}">
-</lov-tool-use>
-الزرار مقفول لأن `isSessionActiveCairo` بترجع false. السيشن المعروضة الآن (`0c3c25f3-20d3-4c97-9d42-b992d3e51a52`) مجدولة في `2026-04-17 15:00:00 Africa/Cairo` لمدة 120 دقيقة، يعني window من 15:00 إلى 17:00 توقيت القاهرة.
+2. **مفيش cron يولد شهادات الـ pending تلقائياً:** الـ Edge Function `generate-certificate` موجودة لكن مفيش `cron.job` بيشغلها. لازم أدمن يضغط زر "Generate" يدوياً من تبويب الشهادات في بروفايل الطالب. النتيجة: الشهادات بتفضل `pending` للأبد.
 
-أتأكد من الوقت الحالي في القاهرة:
-<lov-tool-use id="toolu_vrtx_01PQZXDA9REfVKnuizKKsX5C" name="code--view" integration-id="code" data="{\"file_path\": \"src/pages/SessionDetails.tsx\", \"lines\": \"600-720\"}">
-</lov-tool-use>
+3. **Reception Dashboard بيعد بس الشهادات `ready`:** الـ widget بيعرض `unprintedCertificates` بفلتر `status = 'ready' AND printed_at IS NULL`. الشهادات الـ `pending` (مش متولدة لسه) بتختفي تماماً من رادار الريسيبشن.
 
-<lov-tool-use id="toolu_vrtx_01JYKtbZw4xy3FfAxQ8ovvKz" name="code--search_files" integration-id="code" data="{\"include_patterns\": \"supabase/migrations/**/*.sql\", \"query\": \"save-quiz-answer|grade-quiz|quiz_assignments_insert|quiz_questions_student_view\"}">
-</lov-tool-use>
-معلومات كافية. الوقت دلوقتي بتوقيت القاهرة (من timestamp `1776417882` = 2026-04-17 ~12:24 UTC = ~14:24 Cairo)، والسيشن من 15:00 → 17:00. يعني فيه 36 دقيقة لحد ما الزرار يفتح.
+## الفلو الصحيح المطلوب
 
-<lov-plan>
-
-## المشكلة
-
-السيشن المعروض (T13) مجدول **15:00 → 17:00 توقيت القاهرة**. الوقت دلوقتي ~14:24 القاهرة. يعني الزرار **مقفول صح** لأن السياسة ساعتها بتقول: الكويز يتسند **بس أثناء وقت السيشن** (مذكور في memory: `scheduled-quiz-assignment-policy`).
-
-الـ tooltip شغال ولو وقفت فوق الزرار هتلاقي رسالة: "متاح أثناء وقت السيشن فقط".
-
-## السبب التقني
-
-في `SessionDetails.tsx` السطر 1515:
-```ts
-disabled={!sessionActive || assigningCurriculumQuiz}
+```text
+Student passes exam (outcome=passed, status=graded)
+         ↓
+[AUTO] Trigger creates certificate row (status=pending)
+         ↓
+[AUTO] Cron job (every 5 min) calls generate-certificate edge function
+         ↓
+PDF generated → uploaded to storage → status=ready
+         ↓
+[AUTO] Notification to Reception: "Certificate ready to print"
+         ↓
+Student sees it in /my-certificates (Download button)
+Reception sees count in dashboard widget → opens student profile → prints → marks printed
 ```
-حيث `sessionActive = isSessionActiveCairo(date, time, duration)` بترجع true بس بين start و end بتوقيت Africa/Cairo.
 
-وده مقصود علشان:
-- يمنع الطلاب من بدء الكويز قبل/بعد السيشن
-- `quiz_assignments.start_time = now()` و `due_date = now + duration`
-- لو سندناه قبل السيشن، الطلاب ممكن يبدأوا قبل المعاد أو يخلص الوقت قبل ما يحضروا
+## الخطة (4 خطوات)
 
-## التحقق من فلو الإسناد (قراءة كود فقط، مفيش تنفيذ)
+### 1. Trigger تلقائي لإنشاء الشهادة عند النجاح
+- Migration: trigger جديد `trg_issue_certificate_on_pass` على `level_grades` بعد `INSERT/UPDATE`
+- لما `outcome = 'passed'` يعمل `INSERT INTO student_certificates` بـ `status = 'pending'` (مع `ON CONFLICT DO NOTHING`)
+- نضيف نفس notification "Certificate Ready to Print" للريسيبشن (اللي حالياً بتتبعت بس وقت الترقية)
+- **Backfill يدوي:** إنشاء شهادات pending للطلاب الـ 3 الموجودين حالياً (Elsayed, Rawan, Basil)
 
-بصيت على الفلو من البداية للنهاية:
+### 2. Cron job يشغل التوليد كل 5 دقائق
+- Migration: `cron.schedule('generate-pending-certificates', '*/5 * * * *', ...)`
+- يستدعي `generate-certificate` edge function بـ `x-cron-secret`
+- الـ function بالفعل بتـ batch process الـ pending/failed (lines 162-168)
 
-| المرحلة | المكان | الحالة |
-|---|---|---|
-| الزرار يظهر بشروط | `SessionDetails.tsx:1505-1531` | ✅ `quiz_id` موجود + لسه ما اتسندش + canManage |
-| Guard للحضور | `SessionDetails.tsx:521-536` | ✅ لو فيه حضور مسجل وكل الطلاب غايبين، يمنع |
-| Guard للوقت (Cairo) | `SessionDetails.tsx:539-548` | ✅ `isSessionActiveCairo` |
-| Snapshot المنهج | `SessionDetails.tsx:562-568` | ✅ يحفظ نسخة من المنهج |
-| إسناد فردي للحاضرين | `SessionDetails.tsx:574-588` | ✅ كل طالب حاضر له صف |
-| إسناد جماعي قبل الحضور | `SessionDetails.tsx:589-601` | ✅ على مستوى المجموعة |
-| `start_time = now`, `due_date = now + quiz.duration` | `SessionDetails.tsx:558-560` | ✅ صح |
-| الطالب يفتح الكويز | `MyQuizzes.tsx` → `TakeQuiz.tsx` | ✅ يستعلم `quiz_assignments` ثم `quiz_questions_student_view` (بدون `correct_answer`) |
-| حفظ الإجابات | `save-quiz-answer` edge function | ✅ debounced |
-| التسليم | `grade-quiz` edge function مع advisory lock + idempotency | ✅ يحسب الدرجة ويحفظ في `quiz_submissions` |
+### 3. Reception Dashboard widget محسّن
+- تعديل `ReceptionDashboard.tsx`: عرض عدّادين منفصلين:
+  - **شهادات قيد التوليد** (`status IN ('pending','generating','failed')`) — للمتابعة
+  - **شهادات جاهزة للطباعة** (`status = 'ready' AND printed_at IS NULL`) — للأكشن
+- لينك مباشر لصفحة جديدة `/certificates-queue` تعرض كل الشهادات pending/ready
 
-**الخلاصة: الفلو سليم ومش محتاج تعديل.** المنطق محمي بـ:
-- `pg_advisory_xact_lock_wrapper` ضد race conditions
-- `quiz_questions_student_view` يخفي الإجابات الصحيحة عن الطالب
-- Cairo time guard في الـ frontend والـ edge function
-- Auto-submit عند انتهاء الوقت
+### 4. صفحة `/certificates-queue` للريسيبشن (جديدة)
+- جدول بكل الشهادات اللي مش متطبوعة (pending/generating/ready/failed)
+- أكشنز: تحميل، Mark Printed، Retry (للـ failed)
+- إضافة لـ `AppSidebar` تحت قسم Reception
 
-## الاقتراح
+## الملفات المتأثرة
 
-في حاجة واحدة بس ممكن تتحسن في الـ UX:
+**Migrations:**
+- Trigger جديد على `level_grades` + cron.job + backfill 3 شهادات
 
-**عرض countdown صغير قبل بداية السيشن** عشان المستخدم يعرف الزرار هيفتح إمتى بدل ما يحاول كذا مرة. مثلاً:
-> "متاح بعد 36 دقيقة (15:00 القاهرة)"
+**كود:**
+- `src/components/dashboard/ReceptionDashboard.tsx` — widget محسّن
+- `src/pages/CertificatesQueue.tsx` — صفحة جديدة
+- `src/components/AppSidebar.tsx` — إضافة لينك
+- `src/App.tsx` — route جديد
 
-ده تعديل بسيط في الـ tooltip بدل ما يقول "متاح أثناء وقت السيشن فقط".
-
-## القرار
-
-**مفيش مشكلة في الكود.** الزرار شغال صح. الفلو بتاع الإسناد + التسليم + ظهور الأسئلة محمي بكل الـ guards اللي محتاجينها.
-
-### الاختيارات المتاحة:
-
-1. **استنى لحد 15:00 توقيت القاهرة** وجرب الزرار (هيشتغل تلقائياً).
-2. **حسّن الـ tooltip** ليعرض الوقت المتبقي/وقت بداية السيشن (تعديل تجميلي بسيط، 5 دقايق).
-3. **خليه زي ما هو** ومتعملش أي تعديل.
+## التحقق النهائي
+- إنشاء صف level_grade تجريبي لطالب نجح → التأكد إن الشهادة اتعملت تلقائياً
+- انتظار الـ cron → التأكد إن الـ status بقى ready
+- التأكد إن الإشعار وصل للريسيبشن وإن الـ widget بيعرض العدد الصحيح
 
