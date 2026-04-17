@@ -202,6 +202,66 @@ export default function TakeQuiz() {
           passed: pct !== null ? pct >= (assignmentData.quizzes?.passing_score || 60) : false,
           hasOpenEnded: isFinalExam,
         });
+
+        // Hydrate review screen: load full submission + questions for display
+        if (!isFinalExam) {
+          try {
+            const [{ data: fullSub }, { data: fullQuestions }] = await Promise.all([
+              supabase
+                .from('quiz_submissions')
+                .select('id, answers')
+                .eq('id', existingSub.id)
+                .single(),
+              supabase
+                .from('quiz_questions')
+                .select('id, question_text, question_text_ar, options, correct_answer, points, order_index, image_url, code_snippet, question_type')
+                .eq('quiz_id', assignmentData.quiz_id)
+                .order('order_index'),
+            ]);
+
+            if (fullQuestions) setQuestions(fullQuestions as Question[]);
+
+            const subAnswers = (fullSub?.answers as Record<string, string>) || {};
+            setAnswers(subAnswers);
+
+            // Reconstruct gradeResults from correct_answer
+            if (fullQuestions) {
+              const reconstructed: Record<string, { correct: boolean; correctAnswer: string; questionType?: string }> = {};
+              for (const q of fullQuestions) {
+                if (q.question_type === 'open_ended') {
+                  reconstructed[q.id] = { correct: false, correctAnswer: '', questionType: 'open_ended' };
+                  continue;
+                }
+                const optionsData = q.options as any;
+                let optionsList: string[] = [];
+                if (optionsData?.en && Array.isArray(optionsData.en)) {
+                  optionsList = optionsData.en;
+                } else if (optionsData?.options && Array.isArray(optionsData.options)) {
+                  optionsList = optionsData.options.map((opt: any) => opt.text);
+                }
+                let correctIdx = -1;
+                const parsedCorrect = parseInt(q.correct_answer ?? '-1');
+                if (!isNaN(parsedCorrect) && parsedCorrect >= 0 && parsedCorrect < optionsList.length) {
+                  correctIdx = parsedCorrect;
+                } else {
+                  correctIdx = optionsList.findIndex((opt: string) => opt === q.correct_answer);
+                }
+                const studentIdx = parseInt(subAnswers[q.id] ?? '-1');
+                const correctText = correctIdx >= 0 ? optionsList[correctIdx] : (q.correct_answer ?? '');
+                reconstructed[q.id] = {
+                  correct: studentIdx >= 0 && studentIdx === correctIdx,
+                  correctAnswer: correctText,
+                  questionType: 'multiple_choice',
+                  ...(correctIdx >= 0 ? { correctIndex: correctIdx } as any : {}),
+                };
+              }
+              setGradeResults(reconstructed);
+            }
+          } catch (e) {
+            console.error('Failed to hydrate review screen:', e);
+          }
+        }
+
         setSubmitted(true);
         setLoading(false);
         return;
