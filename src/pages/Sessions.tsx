@@ -988,7 +988,7 @@ user_id: gs.student_id,
                                         {t.common.edit}
                                       </DropdownMenuItem>
                                     )}
-                                    {session.status !== 'cancelled' && session.status === 'scheduled' && (
+                                    {role !== 'instructor' && session.status !== 'cancelled' && session.status === 'scheduled' && (
                                       <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenOnlineDialog(session); }}>
                                         <Globe className="h-4 w-4 mr-2" />
                                         {isRTL ? 'تحويل لأونلاين' : 'Convert to Online'}
@@ -1109,7 +1109,7 @@ user_id: gs.student_id,
                                               {t.common.edit}
                                             </DropdownMenuItem>
                                           )}
-                                          {session.status !== 'cancelled' && session.status === 'scheduled' && (
+                                          {role !== 'instructor' && session.status !== 'cancelled' && session.status === 'scheduled' && (
                                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenOnlineDialog(session); }}>
                                               <Globe className="h-4 w-4 mr-2" />
                                               {isRTL ? 'تحويل لأونلاين' : 'Convert to Online'}
