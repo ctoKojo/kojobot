@@ -609,7 +609,19 @@ export function StudentDashboard() {
           <CardContent>
             <div className="space-y-3">
               {stats.upcomingSessions.map((session: any) => (
-                <div key={session.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-lg border hover:bg-muted/50 gap-2">
+                <div
+                  key={session.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/sessions/${session.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      navigate(`/sessions/${session.id}`);
+                    }
+                  }}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-lg border hover:bg-muted/50 gap-2 cursor-pointer transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                       <Clock className="w-5 h-5 text-primary" />
@@ -640,7 +652,7 @@ export function StudentDashboard() {
                           className="bg-green-600 hover:bg-green-700"
                           asChild
                         >
-                          <a href={link} target="_blank" rel="noopener noreferrer">
+                          <a href={link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                             <ExternalLink className="w-4 h-4" />
                           </a>
                         </Button>
