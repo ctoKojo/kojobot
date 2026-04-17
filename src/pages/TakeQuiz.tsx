@@ -219,7 +219,7 @@ export default function TakeQuiz() {
                 .eq('submission_id', existingSub.id),
             ]);
 
-            const snapshot = (fullSub?.questions_snapshot as Question[] | null) || null;
+            const snapshot = (fullSub?.questions_snapshot as unknown as Question[] | null) || null;
             if (snapshot && Array.isArray(snapshot) && snapshot.length > 0) {
               setQuestions(snapshot.map(q => ({ ...q, correct_answer: '' })));
             }
