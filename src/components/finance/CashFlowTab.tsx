@@ -106,11 +106,26 @@ export function CashFlowTab() {
 
       // ---- Academic renewal projections ----
       const progressRows = (progressRes.data || []) as any[];
-      const nearCompletion: { studentId: string; groupId: string; groupName: string; scheduleDay: string; remaining: number }[] = [];
+      const nearCompletion: { studentId: string; groupId: string; groupName: string; scheduleDay: string; remaining: number; immediate: boolean }[] = [];
       progressRows.forEach((row: any) => {
         const g = row.groups;
         const l = row.levels;
         if (!g || !l || g.is_active !== true || g.status !== 'active') return;
+
+        // Students past in_progress (awaiting/scheduled/graded) → renewal expected this month
+        const advancedStatuses = ['awaiting_exam', 'exam_scheduled', 'graded'];
+        if (advancedStatuses.includes(row.status)) {
+          nearCompletion.push({
+            studentId: row.student_id,
+            groupId: g.id,
+            groupName: g.name || '',
+            scheduleDay: g.schedule_day,
+            remaining: 0,
+            immediate: true,
+          });
+          return;
+        }
+
         const expected = Number(l.expected_sessions_count || 0);
         const delivered = Number(g.last_delivered_content_number || 0);
         const remaining = expected - delivered;
@@ -121,6 +136,7 @@ export function CashFlowTab() {
             groupName: g.name || '',
             scheduleDay: g.schedule_day,
             remaining,
+            immediate: false,
           });
         }
       });
