@@ -203,56 +203,50 @@ export default function TakeQuiz() {
           hasOpenEnded: isFinalExam,
         });
 
-        // Hydrate review screen: load full submission + questions for display
+        // Hydrate review screen from SERVER source of truth (no correct_answer leak)
         if (!isFinalExam) {
           try {
-            const [{ data: fullSub }, { data: fullQuestions }] = await Promise.all([
+            const [{ data: fullSub }, { data: studentQuestions }, { data: attempts }] = await Promise.all([
               supabase
                 .from('quiz_submissions')
                 .select('id, answers')
                 .eq('id', existingSub.id)
                 .single(),
+              // SECURITY: use student view (excludes correct_answer)
               supabase
-                .from('quiz_questions')
-                .select('id, question_text, question_text_ar, options, correct_answer, points, order_index, image_url, code_snippet, question_type')
+                .from('quiz_questions_student_view')
+                .select('id, question_text, question_text_ar, options, points, order_index, image_url, code_snippet, question_type')
                 .eq('quiz_id', assignmentData.quiz_id)
                 .order('order_index'),
+              // Server-graded results (RLS: student reads own only)
+              supabase
+                .from('quiz_question_attempts')
+                .select('question_id, answer, score, max_score')
+                .eq('submission_id', existingSub.id),
             ]);
 
-            if (fullQuestions) setQuestions(fullQuestions as Question[]);
+            if (studentQuestions) {
+              const questionsWithPlaceholder = studentQuestions.map(q => ({ ...q, correct_answer: '' }));
+              setQuestions(questionsWithPlaceholder as Question[]);
+            }
 
             const subAnswers = (fullSub?.answers as Record<string, string>) || {};
             setAnswers(subAnswers);
 
-            // Reconstruct gradeResults from correct_answer
-            if (fullQuestions) {
+            // Build gradeResults from server attempts (correctness from score, not local re-grading)
+            if (attempts && studentQuestions) {
               const reconstructed: Record<string, { correct: boolean; correctAnswer: string; questionType?: string }> = {};
-              for (const q of fullQuestions) {
+              for (const q of studentQuestions) {
+                const attempt = attempts.find(a => a.question_id === q.id);
                 if (q.question_type === 'open_ended') {
                   reconstructed[q.id] = { correct: false, correctAnswer: '', questionType: 'open_ended' };
                   continue;
                 }
-                const optionsData = q.options as any;
-                let optionsList: string[] = [];
-                if (optionsData?.en && Array.isArray(optionsData.en)) {
-                  optionsList = optionsData.en;
-                } else if (optionsData?.options && Array.isArray(optionsData.options)) {
-                  optionsList = optionsData.options.map((opt: any) => opt.text);
-                }
-                let correctIdx = -1;
-                const parsedCorrect = parseInt(q.correct_answer ?? '-1');
-                if (!isNaN(parsedCorrect) && parsedCorrect >= 0 && parsedCorrect < optionsList.length) {
-                  correctIdx = parsedCorrect;
-                } else {
-                  correctIdx = optionsList.findIndex((opt: string) => opt === q.correct_answer);
-                }
-                const studentIdx = parseInt(subAnswers[q.id] ?? '-1');
-                const correctText = correctIdx >= 0 ? optionsList[correctIdx] : (q.correct_answer ?? '');
+                const isCorrect = !!(attempt && attempt.score && attempt.score > 0);
                 reconstructed[q.id] = {
-                  correct: studentIdx >= 0 && studentIdx === correctIdx,
-                  correctAnswer: correctText,
+                  correct: isCorrect,
+                  correctAnswer: '', // server doesn't re-expose after grading; UI shows ✓/✗ only
                   questionType: 'multiple_choice',
-                  ...(correctIdx >= 0 ? { correctIndex: correctIdx } as any : {}),
                 };
               }
               setGradeResults(reconstructed);
