@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { logStart, logSubmit, logComplete } from '@/lib/activityLogger';
 import { CodeBlock } from '@/components/quiz/CodeBlock';
+import { syncServerTime, serverNow } from '@/lib/serverTime';
 
 interface Question {
   id: string;
@@ -116,14 +117,18 @@ export default function TakeQuiz() {
   useEffect(() => { answersRef.current = answers; }, [answers]);
 
   useEffect(() => {
-    if (assignmentId) fetchQuizData();
+    if (assignmentId) {
+      // Sync with server clock before evaluating quiz windows so a wrong
+      // client clock can't mark an open quiz as "not started".
+      syncServerTime().finally(() => fetchQuizData());
+    }
   }, [assignmentId]);
 
   // Auto-refresh when quiz is not_started
   useEffect(() => {
     if (quizStatus !== 'not_started' || !assignment?.start_time) return;
     const interval = setInterval(() => {
-      const now = Date.now();
+      const now = serverNow();
       const startTime = new Date(assignment.start_time!).getTime();
       if (now >= startTime) {
         clearInterval(interval);
@@ -263,7 +268,7 @@ export default function TakeQuiz() {
         }
       }
 
-      const now = Date.now();
+      const now = serverNow();
       const baseDuration = assignmentData.quizzes?.duration_minutes || 30;
       const extraMinutes = (assignmentData as any).extra_minutes || 0;
       const duration = baseDuration + extraMinutes;
