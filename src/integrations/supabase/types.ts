@@ -3093,6 +3093,7 @@ export type Database = {
           graded_by: string | null
           grading_status: string
           id: string
+          is_correct: boolean | null
           max_score: number
           question_id: string
           score: number | null
@@ -3107,6 +3108,7 @@ export type Database = {
           graded_by?: string | null
           grading_status?: string
           id?: string
+          is_correct?: boolean | null
           max_score?: number
           question_id: string
           score?: number | null
@@ -3121,6 +3123,7 @@ export type Database = {
           graded_by?: string | null
           grading_status?: string
           id?: string
+          is_correct?: boolean | null
           max_score?: number
           question_id?: string
           score?: number | null
@@ -3221,6 +3224,7 @@ export type Database = {
           manual_score: number | null
           max_score: number | null
           percentage: number | null
+          questions_snapshot: Json | null
           quiz_assignment_id: string
           score: number | null
           started_at: string
@@ -3238,6 +3242,7 @@ export type Database = {
           manual_score?: number | null
           max_score?: number | null
           percentage?: number | null
+          questions_snapshot?: Json | null
           quiz_assignment_id: string
           score?: number | null
           started_at?: string
@@ -3255,6 +3260,7 @@ export type Database = {
           manual_score?: number | null
           max_score?: number | null
           percentage?: number | null
+          questions_snapshot?: Json | null
           quiz_assignment_id?: string
           score?: number | null
           started_at?: string
