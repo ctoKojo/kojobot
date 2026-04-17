@@ -311,16 +311,20 @@ serve(async (req) => {
       return errorResponse('Failed to save submission', 500)
     }
 
-    // ── Save per-question attempts ───────────────────────────────────
-    const attempts = questions.map(q => ({
-      submission_id: submission.id,
-      question_id: q.id,
-      student_id: studentId,
-      answer: validatedAnswers[q.id] || null,
-      score: q.question_type === 'open_ended' ? null : (results[q.id]?.correct ? q.points : 0),
-      max_score: q.points,
-      grading_status: q.question_type === 'open_ended' ? 'ungraded' : 'auto_graded',
-    }))
+    // ── Save per-question attempts (with is_correct as single source of truth)
+    const attempts = questions.map(q => {
+      const isOpenEnded = q.question_type === 'open_ended'
+      return {
+        submission_id: submission.id,
+        question_id: q.id,
+        student_id: studentId,
+        answer: validatedAnswers[q.id] || null,
+        score: isOpenEnded ? null : (results[q.id]?.correct ? q.points : 0),
+        max_score: q.points,
+        grading_status: isOpenEnded ? 'ungraded' : 'auto_graded',
+        is_correct: isOpenEnded ? null : !!results[q.id]?.correct,
+      }
+    })
 
     const { error: attemptsError } = await adminSupabase
       .from('quiz_question_attempts')
