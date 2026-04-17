@@ -181,11 +181,12 @@ serve(async (req) => {
       console.log(`Using draft_answers fallback for user ${force ? assignment.student_id : userId}, version ${draftRow?.draft_version}`)
     }
 
-    // ── Load questions ───────────────────────────────────────────────
+    // ── Load questions (admin client; correct_answer never leaves server) ──
     const { data: questions, error: questionsError } = await adminSupabase
       .from('quiz_questions')
-      .select('id, options, correct_answer, points, question_type, model_answer, rubric')
+      .select('id, question_text, question_text_ar, options, correct_answer, points, order_index, image_url, code_snippet, question_type, model_answer, rubric')
       .eq('quiz_id', assignment.quiz_id)
+      .order('order_index')
 
     if (questionsError || !questions) return errorResponse('Failed to load quiz questions', 500)
 
@@ -251,6 +252,19 @@ serve(async (req) => {
     const gradingStatus = hasOpenEnded ? 'needs_manual_grading' : 'auto_graded'
     const passed = hasOpenEnded ? false : percentage >= (assignment.quizzes?.passing_score || 60)
 
+    // ── Build questions snapshot (NEVER includes correct_answer) ─────
+    const questionsSnapshot = questions.map(q => ({
+      id: q.id,
+      question_text: q.question_text,
+      question_text_ar: q.question_text_ar,
+      options: q.options,
+      points: q.points,
+      order_index: q.order_index,
+      image_url: q.image_url,
+      code_snippet: q.code_snippet,
+      question_type: q.question_type,
+    }))
+
     // ── Save submission (UNIQUE constraint prevents duplicates) ──────
     const studentId = force ? assignment.student_id : userId
     const submissionPayload = {
@@ -263,6 +277,7 @@ serve(async (req) => {
       submitted_at: new Date().toISOString(),
       grading_status: gradingStatus,
       manual_score: 0,
+      questions_snapshot: questionsSnapshot,
     }
 
     console.log('quiz_submissions insert payload keys:', Object.keys(submissionPayload))
@@ -296,16 +311,20 @@ serve(async (req) => {
       return errorResponse('Failed to save submission', 500)
     }
 
-    // ── Save per-question attempts ───────────────────────────────────
-    const attempts = questions.map(q => ({
-      submission_id: submission.id,
-      question_id: q.id,
-      student_id: studentId,
-      answer: validatedAnswers[q.id] || null,
-      score: q.question_type === 'open_ended' ? null : (results[q.id]?.correct ? q.points : 0),
-      max_score: q.points,
-      grading_status: q.question_type === 'open_ended' ? 'ungraded' : 'auto_graded',
-    }))
+    // ── Save per-question attempts (with is_correct as single source of truth)
+    const attempts = questions.map(q => {
+      const isOpenEnded = q.question_type === 'open_ended'
+      return {
+        submission_id: submission.id,
+        question_id: q.id,
+        student_id: studentId,
+        answer: validatedAnswers[q.id] || null,
+        score: isOpenEnded ? null : (results[q.id]?.correct ? q.points : 0),
+        max_score: q.points,
+        grading_status: isOpenEnded ? 'ungraded' : 'auto_graded',
+        is_correct: isOpenEnded ? null : !!results[q.id]?.correct,
+      }
+    })
 
     const { error: attemptsError } = await adminSupabase
       .from('quiz_question_attempts')
