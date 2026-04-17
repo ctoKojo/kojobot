@@ -417,18 +417,22 @@ export function StudentDashboard() {
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">
                   {stats.groupInfo.schedule_day} - <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={stats.groupInfo.schedule_time} isRTL={isRTL} />
                 </p>
-                {stats.groupInfo.attendance_mode === 'online' && stats.groupInfo.session_link && (() => {
-                  const hasActiveSession = stats.upcomingSessions.some((s: any) => 
+                {(() => {
+                  // Find any active session right now and use its effective mode/link
+                  // (covers per-session overrides like converting an offline session to online)
+                  const activeSession = stats.upcomingSessions.find((s: any) =>
                     isSessionActiveCairo(s.session_date, s.session_time, s.duration_minutes)
                   );
-                  if (!hasActiveSession) return null;
+                  const mode = activeSession?.effective_attendance_mode || stats.groupInfo.attendance_mode;
+                  const link = activeSession?.effective_session_link || stats.groupInfo.session_link;
+                  if (!activeSession || mode !== 'online' || !link) return null;
                   return (
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="mt-2 w-full bg-green-600 hover:bg-green-700"
                       asChild
                     >
-                      <a href={stats.groupInfo.session_link} target="_blank" rel="noopener noreferrer">
+                      <a href={link} target="_blank" rel="noopener noreferrer">
                         <Video className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                         {isRTL ? 'انضم للجلسة' : 'Join Session'}
                       </a>
