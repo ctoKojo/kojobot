@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { isSessionEndedCairo, isSessionActiveCairo, isGracePeriodEndedCairo, getGracePeriodRemainingSeconds } from '@/lib/sessionTimeGuard';
+import { isSessionEndedCairo, isSessionActiveCairo, isGracePeriodEndedCairo, getGracePeriodRemainingSeconds, getMinutesUntilSessionStartCairo } from '@/lib/sessionTimeGuard';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PdfDownloadButton } from '@/components/PdfDownloadButton';
@@ -1504,6 +1504,20 @@ export default function SessionDetails() {
                   <div className="flex flex-wrap gap-3">
                     {curriculumContent.quiz_id && !quizAssignment && (() => {
                       const sessionActive = isSessionActiveCairo(session?.session_date, session?.session_time, session?.duration_minutes);
+                      const minutesUntil = getMinutesUntilSessionStartCairo(session?.session_date, session?.session_time, session?.duration_minutes);
+                      const sessionEnded = isSessionEndedCairo(session?.session_date, session?.session_time, session?.duration_minutes);
+                      const formatStartTime = () => {
+                        if (!session?.session_time) return '';
+                        const [h, m] = session.session_time.split(':');
+                        return `${h}:${m}`;
+                      };
+                      const tooltipMsg = sessionEnded
+                        ? (isRTL ? 'انتهت السيشن — لا يمكن إسناد الكويز' : 'Session ended — quiz can no longer be assigned')
+                        : minutesUntil > 0
+                          ? (isRTL
+                              ? `متاح بعد ${minutesUntil} دقيقة (${formatStartTime()} توقيت القاهرة)`
+                              : `Available in ${minutesUntil} min (${formatStartTime()} Cairo time)`)
+                          : (isRTL ? 'متاح أثناء وقت السيشن فقط' : 'Available during session time only');
                       return (
                         <TooltipProvider>
                           <Tooltip>
@@ -1522,7 +1536,7 @@ export default function SessionDetails() {
                             </TooltipTrigger>
                             {!sessionActive && (
                               <TooltipContent>
-                                {isRTL ? 'متاح أثناء وقت السيشن فقط' : 'Available during session time only'}
+                                {tooltipMsg}
                               </TooltipContent>
                             )}
                           </Tooltip>

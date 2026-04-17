@@ -204,6 +204,49 @@ export function getGracePeriodRemainingSeconds(
 }
 
 /**
+ * Returns minutes until the session starts (Cairo time).
+ * - Returns 0 if session is currently active or already started
+ * - Returns positive number of minutes until start
+ * - Returns -1 on invalid input or if session already ended
+ */
+export function getMinutesUntilSessionStartCairo(
+  sessionDate: string | null | undefined,
+  sessionTime: string | null | undefined,
+  durationMinutes?: number | null,
+): number {
+  if (!sessionDate || !sessionTime) return -1;
+
+  const dateParts = sessionDate.split('-');
+  if (dateParts.length !== 3) return -1;
+  const year = Number(dateParts[0]);
+  const month = Number(dateParts[1]);
+  const day = Number(dateParts[2]);
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) return -1;
+
+  const timeParts = sessionTime.split(':');
+  if (timeParts.length < 2) return -1;
+  const hour = Number(timeParts[0]);
+  const minute = Number(timeParts[1]);
+  const second = timeParts.length >= 3 ? Number(timeParts[2]) : 0;
+  if (Number.isNaN(hour) || Number.isNaN(minute) || Number.isNaN(second)) return -1;
+
+  const start: DateTimeParts = { year, month, day, hour, minute, second };
+  const now = getCairoNowParts();
+
+  // Already past start
+  if (compareParts(now, start) >= 0) {
+    // If session ended, return -1
+    if (isSessionEndedCairo(sessionDate, sessionTime, durationMinutes)) return -1;
+    return 0;
+  }
+
+  // Approximate minutes diff using day-based total seconds
+  const nowTotalSec = ((now.year * 12 + now.month) * 31 + now.day) * 86400 + now.hour * 3600 + now.minute * 60 + now.second;
+  const startTotalSec = ((start.year * 12 + start.month) * 31 + start.day) * 86400 + start.hour * 3600 + start.minute * 60 + start.second;
+  return Math.max(0, Math.ceil((startTotalSec - nowTotalSec) / 60));
+}
+
+/**
  * Returns true when the current Cairo time is within the session window:
  *   start <= now < end
  * Safe: returns false on missing/invalid inputs (never allows accidental assignment).
