@@ -641,6 +641,20 @@ export default function SessionDetails() {
       const dueDate = new Date(`${session.session_date}T${session.session_time.slice(0, 5)}`);
       dueDate.setDate(dueDate.getDate() + 7);
 
+      // Normalize MIME type or raw type to allowed values: text|image|pdf|video
+      const normalizeAttachmentType = (raw?: string | null): string | null => {
+        if (!raw) return null;
+        const v = raw.toLowerCase();
+        if (['text', 'image', 'pdf', 'video'].includes(v)) return v;
+        if (v.startsWith('image/')) return 'image';
+        if (v.startsWith('video/')) return 'video';
+        if (v.includes('pdf')) return 'pdf';
+        if (v.startsWith('text/')) return 'text';
+        return null;
+      };
+      const normalizedAttachmentType = normalizeAttachmentType(curriculumContent.assignment_attachment_type);
+      const normalizedAttachmentUrl = curriculumContent.assignment_attachment_url || null;
+
       const snapshot = {
         curriculum_session_id: curriculumContent.id,
         title: curriculumContent.title,
@@ -667,8 +681,8 @@ export default function SessionDetails() {
           session_id: session.id,
           student_id: s.student_id,
           assigned_by: user.id,
-          attachment_url: curriculumContent.assignment_attachment_url || null,
-          attachment_type: curriculumContent.assignment_attachment_type || null,
+          attachment_url: normalizedAttachmentUrl,
+          attachment_type: normalizedAttachmentType,
           curriculum_snapshot: snapshot,
         }));
         const { error } = await supabase.from('assignments').insert(assignmentRecords);
@@ -685,8 +699,8 @@ export default function SessionDetails() {
           session_id: session.id,
           group_id: session.group_id,
           assigned_by: user.id,
-          attachment_url: curriculumContent.assignment_attachment_url || null,
-          attachment_type: curriculumContent.assignment_attachment_type || null,
+          attachment_url: normalizedAttachmentUrl,
+          attachment_type: normalizedAttachmentType,
           curriculum_snapshot: snapshot,
         });
         assignmentInsertError = error;
