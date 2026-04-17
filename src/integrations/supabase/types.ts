@@ -3094,6 +3094,7 @@ export type Database = {
           grading_status: string
           id: string
           is_correct: boolean | null
+          is_correct_original: boolean | null
           max_score: number
           question_id: string
           score: number | null
@@ -3109,6 +3110,7 @@ export type Database = {
           grading_status?: string
           id?: string
           is_correct?: boolean | null
+          is_correct_original?: boolean | null
           max_score?: number
           question_id: string
           score?: number | null
@@ -3124,6 +3126,7 @@ export type Database = {
           grading_status?: string
           id?: string
           is_correct?: boolean | null
+          is_correct_original?: boolean | null
           max_score?: number
           question_id?: string
           score?: number | null
@@ -3225,8 +3228,10 @@ export type Database = {
           max_score: number | null
           percentage: number | null
           questions_snapshot: Json | null
+          questions_snapshot_full: Json | null
           quiz_assignment_id: string
           score: number | null
+          snapshot_version: number
           started_at: string
           status: string
           student_id: string
@@ -3243,8 +3248,10 @@ export type Database = {
           max_score?: number | null
           percentage?: number | null
           questions_snapshot?: Json | null
+          questions_snapshot_full?: Json | null
           quiz_assignment_id: string
           score?: number | null
+          snapshot_version?: number
           started_at?: string
           status?: string
           student_id: string
@@ -3261,8 +3268,10 @@ export type Database = {
           max_score?: number | null
           percentage?: number | null
           questions_snapshot?: Json | null
+          questions_snapshot_full?: Json | null
           quiz_assignment_id?: string
           score?: number | null
+          snapshot_version?: number
           started_at?: string
           status?: string
           student_id?: string
