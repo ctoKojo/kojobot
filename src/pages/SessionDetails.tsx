@@ -332,18 +332,20 @@ export default function SessionDetails() {
         .select('student_id, status, compensation_status, makeup_session_id')
         .eq('session_id', sessionId);
       
-      // Fetch quiz assignment for this session
-      const { data: quizAssignmentData } = await supabase
+      // Fetch quiz assignment for this session (use latest if duplicates exist)
+      const { data: quizAssignmentRows } = await supabase
         .from('quiz_assignments')
         .select(`
-          id, quiz_id, start_time, due_date,
+          id, quiz_id, start_time, due_date, created_at,
           quizzes(id, title, title_ar, passing_score)
         `)
         .eq('session_id', sessionId)
         .eq('is_active', true)
         .eq('is_auto_generated', false)
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
       
+      const quizAssignmentData = quizAssignmentRows?.[0] ?? null;
       setQuizAssignment(quizAssignmentData);
       
       // Fetch quiz submissions if quiz exists
@@ -356,15 +358,17 @@ export default function SessionDetails() {
         quizSubmissions = submissions || [];
       }
       
-      // Fetch assignment for this session
-      const { data: assignmentData } = await supabase
+      // Fetch assignment for this session (use latest if duplicates exist)
+      const { data: assignmentRows } = await supabase
         .from('assignments')
-        .select('id, title, title_ar, description, description_ar, max_score, due_date')
+        .select('id, title, title_ar, description, description_ar, max_score, due_date, created_at')
         .eq('session_id', sessionId)
         .eq('is_active', true)
         .eq('is_auto_generated', false)
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
       
+      const assignmentData = assignmentRows?.[0] ?? null;
       setAssignment(assignmentData);
       
       // Fetch assignment submissions if assignment exists
