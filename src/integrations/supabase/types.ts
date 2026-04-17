@@ -2920,21 +2920,6 @@ export type Database = {
         }
         Relationships: []
       }
-      private_cron_config: {
-        Row: {
-          key: string
-          value: string
-        }
-        Insert: {
-          key: string
-          value: string
-        }
-        Update: {
-          key?: string
-          value?: string
-        }
-        Relationships: []
-      }
       profiles: {
         Row: {
           age_group_id: string | null
@@ -5410,6 +5395,7 @@ export type Database = {
         Args: { lock_key: string }
         Returns: undefined
       }
+      private_get_cron_secret: { Args: never; Returns: string }
       publish_curriculum: {
         Args: { p_age_group_id: string; p_level_id: string }
         Returns: Json
