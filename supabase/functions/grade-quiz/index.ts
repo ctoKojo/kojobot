@@ -252,8 +252,22 @@ serve(async (req) => {
     const gradingStatus = hasOpenEnded ? 'needs_manual_grading' : 'auto_graded'
     const passed = hasOpenEnded ? false : percentage >= (assignment.quizzes?.passing_score || 60)
 
-    // ── Build TWO snapshots ──────────────────────────────────────────
-    // (a) SAFE snapshot for client review — never includes correct_answer
+    // ── Freeze (or reuse) a quiz_version for this submission ─────────
+    // Versioning ensures the exam definition the student saw is preserved
+    // independently of future edits to quiz_questions.
+    let quizVersionId: string | null = null
+    try {
+      const { data: vid, error: vErr } = await adminSupabase.rpc('freeze_quiz_version', { p_quiz_id: assignment.quiz_id })
+      if (vErr) {
+        console.error('freeze_quiz_version error (continuing without versioning):', vErr.message)
+      } else {
+        quizVersionId = vid as unknown as string
+      }
+    } catch (e) {
+      console.error('freeze_quiz_version threw (continuing):', e)
+    }
+
+    // ── SAFE snapshot for client review (never includes correct_answer) ──
     const questionsSnapshot = questions.map(q => ({
       id: q.id,
       question_text: q.question_text,
@@ -266,9 +280,8 @@ serve(async (req) => {
       question_type: q.question_type,
     }))
 
-    // (b) FULL snapshot for server-side audit / re-grade — includes correct_answer
-    //     RLS + column REVOKE prevent any client from reading this column.
-    const questionsSnapshotFull = questions.map(q => ({
+    // ── FULL snapshot stays SERVER-ONLY in quiz_submission_audit table ──
+    const questionsFullSnapshot = questions.map(q => ({
       id: q.id,
       question_text: q.question_text,
       question_text_ar: q.question_text_ar,
@@ -296,8 +309,7 @@ serve(async (req) => {
       grading_status: gradingStatus,
       manual_score: 0,
       questions_snapshot: questionsSnapshot,
-      questions_snapshot_full: questionsSnapshotFull,
-      snapshot_version: 1,
+      quiz_version_id: quizVersionId,
     }
 
     console.log('quiz_submissions insert payload keys:', Object.keys(submissionPayload))
@@ -331,9 +343,20 @@ serve(async (req) => {
       return errorResponse('Failed to save submission', 500)
     }
 
-    // ── Save per-question attempts (is_correct = explicit server decision)
-    //     NOTE: is_correct is an explicit boolean, NEVER inferred from score downstream.
-    //     is_correct_original preserves the auto-grade decision for audit even after manual re-grading.
+    // ── Write isolated audit record (server-only sensitive layer) ────
+    const { error: auditError } = await adminSupabase
+      .from('quiz_submission_audit')
+      .insert({
+        submission_id: submission.id,
+        quiz_version_id: quizVersionId,
+        questions_full_snapshot: questionsFullSnapshot,
+      })
+    if (auditError) console.error('Audit insert error (non-fatal):', auditError)
+
+    // ── Save per-question attempts ───────────────────────────────────
+    //     is_correct_auto  = immutable server auto-grade decision (set once).
+    //     is_correct_final = current correctness (mutable via manual override; trigger tracks).
+    //     is_correct       = legacy mirror of is_correct_final (kept for backward compatibility).
     const attempts = questions.map(q => {
       const isOpenEnded = q.question_type === 'open_ended'
       const explicitIsCorrect = isOpenEnded ? null : !!results[q.id]?.correct
@@ -346,7 +369,8 @@ serve(async (req) => {
         max_score: q.points,
         grading_status: isOpenEnded ? 'ungraded' : 'auto_graded',
         is_correct: explicitIsCorrect,
-        is_correct_original: explicitIsCorrect,
+        is_correct_auto: explicitIsCorrect,
+        is_correct_final: explicitIsCorrect,
       }
     })
 
@@ -354,6 +378,7 @@ serve(async (req) => {
       .from('quiz_question_attempts')
       .insert(attempts)
     if (attemptsError) console.error('Attempts insert error:', attemptsError)
+
 
     // ── Tweak 5: Cleanup draft_answers after successful submit ──────
     await adminSupabase

@@ -3094,8 +3094,12 @@ export type Database = {
           grading_status: string
           id: string
           is_correct: boolean | null
-          is_correct_original: boolean | null
+          is_correct_auto: boolean | null
+          is_correct_final: boolean | null
+          manual_override_at: string | null
+          manual_override_by: string | null
           max_score: number
+          override_reason: string | null
           question_id: string
           score: number | null
           student_id: string
@@ -3110,8 +3114,12 @@ export type Database = {
           grading_status?: string
           id?: string
           is_correct?: boolean | null
-          is_correct_original?: boolean | null
+          is_correct_auto?: boolean | null
+          is_correct_final?: boolean | null
+          manual_override_at?: string | null
+          manual_override_by?: string | null
           max_score?: number
+          override_reason?: string | null
           question_id: string
           score?: number | null
           student_id: string
@@ -3126,8 +3134,12 @@ export type Database = {
           grading_status?: string
           id?: string
           is_correct?: boolean | null
-          is_correct_original?: boolean | null
+          is_correct_auto?: boolean | null
+          is_correct_final?: boolean | null
+          manual_override_at?: string | null
+          manual_override_by?: string | null
           max_score?: number
+          override_reason?: string | null
           question_id?: string
           score?: number | null
           student_id?: string
@@ -3216,6 +3228,51 @@ export type Database = {
           },
         ]
       }
+      quiz_submission_audit: {
+        Row: {
+          created_at: string
+          grading_audit: Json
+          id: string
+          questions_full_snapshot: Json
+          quiz_version_id: string | null
+          schema_version: number
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string
+          grading_audit?: Json
+          id?: string
+          questions_full_snapshot: Json
+          quiz_version_id?: string | null
+          schema_version?: number
+          submission_id: string
+        }
+        Update: {
+          created_at?: string
+          grading_audit?: Json
+          id?: string
+          questions_full_snapshot?: Json
+          quiz_version_id?: string | null
+          schema_version?: number
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_submission_audit_quiz_version_id_fkey"
+            columns: ["quiz_version_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_submission_audit_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: true
+            referencedRelation: "quiz_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quiz_submissions: {
         Row: {
           answers: Json
@@ -3228,10 +3285,9 @@ export type Database = {
           max_score: number | null
           percentage: number | null
           questions_snapshot: Json | null
-          questions_snapshot_full: Json | null
           quiz_assignment_id: string
+          quiz_version_id: string | null
           score: number | null
-          snapshot_version: number
           started_at: string
           status: string
           student_id: string
@@ -3248,10 +3304,9 @@ export type Database = {
           max_score?: number | null
           percentage?: number | null
           questions_snapshot?: Json | null
-          questions_snapshot_full?: Json | null
           quiz_assignment_id: string
+          quiz_version_id?: string | null
           score?: number | null
-          snapshot_version?: number
           started_at?: string
           status?: string
           student_id: string
@@ -3268,10 +3323,9 @@ export type Database = {
           max_score?: number | null
           percentage?: number | null
           questions_snapshot?: Json | null
-          questions_snapshot_full?: Json | null
           quiz_assignment_id?: string
+          quiz_version_id?: string | null
           score?: number | null
-          snapshot_version?: number
           started_at?: string
           status?: string
           student_id?: string
@@ -3291,6 +3345,57 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "session_details"
             referencedColumns: ["quiz_assignment_id"]
+          },
+          {
+            foreignKeyName: "quiz_submissions_quiz_version_id_fkey"
+            columns: ["quiz_version_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          questions_full: Json
+          questions_safe: Json
+          quiz_config: Json
+          quiz_id: string
+          schema_version: number
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          questions_full: Json
+          questions_safe: Json
+          quiz_config: Json
+          quiz_id: string
+          schema_version?: number
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          questions_full?: Json
+          questions_safe?: Json
+          quiz_config?: Json
+          quiz_id?: string
+          schema_version?: number
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_versions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4916,6 +5021,7 @@ export type Database = {
         Args: { p_group_id: string }
         Returns: Json
       }
+      backfill_quiz_audit_batch: { Args: { p_limit?: number }; Returns: number }
       calculate_student_renewal_status: {
         Args: { p_user_id: string }
         Returns: Json
@@ -5028,6 +5134,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      freeze_quiz_version: { Args: { p_quiz_id: string }; Returns: string }
       get_conversation_participant_profiles: {
         Args: { p_user_ids: string[] }
         Returns: {
