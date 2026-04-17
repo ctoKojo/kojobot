@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { isSessionEndedCairo, isSessionActiveCairo, isGracePeriodEndedCairo, getGracePeriodRemainingSeconds } from '@/lib/sessionTimeGuard';
+import { isSessionEndedCairo, isSessionActiveCairo, isGracePeriodEndedCairo, getGracePeriodRemainingSeconds, getMinutesUntilSessionStartCairo } from '@/lib/sessionTimeGuard';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PdfDownloadButton } from '@/components/PdfDownloadButton';
