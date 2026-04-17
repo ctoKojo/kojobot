@@ -37,6 +37,8 @@ export default tseslint.config(
           message: "Use ATTENDANCE_MODES from '@/lib/constants' instead of defining locally.",
         },
       ],
+      // ARCHITECTURE.md §Layer Boundaries — Step 2 starts as warn (113 violations exist).
+      // Promote to "error" once each entity migration is complete (Students → Sessions → Groups → ...).
       "no-restricted-imports": [
         "warn",
         {
@@ -44,11 +46,24 @@ export default tseslint.config(
             {
               group: ["**/integrations/supabase/client"],
               importNames: ["supabase"],
-              message: "For profile operations, use '@/lib/profileService' instead of querying profiles directly.",
+              message:
+                "Direct Supabase calls are forbidden in UI/hooks. Use a service in 'src/features/<entity>/services/' (or 'src/services/realtime.ts'). See docs/ARCHITECTURE.md.",
             },
           ],
         },
       ],
+    },
+  },
+  // Whitelist: services + the auto-generated client itself may import supabase directly.
+  {
+    files: [
+      "src/features/*/services/**/*.{ts,tsx}",
+      "src/services/**/*.{ts,tsx}",
+      "src/integrations/**/*.{ts,tsx}",
+      "src/lib/profileService.ts",
+    ],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
 );
