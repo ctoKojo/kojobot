@@ -647,7 +647,7 @@ user_id: gs.student_id,
             ...(overdueSessions.length > 0 ? [{ key: 'overdue', label: isRTL ? 'متأخرة' : 'Overdue' }] : []),
           ].map(f => {
             const count = f.key === 'today' ? todaySessions.length
-              : f.key === 'tomorrow' ? sessions.filter(s => isTomorrow(s.session_date)).length
+              : f.key === 'tomorrow' ? sessions.filter(s => isTomorrow(s.session_date) && s.status !== 'cancelled').length
               : f.key === 'overdue' ? overdueSessions.length
               : 0;
             return (
