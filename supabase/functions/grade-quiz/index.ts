@@ -181,11 +181,12 @@ serve(async (req) => {
       console.log(`Using draft_answers fallback for user ${force ? assignment.student_id : userId}, version ${draftRow?.draft_version}`)
     }
 
-    // ── Load questions ───────────────────────────────────────────────
+    // ── Load questions (admin client; correct_answer never leaves server) ──
     const { data: questions, error: questionsError } = await adminSupabase
       .from('quiz_questions')
-      .select('id, options, correct_answer, points, question_type, model_answer, rubric')
+      .select('id, question_text, question_text_ar, options, correct_answer, points, order_index, image_url, code_snippet, question_type, model_answer, rubric')
       .eq('quiz_id', assignment.quiz_id)
+      .order('order_index')
 
     if (questionsError || !questions) return errorResponse('Failed to load quiz questions', 500)
 
