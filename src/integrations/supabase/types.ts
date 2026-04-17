@@ -194,6 +194,57 @@ export type Database = {
         }
         Relationships: []
       }
+      assessment_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          event_type: Database["public"]["Enums"]["assessment_event_type"]
+          id: string
+          payload: Json
+          quiz_version_id: string | null
+          submission_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          event_type: Database["public"]["Enums"]["assessment_event_type"]
+          id?: string
+          payload?: Json
+          quiz_version_id?: string | null
+          submission_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          event_type?: Database["public"]["Enums"]["assessment_event_type"]
+          id?: string
+          payload?: Json
+          quiz_version_id?: string | null
+          submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_events_quiz_version_id_fkey"
+            columns: ["quiz_version_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_events_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_submissions: {
         Row: {
           assignment_id: string
@@ -3099,7 +3150,10 @@ export type Database = {
           manual_override_at: string | null
           manual_override_by: string | null
           max_score: number
-          override_reason: string | null
+          override_reason_code:
+            | Database["public"]["Enums"]["manual_override_reason"]
+            | null
+          override_reason_note: string | null
           question_id: string
           score: number | null
           student_id: string
@@ -3119,7 +3173,10 @@ export type Database = {
           manual_override_at?: string | null
           manual_override_by?: string | null
           max_score?: number
-          override_reason?: string | null
+          override_reason_code?:
+            | Database["public"]["Enums"]["manual_override_reason"]
+            | null
+          override_reason_note?: string | null
           question_id: string
           score?: number | null
           student_id: string
@@ -3139,7 +3196,10 @@ export type Database = {
           manual_override_at?: string | null
           manual_override_by?: string | null
           max_score?: number
-          override_reason?: string | null
+          override_reason_code?:
+            | Database["public"]["Enums"]["manual_override_reason"]
+            | null
+          override_reason_note?: string | null
           question_id?: string
           score?: number | null
           student_id?: string
@@ -3357,36 +3417,51 @@ export type Database = {
       }
       quiz_versions: {
         Row: {
+          content_hash: string | null
           created_at: string
           created_by: string | null
+          grading_schema_version: number
           id: string
+          question_order: string[] | null
           questions_full: Json
           questions_safe: Json
           quiz_config: Json
           quiz_id: string
           schema_version: number
+          scoring_rules: Json
+          time_limit_minutes: number | null
           version_number: number
         }
         Insert: {
+          content_hash?: string | null
           created_at?: string
           created_by?: string | null
+          grading_schema_version?: number
           id?: string
+          question_order?: string[] | null
           questions_full: Json
           questions_safe: Json
           quiz_config: Json
           quiz_id: string
           schema_version?: number
+          scoring_rules?: Json
+          time_limit_minutes?: number | null
           version_number: number
         }
         Update: {
+          content_hash?: string | null
           created_at?: string
           created_by?: string | null
+          grading_schema_version?: number
           id?: string
+          question_order?: string[] | null
           questions_full?: Json
           questions_safe?: Json
           quiz_config?: Json
           quiz_id?: string
           schema_version?: number
+          scoring_rules?: Json
+          time_limit_minutes?: number | null
           version_number?: number
         }
         Relationships: [
@@ -5274,6 +5349,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_submission_review_payload: {
+        Args: { p_submission_id: string }
+        Returns: Json
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -5429,8 +5508,22 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "instructor" | "student" | "reception" | "parent"
+      assessment_event_type:
+        | "submitted"
+        | "auto_graded"
+        | "manual_override"
+        | "re_graded"
+        | "appeal_opened"
+        | "appeal_resolved"
+        | "version_frozen"
       employment_status: "permanent" | "training" | "terminated"
       group_type: "kojo_squad" | "kojo_core" | "kojo_x"
+      manual_override_reason:
+        | "student_appeal"
+        | "teacher_correction"
+        | "system_error_fix"
+        | "rubric_adjustment"
+        | "other"
       subscription_type: "kojo_squad" | "kojo_core" | "kojo_x"
     }
     CompositeTypes: {
@@ -5560,8 +5653,24 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "instructor", "student", "reception", "parent"],
+      assessment_event_type: [
+        "submitted",
+        "auto_graded",
+        "manual_override",
+        "re_graded",
+        "appeal_opened",
+        "appeal_resolved",
+        "version_frozen",
+      ],
       employment_status: ["permanent", "training", "terminated"],
       group_type: ["kojo_squad", "kojo_core", "kojo_x"],
+      manual_override_reason: [
+        "student_appeal",
+        "teacher_correction",
+        "system_error_fix",
+        "rubric_adjustment",
+        "other",
+      ],
       subscription_type: ["kojo_squad", "kojo_core", "kojo_x"],
     },
   },
