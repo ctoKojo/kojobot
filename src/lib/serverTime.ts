@@ -7,11 +7,14 @@
  * (quiz windows, exam windows, etc.).
  */
 
-import { supabase } from '@/integrations/supabase/client';
+import { publicSupabase } from '@/integrations/supabase/publicClient';
 
 let serverOffsetMs = 0;
 let isSynced = false;
 let syncPromise: Promise<void> | null = null;
+let lastSyncedAt = 0;
+
+const SYNC_TTL_MS = 5 * 60 * 1000;
 
 /**
  * Sync the local clock with the server clock.
@@ -21,34 +24,28 @@ let syncPromise: Promise<void> | null = null;
  * Falls back gracefully to client time if the request fails.
  */
 export async function syncServerTime(): Promise<void> {
-  if (isSynced) return;
+  if (isSynced && Date.now() - lastSyncedAt < SYNC_TTL_MS) return;
   if (syncPromise) return syncPromise;
 
   syncPromise = (async () => {
     try {
       const t0 = Date.now();
-      // Use Supabase's HEAD request to read the Date response header — fast,
-      // no auth needed, returns server UTC time.
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/`;
-      const resp = await fetch(url, {
-        method: 'HEAD',
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-      });
+      const { data, error } = await publicSupabase.functions.invoke('get-server-time');
       const t1 = Date.now();
-      const dateHeader = resp.headers.get('date');
-      if (!dateHeader) throw new Error('No date header');
-      const serverMs = new Date(dateHeader).getTime();
+      if (error) throw error;
+
+      const serverMs = Number(data?.nowMs);
+      if (!Number.isFinite(serverMs)) throw new Error('Invalid server time response');
+
       // Estimate one-way latency
       const rtt = t1 - t0;
       const estimatedClientMsAtServerTime = t0 + rtt / 2;
       serverOffsetMs = serverMs - estimatedClientMsAtServerTime;
       isSynced = true;
+      lastSyncedAt = t1;
     } catch (err) {
-      console.warn('[serverTime] Failed to sync, falling back to client clock', err);
-      serverOffsetMs = 0;
-      isSynced = true; // don't keep retrying every call
+      console.warn('[serverTime] Failed to sync, will retry on next request', err);
+      isSynced = false;
     } finally {
       syncPromise = null;
     }
