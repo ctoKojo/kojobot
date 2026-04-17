@@ -252,6 +252,19 @@ serve(async (req) => {
     const gradingStatus = hasOpenEnded ? 'needs_manual_grading' : 'auto_graded'
     const passed = hasOpenEnded ? false : percentage >= (assignment.quizzes?.passing_score || 60)
 
+    // ── Build questions snapshot (NEVER includes correct_answer) ─────
+    const questionsSnapshot = questions.map(q => ({
+      id: q.id,
+      question_text: q.question_text,
+      question_text_ar: q.question_text_ar,
+      options: q.options,
+      points: q.points,
+      order_index: q.order_index,
+      image_url: q.image_url,
+      code_snippet: q.code_snippet,
+      question_type: q.question_type,
+    }))
+
     // ── Save submission (UNIQUE constraint prevents duplicates) ──────
     const studentId = force ? assignment.student_id : userId
     const submissionPayload = {
@@ -264,6 +277,7 @@ serve(async (req) => {
       submitted_at: new Date().toISOString(),
       grading_status: gradingStatus,
       manual_score: 0,
+      questions_snapshot: questionsSnapshot,
     }
 
     console.log('quiz_submissions insert payload keys:', Object.keys(submissionPayload))
