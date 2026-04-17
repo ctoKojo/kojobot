@@ -379,6 +379,44 @@ serve(async (req) => {
       .insert(attempts)
     if (attemptsError) console.error('Attempts insert error:', attemptsError)
 
+    // ── Append assessment events (event-sourced audit) ──────────────
+    try {
+      await adminSupabase.from('assessment_events').insert([
+        {
+          event_type: 'submitted',
+          entity_type: 'quiz_submission',
+          entity_id: submission.id,
+          submission_id: submission.id,
+          quiz_version_id: quizVersionId,
+          actor_id: userId,
+          payload: {
+            student_id: studentId,
+            answered_count: Object.keys(validatedAnswers).length,
+            total_questions: questions.length,
+            used_fallback: usedFallback,
+            force: !!force,
+          },
+        },
+        {
+          event_type: 'auto_graded',
+          entity_type: 'quiz_submission',
+          entity_id: submission.id,
+          submission_id: submission.id,
+          quiz_version_id: quizVersionId,
+          actor_id: null,
+          payload: {
+            score,
+            max_score: maxScore,
+            percentage,
+            grading_status: gradingStatus,
+            has_open_ended: hasOpenEnded,
+          },
+        },
+      ])
+    } catch (e) {
+      console.error('assessment_events insert error (non-fatal):', e)
+    }
+
 
     // ── Tweak 5: Cleanup draft_answers after successful submit ──────
     await adminSupabase
