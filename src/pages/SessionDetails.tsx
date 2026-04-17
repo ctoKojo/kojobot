@@ -667,8 +667,8 @@ export default function SessionDetails() {
           session_id: session.id,
           student_id: s.student_id,
           assigned_by: user.id,
-          attachment_url: curriculumContent.assignment_attachment_url,
-          attachment_type: curriculumContent.assignment_attachment_type,
+          attachment_url: curriculumContent.assignment_attachment_url || null,
+          attachment_type: curriculumContent.assignment_attachment_type || null,
           curriculum_snapshot: snapshot,
         }));
         const { error } = await supabase.from('assignments').insert(assignmentRecords);
@@ -685,8 +685,8 @@ export default function SessionDetails() {
           session_id: session.id,
           group_id: session.group_id,
           assigned_by: user.id,
-          attachment_url: curriculumContent.assignment_attachment_url,
-          attachment_type: curriculumContent.assignment_attachment_type,
+          attachment_url: curriculumContent.assignment_attachment_url || null,
+          attachment_type: curriculumContent.assignment_attachment_type || null,
           curriculum_snapshot: snapshot,
         });
         assignmentInsertError = error;
