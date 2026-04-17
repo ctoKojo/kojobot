@@ -16,6 +16,7 @@ interface QuizAssignment {
   quiz_id: string;
   start_time: string | null;
   due_date: string | null;
+  extra_minutes: number | null;
   created_at: string;
   quizzes: {
     id: string;
