@@ -358,15 +358,17 @@ export default function SessionDetails() {
         quizSubmissions = submissions || [];
       }
       
-      // Fetch assignment for this session
-      const { data: assignmentData } = await supabase
+      // Fetch assignment for this session (use latest if duplicates exist)
+      const { data: assignmentRows } = await supabase
         .from('assignments')
-        .select('id, title, title_ar, description, description_ar, max_score, due_date')
+        .select('id, title, title_ar, description, description_ar, max_score, due_date, created_at')
         .eq('session_id', sessionId)
         .eq('is_active', true)
         .eq('is_auto_generated', false)
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
       
+      const assignmentData = assignmentRows?.[0] ?? null;
       setAssignment(assignmentData);
       
       // Fetch assignment submissions if assignment exists
