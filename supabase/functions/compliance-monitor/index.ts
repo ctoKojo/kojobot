@@ -881,7 +881,7 @@ serve(async (req) => {
     // MODULE D-2: Exam SLA Timeout Check (Section 9a)
     // ========================================
     try {
-      if (!shouldCircuitBreak()) {
+      if (!checkCircuitBreaker()) {
         const { data: slaResult, error: slaError } = await supabase.rpc('check_exam_sla_timeouts');
         if (slaError) {
           results.errors.push(`Section 9a (Exam SLA) error: ${slaError.message}`);
