@@ -2920,6 +2920,21 @@ export type Database = {
         }
         Relationships: []
       }
+      private_cron_config: {
+        Row: {
+          key: string
+          value: string
+        }
+        Insert: {
+          key: string
+          value: string
+        }
+        Update: {
+          key?: string
+          value?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age_group_id: string | null
