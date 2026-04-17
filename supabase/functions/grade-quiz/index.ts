@@ -331,9 +331,12 @@ serve(async (req) => {
       return errorResponse('Failed to save submission', 500)
     }
 
-    // ── Save per-question attempts (with is_correct as single source of truth)
+    // ── Save per-question attempts (is_correct = explicit server decision)
+    //     NOTE: is_correct is an explicit boolean, NEVER inferred from score downstream.
+    //     is_correct_original preserves the auto-grade decision for audit even after manual re-grading.
     const attempts = questions.map(q => {
       const isOpenEnded = q.question_type === 'open_ended'
+      const explicitIsCorrect = isOpenEnded ? null : !!results[q.id]?.correct
       return {
         submission_id: submission.id,
         question_id: q.id,
@@ -342,7 +345,8 @@ serve(async (req) => {
         score: isOpenEnded ? null : (results[q.id]?.correct ? q.points : 0),
         max_score: q.points,
         grading_status: isOpenEnded ? 'ungraded' : 'auto_graded',
-        is_correct: isOpenEnded ? null : !!results[q.id]?.correct,
+        is_correct: explicitIsCorrect,
+        is_correct_original: explicitIsCorrect,
       }
     })
 
