@@ -1,77 +1,116 @@
 
 
-## التشخيص
+## الخطة النهائية المحدثة (Production-Grade)
 
-**حالة النظام الحالية (3 طلاب نجحوا، 0 شهادة):**
+### 1. تفعيل الإكستنشنز + جدولة الكرون
+**Migration جديدة:**
+```sql
+-- ضمان تفعيل الإكستنشنز
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
 
-| الطالب | المجموعة | المستوى | حالة الـ Lifecycle | شهادة؟ |
-|--------|----------|---------|-------------------|--------|
-| Elsayed mohamed | T9 | Level 2 Software | `graded` (passed) | ❌ |
-| Rawan mohamed | T10 | Level 1 | `graded` (passed) | ❌ |
-| Basil wael | T38 | Level 1 | `graded` (passed) | ❌ |
+-- حفظ CRON_SECRET كـ DB setting (لو مش موجود)
+ALTER DATABASE postgres SET app.cron_secret = '<from vault>';
 
-**سبب المشكلة (3 ثغرات في الفلو):**
-
-1. **الشهادة بتتعمل بس وقت الترقية، مش لما الطالب ينجح:** RPC `upgrade_student_level` و `student_choose_track_and_upgrade` هما الوحيدين اللي بيـ `INSERT INTO student_certificates`. لو المسؤول لسه ما عملش "Promote" من صفحة المجموعة، الشهادة مش بتتولد أصلاً. الطلاب التلاتة لسه `graded` ومش `pending_group_assignment`.
-
-2. **مفيش cron يولد شهادات الـ pending تلقائياً:** الـ Edge Function `generate-certificate` موجودة لكن مفيش `cron.job` بيشغلها. لازم أدمن يضغط زر "Generate" يدوياً من تبويب الشهادات في بروفايل الطالب. النتيجة: الشهادات بتفضل `pending` للأبد.
-
-3. **Reception Dashboard بيعد بس الشهادات `ready`:** الـ widget بيعرض `unprintedCertificates` بفلتر `status = 'ready' AND printed_at IS NULL`. الشهادات الـ `pending` (مش متولدة لسه) بتختفي تماماً من رادار الريسيبشن.
-
-## الفلو الصحيح المطلوب
-
-```text
-Student passes exam (outcome=passed, status=graded)
-         ↓
-[AUTO] Trigger creates certificate row (status=pending)
-         ↓
-[AUTO] Cron job (every 5 min) calls generate-certificate edge function
-         ↓
-PDF generated → uploaded to storage → status=ready
-         ↓
-[AUTO] Notification to Reception: "Certificate ready to print"
-         ↓
-Student sees it in /my-certificates (Download button)
-Reception sees count in dashboard widget → opens student profile → prints → marks printed
+-- 3 cron jobs
+SELECT cron.schedule('auto-complete-sessions', '*/15 * * * *', $$...$$);
+SELECT cron.schedule('compliance-monitor', '0 * * * *', $$...$$);
+SELECT cron.schedule('session-reminders', '*/30 * * * *', $$...$$);
 ```
 
-## الخطة (4 خطوات)
+### 2. منع تكرار الإنذارات على مستوى DB (Idempotency)
+**Migration:**
+```sql
+-- partial unique index (يسمح بإنذارات مختلفة لنفس السيشن لكن يمنع التكرار)
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_warning_per_session_type
+ON instructor_warnings(session_id, warning_type)
+WHERE session_id IS NOT NULL AND is_active = true;
+```
+ده بيخلي أي محاولة insert ثانية بترجع conflict تلقائياً → الكود يستخدم `.upsert(..., { onConflict: 'session_id,warning_type', ignoreDuplicates: true })`.
 
-### 1. Trigger تلقائي لإنشاء الشهادة عند النجاح
-- Migration: trigger جديد `trg_issue_certificate_on_pass` على `level_grades` بعد `INSERT/UPDATE`
-- لما `outcome = 'passed'` يعمل `INSERT INTO student_certificates` بـ `status = 'pending'` (مع `ON CONFLICT DO NOTHING`)
-- نضيف نفس notification "Certificate Ready to Print" للريسيبشن (اللي حالياً بتتبعت بس وقت الترقية)
-- **Backfill يدوي:** إنشاء شهادات pending للطلاب الـ 3 الموجودين حالياً (Elsayed, Rawan, Basil)
+### 3. إصلاح `compliance-monitor/index.ts`
 
-### 2. Cron job يشغل التوليد كل 5 دقائق
-- Migration: `cron.schedule('generate-pending-certificates', '*/5 * * * *', ...)`
-- يستدعي `generate-certificate` edge function بـ `x-cron-secret`
-- الـ function بالفعل بتـ batch process الـ pending/failed (lines 162-168)
+**أ) الفلترة بالوقت بدل الـ status فقط:**
+```typescript
+// قديم: .eq('status', 'completed')
+// جديد: نفحص أي سيشن عدى عليها 60 دقيقة من end time
+.lte('session_date', getCairoToday())
+.in('status', ['completed', 'scheduled']) // نشمل scheduled العالقة
+// + فلتر إضافي بالكود: نتأكد إن (session_date + session_time + duration + 60min) < now()
+```
 
-### 3. Reception Dashboard widget محسّن
-- تعديل `ReceptionDashboard.tsx`: عرض عدّادين منفصلين:
-  - **شهادات قيد التوليد** (`status IN ('pending','generating','failed')`) — للمتابعة
-  - **شهادات جاهزة للطباعة** (`status = 'ready' AND printed_at IS NULL`) — للأكشن
-- لينك مباشر لصفحة جديدة `/certificates-queue` تعرض كل الشهادات pending/ready
+**ب) curriculum validation آمن (multi-assets):**
+```typescript
+const assets = cs?.curriculum_session_assets || [];
+const expectsQuiz = assets.some(a => a.quiz_id);
+const expectsAssignment = assets.some(a => a.assignment_title);
+if (!expectsQuiz) skip 'no_quiz';
+if (!expectsAssignment) skip 'no_assignment';
+```
 
-### 4. صفحة `/certificates-queue` للريسيبشن (جديدة)
-- جدول بكل الشهادات اللي مش متطبوعة (pending/generating/ready/failed)
-- أكشنز: تحميل، Mark Printed، Retry (للـ failed)
-- إضافة لـ `AppSidebar` تحت قسم Reception
+**ج) Evaluation check دقيق (مقارنة على مستوى الطلاب):**
+```typescript
+const { data: presentStudents } = await supabase
+  .from('attendance')
+  .select('student_id')
+  .eq('session_id', session.id)
+  .eq('status', 'present');
 
-## الملفات المتأثرة
+const { data: evaluatedStudents } = await supabase
+  .from('session_evaluations')
+  .select('student_id')
+  .eq('session_id', session.id);
 
-**Migrations:**
-- Trigger جديد على `level_grades` + cron.job + backfill 3 شهادات
+const presentSet = new Set(presentStudents?.map(s => s.student_id) || []);
+const evalSet = new Set(evaluatedStudents?.map(s => s.student_id) || []);
+const missing = [...presentSet].filter(id => !evalSet.has(id));
 
-**كود:**
-- `src/components/dashboard/ReceptionDashboard.tsx` — widget محسّن
-- `src/pages/CertificatesQueue.tsx` — صفحة جديدة
-- `src/components/AppSidebar.tsx` — إضافة لينك
-- `src/App.tsx` — route جديد
+if (missing.length > 0) → issue 'no_evaluation' warning;
+```
 
-## التحقق النهائي
-- إنشاء صف level_grade تجريبي لطالب نجح → التأكد إن الشهادة اتعملت تلقائياً
-- انتظار الـ cron → التأكد إن الـ status بقى ready
-- التأكد إن الإشعار وصل للريسيبشن وإن الـ widget بيعرض العدد الصحيح
+**د) Auth strict + batching:**
+```typescript
+const auth = req.headers.get('Authorization') || '';
+if (auth !== `Bearer ${SERVICE_ROLE}` && auth !== `Bearer ${CRON_SECRET}`) {
+  return 401;
+}
+
+// batching للسيشنات المتراكمة
+.limit(100)
+.order('session_date', { ascending: true })
+```
+
+### 4. تشغيل دفعة فورية للسيشنات المتأخرة
+بعد تطبيق الـ migration، نستدعي الـ functions يدوياً:
+- `auto-complete-sessions` لإقفال السيشنات العالقة
+- `compliance-monitor` لإصدار الإنذارات للسيشنات المتراكمة (آخر 14 يوم)
+
+batch size محدود بـ 100 سيشن في كل run.
+
+---
+
+## ملخص الفروقات عن الخطة السابقة
+
+| النقطة | السابق | المحدث |
+|--------|--------|--------|
+| pg_cron extension | غير مذكور | `CREATE EXTENSION IF NOT EXISTS` |
+| Status filter | `eq('completed')` فقط | time-based + multi-status |
+| curriculum_session_assets | `[0]` (هش) | `.some()` على array |
+| Evaluation check | count-based | student-set comparison |
+| Idempotency | check بالكود فقط | DB-level partial unique index |
+| Batching | غير محدد | `.limit(100)` + ordered |
+| Auth في الـ function | موجود لكن نتأكد منه | strict bearer match |
+
+## الملفات اللي هتتعدل
+- `supabase/migrations/<new>.sql` — extensions + cron schedules + unique index
+- `supabase/functions/compliance-monitor/index.ts` — كل التعديلات الـ 4 (a/b/c/d)
+- استدعاء الـ functions يدوياً مرة بعد deploy
+
+## الذاكرة هتتحدث
+- `mem://logic/automated-task-idempotency` — إضافة DB-level unique index كطبقة ثانية
+- ذاكرة جديدة `mem://features/compliance-warnings-system` — توثق:
+  - time-based filtering (مش status فقط)
+  - curriculum-aware (skip لو السيشن ملهاش quiz/assignment)
+  - student-set comparison في الـ evaluation
+  - batch size 100
 
