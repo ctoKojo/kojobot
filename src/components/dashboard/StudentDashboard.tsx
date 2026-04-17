@@ -628,19 +628,24 @@ export function StudentDashboard() {
                       <Badge variant="outline">{session.session_date}</Badge>
                       <p className="text-sm text-muted-foreground mt-1"><SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} /></p>
                     </div>
-                    {/* Join Session Button for Online Groups */}
-                    {session.groups?.attendance_mode === 'online' && session.groups?.session_link && 
-                      isSessionActiveCairo(session.session_date, session.session_time, session.duration_minutes) && (
-                      <Button 
-                        size="sm" 
-                        className="bg-green-600 hover:bg-green-700"
-                        asChild
-                      >
-                        <a href={session.groups.session_link} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </Button>
-                    )}
+                    {/* Join Session Button — supports per-session online overrides */}
+                    {(() => {
+                      const mode = session.effective_attendance_mode || session.groups?.attendance_mode;
+                      const link = session.effective_session_link || session.groups?.session_link;
+                      if (mode !== 'online' || !link) return null;
+                      if (!isSessionActiveCairo(session.session_date, session.session_time, session.duration_minutes)) return null;
+                      return (
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                          asChild
+                        >
+                          <a href={link} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </Button>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
