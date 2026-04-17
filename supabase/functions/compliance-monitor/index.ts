@@ -12,6 +12,9 @@ interface CompletedSession {
   session_date: string;
   session_time: string;
   session_number: number;
+  content_number: number | null;
+  level_id: string | null;
+  duration_minutes?: number;
   group_id: string;
   groups: {
     instructor_id: string;
@@ -20,6 +23,49 @@ interface CompletedSession {
     starting_session_number: number | null;
   };
 }
+
+// Cache curriculum lookups within a single run to avoid repeated queries
+const curriculumCache = new Map<string, { expectsQuiz: boolean; expectsAssignment: boolean }>();
+
+async function getCurriculumExpectations(
+  supabase: any,
+  levelId: string | null,
+  contentNumber: number | null
+): Promise<{ expectsQuiz: boolean; expectsAssignment: boolean } | null> {
+  if (!levelId || !contentNumber) return null;
+  const key = `${levelId}::${contentNumber}`;
+  if (curriculumCache.has(key)) return curriculumCache.get(key)!;
+
+  const { data } = await supabase
+    .from('curriculum_sessions')
+    .select('quiz_id, assignment_title')
+    .eq('level_id', levelId)
+    .eq('session_number', contentNumber)
+    .eq('is_active', true)
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) {
+    curriculumCache.set(key, { expectsQuiz: false, expectsAssignment: false });
+    return curriculumCache.get(key)!;
+  }
+  const result = {
+    expectsQuiz: !!data.quiz_id,
+    expectsAssignment: !!(data.assignment_title && data.assignment_title.trim().length > 0),
+  };
+  curriculumCache.set(key, result);
+  return result;
+}
+
+// Check if session's grace period (end + 60 min) has passed in Cairo time
+function isPastGracePeriod(sessionDate: string, sessionTime: string, durationMinutes: number): boolean {
+  // Cairo offset is +03:00 (no DST since 2014)
+  const sessionEnd = new Date(`${sessionDate}T${sessionTime}+03:00`);
+  sessionEnd.setMinutes(sessionEnd.getMinutes() + durationMinutes + 60);
+  return Date.now() >= sessionEnd.getTime();
+}
+
+const BATCH_SIZE = 100;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
