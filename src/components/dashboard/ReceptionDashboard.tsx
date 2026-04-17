@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getCairoToday } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
-import { Users, Calendar, Clock, AlertTriangle, CreditCard, RefreshCw, Target, ChevronRight, ArrowRight, Award } from 'lucide-react';
+import { Users, Calendar, Clock, AlertTriangle, CreditCard, RefreshCw, Target, ChevronRight, ArrowRight, Award, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -16,6 +16,7 @@ interface DashboardStats {
   pendingMakeups: number;
   awaitingFinalExam: number;
   unprintedCertificates: number;
+  generatingCertificates: number;
 }
 
 export function ReceptionDashboard() {
@@ -30,6 +31,7 @@ export function ReceptionDashboard() {
     pendingMakeups: 0,
     awaitingFinalExam: 0,
     unprintedCertificates: 0,
+    generatingCertificates: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -41,7 +43,7 @@ export function ReceptionDashboard() {
     try {
       const today = getCairoToday();
 
-      const [studentsRes, groupsRes, sessionsRes, attendanceRes, subsRes, makeupRes, awaitingExamRes, certsRes] = await Promise.all([
+      const [studentsRes, groupsRes, sessionsRes, attendanceRes, subsRes, makeupRes, awaitingExamRes, certsRes, generatingCertsRes] = await Promise.all([
         supabase.from('user_roles').select('id', { count: 'exact', head: true }).eq('role', 'student'),
         supabase.from('groups').select('id', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('sessions').select('id, group_id').eq('session_date', today).eq('status', 'scheduled'),
@@ -55,6 +57,7 @@ export function ReceptionDashboard() {
         supabase.from('makeup_sessions').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('group_student_progress').select('id', { count: 'exact', head: true }).eq('status', 'awaiting_exam'),
         supabase.from('student_certificates').select('id', { count: 'exact', head: true }).eq('status', 'ready').is('printed_at', null),
+        supabase.from('student_certificates').select('id', { count: 'exact', head: true }).in('status', ['pending', 'generating', 'failed']),
       ]);
 
       // Calculate unrecorded attendance
@@ -71,6 +74,7 @@ export function ReceptionDashboard() {
         pendingMakeups: makeupRes.count || 0,
         awaitingFinalExam: awaitingExamRes.count || 0,
         unprintedCertificates: certsRes.count || 0,
+        generatingCertificates: generatingCertsRes.count || 0,
       });
     } catch (error) {
       console.error('Error fetching reception stats:', error);
@@ -146,13 +150,23 @@ export function ReceptionDashboard() {
     },
     stats.unprintedCertificates > 0 && {
       icon: Award,
-      title: isRTL ? 'شهادات تحتاج طباعة' : 'Certificates to Print',
+      title: isRTL ? 'شهادات جاهزة للطباعة' : 'Certificates Ready to Print',
       description: isRTL
-        ? `${stats.unprintedCertificates} شهادة جاهزة للطباعة`
-        : `${stats.unprintedCertificates} certificates ready to print`,
+        ? `${stats.unprintedCertificates} شهادة جاهزة — افتح الطابور للطباعة`
+        : `${stats.unprintedCertificates} certificates ready — open queue to print`,
       count: stats.unprintedCertificates,
       variant: 'default' as const,
-      onClick: () => navigate('/students'),
+      onClick: () => navigate('/certificates-queue'),
+    },
+    stats.generatingCertificates > 0 && {
+      icon: Loader2,
+      title: isRTL ? 'شهادات قيد التوليد' : 'Certificates Generating',
+      description: isRTL
+        ? `${stats.generatingCertificates} شهادة قيد المعالجة التلقائية`
+        : `${stats.generatingCertificates} certificates being processed automatically`,
+      count: stats.generatingCertificates,
+      variant: 'secondary' as const,
+      onClick: () => navigate('/certificates-queue'),
     },
   ].filter(Boolean) as Array<{
     icon: any;

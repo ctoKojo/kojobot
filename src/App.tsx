@@ -72,6 +72,7 @@ const PlacementGate = React.lazy(() => import("./pages/PlacementGate"));
 const FinalExams = React.lazy(() => import("./pages/FinalExams"));
 const ProgressionMetrics = React.lazy(() => import("./pages/ProgressionMetrics"));
 const MyCertificates = React.lazy(() => import("./pages/MyCertificates"));
+const CertificatesQueue = React.lazy(() => import("./pages/CertificatesQueue"));
 const RenewalRequired = React.lazy(() => import("./pages/RenewalRequired"));
 const ParentStudentView = React.lazy(() => import("./pages/ParentStudentView"));
 
@@ -162,6 +163,7 @@ const App = () => (
                   <Route path="/final-exams" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><FinalExams /></ProtectedRoute>} />
                   <Route path="/progression-metrics" element={<ProtectedRoute allowedRoles={['admin']}><ProgressionMetrics /></ProtectedRoute>} />
                   <Route path="/my-certificates" element={<ProtectedRoute allowedRoles={['student']}><MyCertificates /></ProtectedRoute>} />
+                  <Route path="/certificates-queue" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><CertificatesQueue /></ProtectedRoute>} />
                   <Route path="/account-suspended" element={<AccountSuspended />} />
                   <Route path="/account-terminated" element={<AccountTerminated />} />
                   <Route path="/renewal-required" element={<RenewalRequired />} />
