@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { StudentQuizPreviewDialog } from '@/components/quiz/StudentQuizPreviewDialog';
+import { syncServerTime, serverNow } from '@/lib/serverTime';
 
 interface QuizAssignment {
   id: string;
@@ -45,7 +46,10 @@ export default function MyQuizzes() {
   const [isFrozen, setIsFrozen] = useState(false);
 
   useEffect(() => {
-    if (user) fetchQuizzes();
+    if (user) {
+      // Sync with server clock so a wrong client clock doesn't lock open quizzes.
+      syncServerTime().finally(() => fetchQuizzes());
+    }
   }, [user]);
 
   // Auto-refresh every minute to update remaining time display
@@ -112,7 +116,7 @@ export default function MyQuizzes() {
   // SSOT: using centralized formatDate from timeUtils.ts with Cairo timezone
 
   const getQuizStatus = (quiz: QuizAssignment) => {
-    const now = new Date().getTime();
+    const now = serverNow();
     const startTime = quiz.start_time ? new Date(quiz.start_time).getTime() : null;
     const dueDate = quiz.due_date ? new Date(quiz.due_date).getTime() : null;
     const duration = quiz.quizzes?.duration_minutes || 30;
