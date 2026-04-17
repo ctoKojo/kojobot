@@ -4901,6 +4901,10 @@ export type Database = {
         Args: { p_group_id: string }
         Returns: Json
       }
+      calculate_student_renewal_status: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       check_and_increment_chatbot_rate: {
         Args: { p_student_id: string }
         Returns: Json
@@ -5108,6 +5112,11 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_student_attendance_stats: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      get_student_full_profile: { Args: { p_user_id: string }; Returns: Json }
       get_student_group_ids: {
         Args: { _student_id: string }
         Returns: string[]
@@ -5127,6 +5136,21 @@ export type Database = {
           rank_progress: number
           total_xp: number
         }[]
+      }
+      get_student_subscription_status: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
+      get_student_summary: { Args: { p_user_id: string }; Returns: Json }
+      get_students_list: {
+        Args: {
+          p_filters?: Json
+          p_limit?: number
+          p_offset?: number
+          p_sort_by?: string
+          p_sort_dir?: string
+        }
+        Returns: Json
       }
       get_user_role: {
         Args: { _user_id: string }
