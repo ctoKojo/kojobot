@@ -167,7 +167,12 @@ export function StudentDashboard() {
           .eq('status', 'scheduled')
           .order('session_date')
           .limit(3);
-        upcomingSessions = data || [];
+        // Prefer per-session overrides (attendance_mode + session_link) over the group defaults
+        upcomingSessions = (data || []).map((s: any) => ({
+          ...s,
+          effective_attendance_mode: s.attendance_mode || s.groups?.attendance_mode || null,
+          effective_session_link: s.session_link || s.groups?.session_link || null,
+        }));
       }
 
       // Fetch level progress from group's last_delivered_content_number
@@ -412,18 +417,22 @@ export function StudentDashboard() {
                 <p className="text-xs sm:text-sm text-muted-foreground truncate">
                   {stats.groupInfo.schedule_day} - <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={stats.groupInfo.schedule_time} isRTL={isRTL} />
                 </p>
-                {stats.groupInfo.attendance_mode === 'online' && stats.groupInfo.session_link && (() => {
-                  const hasActiveSession = stats.upcomingSessions.some((s: any) => 
+                {(() => {
+                  // Find any active session right now and use its effective mode/link
+                  // (covers per-session overrides like converting an offline session to online)
+                  const activeSession = stats.upcomingSessions.find((s: any) =>
                     isSessionActiveCairo(s.session_date, s.session_time, s.duration_minutes)
                   );
-                  if (!hasActiveSession) return null;
+                  const mode = activeSession?.effective_attendance_mode || stats.groupInfo.attendance_mode;
+                  const link = activeSession?.effective_session_link || stats.groupInfo.session_link;
+                  if (!activeSession || mode !== 'online' || !link) return null;
                   return (
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="mt-2 w-full bg-green-600 hover:bg-green-700"
                       asChild
                     >
-                      <a href={stats.groupInfo.session_link} target="_blank" rel="noopener noreferrer">
+                      <a href={link} target="_blank" rel="noopener noreferrer">
                         <Video className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                         {isRTL ? 'انضم للجلسة' : 'Join Session'}
                       </a>
@@ -619,19 +628,24 @@ export function StudentDashboard() {
                       <Badge variant="outline">{session.session_date}</Badge>
                       <p className="text-sm text-muted-foreground mt-1"><SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} /></p>
                     </div>
-                    {/* Join Session Button for Online Groups */}
-                    {session.groups?.attendance_mode === 'online' && session.groups?.session_link && 
-                      isSessionActiveCairo(session.session_date, session.session_time, session.duration_minutes) && (
-                      <Button 
-                        size="sm" 
-                        className="bg-green-600 hover:bg-green-700"
-                        asChild
-                      >
-                        <a href={session.groups.session_link} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </Button>
-                    )}
+                    {/* Join Session Button — supports per-session online overrides */}
+                    {(() => {
+                      const mode = session.effective_attendance_mode || session.groups?.attendance_mode;
+                      const link = session.effective_session_link || session.groups?.session_link;
+                      if (mode !== 'online' || !link) return null;
+                      if (!isSessionActiveCairo(session.session_date, session.session_time, session.duration_minutes)) return null;
+                      return (
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                          asChild
+                        >
+                          <a href={link} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </Button>
+                      );
+                    })()}
                   </div>
                 </div>
               ))}
