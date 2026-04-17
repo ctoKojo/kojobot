@@ -134,51 +134,58 @@ serve(async (req) => {
     };
 
     // ========================================
-    // EXISTING Section 1: Check for sessions without quiz
+    // Section 1: Check sessions without quiz (curriculum-aware, time-based)
     // ========================================
     try {
-      // Only scan sessions from the last 60 days to avoid re-processing old history
       const sixtyDaysAgo = getCairoDatePlusDays(-60);
-      const { data: sessionsWithoutQuiz, error: quizError } = await supabase
+      const { data: sessionsForQuiz, error: quizError } = await supabase
         .from('sessions')
-        .select(`id, session_date, session_time, session_number, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
-        .eq('status', 'completed')
+        .select(`id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
+        .in('status', ['completed', 'scheduled'])
         .neq('groups.status', 'frozen')
-        .gte('session_date', sixtyDaysAgo);
+        .gte('session_date', sixtyDaysAgo)
+        .lte('session_date', todayStr)
+        .order('session_date', { ascending: true })
+        .limit(BATCH_SIZE);
 
       if (quizError) {
         results.errors.push(`Quiz check error: ${quizError.message}`);
-      } else if (sessionsWithoutQuiz) {
-        for (const session of sessionsWithoutQuiz as unknown as CompletedSession[]) {
+      } else if (sessionsForQuiz) {
+        for (const session of sessionsForQuiz as unknown as CompletedSession[]) {
           if (checkCircuitBreaker()) break;
           if (isLegacySession(session)) { results.skippedLegacySessions++; continue; }
+          // Time-based: only act if grace period passed
+          if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60)) continue;
+
+          // Curriculum-aware: skip if this session does not expect a quiz
+          const expect = await getCurriculumExpectations(supabase, session.level_id, session.content_number);
+          if (expect && !expect.expectsQuiz) continue;
 
           const { data: quizAssignment } = await supabase
             .from('quiz_assignments').select('id').eq('session_id', session.id).limit(1).maybeSingle();
 
           if (!quizAssignment) {
-            const { data: existingWarning } = await supabase
-              .from('instructor_warnings').select('id')
-              .eq('session_id', session.id).eq('warning_type', 'no_quiz').eq('is_active', true).maybeSingle();
-
-            if (!existingWarning) {
-              const { error: insertError } = await supabase.from('instructor_warnings').insert({
+            // DB-level idempotency via partial unique index — use upsert with ignoreDuplicates
+            const { error: insertError, data: inserted } = await supabase
+              .from('instructor_warnings')
+              .upsert({
                 instructor_id: session.groups.instructor_id,
                 session_id: session.id,
                 warning_type: 'no_quiz',
                 reason: `No quiz assigned for Session ${session.session_number} (${session.groups.name})`,
                 reason_ar: `لم يتم تعيين كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
+              }, { onConflict: 'session_id,warning_type', ignoreDuplicates: true })
+              .select('id');
+
+            if (!insertError && inserted && inserted.length > 0) {
+              results.instructorWarnings++;
+              await supabase.from('notifications').insert({
+                user_id: session.groups.instructor_id,
+                title: 'Warning: Missing Quiz', title_ar: 'تحذير: كويز مفقود',
+                message: `You didn't add a quiz for Session ${session.session_number} (${session.groups.name})`,
+                message_ar: `لم تقم بإضافة كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
+                type: 'warning', category: 'compliance',
               });
-              if (!insertError) {
-                results.instructorWarnings++;
-                await supabase.from('notifications').insert({
-                  user_id: session.groups.instructor_id,
-                  title: 'Warning: Missing Quiz', title_ar: 'تحذير: كويز مفقود',
-                  message: `You didn't add a quiz for Session ${session.session_number} (${session.groups.name})`,
-                  message_ar: `لم تقم بإضافة كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                  type: 'warning', category: 'compliance',
-                });
-              }
             }
           }
         }
@@ -188,51 +195,53 @@ serve(async (req) => {
     }
 
     // ========================================
-    // EXISTING Section 2: Check for sessions without attendance
+    // Section 2: Sessions without attendance (time-based)
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
         const sixtyDaysAgoAtt = getCairoDatePlusDays(-60);
         const { data: completedSessions, error: attendanceCheckError } = await supabase
           .from('sessions')
-          .select(`id, session_date, session_time, session_number, group_id, duration_minutes, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
-          .eq('status', 'completed')
+          .select(`id, session_date, session_time, session_number, content_number, level_id, group_id, duration_minutes, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
+          .in('status', ['completed', 'scheduled'])
           .neq('groups.status', 'frozen')
-          .gte('session_date', sixtyDaysAgoAtt);
+          .gte('session_date', sixtyDaysAgoAtt)
+          .lte('session_date', todayStr)
+          .order('session_date', { ascending: true })
+          .limit(BATCH_SIZE);
 
         if (attendanceCheckError) {
           results.errors.push(`Attendance check error: ${attendanceCheckError.message}`);
         } else if (completedSessions) {
-          for (const session of completedSessions as unknown as (CompletedSession & { duration_minutes: number })[]) {
+          for (const session of completedSessions as unknown as CompletedSession[]) {
             if (checkCircuitBreaker()) break;
             if (isLegacySession(session)) continue;
+            if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60)) continue;
 
             const { count: attendanceCount } = await supabase
               .from('attendance').select('*', { count: 'exact', head: true }).eq('session_id', session.id);
 
             if (attendanceCount === 0) {
-              const { data: existingWarning } = await supabase
-                .from('instructor_warnings').select('id')
-                .eq('session_id', session.id).eq('warning_type', 'no_attendance').eq('is_active', true).maybeSingle();
-
-              if (!existingWarning) {
-                const { error: insertError } = await supabase.from('instructor_warnings').insert({
+              const { error: insertError, data: inserted } = await supabase
+                .from('instructor_warnings')
+                .upsert({
                   instructor_id: session.groups.instructor_id,
                   session_id: session.id,
                   warning_type: 'no_attendance',
                   reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})`,
                   reason_ar: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
+                }, { onConflict: 'session_id,warning_type', ignoreDuplicates: true })
+                .select('id');
+
+              if (!insertError && inserted && inserted.length > 0) {
+                results.instructorWarnings++;
+                await supabase.from('notifications').insert({
+                  user_id: session.groups.instructor_id,
+                  title: 'Warning: Missing Attendance', title_ar: 'تحذير: حضور مفقود',
+                  message: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})`,
+                  message_ar: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
+                  type: 'warning', category: 'compliance',
                 });
-                if (!insertError) {
-                  results.instructorWarnings++;
-                  await supabase.from('notifications').insert({
-                    user_id: session.groups.instructor_id,
-                    title: 'Warning: Missing Attendance', title_ar: 'تحذير: حضور مفقود',
-                    message: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})`,
-                    message_ar: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                    type: 'warning', category: 'compliance',
-                  });
-                }
               }
             }
           }
@@ -243,17 +252,22 @@ serve(async (req) => {
     }
 
     // ========================================
-    // EXISTING Section 3: Check for sessions without assignment (24h+)
+    // Section 3: Sessions without assignment (curriculum-aware, 24h+)
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
-        // Use Cairo-aware "yesterday" calculation
         const yesterdayStr = getCairoDatePlusDays(-1);
+        const sixtyDaysAgo = getCairoDatePlusDays(-60);
 
         const { data: oldSessions, error: assignmentCheckError } = await supabase
           .from('sessions')
-          .select(`id, session_date, session_time, session_number, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
-          .eq('status', 'completed').neq('groups.status', 'frozen').lte('session_date', yesterdayStr);
+          .select(`id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
+          .in('status', ['completed', 'scheduled'])
+          .neq('groups.status', 'frozen')
+          .gte('session_date', sixtyDaysAgo)
+          .lte('session_date', yesterdayStr)
+          .order('session_date', { ascending: true })
+          .limit(BATCH_SIZE);
 
         if (assignmentCheckError) {
           results.errors.push(`Assignment check error: ${assignmentCheckError.message}`);
@@ -262,32 +276,34 @@ serve(async (req) => {
             if (checkCircuitBreaker()) break;
             if (isLegacySession(session)) continue;
 
+            // Curriculum-aware: skip if this session does not expect an assignment
+            const expect = await getCurriculumExpectations(supabase, session.level_id, session.content_number);
+            if (expect && !expect.expectsAssignment) continue;
+
             const { data: assignment } = await supabase
               .from('assignments').select('id').eq('session_id', session.id).limit(1).maybeSingle();
 
             if (!assignment) {
-              const { data: existingWarning } = await supabase
-                .from('instructor_warnings').select('id')
-                .eq('session_id', session.id).eq('warning_type', 'no_assignment').eq('is_active', true).maybeSingle();
-
-              if (!existingWarning) {
-                const { error: insertError } = await supabase.from('instructor_warnings').insert({
+              const { error: insertError, data: inserted } = await supabase
+                .from('instructor_warnings')
+                .upsert({
                   instructor_id: session.groups.instructor_id,
                   session_id: session.id,
                   warning_type: 'no_assignment',
                   reason: `No assignment uploaded for Session ${session.session_number} within 24 hours (${session.groups.name})`,
                   reason_ar: `لم يتم رفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
+                }, { onConflict: 'session_id,warning_type', ignoreDuplicates: true })
+                .select('id');
+
+              if (!insertError && inserted && inserted.length > 0) {
+                results.instructorWarnings++;
+                await supabase.from('notifications').insert({
+                  user_id: session.groups.instructor_id,
+                  title: 'Warning: Missing Assignment', title_ar: 'تحذير: واجب مفقود',
+                  message: `You didn't upload an assignment for Session ${session.session_number} within 24 hours (${session.groups.name})`,
+                  message_ar: `لم تقم برفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
+                  type: 'warning', category: 'compliance',
                 });
-                if (!insertError) {
-                  results.instructorWarnings++;
-                  await supabase.from('notifications').insert({
-                    user_id: session.groups.instructor_id,
-                    title: 'Warning: Missing Assignment', title_ar: 'تحذير: واجب مفقود',
-                    message: `You didn't upload an assignment for Session ${session.session_number} within 24 hours (${session.groups.name})`,
-                    message_ar: `لم تقم برفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
-                    type: 'warning', category: 'compliance',
-                  });
-                }
               }
             }
           }
@@ -298,7 +314,73 @@ serve(async (req) => {
     }
 
     // ========================================
-    // EXISTING Section 4: Student deadline warnings
+    // Section 3b: Sessions missing student evaluations (student-set comparison)
+    // ========================================
+    try {
+      if (!checkCircuitBreaker()) {
+        const sixtyDaysAgo = getCairoDatePlusDays(-60);
+        const { data: evalSessions, error: evalSessErr } = await supabase
+          .from('sessions')
+          .select(`id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
+          .in('status', ['completed', 'scheduled'])
+          .neq('groups.status', 'frozen')
+          .gte('session_date', sixtyDaysAgo)
+          .lte('session_date', todayStr)
+          .order('session_date', { ascending: true })
+          .limit(BATCH_SIZE);
+
+        if (evalSessErr) {
+          results.errors.push(`Evaluation check error: ${evalSessErr.message}`);
+        } else if (evalSessions) {
+          for (const session of evalSessions as unknown as CompletedSession[]) {
+            if (checkCircuitBreaker()) break;
+            if (isLegacySession(session)) continue;
+            if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60)) continue;
+
+            const { data: presentStudents } = await supabase
+              .from('attendance').select('student_id').eq('session_id', session.id).eq('status', 'present');
+
+            const presentSet = new Set((presentStudents || []).map((s: any) => s.student_id));
+            if (presentSet.size === 0) continue;
+
+            const { data: evaluatedStudents } = await supabase
+              .from('session_evaluations').select('student_id').eq('session_id', session.id);
+
+            const evalSet = new Set((evaluatedStudents || []).map((s: any) => s.student_id));
+            const missing = [...presentSet].filter((id) => !evalSet.has(id));
+
+            if (missing.length > 0) {
+              const { error: insertError, data: inserted } = await supabase
+                .from('instructor_warnings')
+                .upsert({
+                  instructor_id: session.groups.instructor_id,
+                  session_id: session.id,
+                  warning_type: 'no_evaluation',
+                  reason: `Missing evaluations for ${missing.length} student(s) in Session ${session.session_number} (${session.groups.name})`,
+                  reason_ar: `تقييمات ناقصة لـ ${missing.length} طالب في السيشن ${session.session_number} (${session.groups.name_ar})`,
+                }, { onConflict: 'session_id,warning_type', ignoreDuplicates: true })
+                .select('id');
+
+              if (!insertError && inserted && inserted.length > 0) {
+                results.instructorWarnings++;
+                await supabase.from('notifications').insert({
+                  user_id: session.groups.instructor_id,
+                  title: 'Warning: Missing Evaluations', title_ar: 'تحذير: تقييمات ناقصة',
+                  message: `You didn't evaluate ${missing.length} student(s) for Session ${session.session_number} (${session.groups.name})`,
+                  message_ar: `لم تقم بتقييم ${missing.length} طالب للسيشن ${session.session_number} (${session.groups.name_ar})`,
+                  type: 'warning', category: 'compliance',
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      results.errors.push(`Section 3b (Evaluations) error: ${e.message}`);
+    }
+
+    // ========================================
+    // Section 4: Student deadline warnings
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
