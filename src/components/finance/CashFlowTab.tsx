@@ -70,13 +70,14 @@ export function CashFlowTab() {
         supabase.from('group_student_progress').select(`
           student_id,
           group_id,
+          status,
           groups!group_student_progress_group_id_fkey (
             id, name, schedule_day, last_delivered_content_number, is_active, status
           ),
           levels!group_student_progress_current_level_id_fkey (
             expected_sessions_count
           )
-        `).eq('status', 'in_progress'),
+        `).in('status', ['in_progress', 'awaiting_exam', 'exam_scheduled', 'graded']),
       ]);
 
       const payments = paymentsRes.data || [];
@@ -105,11 +106,26 @@ export function CashFlowTab() {
 
       // ---- Academic renewal projections ----
       const progressRows = (progressRes.data || []) as any[];
-      const nearCompletion: { studentId: string; groupId: string; groupName: string; scheduleDay: string; remaining: number }[] = [];
+      const nearCompletion: { studentId: string; groupId: string; groupName: string; scheduleDay: string; remaining: number; immediate: boolean }[] = [];
       progressRows.forEach((row: any) => {
         const g = row.groups;
         const l = row.levels;
         if (!g || !l || g.is_active !== true || g.status !== 'active') return;
+
+        // Students past in_progress (awaiting/scheduled/graded) → renewal expected this month
+        const advancedStatuses = ['awaiting_exam', 'exam_scheduled', 'graded'];
+        if (advancedStatuses.includes(row.status)) {
+          nearCompletion.push({
+            studentId: row.student_id,
+            groupId: g.id,
+            groupName: g.name || '',
+            scheduleDay: g.schedule_day,
+            remaining: 0,
+            immediate: true,
+          });
+          return;
+        }
+
         const expected = Number(l.expected_sessions_count || 0);
         const delivered = Number(g.last_delivered_content_number || 0);
         const remaining = expected - delivered;
@@ -120,6 +136,7 @@ export function CashFlowTab() {
             groupName: g.name || '',
             scheduleDay: g.schedule_day,
             remaining,
+            immediate: false,
           });
         }
       });
@@ -147,8 +164,8 @@ export function CashFlowTab() {
       const academicDetailsByMonth: Record<string, AcademicRenewalDetail[]> = {};
       const academicByMonth: Record<string, number> = {};
 
-      nearCompletion.forEach(({ studentId, groupName, scheduleDay, remaining }) => {
-        const completionDate = estimateCompletionDate(scheduleDay, remaining);
+      nearCompletion.forEach(({ studentId, groupName, scheduleDay, remaining, immediate }) => {
+        const completionDate = immediate ? new Date() : estimateCompletionDate(scheduleDay, remaining);
         const monthKey = `${completionDate.getFullYear()}-${completionDate.getMonth()}`;
         const amount = studentSubMap[studentId] || 0;
         if (amount <= 0) return;
