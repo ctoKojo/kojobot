@@ -652,7 +652,7 @@ export function StudentDashboard() {
                           className="bg-green-600 hover:bg-green-700"
                           asChild
                         >
-                          <a href={link} target="_blank" rel="noopener noreferrer">
+                          <a href={link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                             <ExternalLink className="w-4 h-4" />
                           </a>
                         </Button>
