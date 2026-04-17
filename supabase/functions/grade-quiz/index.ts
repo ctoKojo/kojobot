@@ -252,7 +252,8 @@ serve(async (req) => {
     const gradingStatus = hasOpenEnded ? 'needs_manual_grading' : 'auto_graded'
     const passed = hasOpenEnded ? false : percentage >= (assignment.quizzes?.passing_score || 60)
 
-    // ── Build questions snapshot (NEVER includes correct_answer) ─────
+    // ── Build TWO snapshots ──────────────────────────────────────────
+    // (a) SAFE snapshot for client review — never includes correct_answer
     const questionsSnapshot = questions.map(q => ({
       id: q.id,
       question_text: q.question_text,
@@ -263,6 +264,23 @@ serve(async (req) => {
       image_url: q.image_url,
       code_snippet: q.code_snippet,
       question_type: q.question_type,
+    }))
+
+    // (b) FULL snapshot for server-side audit / re-grade — includes correct_answer
+    //     RLS + column REVOKE prevent any client from reading this column.
+    const questionsSnapshotFull = questions.map(q => ({
+      id: q.id,
+      question_text: q.question_text,
+      question_text_ar: q.question_text_ar,
+      options: q.options,
+      correct_answer: q.correct_answer,
+      points: q.points,
+      order_index: q.order_index,
+      image_url: q.image_url,
+      code_snippet: q.code_snippet,
+      question_type: q.question_type,
+      model_answer: q.model_answer,
+      rubric: q.rubric,
     }))
 
     // ── Save submission (UNIQUE constraint prevents duplicates) ──────
@@ -278,6 +296,8 @@ serve(async (req) => {
       grading_status: gradingStatus,
       manual_score: 0,
       questions_snapshot: questionsSnapshot,
+      questions_snapshot_full: questionsSnapshotFull,
+      snapshot_version: 1,
     }
 
     console.log('quiz_submissions insert payload keys:', Object.keys(submissionPayload))
