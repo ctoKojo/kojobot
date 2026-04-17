@@ -944,6 +944,12 @@ user_id: gs.student_id,
                                       {isRTL ? 'اليوم' : 'Today'}
                                     </Badge>
                                   )}
+                                  {(session as any).attendance_mode === 'online' && (
+                                    <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs gap-1">
+                                      <Globe className="h-3 w-3" />
+                                      {isRTL ? 'أونلاين' : 'Online'}
+                                    </Badge>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                                   <span className="flex items-center gap-1">
