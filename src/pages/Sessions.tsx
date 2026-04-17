@@ -68,6 +68,8 @@ interface Session {
   content_number: number | null;
   is_makeup: boolean;
   makeup_session_id: string | null;
+  attendance_mode?: string | null;
+  session_link?: string | null;
 }
 
 // Helper: display content_number as primary, session_number as secondary when different

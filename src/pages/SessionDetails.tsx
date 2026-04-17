@@ -1251,7 +1251,7 @@ export default function SessionDetails() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                {isOnline && activeSessionLink && liveStatus === 'active' && (
+                {isOnline && activeSessionLink && session.status !== 'completed' && session.status !== 'cancelled' && (
                   <Button variant="outline" size="sm" asChild>
                     <a href={activeSessionLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                       <Video className="h-4 w-4" />
