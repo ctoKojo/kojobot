@@ -164,8 +164,8 @@ export function CashFlowTab() {
       const academicDetailsByMonth: Record<string, AcademicRenewalDetail[]> = {};
       const academicByMonth: Record<string, number> = {};
 
-      nearCompletion.forEach(({ studentId, groupName, scheduleDay, remaining }) => {
-        const completionDate = estimateCompletionDate(scheduleDay, remaining);
+      nearCompletion.forEach(({ studentId, groupName, scheduleDay, remaining, immediate }) => {
+        const completionDate = immediate ? new Date() : estimateCompletionDate(scheduleDay, remaining);
         const monthKey = `${completionDate.getFullYear()}-${completionDate.getMonth()}`;
         const amount = studentSubMap[studentId] || 0;
         if (amount <= 0) return;
