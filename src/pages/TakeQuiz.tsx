@@ -203,50 +203,38 @@ export default function TakeQuiz() {
           hasOpenEnded: isFinalExam,
         });
 
-        // Hydrate review screen from SERVER source of truth (no correct_answer leak)
+        // Hydrate review screen from FROZEN SNAPSHOT + server-graded attempts
+        // No reads from quiz_questions / no client-side correctness inference
         if (!isFinalExam) {
           try {
-            const [{ data: fullSub }, { data: studentQuestions }, { data: attempts }] = await Promise.all([
+            const [{ data: fullSub }, { data: attempts }] = await Promise.all([
               supabase
                 .from('quiz_submissions')
-                .select('id, answers')
+                .select('id, answers, questions_snapshot')
                 .eq('id', existingSub.id)
                 .single(),
-              // SECURITY: use student view (excludes correct_answer)
-              supabase
-                .from('quiz_questions_student_view')
-                .select('id, question_text, question_text_ar, options, points, order_index, image_url, code_snippet, question_type')
-                .eq('quiz_id', assignmentData.quiz_id)
-                .order('order_index'),
-              // Server-graded results (RLS: student reads own only)
               supabase
                 .from('quiz_question_attempts')
-                .select('question_id, answer, score, max_score')
+                .select('question_id, answer, is_correct, score, max_score')
                 .eq('submission_id', existingSub.id),
             ]);
 
-            if (studentQuestions) {
-              const questionsWithPlaceholder = studentQuestions.map(q => ({ ...q, correct_answer: '' }));
-              setQuestions(questionsWithPlaceholder as Question[]);
+            const snapshot = (fullSub?.questions_snapshot as Question[] | null) || null;
+            if (snapshot && Array.isArray(snapshot) && snapshot.length > 0) {
+              setQuestions(snapshot.map(q => ({ ...q, correct_answer: '' })));
             }
 
             const subAnswers = (fullSub?.answers as Record<string, string>) || {};
             setAnswers(subAnswers);
 
-            // Build gradeResults from server attempts (correctness from score, not local re-grading)
-            if (attempts && studentQuestions) {
+            // Build gradeResults strictly from server's is_correct field
+            if (attempts) {
               const reconstructed: Record<string, { correct: boolean; correctAnswer: string; questionType?: string }> = {};
-              for (const q of studentQuestions) {
-                const attempt = attempts.find(a => a.question_id === q.id);
-                if (q.question_type === 'open_ended') {
-                  reconstructed[q.id] = { correct: false, correctAnswer: '', questionType: 'open_ended' };
-                  continue;
-                }
-                const isCorrect = !!(attempt && attempt.score && attempt.score > 0);
-                reconstructed[q.id] = {
-                  correct: isCorrect,
-                  correctAnswer: '', // server doesn't re-expose after grading; UI shows ✓/✗ only
-                  questionType: 'multiple_choice',
+              for (const a of attempts) {
+                reconstructed[a.question_id] = {
+                  correct: a.is_correct === true,
+                  correctAnswer: '', // never re-exposed; UI shows ✓/✗ only
+                  questionType: a.is_correct === null ? 'open_ended' : 'multiple_choice',
                 };
               }
               setGradeResults(reconstructed);
