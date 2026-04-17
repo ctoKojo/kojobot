@@ -167,7 +167,12 @@ export function StudentDashboard() {
           .eq('status', 'scheduled')
           .order('session_date')
           .limit(3);
-        upcomingSessions = data || [];
+        // Prefer per-session overrides (attendance_mode + session_link) over the group defaults
+        upcomingSessions = (data || []).map((s: any) => ({
+          ...s,
+          effective_attendance_mode: s.attendance_mode || s.groups?.attendance_mode || null,
+          effective_session_link: s.session_link || s.groups?.session_link || null,
+        }));
       }
 
       // Fetch level progress from group's last_delivered_content_number
