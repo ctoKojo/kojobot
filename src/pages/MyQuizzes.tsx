@@ -16,6 +16,7 @@ interface QuizAssignment {
   quiz_id: string;
   start_time: string | null;
   due_date: string | null;
+  extra_minutes: number | null;
   created_at: string;
   quizzes: {
     id: string;
@@ -129,14 +130,15 @@ export default function MyQuizzes() {
       return 'not_started';
     }
     
-    // Calculate when quiz time window ends (start_time + duration)
-    const quizEndTime = startTime + (duration * 60 * 1000);
-    
+    // SSOT: due_date is the authoritative end (already includes extra_minutes / extensions).
+    // Fall back to start_time + duration only if due_date is missing.
+    const quizEndTime = dueDate ?? (startTime + duration * 60 * 1000);
+
     // Quiz time window has passed
     if (now > quizEndTime) {
       return 'expired';
     }
-    
+
     // Quiz is available
     return 'available';
   };
@@ -144,12 +146,13 @@ export default function MyQuizzes() {
   const getRemainingTime = (quiz: QuizAssignment) => {
     const now = new Date().getTime();
     const startTime = quiz.start_time ? new Date(quiz.start_time).getTime() : now;
+    const dueDate = quiz.due_date ? new Date(quiz.due_date).getTime() : null;
     const duration = quiz.quizzes?.duration_minutes || 30;
-    const durationMs = duration * 60 * 1000;
-    
-    const elapsed = now - startTime;
-    const remaining = durationMs - elapsed;
-    
+
+    // Prefer due_date (which already accounts for extensions/extra_minutes).
+    const endTime = dueDate ?? startTime + duration * 60 * 1000;
+    const remaining = endTime - now;
+
     if (remaining <= 0) return 0;
     return Math.floor(remaining / 60000); // Return in minutes
   };
