@@ -20,9 +20,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { notificationService } from '@/lib/notificationService';
 import {
   Target, CalendarClock, AlertTriangle, Search, Clock, CheckCircle2,
-  GraduationCap, Users, Loader2, FileText, ArrowRight, Timer,
+  GraduationCap, Users, Loader2, FileText, ArrowRight, Timer, RotateCcw, XCircle,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -35,6 +36,8 @@ interface ExamCandidate {
   group_id: string;
   current_level_id: string;
   status: string;
+  outcome: string | null;
+  exam_retry_count: number;
   exam_scheduled_at: string | null;
   exam_submitted_at: string | null;
   graded_at: string | null;
@@ -49,7 +52,10 @@ interface ExamCandidate {
   final_exam_quiz_id: string | null;
 }
 
-type FilterType = 'all' | 'awaiting_exam' | 'exam_scheduled' | 'graded';
+type FilterType = 'all' | 'awaiting_exam' | 'exam_scheduled' | 'graded' | 'failed';
+
+const isFailedOutcome = (o: string | null | undefined) =>
+  o === 'failed' || o === 'failed_exam' || o === 'failed_total';
 
 export default function FinalExams() {
   const { isRTL, language } = useLanguage();
@@ -100,7 +106,8 @@ export default function FinalExams() {
     let result = candidates;
     if (filter === 'awaiting_exam') result = result.filter(c => c.status === 'awaiting_exam');
     if (filter === 'exam_scheduled') result = result.filter(c => c.status === 'exam_scheduled');
-    if (filter === 'graded') result = result.filter(c => c.status === 'graded');
+    if (filter === 'graded') result = result.filter(c => c.status === 'graded' && !isFailedOutcome(c.outcome));
+    if (filter === 'failed') result = result.filter(c => c.status === 'graded' && isFailedOutcome(c.outcome));
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(c =>
@@ -207,37 +214,70 @@ export default function FinalExams() {
         if (quizData) examDuration = quizData.duration_minutes;
       }
 
-      const { data, error } = await supabase.rpc('schedule_final_exam_for_students', {
-        p_group_id: groupId,
-        p_student_ids: studentIds,
-        p_date: dateTime,
-        p_duration: examDuration,
-      });
+      // Branch: rescheduling a failed student (single candidate) vs initial/group scheduling
+      const isFailedReschedule = !!rescheduleCandidate && isFailedOutcome(rescheduleCandidate.outcome);
 
-      if (error) throw error;
+      if (isFailedReschedule && rescheduleCandidate) {
+        const { data, error } = await supabase.rpc('reschedule_failed_final_exam', {
+          p_progress_id: rescheduleCandidate.progress_id,
+          p_date: dateTime,
+          p_duration: examDuration,
+        });
+        if (error) throw error;
 
-      const result = data as any;
-      const scheduledCount = result?.scheduled ?? result?.scheduled_count ?? 0;
-      const skippedCount = result?.skipped ?? 0;
+        // Notifications fan-out (student + parents + reception/admin)
+        const examLabelEn = new Date(dateTime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+        const examLabelAr = new Date(dateTime).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' });
+        await notificationService.notifyFinalExamRescheduled({
+          studentId: rescheduleCandidate.student_id,
+          studentName: rescheduleCandidate.full_name,
+          studentNameAr: rescheduleCandidate.full_name_ar || rescheduleCandidate.full_name,
+          levelName: rescheduleCandidate.level_name,
+          levelNameAr: rescheduleCandidate.level_name_ar || rescheduleCandidate.level_name,
+          examDateLabel: examLabelEn,
+          examDateLabelAr: examLabelAr,
+        });
 
-      if (scheduledCount === 0) {
         toast({
-          variant: 'destructive',
-          title: isRTL ? 'لم يتم جدولة أي طالب' : 'No students scheduled',
+          title: isRTL ? 'تمت إعادة الجدولة' : 'Rescheduled',
           description: isRTL
-            ? `الطلاب المحددون لم يستوفوا شرط عدد الحصص المكتملة المطلوبة للامتحان النهائي`
-            : `Selected students have not completed the required number of sessions for the final exam`,
+            ? 'تم إعادة جدولة الامتحان وإرسال التنبيهات للطالب وولي الأمر والإدارة'
+            : 'Exam rescheduled and notifications sent to student, parents and reception',
         });
       } else {
-        toast({
-          title: isRTL ? 'تمت الجدولة' : 'Scheduled',
-          description: isRTL
-            ? `تم جدولة الامتحان النهائي لـ ${scheduledCount} طالب${skippedCount > 0 ? ` (تم تخطي ${skippedCount})` : ''}`
-            : `Final exam scheduled for ${scheduledCount} student(s)${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`,
+        const { data, error } = await supabase.rpc('schedule_final_exam_for_students', {
+          p_group_id: groupId,
+          p_student_ids: studentIds,
+          p_date: dateTime,
+          p_duration: examDuration,
         });
+
+        if (error) throw error;
+
+        const result = data as any;
+        const scheduledCount = result?.scheduled ?? result?.scheduled_count ?? 0;
+        const skippedCount = result?.skipped ?? 0;
+
+        if (scheduledCount === 0) {
+          toast({
+            variant: 'destructive',
+            title: isRTL ? 'لم يتم جدولة أي طالب' : 'No students scheduled',
+            description: isRTL
+              ? `الطلاب المحددون لم يستوفوا شرط عدد الحصص المكتملة المطلوبة للامتحان النهائي`
+              : `Selected students have not completed the required number of sessions for the final exam`,
+          });
+        } else {
+          toast({
+            title: isRTL ? 'تمت الجدولة' : 'Scheduled',
+            description: isRTL
+              ? `تم جدولة الامتحان النهائي لـ ${scheduledCount} طالب${skippedCount > 0 ? ` (تم تخطي ${skippedCount})` : ''}`
+              : `Final exam scheduled for ${scheduledCount} student(s)${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`,
+          });
+        }
       }
 
       setShowScheduleDialog(false);
+      setRescheduleCandidate(null);
       setSelectedIds(new Set());
       setScheduleDate('');
       setScheduleTime('');
@@ -253,7 +293,8 @@ export default function FinalExams() {
     all: candidates.length,
     awaiting_exam: candidates.filter(c => c.status === 'awaiting_exam').length,
     exam_scheduled: candidates.filter(c => c.status === 'exam_scheduled').length,
-    graded: candidates.filter(c => c.status === 'graded').length,
+    graded: candidates.filter(c => c.status === 'graded' && !isFailedOutcome(c.outcome)).length,
+    failed: candidates.filter(c => c.status === 'graded' && isFailedOutcome(c.outcome)).length,
   };
 
   const getName = (c: ExamCandidate) => language === 'ar' ? c.full_name_ar || c.full_name : c.full_name;
@@ -313,12 +354,13 @@ export default function FinalExams() {
         />
 
         {/* Stats Strip */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
             { key: 'all' as FilterType, label: isRTL ? 'الإجمالي' : 'Total', count: filterCounts.all, icon: Users, color: 'text-primary', bgColor: 'bg-primary/10', borderColor: 'border-primary/20' },
             { key: 'awaiting_exam' as FilterType, label: isRTL ? 'في الانتظار' : 'Awaiting', count: filterCounts.awaiting_exam, icon: Clock, color: 'text-amber-600 dark:text-amber-400', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20' },
             { key: 'exam_scheduled' as FilterType, label: isRTL ? 'مجدول' : 'Scheduled', count: filterCounts.exam_scheduled, icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20' },
-            { key: 'graded' as FilterType, label: isRTL ? 'تم التصحيح' : 'Graded', count: filterCounts.graded, icon: FileText, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/20' },
+            { key: 'graded' as FilterType, label: isRTL ? 'ناجح' : 'Passed', count: filterCounts.graded, icon: FileText, color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/20' },
+            { key: 'failed' as FilterType, label: isRTL ? 'راسب' : 'Failed', count: filterCounts.failed, icon: XCircle, color: 'text-destructive', bgColor: 'bg-destructive/10', borderColor: 'border-destructive/20' },
           ].map(stat => (
             <button
               key={stat.key}
@@ -461,10 +503,15 @@ export default function FinalExams() {
                                     <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal">
                                       {getLevelName(c)}
                                     </Badge>
-                                    {c.status === 'graded' ? (
+                                    {c.status === 'graded' && isFailedOutcome(c.outcome) ? (
+                                      <Badge className="bg-destructive/15 text-destructive border-0 text-[10px] py-0 px-1.5">
+                                        <XCircle className="h-2.5 w-2.5 me-0.5" />
+                                        {isRTL ? `راسب${c.exam_retry_count > 0 ? ' (إعادة)' : ''}` : `Failed${c.exam_retry_count > 0 ? ' (Retry)' : ''}`}
+                                      </Badge>
+                                    ) : c.status === 'graded' ? (
                                       <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-0 text-[10px] py-0 px-1.5">
                                         <CheckCircle2 className="h-2.5 w-2.5 me-0.5" />
-                                        {isRTL ? 'تم التصحيح' : 'Graded'}
+                                        {isRTL ? 'ناجح' : 'Passed'}
                                       </Badge>
                                     ) : c.status === 'exam_scheduled' ? (
                                       <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0 text-[10px] py-0 px-1.5">
@@ -533,6 +580,17 @@ export default function FinalExams() {
                                 >
                                   <CalendarClock className="h-3.5 w-3.5" />
                                   {isRTL ? 'إعادة جدولة' : 'Reschedule'}
+                                </Button>
+                              )}
+                              {isAdmin && c.status === 'graded' && isFailedOutcome(c.outcome) && c.exam_retry_count < 1 && c.final_exam_quiz_id && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1.5 mt-2.5 w-full border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                  onClick={(e) => { e.stopPropagation(); handleOpenReschedule(c); }}
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5" />
+                                  {isRTL ? 'إعادة الامتحان' : 'Retry Exam'}
                                 </Button>
                               )}
                             </div>
@@ -645,10 +703,15 @@ export default function FinalExams() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          {c.status === 'graded' ? (
+                          {c.status === 'graded' && isFailedOutcome(c.outcome) ? (
+                            <Badge className="bg-destructive/15 text-destructive border-0 text-xs gap-1">
+                              <XCircle className="h-3 w-3" />
+                              {isRTL ? `راسب${c.exam_retry_count > 0 ? ' (إعادة)' : ''}` : `Failed${c.exam_retry_count > 0 ? ' (Retry)' : ''}`}
+                            </Badge>
+                          ) : c.status === 'graded' ? (
                             <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-0 text-xs gap-1">
                               <CheckCircle2 className="h-3 w-3" />
-                              {isRTL ? 'تم التصحيح' : 'Graded'}
+                              {isRTL ? 'ناجح' : 'Passed'}
                             </Badge>
                           ) : c.status === 'exam_scheduled' ? (
                             <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0 text-xs gap-1">
@@ -718,6 +781,16 @@ export default function FinalExams() {
                               >
                                 <CalendarClock className="h-3 w-3" />
                                 {isRTL ? 'إعادة جدولة' : 'Reschedule'}
+                              </Button>
+                            ) : c.status === 'graded' && isFailedOutcome(c.outcome) && c.exam_retry_count < 1 && c.final_exam_quiz_id ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1.5 h-7 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => handleOpenReschedule(c)}
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                {isRTL ? 'إعادة الامتحان' : 'Retry Exam'}
                               </Button>
                             ) : (
                               <span className="text-muted-foreground/20">—</span>

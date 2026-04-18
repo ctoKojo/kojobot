@@ -282,6 +282,75 @@ export const notificationService = {
     });
   },
 
+  // Notify all relevant parties (student + linked parents + reception/admin) about a final-exam reschedule after a fail
+  async notifyFinalExamRescheduled(params: {
+    studentId: string;
+    studentName: string;
+    studentNameAr: string;
+    levelName: string;
+    levelNameAr: string;
+    examDateLabel: string;
+    examDateLabelAr: string;
+  }) {
+    const { studentId, studentName, studentNameAr, levelName, levelNameAr, examDateLabel, examDateLabelAr } = params;
+
+    try {
+      // 1) Student
+      await this.create({
+        user_id: studentId,
+        title: 'Final Exam Rescheduled',
+        title_ar: 'تم إعادة جدولة الامتحان النهائي',
+        message: `Your final exam for "${levelName}" has been rescheduled to ${examDateLabel}. Good luck!`,
+        message_ar: `تم إعادة جدولة الامتحان النهائي لـ "${levelNameAr}" إلى ${examDateLabelAr}. بالتوفيق!`,
+        type: 'info',
+        category: 'exam',
+        action_url: '/dashboard',
+      });
+
+      // 2) Linked parents
+      const { data: parentLinks } = await supabase
+        .from('parent_students')
+        .select('parent_id')
+        .eq('student_id', studentId);
+
+      const parentIds = (parentLinks || []).map(p => p.parent_id);
+
+      // 3) Admins + Reception
+      const { data: staffRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .in('role', ['admin', 'reception']);
+
+      const staffIds = (staffRoles || []).map(r => r.user_id);
+
+      const recipients = Array.from(new Set([...parentIds, ...staffIds]));
+      if (recipients.length === 0) return true;
+
+      const isParent = new Set(parentIds);
+      const notifications = recipients.map(uid => ({
+        user_id: uid,
+        title: isParent.has(uid) ? "Child's Final Exam Rescheduled" : 'Final Exam Rescheduled',
+        title_ar: isParent.has(uid) ? 'تم إعادة جدولة امتحان ابنك النهائي' : 'تم إعادة جدولة امتحان نهائي',
+        message: isParent.has(uid)
+          ? `${studentName}'s final exam for "${levelName}" has been rescheduled to ${examDateLabel} (retry attempt).`
+          : `${studentName}'s final exam for "${levelName}" was rescheduled to ${examDateLabel} (retry after fail).`,
+        message_ar: isParent.has(uid)
+          ? `تم إعادة جدولة الامتحان النهائي لـ ${studentNameAr} في "${levelNameAr}" إلى ${examDateLabelAr} (محاولة إعادة).`
+          : `تم إعادة جدولة الامتحان النهائي للطالب ${studentNameAr} في "${levelNameAr}" إلى ${examDateLabelAr} (إعادة بعد رسوب).`,
+        type: 'info' as const,
+        category: 'exam',
+        action_url: isParent.has(uid) ? `/parent-student/${studentId}` : `/student/${studentId}`,
+      }));
+
+      const { error } = await supabase.from('notifications').insert(notifications);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('Error sending final-exam reschedule notifications:', err);
+      return false;
+    }
+  },
+
   // Notify when account is reactivated after payment
   async notifyAccountReactivated(studentId: string) {
     return this.create({
