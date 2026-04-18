@@ -19,9 +19,21 @@ Deno.serve(async (req) => {
 
     const token = authHeader?.replace("Bearer ", "") ?? "";
     const isServiceRole = token === supabaseKey;
-    const isCronAuth = cronSecret && token === cronSecret;
+    const isCronEnvAuth = !!cronSecret && token === cronSecret;
 
-    if (!isServiceRole && !isCronAuth) {
+    let isVaultCronAuth = false;
+    if (!isServiceRole && !isCronEnvAuth && token) {
+      try {
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const tmpClient = createClient(supabaseUrl, supabaseKey);
+        const { data } = await tmpClient.rpc("verify_cron_token", { p_token: token });
+        isVaultCronAuth = data === true;
+      } catch (_) {
+        isVaultCronAuth = false;
+      }
+    }
+
+    if (!isServiceRole && !isCronEnvAuth && !isVaultCronAuth) {
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
