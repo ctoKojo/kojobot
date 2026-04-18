@@ -151,9 +151,10 @@ serve(async (req) => {
       const sixtyDaysAgo = getCairoDatePlusDays(-60);
       const { data: sessionsForQuiz, error: quizError } = await supabase
         .from('sessions')
-        .select(`id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
+        .select(`id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active)`)
         .in('status', ['completed', 'scheduled'])
-        .neq('groups.status', 'frozen')
+        .in('groups.status', ['active', 'pending'])
+        .eq('groups.is_active', true)
         .gte('session_date', sixtyDaysAgo)
         .lte('session_date', todayStr)
         .order('session_date', { ascending: true })
@@ -221,9 +222,10 @@ serve(async (req) => {
         const sixtyDaysAgoAtt = getCairoDatePlusDays(-60);
         const { data: completedSessions, error: attendanceCheckError } = await supabase
           .from('sessions')
-          .select(`id, session_date, session_time, session_number, content_number, level_id, group_id, duration_minutes, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
+          .select(`id, session_date, session_time, session_number, content_number, level_id, group_id, duration_minutes, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active)`)
           .in('status', ['completed', 'scheduled'])
-          .neq('groups.status', 'frozen')
+          .in('groups.status', ['active', 'pending'])
+          .eq('groups.is_active', true)
           .gte('session_date', sixtyDaysAgoAtt)
           .lte('session_date', todayStr)
           .order('session_date', { ascending: true })
@@ -288,9 +290,10 @@ serve(async (req) => {
 
         const { data: oldSessions, error: assignmentCheckError } = await supabase
           .from('sessions')
-          .select(`id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
+          .select(`id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active)`)
           .in('status', ['completed', 'scheduled'])
-          .neq('groups.status', 'frozen')
+          .in('groups.status', ['active', 'pending'])
+          .eq('groups.is_active', true)
           .gte('session_date', sixtyDaysAgo)
           .lte('session_date', yesterdayStr)
           .order('session_date', { ascending: true })
@@ -356,9 +359,10 @@ serve(async (req) => {
         const sixtyDaysAgo = getCairoDatePlusDays(-60);
         const { data: evalSessions, error: evalSessErr } = await supabase
           .from('sessions')
-          .select(`id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status)`)
+          .select(`id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active)`)
           .in('status', ['completed', 'scheduled'])
-          .neq('groups.status', 'frozen')
+          .in('groups.status', ['active', 'pending'])
+          .eq('groups.is_active', true)
           .gte('session_date', sixtyDaysAgo)
           .lte('session_date', todayStr)
           .order('session_date', { ascending: true })
