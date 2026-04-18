@@ -93,7 +93,6 @@ serve(async (req) => {
   }
 
   if (!isServiceRole && !isCronEnvAuth && !isVaultCronAuth) {
-    console.log('[Compliance Monitor] Request rejected: no valid auth');
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
