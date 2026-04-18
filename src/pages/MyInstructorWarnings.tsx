@@ -73,7 +73,50 @@ export default function MyInstructorWarnings() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setWarnings(data || []);
+
+      // Enrich no_reply warnings with conversation context (sender + last message)
+      const noReplyWarnings = (data || []).filter(
+        (w: any) => w.warning_type === 'no_reply' && w.reference_type === 'conversation' && w.reference_id
+      );
+
+      const contextMap = new Map<string, ConversationContext>();
+      await Promise.all(
+        noReplyWarnings.map(async (w: any) => {
+          const convId = w.reference_id as string;
+          const { data: lastMsg } = await supabase
+            .from('messages')
+            .select('content, created_at, sender_id')
+            .eq('conversation_id', convId)
+            .neq('sender_id', user?.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (lastMsg) {
+            const { data: senderProfile } = await supabase
+              .from('profiles')
+              .select('full_name, full_name_ar')
+              .eq('user_id', lastMsg.sender_id)
+              .maybeSingle();
+
+            contextMap.set(w.id, {
+              senderName: language === 'ar'
+                ? (senderProfile?.full_name_ar || senderProfile?.full_name || null)
+                : (senderProfile?.full_name || null),
+              lastMessage: lastMsg.content,
+              lastMessageAt: lastMsg.created_at,
+              conversationId: convId,
+            });
+          }
+        })
+      );
+
+      const enriched = (data || []).map((w: any) => ({
+        ...w,
+        conversationContext: contextMap.get(w.id) || null,
+      }));
+
+      setWarnings(enriched);
     } catch (error) {
       console.error('Error fetching warnings:', error);
     } finally {
