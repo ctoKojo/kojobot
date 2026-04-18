@@ -974,8 +974,17 @@ user_id: gs.student_id,
                                     </Badge>
                                   {getStatusBadge(session.status)}
                                   {session.is_makeup && (
-                                    <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 text-xs">
-                                      {isRTL ? 'تعويضية' : 'Makeup'}
+                                    <Badge
+                                      className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 text-xs"
+                                      title={
+                                        session.original_date
+                                          ? isRTL
+                                            ? `تعويضية عن ${session.original_date} ${session.original_time}`
+                                            : `Makeup of ${session.original_date} ${session.original_time}`
+                                          : undefined
+                                      }
+                                    >
+                                      {getMakeupBadgeText(session, isRTL)}
                                     </Badge>
                                   )}
                                   {isToday(session.session_date) && (
@@ -1115,8 +1124,17 @@ user_id: gs.student_id,
                                   <div className="flex items-center gap-1">
                                     {getStatusBadge(session.status)}
                                     {session.is_makeup && (
-                                      <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 text-xs">
-                                        {isRTL ? 'تعويضية' : 'Makeup'}
+                                      <Badge
+                                        className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 text-xs"
+                                        title={
+                                          session.original_date
+                                            ? isRTL
+                                              ? `تعويضية عن ${session.original_date} ${session.original_time}`
+                                              : `Makeup of ${session.original_date} ${session.original_time}`
+                                            : undefined
+                                        }
+                                      >
+                                        {getMakeupBadgeText(session, isRTL)}
                                       </Badge>
                                     )}
                                   </div>
