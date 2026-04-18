@@ -10,6 +10,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
 
+interface ConversationContext {
+  senderName: string | null;
+  lastMessage: string | null;
+  lastMessageAt: string | null;
+  conversationId: string;
+}
+
 interface Warning {
   id: string;
   warning_type: string;
@@ -19,6 +26,8 @@ interface Warning {
   is_active: boolean;
   created_at: string;
   session_id: string | null;
+  reference_id: string | null;
+  reference_type: string | null;
   sessions?: {
     session_number: number;
     session_date: string;
@@ -27,6 +36,7 @@ interface Warning {
       name_ar: string;
     };
   } | null;
+  conversationContext?: ConversationContext | null;
 }
 
 interface SLAStatus {
