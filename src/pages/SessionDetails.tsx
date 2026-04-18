@@ -2126,11 +2126,20 @@ export default function SessionDetails() {
                 </div>
                 
                 <div className="space-y-3 py-4">
-                  {unrecordedStudents.map((student) => (
+                  {unrecordedStudents.map((student) => {
+                    const isAbsentWithMakeup = student.attendance_status === 'absent' && student.compensation_status === 'pending_compensation';
+                    return (
                     <div key={student.student_id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                      <span className="font-medium">
-                        {language === 'ar' ? student.student_name_ar : student.student_name}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium">
+                          {language === 'ar' ? student.student_name_ar : student.student_name}
+                        </span>
+                        {isAbsentWithMakeup && (
+                          <span className="text-xs text-orange-600">
+                            {isRTL ? 'مسجل غايب • تعويضية معلقة' : 'Marked absent • makeup pending'}
+                          </span>
+                        )}
+                      </div>
                       <Select 
                         value={attendanceRecords[student.student_id] || ''} 
                         onValueChange={(value) => setAttendanceRecords(prev => ({ ...prev, [student.student_id]: value }))}
