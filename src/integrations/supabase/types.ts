@@ -5396,6 +5396,7 @@ export type Database = {
         Returns: undefined
       }
       private_get_cron_secret: { Args: never; Returns: string }
+      private_get_service_role_key: { Args: never; Returns: string }
       publish_curriculum: {
         Args: { p_age_group_id: string; p_level_id: string }
         Returns: Json
