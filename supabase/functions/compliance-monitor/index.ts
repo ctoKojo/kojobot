@@ -65,7 +65,7 @@ function isPastGracePeriod(sessionDate: string, sessionTime: string, durationMin
   return Date.now() >= sessionEnd.getTime();
 }
 
-const BATCH_SIZE = 100;
+const BATCH_SIZE = 500;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {

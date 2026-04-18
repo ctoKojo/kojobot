@@ -1,0 +1,2 @@
+ALTER TABLE public.notifications DROP CONSTRAINT IF EXISTS notifications_category_check;
+ALTER TABLE public.notifications ADD CONSTRAINT notifications_category_check CHECK (category = ANY (ARRAY['general'::text, 'quiz'::text, 'assignment'::text, 'attendance'::text, 'subscription'::text, 'system'::text, 'schedule'::text, 'academic'::text, 'warning'::text, 'compliance'::text]));
