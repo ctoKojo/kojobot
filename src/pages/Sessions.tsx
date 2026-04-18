@@ -148,7 +148,58 @@ export default function SessionsPage() {
       }
 
       const { data: sessionsData } = await sessionsQuery;
-      setSessions(sessionsData || []);
+
+      // Also fetch confirmed individual makeup sessions and surface them
+      // alongside regular sessions so reception/admin/instructors can see
+      // them in the daily/upcoming sessions view.
+      let makeupQuery = supabase
+        .from('makeup_sessions')
+        .select('id, group_id, scheduled_date, scheduled_time, status, notes, assigned_instructor_id, original_session_id, student_id')
+        .eq('student_confirmed', true)
+        .in('status', ['scheduled', 'completed']);
+
+      if (role === 'instructor' && user) {
+        makeupQuery = makeupQuery.eq('assigned_instructor_id', user.id);
+      }
+
+      const { data: makeupData } = await makeupQuery;
+
+      // Pull the original session's metadata (number/content) so the makeup
+      // row can show meaningful labels.
+      const originalIds = Array.from(
+        new Set((makeupData || []).map((m: any) => m.original_session_id).filter(Boolean))
+      );
+      let originalsMap = new Map<string, any>();
+      if (originalIds.length > 0) {
+        const { data: originals } = await supabase
+          .from('sessions')
+          .select('id, session_number, content_number, duration_minutes, attendance_mode, session_link')
+          .in('id', originalIds);
+        originalsMap = new Map((originals || []).map((s: any) => [s.id, s]));
+      }
+
+      const makeupRows: Session[] = (makeupData || []).map((m: any) => {
+        const orig = originalsMap.get(m.original_session_id) || {};
+        return {
+          id: `makeup-${m.id}`,
+          group_id: m.group_id,
+          session_date: m.scheduled_date,
+          session_time: m.scheduled_time,
+          duration_minutes: orig.duration_minutes ?? 60,
+          topic: null,
+          topic_ar: null,
+          status: m.status,
+          notes: m.notes,
+          session_number: orig.session_number ?? null,
+          content_number: orig.content_number ?? null,
+          is_makeup: true,
+          makeup_session_id: m.id,
+          attendance_mode: orig.attendance_mode ?? null,
+          session_link: orig.session_link ?? null,
+        };
+      });
+
+      setSessions([...(sessionsData || []), ...makeupRows]);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
