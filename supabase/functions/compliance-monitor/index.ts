@@ -396,8 +396,9 @@ serve(async (req) => {
     try {
       if (!checkCircuitBreaker()) {
         const { data: expiredAssignments, error: deadlineError } = await supabase
-          .from('assignments').select(`id, title, title_ar, due_date, group_id, student_id, session_id`)
-          .lt('due_date', now.toISOString()).eq('is_active', true);
+          .from('assignments').select(`id, title, title_ar, due_date, group_id, student_id, session_id, attachment_url`)
+          .lt('due_date', now.toISOString()).eq('is_active', true)
+          .not('attachment_url', 'is', null);
 
         if (deadlineError) {
           results.errors.push(`Deadline check error: ${deadlineError.message}`);
