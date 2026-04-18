@@ -166,9 +166,8 @@ export function StudentFormDialog({
     return baseValid &&
       !validationErrors.email &&
       validationErrors.passwordDetails.isValid &&
-      formData.subscription_type !== '' &&
-      formData.parent_id !== '';
-  }, [validationErrors, editingStudent, formData.subscription_type, formData.parent_id]);
+      formData.subscription_type !== '';
+  }, [validationErrors, editingStudent, formData.subscription_type]);
 
   // Load reference data once when the dialog opens.
   useEffect(() => {
@@ -515,8 +514,11 @@ export function StudentFormDialog({
 
             {!editingStudent && (
               <div className="grid gap-2 border-t pt-4 mt-2">
-                <Label className={cn(formTouched.parent_id && !formData.parent_id && 'text-destructive')}>
-                  {isRTL ? '👨‍👩‍👧 ولي الأمر' : '👨‍👩‍👧 Parent'} <span className="text-destructive">*</span>
+                <Label>
+                  {isRTL ? '👨‍👩‍👧 ولي الأمر' : '👨‍👩‍👧 Parent'}{' '}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {isRTL ? '(اختياري — يمكن ربطه لاحقاً)' : '(optional — can be linked later)'}
+                  </span>
                 </Label>
                 {selectedParent ? (
                   <div className="flex items-center justify-between rounded-md border bg-primary/5 border-primary/20 p-3">
@@ -534,8 +536,7 @@ export function StudentFormDialog({
                 ) : (
                   <div className="relative">
                     <Input value={parentSearchQuery} onChange={(e) => handleParentSearch(e.target.value)}
-                      onBlur={() => setFormTouched({ ...formTouched, parent_id: true })}
-                      placeholder={isRTL ? 'ابحث بالاسم أو الموبايل' : 'Search by name or phone'} />
+                      placeholder={isRTL ? 'ابحث بالاسم أو الموبايل (اختياري)' : 'Search by name or phone (optional)'} />
                     {parentSearching && <div className="absolute top-2.5 end-3"><div className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}
                     {parentSearchResults.length > 0 && (
                       <div className="absolute z-50 w-full mt-1 rounded-md border bg-popover shadow-md max-h-48 overflow-auto">
@@ -554,12 +555,9 @@ export function StudentFormDialog({
                       </div>
                     )}
                     {parentSearchQuery.length >= 2 && !parentSearching && parentSearchResults.length === 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">{isRTL ? 'لا يوجد ولي أمر بهذا الاسم' : 'No parent found'}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{isRTL ? 'لا يوجد ولي أمر بهذا الاسم — يمكن ربطه لاحقاً من بروفايل الطالب' : 'No parent found — you can link one later from the student profile'}</p>
                     )}
                   </div>
-                )}
-                {formTouched.parent_id && !formData.parent_id && (
-                  <p className="text-sm text-destructive flex items-center gap-1"><AlertCircle className="h-3 w-3" />{isRTL ? 'يجب اختيار ولي أمر' : 'Parent required'}</p>
                 )}
               </div>
             )}
