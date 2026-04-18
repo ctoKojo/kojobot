@@ -943,14 +943,19 @@ export default function SessionDetails() {
   const attendanceComplete = totalSessionStudents > 0 && studentsWithAttendance === totalSessionStudents;
   const attendancePartial = studentsWithAttendance > 0 && studentsWithAttendance < totalSessionStudents;
 
-  // Filter to only students WITHOUT attendance records for the dialog
-  const unrecordedStudents = attendanceStudents.filter(s => s.attendance_status === null);
+  // Show in the dialog: students with no record yet, OR students marked absent
+  // who still have a pending makeup (so the admin can re-decide if needed).
+  const unrecordedStudents = attendanceStudents.filter(s => 
+    s.attendance_status === null ||
+    (s.attendance_status === 'absent' && s.compensation_status === 'pending_compensation')
+  );
 
   const openAttendanceDialog = () => {
-    // Initialize with empty values (no default) for unrecorded students only
+    // Pre-fill current status (so existing absent-with-pending-makeup rows
+    // show their current value and can be changed).
     const records: Record<string, string> = {};
     unrecordedStudents.forEach(s => {
-      records[s.student_id] = '';
+      records[s.student_id] = s.attendance_status ?? '';
     });
     setAttendanceRecords(records);
     setAttendanceDialogOpen(true);
@@ -2121,11 +2126,20 @@ export default function SessionDetails() {
                 </div>
                 
                 <div className="space-y-3 py-4">
-                  {unrecordedStudents.map((student) => (
+                  {unrecordedStudents.map((student) => {
+                    const isAbsentWithMakeup = student.attendance_status === 'absent' && student.compensation_status === 'pending_compensation';
+                    return (
                     <div key={student.student_id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                      <span className="font-medium">
-                        {language === 'ar' ? student.student_name_ar : student.student_name}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-medium">
+                          {language === 'ar' ? student.student_name_ar : student.student_name}
+                        </span>
+                        {isAbsentWithMakeup && (
+                          <span className="text-xs text-orange-600">
+                            {isRTL ? 'مسجل غايب • تعويضية معلقة' : 'Marked absent • makeup pending'}
+                          </span>
+                        )}
+                      </div>
                       <Select 
                         value={attendanceRecords[student.student_id] || ''} 
                         onValueChange={(value) => setAttendanceRecords(prev => ({ ...prev, [student.student_id]: value }))}
@@ -2161,7 +2175,8 @@ export default function SessionDetails() {
                         </SelectContent>
                       </Select>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
 
                 {!allStudentsSelected && (
