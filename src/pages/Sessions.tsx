@@ -187,27 +187,34 @@ export default function SessionsPage() {
         makeupGroupsMap.get(key)!.push(m);
       });
 
-      const makeupRows: Session[] = Array.from(makeupGroupsMap.values()).map((group) => {
-        const first = group[0];
-        const orig = originalsMap.get(first.original_session_id) || {};
-        return {
-          id: `makeup-${first.id}`,
-          group_id: first.group_id,
-          session_date: first.scheduled_date,
-          session_time: first.scheduled_time,
-          duration_minutes: orig.duration_minutes ?? 60,
-          topic: null,
-          topic_ar: null,
-          status: first.status,
-          notes: first.notes,
-          session_number: orig.session_number ?? null,
-          content_number: orig.content_number ?? null,
-          is_makeup: true,
-          makeup_session_id: first.id,
-          attendance_mode: orig.attendance_mode ?? null,
-          session_link: orig.session_link ?? null,
-        };
-      });
+      const existingSessionIds = new Set((sessionsData || []).map((s: any) => s.id));
+
+      const makeupRows: Session[] = Array.from(makeupGroupsMap.values())
+        // Skip makeup rows whose original session is already shown in the regular list
+        // for the current viewer (prevents duplicate rows).
+        .filter((group) => !existingSessionIds.has(group[0].original_session_id))
+        .map((group) => {
+          const first = group[0];
+          const orig = originalsMap.get(first.original_session_id) || {};
+          return {
+            // Use the original session id so navigation/details opens the real session.
+            id: first.original_session_id,
+            group_id: first.group_id,
+            session_date: first.scheduled_date,
+            session_time: first.scheduled_time,
+            duration_minutes: orig.duration_minutes ?? 60,
+            topic: null,
+            topic_ar: null,
+            status: first.status,
+            notes: first.notes,
+            session_number: orig.session_number ?? null,
+            content_number: orig.content_number ?? null,
+            is_makeup: true,
+            makeup_session_id: first.id,
+            attendance_mode: orig.attendance_mode ?? null,
+            session_link: orig.session_link ?? null,
+          };
+        });
 
       setSessions([...(sessionsData || []), ...makeupRows]);
     } catch (error) {
