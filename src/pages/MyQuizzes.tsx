@@ -100,7 +100,29 @@ export default function MyQuizzes() {
 
       const submissionsMap = new Map(submissions?.map(s => [s.quiz_assignment_id, s]));
 
-      const quizzesWithSubmissions = (assignments || []).map(assignment => ({
+      // Apply per-student window overrides (e.g. makeup sessions, attendance-based)
+      const effectiveAssignments = await Promise.all((assignments || []).map(async (a) => {
+        try {
+          const { data: eff } = await supabase.rpc('get_effective_quiz_window', {
+            p_student_id: user?.id,
+            p_quiz_assignment_id: a.id,
+          });
+          const row = Array.isArray(eff) ? eff[0] : eff;
+          if (row) {
+            return {
+              ...a,
+              start_time: row.start_time ?? a.start_time,
+              due_date: row.due_date ?? a.due_date,
+              extra_minutes: row.extra_minutes ?? a.extra_minutes,
+            };
+          }
+        } catch (e) {
+          console.warn('effective window fetch failed for', a.id, e);
+        }
+        return a;
+      }));
+
+      const quizzesWithSubmissions = effectiveAssignments.map(assignment => ({
         ...assignment,
         submission: submissionsMap.get(assignment.id),
       }));

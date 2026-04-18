@@ -187,6 +187,22 @@ export default function TakeQuiz() {
         .single();
 
       if (assignmentError) throw assignmentError;
+
+      // Apply per-student window override (e.g. makeup session window)
+      try {
+        const { data: eff } = await supabase.rpc('get_effective_quiz_window', {
+          p_student_id: user?.id,
+          p_quiz_assignment_id: assignmentData.id,
+        });
+        const row = Array.isArray(eff) ? eff[0] : eff;
+        if (row) {
+          (assignmentData as any).start_time = row.start_time ?? assignmentData.start_time;
+          (assignmentData as any).due_date = row.due_date ?? assignmentData.due_date;
+          (assignmentData as any).extra_minutes = row.extra_minutes ?? (assignmentData as any).extra_minutes;
+        }
+      } catch (e) {
+        console.warn('effective window fetch failed:', e);
+      }
       setAssignment(assignmentData);
 
       // Check if already submitted
