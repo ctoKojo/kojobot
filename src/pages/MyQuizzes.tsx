@@ -161,8 +161,10 @@ export default function MyQuizzes() {
     return Math.floor(remaining / 60000); // Return in minutes
   };
 
-  const pendingQuizzes = quizzes.filter(q => !q.submission);
-  const completedQuizzes = quizzes.filter(q => q.submission);
+  // Pending = not submitted AND not expired (status !== 'expired').
+  // Expired-without-submission quizzes show under "completed" as missed.
+  const pendingQuizzes = quizzes.filter(q => !q.submission && getQuizStatus(q) !== 'expired');
+  const completedQuizzes = quizzes.filter(q => q.submission || getQuizStatus(q) === 'expired');
 
   if (loading) {
     return (
