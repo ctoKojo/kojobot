@@ -528,12 +528,6 @@ user_id: gs.student_id,
         session.session_date.includes(searchQuery);
       const matchesStatus = statusFilter === 'all' || session.status === statusFilter;
       
-      // Hide cancelled sessions from active time filters unless user explicitly filters by 'cancelled'
-      const isActiveTimeFilter = ['today', 'tomorrow', 'week', 'upcoming', 'overdue'].includes(timeFilter);
-      if (isActiveTimeFilter && session.status === 'cancelled' && statusFilter !== 'cancelled') {
-        return false;
-      }
-      
       let matchesTime = true;
       if (timeFilter === 'today') matchesTime = isToday(session.session_date);
       else if (timeFilter === 'tomorrow') matchesTime = isTomorrow(session.session_date);
