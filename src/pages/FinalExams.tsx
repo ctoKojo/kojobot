@@ -20,9 +20,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { notificationService } from '@/lib/notificationService';
 import {
   Target, CalendarClock, AlertTriangle, Search, Clock, CheckCircle2,
-  GraduationCap, Users, Loader2, FileText, ArrowRight, Timer,
+  GraduationCap, Users, Loader2, FileText, ArrowRight, Timer, RotateCcw, XCircle,
 } from 'lucide-react';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { useIsMobile } from '@/hooks/use-mobile';
