@@ -178,22 +178,32 @@ export default function SessionsPage() {
         originalsMap = new Map((originals || []).map((s: any) => [s.id, s]));
       }
 
-      const makeupRows: Session[] = (makeupData || []).map((m: any) => {
-        const orig = originalsMap.get(m.original_session_id) || {};
+      // Group makeup sessions that share the same original session + group + date + time
+      // so that a single co-scheduled makeup session is shown as ONE row, not one per student.
+      const makeupGroupsMap = new Map<string, any[]>();
+      (makeupData || []).forEach((m: any) => {
+        const key = `${m.group_id}|${m.original_session_id}|${m.scheduled_date}|${m.scheduled_time}|${m.assigned_instructor_id || ''}`;
+        if (!makeupGroupsMap.has(key)) makeupGroupsMap.set(key, []);
+        makeupGroupsMap.get(key)!.push(m);
+      });
+
+      const makeupRows: Session[] = Array.from(makeupGroupsMap.values()).map((group) => {
+        const first = group[0];
+        const orig = originalsMap.get(first.original_session_id) || {};
         return {
-          id: `makeup-${m.id}`,
-          group_id: m.group_id,
-          session_date: m.scheduled_date,
-          session_time: m.scheduled_time,
+          id: `makeup-${first.id}`,
+          group_id: first.group_id,
+          session_date: first.scheduled_date,
+          session_time: first.scheduled_time,
           duration_minutes: orig.duration_minutes ?? 60,
           topic: null,
           topic_ar: null,
-          status: m.status,
-          notes: m.notes,
+          status: first.status,
+          notes: first.notes,
           session_number: orig.session_number ?? null,
           content_number: orig.content_number ?? null,
           is_makeup: true,
-          makeup_session_id: m.id,
+          makeup_session_id: first.id,
           attendance_mode: orig.attendance_mode ?? null,
           session_link: orig.session_link ?? null,
         };
