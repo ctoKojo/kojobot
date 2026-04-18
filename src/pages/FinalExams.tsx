@@ -703,10 +703,15 @@ export default function FinalExams() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          {c.status === 'graded' ? (
+                          {c.status === 'graded' && isFailedOutcome(c.outcome) ? (
+                            <Badge className="bg-destructive/15 text-destructive border-0 text-xs gap-1">
+                              <XCircle className="h-3 w-3" />
+                              {isRTL ? `راسب${c.exam_retry_count > 0 ? ' (إعادة)' : ''}` : `Failed${c.exam_retry_count > 0 ? ' (Retry)' : ''}`}
+                            </Badge>
+                          ) : c.status === 'graded' ? (
                             <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border-0 text-xs gap-1">
                               <CheckCircle2 className="h-3 w-3" />
-                              {isRTL ? 'تم التصحيح' : 'Graded'}
+                              {isRTL ? 'ناجح' : 'Passed'}
                             </Badge>
                           ) : c.status === 'exam_scheduled' ? (
                             <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0 text-xs gap-1">
@@ -776,6 +781,16 @@ export default function FinalExams() {
                               >
                                 <CalendarClock className="h-3 w-3" />
                                 {isRTL ? 'إعادة جدولة' : 'Reschedule'}
+                              </Button>
+                            ) : c.status === 'graded' && isFailedOutcome(c.outcome) && c.exam_retry_count < 1 && c.final_exam_quiz_id ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1.5 h-7 text-xs border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => handleOpenReschedule(c)}
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                                {isRTL ? 'إعادة الامتحان' : 'Retry Exam'}
                               </Button>
                             ) : (
                               <span className="text-muted-foreground/20">—</span>
