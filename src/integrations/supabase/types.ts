@@ -636,6 +636,51 @@ export type Database = {
           },
         ]
       }
+      compliance_scan_runs: {
+        Row: {
+          avg_scan_lag_seconds: number | null
+          errors: Json | null
+          execution_time_ms: number | null
+          finished_at: string | null
+          id: string
+          metadata: Json | null
+          scan_type: string
+          sessions_scanned: number | null
+          started_at: string
+          warnings_auto_resolved: number | null
+          warnings_created: number | null
+          warnings_skipped: number | null
+        }
+        Insert: {
+          avg_scan_lag_seconds?: number | null
+          errors?: Json | null
+          execution_time_ms?: number | null
+          finished_at?: string | null
+          id?: string
+          metadata?: Json | null
+          scan_type?: string
+          sessions_scanned?: number | null
+          started_at?: string
+          warnings_auto_resolved?: number | null
+          warnings_created?: number | null
+          warnings_skipped?: number | null
+        }
+        Update: {
+          avg_scan_lag_seconds?: number | null
+          errors?: Json | null
+          execution_time_ms?: number | null
+          finished_at?: string | null
+          id?: string
+          metadata?: Json | null
+          scan_type?: string
+          sessions_scanned?: number | null
+          started_at?: string
+          warnings_auto_resolved?: number | null
+          warnings_created?: number | null
+          warnings_skipped?: number | null
+        }
+        Relationships: []
+      }
       content_access_rules: {
         Row: {
           attendance_mode: string
@@ -1534,8 +1579,11 @@ export type Database = {
           reason_ar: string | null
           reference_id: string | null
           reference_type: string | null
+          resolved_at: string | null
+          resolved_reason: string | null
           session_id: string | null
           severity: string
+          updated_at: string
           warning_type: string
         }
         Insert: {
@@ -1548,8 +1596,11 @@ export type Database = {
           reason_ar?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          resolved_at?: string | null
+          resolved_reason?: string | null
           session_id?: string | null
           severity?: string
+          updated_at?: string
           warning_type: string
         }
         Update: {
@@ -1562,8 +1613,11 @@ export type Database = {
           reason_ar?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          resolved_at?: string | null
+          resolved_reason?: string | null
           session_id?: string | null
           severity?: string
+          updated_at?: string
           warning_type?: string
         }
         Relationships: [
@@ -1582,6 +1636,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      instructor_warnings_backup_20260418: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          instructor_id: string | null
+          is_active: boolean | null
+          issued_by: string | null
+          reason: string | null
+          reason_ar: string | null
+          reference_id: string | null
+          reference_type: string | null
+          resolved_at: string | null
+          resolved_reason: string | null
+          session_id: string | null
+          severity: string | null
+          updated_at: string | null
+          warning_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          instructor_id?: string | null
+          is_active?: boolean | null
+          issued_by?: string | null
+          reason?: string | null
+          reason_ar?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          resolved_at?: string | null
+          resolved_reason?: string | null
+          session_id?: string | null
+          severity?: string | null
+          updated_at?: string | null
+          warning_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          instructor_id?: string | null
+          is_active?: boolean | null
+          issued_by?: string | null
+          reason?: string | null
+          reason_ar?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          resolved_at?: string | null
+          resolved_reason?: string | null
+          session_id?: string | null
+          severity?: string | null
+          updated_at?: string | null
+          warning_type?: string | null
+        }
+        Relationships: []
       }
       landing_features: {
         Row: {
@@ -3947,6 +4055,7 @@ export type Database = {
           group_id: string
           id: string
           is_makeup: boolean
+          last_compliance_scan_at: string | null
           level_id: string | null
           makeup_session_id: string | null
           notes: string | null
@@ -3968,6 +4077,7 @@ export type Database = {
           group_id: string
           id?: string
           is_makeup?: boolean
+          last_compliance_scan_at?: string | null
           level_id?: string | null
           makeup_session_id?: string | null
           notes?: string | null
@@ -3989,6 +4099,7 @@ export type Database = {
           group_id?: string
           id?: string
           is_makeup?: boolean
+          last_compliance_scan_at?: string | null
           level_id?: string | null
           makeup_session_id?: string | null
           notes?: string | null
@@ -5095,6 +5206,14 @@ export type Database = {
       assign_subscription_dates_bulk: {
         Args: { p_group_id: string }
         Returns: Json
+      }
+      auto_resolve_warning: {
+        Args: {
+          p_reason?: string
+          p_session_id: string
+          p_warning_type: string
+        }
+        Returns: number
       }
       backfill_quiz_audit_batch: { Args: { p_limit?: number }; Returns: number }
       calculate_student_renewal_status: {
