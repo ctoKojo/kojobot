@@ -1278,6 +1278,7 @@ export type Database = {
           created_at: string | null
           current_level_id: string
           current_track_id: string | null
+          exam_retry_count: number
           exam_scheduled_at: string | null
           exam_submitted_at: string | null
           graded_at: string | null
@@ -1297,6 +1298,7 @@ export type Database = {
           created_at?: string | null
           current_level_id: string
           current_track_id?: string | null
+          exam_retry_count?: number
           exam_scheduled_at?: string | null
           exam_submitted_at?: string | null
           graded_at?: string | null
@@ -1316,6 +1318,7 @@ export type Database = {
           created_at?: string | null
           current_level_id?: string
           current_track_id?: string | null
+          exam_retry_count?: number
           exam_scheduled_at?: string | null
           exam_submitted_at?: string | null
           graded_at?: string | null
@@ -4906,6 +4909,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           current_level_id: string | null
+          exam_retry_count: number | null
           exam_scheduled_at: string | null
           exam_submitted_at: string | null
           final_exam_quiz_id: string | null
@@ -4917,6 +4921,7 @@ export type Database = {
           group_name_ar: string | null
           level_name: string | null
           level_name_ar: string | null
+          outcome: string | null
           progress_id: string | null
           status: string | null
           status_changed_at: string | null
@@ -5546,6 +5551,10 @@ export type Database = {
         Returns: Json
       }
       repair_orphaned_sessions: { Args: never; Returns: Json }
+      reschedule_failed_final_exam: {
+        Args: { p_date: string; p_duration: number; p_progress_id: string }
+        Returns: Json
+      }
       save_attendance: {
         Args: { p_group_id: string; p_records: Json; p_session_id: string }
         Returns: Json
