@@ -106,7 +106,8 @@ export default function FinalExams() {
     let result = candidates;
     if (filter === 'awaiting_exam') result = result.filter(c => c.status === 'awaiting_exam');
     if (filter === 'exam_scheduled') result = result.filter(c => c.status === 'exam_scheduled');
-    if (filter === 'graded') result = result.filter(c => c.status === 'graded');
+    if (filter === 'graded') result = result.filter(c => c.status === 'graded' && !isFailedOutcome(c.outcome));
+    if (filter === 'failed') result = result.filter(c => c.status === 'graded' && isFailedOutcome(c.outcome));
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(c =>
@@ -213,37 +214,70 @@ export default function FinalExams() {
         if (quizData) examDuration = quizData.duration_minutes;
       }
 
-      const { data, error } = await supabase.rpc('schedule_final_exam_for_students', {
-        p_group_id: groupId,
-        p_student_ids: studentIds,
-        p_date: dateTime,
-        p_duration: examDuration,
-      });
+      // Branch: rescheduling a failed student (single candidate) vs initial/group scheduling
+      const isFailedReschedule = !!rescheduleCandidate && isFailedOutcome(rescheduleCandidate.outcome);
 
-      if (error) throw error;
+      if (isFailedReschedule && rescheduleCandidate) {
+        const { data, error } = await supabase.rpc('reschedule_failed_final_exam', {
+          p_progress_id: rescheduleCandidate.progress_id,
+          p_date: dateTime,
+          p_duration: examDuration,
+        });
+        if (error) throw error;
 
-      const result = data as any;
-      const scheduledCount = result?.scheduled ?? result?.scheduled_count ?? 0;
-      const skippedCount = result?.skipped ?? 0;
+        // Notifications fan-out (student + parents + reception/admin)
+        const examLabelEn = new Date(dateTime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+        const examLabelAr = new Date(dateTime).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' });
+        await notificationService.notifyFinalExamRescheduled({
+          studentId: rescheduleCandidate.student_id,
+          studentName: rescheduleCandidate.full_name,
+          studentNameAr: rescheduleCandidate.full_name_ar || rescheduleCandidate.full_name,
+          levelName: rescheduleCandidate.level_name,
+          levelNameAr: rescheduleCandidate.level_name_ar || rescheduleCandidate.level_name,
+          examDateLabel: examLabelEn,
+          examDateLabelAr: examLabelAr,
+        });
 
-      if (scheduledCount === 0) {
         toast({
-          variant: 'destructive',
-          title: isRTL ? 'لم يتم جدولة أي طالب' : 'No students scheduled',
+          title: isRTL ? 'تمت إعادة الجدولة' : 'Rescheduled',
           description: isRTL
-            ? `الطلاب المحددون لم يستوفوا شرط عدد الحصص المكتملة المطلوبة للامتحان النهائي`
-            : `Selected students have not completed the required number of sessions for the final exam`,
+            ? 'تم إعادة جدولة الامتحان وإرسال التنبيهات للطالب وولي الأمر والإدارة'
+            : 'Exam rescheduled and notifications sent to student, parents and reception',
         });
       } else {
-        toast({
-          title: isRTL ? 'تمت الجدولة' : 'Scheduled',
-          description: isRTL
-            ? `تم جدولة الامتحان النهائي لـ ${scheduledCount} طالب${skippedCount > 0 ? ` (تم تخطي ${skippedCount})` : ''}`
-            : `Final exam scheduled for ${scheduledCount} student(s)${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`,
+        const { data, error } = await supabase.rpc('schedule_final_exam_for_students', {
+          p_group_id: groupId,
+          p_student_ids: studentIds,
+          p_date: dateTime,
+          p_duration: examDuration,
         });
+
+        if (error) throw error;
+
+        const result = data as any;
+        const scheduledCount = result?.scheduled ?? result?.scheduled_count ?? 0;
+        const skippedCount = result?.skipped ?? 0;
+
+        if (scheduledCount === 0) {
+          toast({
+            variant: 'destructive',
+            title: isRTL ? 'لم يتم جدولة أي طالب' : 'No students scheduled',
+            description: isRTL
+              ? `الطلاب المحددون لم يستوفوا شرط عدد الحصص المكتملة المطلوبة للامتحان النهائي`
+              : `Selected students have not completed the required number of sessions for the final exam`,
+          });
+        } else {
+          toast({
+            title: isRTL ? 'تمت الجدولة' : 'Scheduled',
+            description: isRTL
+              ? `تم جدولة الامتحان النهائي لـ ${scheduledCount} طالب${skippedCount > 0 ? ` (تم تخطي ${skippedCount})` : ''}`
+              : `Final exam scheduled for ${scheduledCount} student(s)${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`,
+          });
+        }
       }
 
       setShowScheduleDialog(false);
+      setRescheduleCandidate(null);
       setSelectedIds(new Set());
       setScheduleDate('');
       setScheduleTime('');
@@ -259,7 +293,8 @@ export default function FinalExams() {
     all: candidates.length,
     awaiting_exam: candidates.filter(c => c.status === 'awaiting_exam').length,
     exam_scheduled: candidates.filter(c => c.status === 'exam_scheduled').length,
-    graded: candidates.filter(c => c.status === 'graded').length,
+    graded: candidates.filter(c => c.status === 'graded' && !isFailedOutcome(c.outcome)).length,
+    failed: candidates.filter(c => c.status === 'graded' && isFailedOutcome(c.outcome)).length,
   };
 
   const getName = (c: ExamCandidate) => language === 'ar' ? c.full_name_ar || c.full_name : c.full_name;
