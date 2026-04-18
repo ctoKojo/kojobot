@@ -1470,9 +1470,9 @@ export default function SessionDetails() {
                 {/* Videos: Only for admin and students (NOT instructors) */}
                 {role !== 'instructor' && (
                   <>
-                    {/* Summary Video */}
-                    {curriculumContent.summary_video_url && (
-                      curriculumContent.can_view_summary_video ? (
+                    {/* Summary Video — locked button always shown for promotional purposes */}
+                    {curriculumContent.can_view_summary_video ? (
+                      curriculumContent.summary_video_url && (
                         <Button variant="outline" size="sm" asChild>
                           <a href={curriculumContent.summary_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                             <PlayCircle className="h-4 w-4" />
@@ -1480,29 +1480,29 @@ export default function SessionDetails() {
                             <ExternalLink className="h-3 w-3" />
                           </a>
                         </Button>
-                      ) : (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="outline" size="sm" disabled className="flex items-center gap-2 opacity-60 pointer-events-auto cursor-not-allowed">
-                                <Lock className="h-4 w-4" />
-                                {isRTL ? 'فيديو ملخص' : 'Summary Video'}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-xs max-w-[220px]">
-                                {isRTL
-                                  ? 'متاح لمشتركي باقة كوجو كور أو كوجو إكس فقط'
-                                  : 'Available for Kojo Core or Kojo X subscribers'}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
                       )
+                    ) : (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" disabled className="flex items-center gap-2 opacity-60 pointer-events-auto cursor-not-allowed">
+                              <Lock className="h-4 w-4" />
+                              {isRTL ? 'فيديو ملخص' : 'Summary Video'}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs max-w-[240px]">
+                              {isRTL
+                                ? '🔒 افتح الفيديوهات الملخصة بترقية باقتك لكوجو كور أو كوجو إكس'
+                                : '🔒 Unlock summary videos by upgrading to Kojo Core or Kojo X'}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
-                    {/* Full Video */}
-                    {curriculumContent.full_video_url && (
-                      curriculumContent.can_view_full_video ? (
+                    {/* Full Video — locked button always shown for promotional purposes */}
+                    {curriculumContent.can_view_full_video ? (
+                      curriculumContent.full_video_url && (
                         <Button variant="outline" size="sm" asChild>
                           <a href={curriculumContent.full_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                             <Film className="h-4 w-4" />
@@ -1510,25 +1510,25 @@ export default function SessionDetails() {
                             <ExternalLink className="h-3 w-3" />
                           </a>
                         </Button>
-                      ) : (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="outline" size="sm" disabled className="flex items-center gap-2 opacity-60 pointer-events-auto cursor-not-allowed">
-                                <Lock className="h-4 w-4" />
-                                {isRTL ? 'فيديو كامل' : 'Full Video'}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-xs max-w-[220px]">
-                                {isRTL
-                                  ? 'متاح لمشتركي باقة كوجو إكس فقط'
-                                  : 'Available for Kojo X subscribers only'}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
                       )
+                    ) : (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" disabled className="flex items-center gap-2 opacity-60 pointer-events-auto cursor-not-allowed">
+                              <Lock className="h-4 w-4" />
+                              {isRTL ? 'فيديو كامل' : 'Full Video'}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs max-w-[240px]">
+                              {isRTL
+                                ? '🔒 شاهد شرح السيشن كامل بالاشتراك في باقة كوجو إكس'
+                                : '🔒 Watch the full session by subscribing to Kojo X'}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     )}
                   </>
                 )}

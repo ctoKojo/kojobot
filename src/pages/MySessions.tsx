@@ -348,9 +348,9 @@ export default function MySessions() {
                       {s.curriculum?.student_pdf_available && (
                         <PdfDownloadButton sessionId={s.id} sessionNumber={s.session_number} isRTL={isRTL} />
                       )}
-                      {/* Summary Video - locked if no access */}
-                      {s.curriculum?.summary_video_url && (
-                        s.curriculum.can_view_summary_video ? (
+                      {/* Summary Video — locked button always shown for promotional purposes */}
+                      {s.curriculum?.can_view_summary_video ? (
+                        s.curriculum?.summary_video_url && (
                           <Button variant="outline" size="sm" asChild>
                             <a href={s.curriculum.summary_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs">
                               <PlayCircle className="h-3.5 w-3.5" />
@@ -358,29 +358,29 @@ export default function MySessions() {
                               <ExternalLink className="h-2.5 w-2.5" />
                             </a>
                           </Button>
-                        ) : (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="outline" size="sm" disabled className="flex items-center gap-1.5 text-xs opacity-60 pointer-events-auto cursor-not-allowed">
-                                  <Lock className="h-3.5 w-3.5" />
-                                  {isRTL ? 'ملخص' : 'Summary'}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="text-xs max-w-[220px]">
-                                  {isRTL
-                                    ? 'متاح لمشتركي باقة كوجو كور أو كوجو إكس'
-                                    : 'Available for Kojo Core or Kojo X subscribers'}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
                         )
+                      ) : (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" disabled className="flex items-center gap-1.5 text-xs opacity-60 pointer-events-auto cursor-not-allowed">
+                                <Lock className="h-3.5 w-3.5" />
+                                {isRTL ? 'ملخص' : 'Summary'}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs max-w-[240px]">
+                                {isRTL
+                                  ? '🔒 افتح الفيديوهات الملخصة بترقية باقتك لكوجو كور أو كوجو إكس'
+                                  : '🔒 Unlock summary videos by upgrading to Kojo Core or Kojo X'}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
-                      {/* Full Video - locked if no access */}
-                      {s.curriculum?.full_video_url && (
-                        s.curriculum.can_view_full_video ? (
+                      {/* Full Video — locked button always shown for promotional purposes */}
+                      {s.curriculum?.can_view_full_video ? (
+                        s.curriculum?.full_video_url && (
                           <Button variant="outline" size="sm" asChild>
                             <a href={s.curriculum.full_video_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs">
                               <Film className="h-3.5 w-3.5" />
@@ -388,25 +388,25 @@ export default function MySessions() {
                               <ExternalLink className="h-2.5 w-2.5" />
                             </a>
                           </Button>
-                        ) : (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="outline" size="sm" disabled className="flex items-center gap-1.5 text-xs opacity-60 pointer-events-auto cursor-not-allowed">
-                                  <Lock className="h-3.5 w-3.5" />
-                                  {isRTL ? 'كامل' : 'Full'}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="text-xs max-w-[220px]">
-                                  {isRTL
-                                    ? 'متاح لمشتركي باقة كوجو إكس فقط'
-                                    : 'Available for Kojo X subscribers only'}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
                         )
+                      ) : (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="outline" size="sm" disabled className="flex items-center gap-1.5 text-xs opacity-60 pointer-events-auto cursor-not-allowed">
+                                <Lock className="h-3.5 w-3.5" />
+                                {isRTL ? 'كامل' : 'Full'}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs max-w-[240px]">
+                                {isRTL
+                                  ? '🔒 شاهد شرح السيشن كامل بالاشتراك في باقة كوجو إكس'
+                                  : '🔒 Watch the full session by subscribing to Kojo X'}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                   )}
