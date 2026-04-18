@@ -176,27 +176,35 @@ serve(async (req) => {
             .from('quiz_assignments').select('id').eq('session_id', session.id).limit(1).maybeSingle();
 
           if (!quizAssignment) {
-            // DB-level idempotency via partial unique index — use upsert with ignoreDuplicates
-            const { error: insertError, data: inserted } = await supabase
-              .from('instructor_warnings')
-              .upsert({
-                instructor_id: session.groups.instructor_id,
-                session_id: session.id,
-                warning_type: 'no_quiz',
-                reason: `No quiz assigned for Session ${session.session_number} (${session.groups.name})`,
-                reason_ar: `لم يتم تعيين كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
-              }, { onConflict: 'session_id,warning_type', ignoreDuplicates: true })
-              .select('id');
+            // Idempotency: check existing active warning (partial unique indexes don't play well with PostgREST upsert)
+            const { data: existing } = await supabase
+              .from('instructor_warnings').select('id')
+              .eq('session_id', session.id).eq('warning_type', 'no_quiz').eq('is_active', true)
+              .limit(1).maybeSingle();
 
-            if (!insertError && inserted && inserted.length > 0) {
-              results.instructorWarnings++;
-              await supabase.from('notifications').insert({
-                user_id: session.groups.instructor_id,
-                title: 'Warning: Missing Quiz', title_ar: 'تحذير: كويز مفقود',
-                message: `You didn't add a quiz for Session ${session.session_number} (${session.groups.name})`,
-                message_ar: `لم تقم بإضافة كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                type: 'warning', category: 'compliance',
-              });
+            if (!existing) {
+              const { error: insertError } = await supabase
+                .from('instructor_warnings')
+                .insert({
+                  instructor_id: session.groups.instructor_id,
+                  session_id: session.id,
+                  warning_type: 'no_quiz',
+                  reason: `No quiz assigned for Session ${session.session_number} (${session.groups.name})`,
+                  reason_ar: `لم يتم تعيين كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
+                });
+
+              if (!insertError) {
+                results.instructorWarnings++;
+                await supabase.from('notifications').insert({
+                  user_id: session.groups.instructor_id,
+                  title: 'Warning: Missing Quiz', title_ar: 'تحذير: كويز مفقود',
+                  message: `You didn't add a quiz for Session ${session.session_number} (${session.groups.name})`,
+                  message_ar: `لم تقم بإضافة كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
+                  type: 'warning', category: 'compliance',
+                });
+              } else {
+                console.error('[no_quiz insert error]', insertError);
+              }
             }
           }
         }
@@ -233,26 +241,34 @@ serve(async (req) => {
               .from('attendance').select('*', { count: 'exact', head: true }).eq('session_id', session.id);
 
             if (attendanceCount === 0) {
-              const { error: insertError, data: inserted } = await supabase
-                .from('instructor_warnings')
-                .upsert({
-                  instructor_id: session.groups.instructor_id,
-                  session_id: session.id,
-                  warning_type: 'no_attendance',
-                  reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})`,
-                  reason_ar: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                }, { onConflict: 'session_id,warning_type', ignoreDuplicates: true })
-                .select('id');
+              const { data: existing } = await supabase
+                .from('instructor_warnings').select('id')
+                .eq('session_id', session.id).eq('warning_type', 'no_attendance').eq('is_active', true)
+                .limit(1).maybeSingle();
 
-              if (!insertError && inserted && inserted.length > 0) {
-                results.instructorWarnings++;
-                await supabase.from('notifications').insert({
-                  user_id: session.groups.instructor_id,
-                  title: 'Warning: Missing Attendance', title_ar: 'تحذير: حضور مفقود',
-                  message: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})`,
-                  message_ar: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                  type: 'warning', category: 'compliance',
-                });
+              if (!existing) {
+                const { error: insertError } = await supabase
+                  .from('instructor_warnings')
+                  .insert({
+                    instructor_id: session.groups.instructor_id,
+                    session_id: session.id,
+                    warning_type: 'no_attendance',
+                    reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})`,
+                    reason_ar: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
+                  });
+
+                if (!insertError) {
+                  results.instructorWarnings++;
+                  await supabase.from('notifications').insert({
+                    user_id: session.groups.instructor_id,
+                    title: 'Warning: Missing Attendance', title_ar: 'تحذير: حضور مفقود',
+                    message: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})`,
+                    message_ar: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
+                    type: 'warning', category: 'compliance',
+                  });
+                } else {
+                  console.error('[no_attendance insert error]', insertError);
+                }
               }
             }
           }
@@ -295,26 +311,34 @@ serve(async (req) => {
               .from('assignments').select('id').eq('session_id', session.id).limit(1).maybeSingle();
 
             if (!assignment) {
-              const { error: insertError, data: inserted } = await supabase
-                .from('instructor_warnings')
-                .upsert({
-                  instructor_id: session.groups.instructor_id,
-                  session_id: session.id,
-                  warning_type: 'no_assignment',
-                  reason: `No assignment uploaded for Session ${session.session_number} within 24 hours (${session.groups.name})`,
-                  reason_ar: `لم يتم رفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
-                }, { onConflict: 'session_id,warning_type', ignoreDuplicates: true })
-                .select('id');
+              const { data: existing } = await supabase
+                .from('instructor_warnings').select('id')
+                .eq('session_id', session.id).eq('warning_type', 'no_assignment').eq('is_active', true)
+                .limit(1).maybeSingle();
 
-              if (!insertError && inserted && inserted.length > 0) {
-                results.instructorWarnings++;
-                await supabase.from('notifications').insert({
-                  user_id: session.groups.instructor_id,
-                  title: 'Warning: Missing Assignment', title_ar: 'تحذير: واجب مفقود',
-                  message: `You didn't upload an assignment for Session ${session.session_number} within 24 hours (${session.groups.name})`,
-                  message_ar: `لم تقم برفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
-                  type: 'warning', category: 'compliance',
-                });
+              if (!existing) {
+                const { error: insertError } = await supabase
+                  .from('instructor_warnings')
+                  .insert({
+                    instructor_id: session.groups.instructor_id,
+                    session_id: session.id,
+                    warning_type: 'no_assignment',
+                    reason: `No assignment uploaded for Session ${session.session_number} within 24 hours (${session.groups.name})`,
+                    reason_ar: `لم يتم رفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
+                  });
+
+                if (!insertError) {
+                  results.instructorWarnings++;
+                  await supabase.from('notifications').insert({
+                    user_id: session.groups.instructor_id,
+                    title: 'Warning: Missing Assignment', title_ar: 'تحذير: واجب مفقود',
+                    message: `You didn't upload an assignment for Session ${session.session_number} within 24 hours (${session.groups.name})`,
+                    message_ar: `لم تقم برفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
+                    type: 'warning', category: 'compliance',
+                  });
+                } else {
+                  console.error('[no_assignment insert error]', insertError);
+                }
               }
             }
           }
@@ -361,26 +385,34 @@ serve(async (req) => {
             const missing = [...presentSet].filter((id) => !evalSet.has(id));
 
             if (missing.length > 0) {
-              const { error: insertError, data: inserted } = await supabase
-                .from('instructor_warnings')
-                .upsert({
-                  instructor_id: session.groups.instructor_id,
-                  session_id: session.id,
-                  warning_type: 'no_evaluation',
-                  reason: `Missing evaluations for ${missing.length} student(s) in Session ${session.session_number} (${session.groups.name})`,
-                  reason_ar: `تقييمات ناقصة لـ ${missing.length} طالب في السيشن ${session.session_number} (${session.groups.name_ar})`,
-                }, { onConflict: 'session_id,warning_type', ignoreDuplicates: true })
-                .select('id');
+              const { data: existing } = await supabase
+                .from('instructor_warnings').select('id')
+                .eq('session_id', session.id).eq('warning_type', 'no_evaluation').eq('is_active', true)
+                .limit(1).maybeSingle();
 
-              if (!insertError && inserted && inserted.length > 0) {
-                results.instructorWarnings++;
-                await supabase.from('notifications').insert({
-                  user_id: session.groups.instructor_id,
-                  title: 'Warning: Missing Evaluations', title_ar: 'تحذير: تقييمات ناقصة',
-                  message: `You didn't evaluate ${missing.length} student(s) for Session ${session.session_number} (${session.groups.name})`,
-                  message_ar: `لم تقم بتقييم ${missing.length} طالب للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                  type: 'warning', category: 'compliance',
-                });
+              if (!existing) {
+                const { error: insertError } = await supabase
+                  .from('instructor_warnings')
+                  .insert({
+                    instructor_id: session.groups.instructor_id,
+                    session_id: session.id,
+                    warning_type: 'no_evaluation',
+                    reason: `Missing evaluations for ${missing.length} student(s) in Session ${session.session_number} (${session.groups.name})`,
+                    reason_ar: `تقييمات ناقصة لـ ${missing.length} طالب في السيشن ${session.session_number} (${session.groups.name_ar})`,
+                  });
+
+                if (!insertError) {
+                  results.instructorWarnings++;
+                  await supabase.from('notifications').insert({
+                    user_id: session.groups.instructor_id,
+                    title: 'Warning: Missing Evaluations', title_ar: 'تحذير: تقييمات ناقصة',
+                    message: `You didn't evaluate ${missing.length} student(s) for Session ${session.session_number} (${session.groups.name})`,
+                    message_ar: `لم تقم بتقييم ${missing.length} طالب للسيشن ${session.session_number} (${session.groups.name_ar})`,
+                    type: 'warning', category: 'compliance',
+                  });
+                } else {
+                  console.error('[no_evaluation insert error]', insertError);
+                }
               }
             }
           }
