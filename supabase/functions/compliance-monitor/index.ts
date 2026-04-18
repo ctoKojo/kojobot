@@ -241,26 +241,34 @@ serve(async (req) => {
               .from('attendance').select('*', { count: 'exact', head: true }).eq('session_id', session.id);
 
             if (attendanceCount === 0) {
-              const { error: insertError, data: inserted } = await supabase
-                .from('instructor_warnings')
-                .upsert({
-                  instructor_id: session.groups.instructor_id,
-                  session_id: session.id,
-                  warning_type: 'no_attendance',
-                  reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})`,
-                  reason_ar: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                }, { onConflict: 'session_id,warning_type', ignoreDuplicates: true })
-                .select('id');
+              const { data: existing } = await supabase
+                .from('instructor_warnings').select('id')
+                .eq('session_id', session.id).eq('warning_type', 'no_attendance').eq('is_active', true)
+                .limit(1).maybeSingle();
 
-              if (!insertError && inserted && inserted.length > 0) {
-                results.instructorWarnings++;
-                await supabase.from('notifications').insert({
-                  user_id: session.groups.instructor_id,
-                  title: 'Warning: Missing Attendance', title_ar: 'تحذير: حضور مفقود',
-                  message: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})`,
-                  message_ar: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                  type: 'warning', category: 'compliance',
-                });
+              if (!existing) {
+                const { error: insertError } = await supabase
+                  .from('instructor_warnings')
+                  .insert({
+                    instructor_id: session.groups.instructor_id,
+                    session_id: session.id,
+                    warning_type: 'no_attendance',
+                    reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})`,
+                    reason_ar: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
+                  });
+
+                if (!insertError) {
+                  results.instructorWarnings++;
+                  await supabase.from('notifications').insert({
+                    user_id: session.groups.instructor_id,
+                    title: 'Warning: Missing Attendance', title_ar: 'تحذير: حضور مفقود',
+                    message: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})`,
+                    message_ar: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
+                    type: 'warning', category: 'compliance',
+                  });
+                } else {
+                  console.error('[no_attendance insert error]', insertError);
+                }
               }
             }
           }
