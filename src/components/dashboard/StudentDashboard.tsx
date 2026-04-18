@@ -118,13 +118,15 @@ export function StudentDashboard() {
         ? `student_id.eq.${user?.id},group_id.eq.${groupId}`
         : `student_id.eq.${user?.id}`;
 
-      // Get pending quiz assignments
+      // Get pending quiz assignments (only those still within their time window)
+      const nowIso = new Date().toISOString();
       const { data: quizAssignments } = await supabase
         .from('quiz_assignments')
         .select('*, quizzes(title, title_ar, duration_minutes)')
         .eq('is_active', true)
         .eq('is_auto_generated', false)
         .or(quizFilter)
+        .or(`due_date.is.null,due_date.gte.${nowIso}`)
         .limit(5);
 
       // Filter out completed quizzes
@@ -134,7 +136,19 @@ export function StudentDashboard() {
         .eq('student_id', user?.id);
 
       const completedIds = completedQuizzes?.map(q => q.quiz_assignment_id) || [];
-      const pendingQuizzes = quizAssignments?.filter(q => !completedIds.includes(q.id)) || [];
+      const nowMs = Date.now();
+      const pendingQuizzes = (quizAssignments || []).filter(q => {
+        if (completedIds.includes(q.id)) return false;
+        // Exclude expired quizzes (use due_date as authoritative end; fallback to start_time + duration)
+        if (q.due_date) {
+          return new Date(q.due_date).getTime() > nowMs;
+        }
+        if (q.start_time) {
+          const duration = (q.quizzes?.duration_minutes || 30) * 60 * 1000;
+          return new Date(q.start_time).getTime() + duration > nowMs;
+        }
+        return true;
+      });
 
       // Get pending assignments
       const { data: assignments } = await supabase
