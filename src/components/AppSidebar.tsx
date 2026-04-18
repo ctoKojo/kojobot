@@ -130,6 +130,7 @@ export function AppSidebar() {
             items: [
               { title: isRTL ? 'أداء المدربين' : 'Instructor Performance', url: '/instructor-performance', icon: TrendingUp, roles: ['admin'] },
               { title: isRTL ? 'إنذارات المدربين' : 'Instructor Warnings', url: '/instructor-warnings', icon: AlertTriangle, roles: ['admin'] },
+              { title: isRTL ? 'إنذارات الطلاب' : 'Student Warnings', url: '/student-warnings', icon: AlertTriangle, roles: ['admin'] },
               { title: isRTL ? 'مراجعة تحديد المستوى' : 'Placement Review', url: '/placement-test-review', icon: ClipboardCheck, roles: ['admin'] },
               { title: isRTL ? 'طلبات الإجازة والأعذار' : 'Leave & Absence', url: '/leave-requests', icon: CalendarDays, roles: ['admin'] },
               { title: isRTL ? 'لوحة الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3, roles: ['admin', 'reception'] },
@@ -252,6 +253,8 @@ export function AppSidebar() {
             items: [
               { title: isRTL ? 'مراجعة تحديد المستوى' : 'Placement Review', url: '/placement-test-review', icon: ClipboardCheck, roles: ['reception'] },
               { title: isRTL ? 'طلبات الإجازة والأعذار' : 'Leave & Absence', url: '/leave-requests', icon: CalendarDays, roles: ['reception'] },
+              { title: isRTL ? 'إنذارات المدربين' : 'Instructor Warnings', url: '/instructor-warnings', icon: AlertTriangle, roles: ['reception'] },
+              { title: isRTL ? 'إنذارات الطلاب' : 'Student Warnings', url: '/student-warnings', icon: AlertTriangle, roles: ['reception'] },
               { title: isRTL ? 'لوحة الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3, roles: ['reception'] },
             ],
           },

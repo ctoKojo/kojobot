@@ -44,6 +44,7 @@ const MyInstructorQuizzes = React.lazy(() => import("./pages/MyInstructorQuizzes
 const SessionDetails = React.lazy(() => import("./pages/SessionDetails"));
 const InstructorWarnings = React.lazy(() => import("./pages/InstructorWarnings"));
 const StudentWarnings = React.lazy(() => import("./pages/StudentWarnings"));
+const StudentWarningsAdmin = React.lazy(() => import("./pages/StudentWarningsAdmin"));
 const MyInstructorWarningsPage = React.lazy(() => import("./pages/MyInstructorWarnings"));
 const MonthlyReports = React.lazy(() => import("./pages/MonthlyReports"));
 const Materials = React.lazy(() => import("./pages/Materials"));
@@ -134,7 +135,8 @@ const App = () => (
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                   <Route path="/instructor-schedule/:instructorId?" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'reception']}><InstructorSchedule /></ProtectedRoute>} />
                   <Route path="/session/:sessionId" element={<ProtectedRoute><SessionDetails /></ProtectedRoute>} />
-                  <Route path="/instructor-warnings" element={<ProtectedRoute allowedRoles={['admin']}><InstructorWarnings /></ProtectedRoute>} />
+                  <Route path="/instructor-warnings" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><InstructorWarnings /></ProtectedRoute>} />
+                  <Route path="/student-warnings" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><StudentWarningsAdmin /></ProtectedRoute>} />
                   <Route path="/my-warnings" element={<ProtectedRoute allowedRoles={['student']}><StudentWarnings /></ProtectedRoute>} />
                   <Route path="/my-instructor-warnings" element={<ProtectedRoute allowedRoles={['instructor']}><MyInstructorWarningsPage /></ProtectedRoute>} />
                   <Route path="/monthly-reports" element={<ProtectedRoute allowedRoles={['admin', 'student']}><MonthlyReports /></ProtectedRoute>} />
