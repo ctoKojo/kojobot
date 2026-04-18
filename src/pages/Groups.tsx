@@ -421,6 +421,55 @@ export default function GroupsPage() {
           continue;
         }
 
+        // Brand new student with no academic record yet — RPC can't transfer them.
+        // Fall back to a direct enrollment + bootstrap a progress record so they're treated like a fresh start in this group.
+        if (result.status === 'no_progress_record') {
+          const existing = groupStudents.find(gs => gs.student_id === studentId);
+          if (existing) {
+            await supabase.from('group_students').update({ is_active: true }).eq('id', existing.id);
+          } else {
+            const { error: insertErr } = await supabase
+              .from('group_students')
+              .insert({ group_id: group.id, student_id: studentId });
+            if (insertErr) {
+              toast({
+                variant: 'destructive',
+                title: t.common.error,
+                description: isRTL
+                  ? `فشل إضافة ${getStudentName(studentId)}: ${insertErr.message}`
+                  : `Failed to add ${getStudentName(studentId)}: ${insertErr.message}`,
+              });
+              continue;
+            }
+          }
+          await supabase.from('group_student_progress').insert({
+            student_id: studentId,
+            group_id: group.id,
+            current_level_id: group.level_id,
+            status: 'in_progress',
+            level_started_at: new Date().toISOString(),
+          });
+          toast({
+            title: isRTL ? 'تمت الإضافة' : 'Added',
+            description: isRTL
+              ? `تمت إضافة ${getStudentName(studentId)} كطالب جديد. قد يحتاج إلى سيشن تعويضية للحصص الفائتة.`
+              : `${getStudentName(studentId)} added as new. May need makeup sessions for missed classes.`,
+          });
+          continue;
+        }
+
+        // Any other failure surfaced by the RPC — never fail silently again.
+        if (result.status && !['student_behind','no_progress_created','equal','no_op','transferred'].includes(result.status)) {
+          toast({
+            variant: 'destructive',
+            title: t.common.error,
+            description: isRTL
+              ? `تعذّر إضافة ${getStudentName(studentId)} (${result.status})`
+              : `Could not add ${getStudentName(studentId)} (${result.status})`,
+          });
+          continue;
+        }
+
         if (result.status === 'student_behind' && result.makeupCount && result.makeupCount > 0) {
           const sessionsList = result.missedSessions?.join(', ') || '';
           toast({
