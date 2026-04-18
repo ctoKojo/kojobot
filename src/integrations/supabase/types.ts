@@ -245,6 +245,61 @@ export type Database = {
           },
         ]
       }
+      assignment_overrides: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          makeup_session_id: string | null
+          source: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          makeup_session_id?: string | null
+          source?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          makeup_session_id?: string | null
+          source?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_overrides_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_overrides_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["assignment_id"]
+          },
+          {
+            foreignKeyName: "assignment_overrides_makeup_session_id_fkey"
+            columns: ["makeup_session_id"]
+            isOneToOne: false
+            referencedRelation: "makeup_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_submissions: {
         Row: {
           assignment_id: string
@@ -3169,6 +3224,67 @@ export type Database = {
         }
         Relationships: []
       }
+      quiz_assignment_overrides: {
+        Row: {
+          created_at: string
+          due_date: string | null
+          extra_minutes: number
+          id: string
+          makeup_session_id: string | null
+          quiz_assignment_id: string
+          source: string
+          start_time: string | null
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          due_date?: string | null
+          extra_minutes?: number
+          id?: string
+          makeup_session_id?: string | null
+          quiz_assignment_id: string
+          source?: string
+          start_time?: string | null
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          due_date?: string | null
+          extra_minutes?: number
+          id?: string
+          makeup_session_id?: string | null
+          quiz_assignment_id?: string
+          source?: string
+          start_time?: string | null
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_assignment_overrides_makeup_session_id_fkey"
+            columns: ["makeup_session_id"]
+            isOneToOne: false
+            referencedRelation: "makeup_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_assignment_overrides_quiz_assignment_id_fkey"
+            columns: ["quiz_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_assignment_overrides_quiz_assignment_id_fkey"
+            columns: ["quiz_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "session_details"
+            referencedColumns: ["quiz_assignment_id"]
+          },
+        ]
+      }
       quiz_assignments: {
         Row: {
           assigned_by: string
@@ -5383,6 +5499,22 @@ export type Database = {
           title: string
           title_ar: string
           version: number
+        }[]
+      }
+      get_effective_assignment_due: {
+        Args: { p_assignment_id: string; p_student_id: string }
+        Returns: {
+          due_date: string
+          source: string
+        }[]
+      }
+      get_effective_quiz_window: {
+        Args: { p_quiz_assignment_id: string; p_student_id: string }
+        Returns: {
+          due_date: string
+          extra_minutes: number
+          source: string
+          start_time: string
         }[]
       }
       get_group_level_status: { Args: { p_group_id: string }; Returns: Json }
