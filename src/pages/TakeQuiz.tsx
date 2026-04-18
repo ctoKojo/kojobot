@@ -448,19 +448,32 @@ export default function TakeQuiz() {
   }, [saveAnswersToServer]);
 
   // ── Heartbeat: presence only (no answers) ──────────────────────────
-  const answeredCount = Object.keys(answers).length;
+  // IMPORTANT: We do NOT touch draft_answers here. answered_count is computed
+  // server-side from local state but capped to never DECREASE — protects
+  // against refresh races where local state is briefly empty.
+  const answeredCount = Object.keys(answers).filter(k => (answers[k] ?? '') !== '').length;
   useEffect(() => {
     if (!assignment || !user || quizStatus !== 'available' || questions.length === 0) return;
 
     const upsertProgress = async () => {
       try {
+        // Read current server count first to avoid regressions
+        const { data: existing } = await supabase
+          .from('exam_live_progress')
+          .select('answered_count')
+          .eq('quiz_assignment_id', assignment.id)
+          .eq('student_id', user.id)
+          .maybeSingle();
+
+        const safeCount = Math.max(answeredCount, existing?.answered_count ?? 0);
+
         await supabase
           .from('exam_live_progress')
           .upsert({
             student_id: user.id,
             quiz_assignment_id: assignment.id,
             current_question_index: currentIndex,
-            answered_count: answeredCount,
+            answered_count: safeCount,
             total_questions: questions.length,
             last_activity_at: new Date().toISOString(),
             status: 'in_progress',
