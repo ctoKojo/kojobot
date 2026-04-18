@@ -372,6 +372,35 @@ export default function TakeQuiz() {
         correct_answer: ''
       }));
       setQuestions(questionsWithPlaceholder);
+
+      // ── Recovery: hydrate answers from server draft (refresh / device switch) ──
+      try {
+        const { data: liveProgress } = await supabase
+          .from('exam_live_progress')
+          .select('draft_answers, current_question_index')
+          .eq('quiz_assignment_id', assignmentData.id)
+          .eq('student_id', user!.id)
+          .maybeSingle();
+
+        const draft = (liveProgress?.draft_answers as Record<string, { answer: string }>) || {};
+        const draftAnswers: Record<string, string> = {};
+        for (const [qid, entry] of Object.entries(draft)) {
+          if (entry && typeof entry === 'object' && 'answer' in entry) {
+            draftAnswers[qid] = String(entry.answer ?? '');
+          }
+        }
+        setAnswers(prev => {
+          const merged = { ...draftAnswers, ...prev };
+          try { sessionStorage.setItem(`quiz-${assignmentData.id}-answers`, JSON.stringify(merged)); } catch {}
+          return merged;
+        });
+        if (liveProgress?.current_question_index != null) {
+          const savedIdx = sessionStorage.getItem(`quiz-${assignmentData.id}-index`);
+          if (!savedIdx) setCurrentIndex(liveProgress.current_question_index);
+        }
+      } catch (e) {
+        console.warn('Failed to recover draft answers from server:', e);
+      }
     } catch (error) {
       console.error('Error fetching quiz:', error);
       toast({
