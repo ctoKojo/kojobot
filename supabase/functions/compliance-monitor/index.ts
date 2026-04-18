@@ -38,10 +38,11 @@ async function getCurriculumExpectations(
 
   const { data } = await supabase
     .from('curriculum_sessions')
-    .select('quiz_id, assignment_title')
+    .select('quiz_id, assignment_title, assignment_attachment_url')
     .eq('level_id', levelId)
     .eq('session_number', contentNumber)
     .eq('is_active', true)
+    .eq('is_published', true)
     .limit(1)
     .maybeSingle();
 
@@ -51,7 +52,7 @@ async function getCurriculumExpectations(
   }
   const result = {
     expectsQuiz: !!data.quiz_id,
-    expectsAssignment: !!(data.assignment_title && data.assignment_title.trim().length > 0),
+    expectsAssignment: !!(data.assignment_attachment_url && data.assignment_attachment_url.trim().length > 0),
   };
   curriculumCache.set(key, result);
   return result;
