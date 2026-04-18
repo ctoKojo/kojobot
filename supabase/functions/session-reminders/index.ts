@@ -30,7 +30,6 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const cronSecret = Deno.env.get('CRON_SECRET')
 
-    // Authentication: accept service role, CRON_SECRET, or admin user JWT
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
@@ -41,10 +40,21 @@ Deno.serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '')
     const isServiceRole = token === serviceRoleKey
-    const isCronAuth = !!cronSecret && token === cronSecret
+    const isCronEnvAuth = !!cronSecret && token === cronSecret
 
-    if (!isServiceRole && !isCronAuth) {
-      // Fallback: validate admin user JWT for manual invocations
+    let isVaultCronAuth = false
+    if (!isServiceRole && !isCronEnvAuth && token) {
+      try {
+        const tmpClient = createClient(supabaseUrl, serviceRoleKey)
+        const { data } = await tmpClient.rpc('verify_cron_token', { p_token: token })
+        isVaultCronAuth = data === true
+      } catch (_) {
+        isVaultCronAuth = false
+      }
+    }
+
+    if (!isServiceRole && !isCronEnvAuth && !isVaultCronAuth) {
+      // Fallback: validate admin user JWT for manual UI invocations
       const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
         global: { headers: { Authorization: authHeader } }
       })

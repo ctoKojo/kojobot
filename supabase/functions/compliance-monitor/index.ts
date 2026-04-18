@@ -72,27 +72,28 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  // Auth: only service role or CRON_SECRET allowed
+  // Auth: service role, CRON_SECRET env, OR vault cron_secret (via RPC)
   const authHeader = req.headers.get('Authorization');
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const cronSecret = Deno.env.get('CRON_SECRET');
   const token = authHeader?.replace('Bearer ', '') ?? '';
   const isServiceRole = token === supabaseKey;
-  const isCronAuth = cronSecret && token === cronSecret;
+  const isCronEnvAuth = !!cronSecret && token === cronSecret;
 
-  if (!isServiceRole && !isCronAuth) {
-    // Temporary diagnostic — partial fingerprints only, never full secrets
-    console.log('[Compliance Monitor] Auth failed', {
-      hasAuth: !!authHeader,
-      tokenLen: token.length,
-      tokenPrefix: token.substring(0, 6),
-      tokenSuffix: token.substring(token.length - 6),
-      cronSecretSet: !!cronSecret,
-      cronSecretLen: cronSecret?.length ?? 0,
-      cronSecretPrefix: cronSecret?.substring(0, 6) ?? '',
-      cronSecretSuffix: (cronSecret ?? '').substring((cronSecret ?? '').length - 6),
-      serviceKeyLen: supabaseKey?.length ?? 0,
-    });
+  let isVaultCronAuth = false;
+  if (!isServiceRole && !isCronEnvAuth && token) {
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const tmpClient = createClient(supabaseUrl, supabaseKey);
+      const { data } = await tmpClient.rpc('verify_cron_token', { p_token: token });
+      isVaultCronAuth = data === true;
+    } catch (_) {
+      isVaultCronAuth = false;
+    }
+  }
+
+  if (!isServiceRole && !isCronEnvAuth && !isVaultCronAuth) {
+    console.log('[Compliance Monitor] Request rejected: no valid auth');
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
