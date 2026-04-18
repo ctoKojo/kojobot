@@ -139,13 +139,37 @@ export default function TakeQuiz() {
   }, [quizStatus, assignment?.start_time]);
 
   // ── Timer: when it hits 0, auto-submit via ref ─────────────────────
+  // Re-sync with server every 30 ticks to avoid drift from a wrong client clock
   useEffect(() => {
     if (timeLeft > 0 && !submitted) {
-      const timer = setInterval(() => {
+      let tickCount = 0;
+      const timer = setInterval(async () => {
+        tickCount += 1;
+        if (tickCount % 30 === 0 && assignment) {
+          try {
+            await syncServerTime();
+            const dueIso = (assignment as any).due_date as string | undefined;
+            const startIso = assignment.start_time as string | undefined;
+            const baseDur = (assignment.quizzes?.duration_minutes || 30) + ((assignment as any).extra_minutes || 0);
+            let endMs: number | null = null;
+            if (dueIso) endMs = new Date(dueIso).getTime();
+            else if (startIso) endMs = new Date(startIso).getTime() + baseDur * 60_000;
+            if (endMs != null) {
+              const remaining = Math.max(0, Math.floor((endMs - serverNow()) / 1000));
+              setTimeLeft(remaining);
+              if (remaining <= 0) {
+                clearInterval(timer);
+                handleSubmitFromRef();
+              }
+              return;
+            }
+          } catch (e) {
+            console.warn('[timer] resync failed, falling back to local tick', e);
+          }
+        }
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            // Use ref-based submit to avoid stale closure
             handleSubmitFromRef();
             return 0;
           }
@@ -154,7 +178,7 @@ export default function TakeQuiz() {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [timeLeft, submitted]);
+  }, [timeLeft, submitted, assignment]);
 
   // Listen for extra_minutes updates in realtime
   useEffect(() => {
