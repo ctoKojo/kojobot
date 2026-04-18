@@ -240,11 +240,22 @@ export default function MyInstructorWarnings() {
     const typeInfo = getWarningTypeInfo(warning.warning_type);
     const TypeIcon = typeInfo.icon;
     const sevBadge = getSeverityBadge(warning.severity || 'minor');
+    const ctx = warning.conversationContext;
+    const isClickableConv = warning.warning_type === 'no_reply' && !!ctx;
+    const isClickableSession = !!warning.session_id;
+
+    const handleClick = () => {
+      if (isClickableConv) {
+        navigate(`/messages?conversation=${ctx!.conversationId}`);
+      } else if (isClickableSession) {
+        navigate(`/session/${warning.session_id}`);
+      }
+    };
 
     return (
       <Card 
-        className={`${warning.is_active ? 'border-warning' : 'opacity-60'} ${warning.session_id ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
-        onClick={() => warning.session_id && navigate(`/session/${warning.session_id}`)}
+        className={`${warning.is_active ? 'border-warning' : 'opacity-60'} ${(isClickableConv || isClickableSession) ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+        onClick={handleClick}
       >
         <CardContent className="p-4">
           <div className="flex items-start gap-4">
@@ -267,6 +278,29 @@ export default function MyInstructorWarnings() {
               <p className="font-medium text-sm sm:text-base">
                 {language === 'ar' && warning.reason_ar ? warning.reason_ar : warning.reason}
               </p>
+
+              {/* Conversation context for no_reply warnings */}
+              {ctx && (
+                <div className="mt-3 p-3 rounded-lg border border-sky-200 bg-sky-50 dark:bg-sky-950/20 dark:border-sky-900 space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs">
+                    <MessageSquare className="w-3.5 h-3.5 text-sky-600" />
+                    <span className="font-semibold text-sky-700 dark:text-sky-300">
+                      {isRTL ? 'من:' : 'From:'} {ctx.senderName || (isRTL ? 'مستخدم' : 'User')}
+                    </span>
+                    {ctx.lastMessageAt && (
+                      <span className="text-muted-foreground">
+                        · {formatDate(ctx.lastMessageAt, language)}
+                      </span>
+                    )}
+                  </div>
+                  {ctx.lastMessage && (
+                    <p className="text-sm text-foreground/80 line-clamp-3 whitespace-pre-wrap break-words">
+                      "{ctx.lastMessage.length > 220 ? ctx.lastMessage.slice(0, 220) + '…' : ctx.lastMessage}"
+                    </p>
+                  )}
+                </div>
+              )}
+
               {warning.sessions && (
                 <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                   <Calendar className="w-4 h-4" />
@@ -278,7 +312,12 @@ export default function MyInstructorWarnings() {
               <p className="text-xs text-muted-foreground mt-2">
                 {formatDate(warning.created_at, language)}
               </p>
-              {warning.session_id && warning.is_active && (
+              {isClickableConv && warning.is_active && (
+                <p className="text-xs text-primary mt-1">
+                  {isRTL ? 'اضغط لفتح المحادثة والرد' : 'Click to open conversation and reply'}
+                </p>
+              )}
+              {!isClickableConv && isClickableSession && warning.is_active && (
                 <p className="text-xs text-primary mt-1">
                   {isRTL ? 'اضغط لفتح السيشن وحل المشكلة' : 'Click to open session and resolve'}
                 </p>
