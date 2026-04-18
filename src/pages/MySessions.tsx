@@ -358,10 +358,23 @@ export default function MySessions() {
                             </a>
                           </Button>
                         ) : (
-                          <Button variant="outline" size="sm" disabled className="flex items-center gap-1.5 text-xs opacity-60">
-                            <Lock className="h-3.5 w-3.5" />
-                            {isRTL ? 'ملخص' : 'Summary'}
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="sm" disabled className="flex items-center gap-1.5 text-xs opacity-60 pointer-events-auto cursor-not-allowed">
+                                  <Lock className="h-3.5 w-3.5" />
+                                  {isRTL ? 'ملخص' : 'Summary'}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs max-w-[220px]">
+                                  {isRTL
+                                    ? 'متاح لمشتركي باقة كوجو كور أو كوجو إكس'
+                                    : 'Available for Kojo Core or Kojo X subscribers'}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )
                       )}
                       {/* Full Video - locked if no access */}
@@ -375,10 +388,23 @@ export default function MySessions() {
                             </a>
                           </Button>
                         ) : (
-                          <Button variant="outline" size="sm" disabled className="flex items-center gap-1.5 text-xs opacity-60">
-                            <Lock className="h-3.5 w-3.5" />
-                            {isRTL ? 'كامل' : 'Full'}
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="outline" size="sm" disabled className="flex items-center gap-1.5 text-xs opacity-60 pointer-events-auto cursor-not-allowed">
+                                  <Lock className="h-3.5 w-3.5" />
+                                  {isRTL ? 'كامل' : 'Full'}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs max-w-[220px]">
+                                  {isRTL
+                                    ? 'متاح لمشتركي باقة كوجو إكس فقط'
+                                    : 'Available for Kojo X subscribers only'}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )
                       )}
                     </div>
