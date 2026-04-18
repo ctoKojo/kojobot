@@ -82,8 +82,14 @@ export default function MyQuizzes() {
         .eq('is_auto_generated', false)
         .order('start_time', { ascending: true });
 
+      // Bug fix: A group-level assignment (student_id IS NULL) belongs to all
+      // students in the group. A per-student assignment (student_id IS NOT NULL)
+      // belongs ONLY to that specific student. The previous filter leaked
+      // per-student assignments to other students in the same group.
       if (groupIds.length > 0) {
-        query = query.or(`student_id.eq.${user?.id},group_id.in.(${groupIds.join(',')})`);
+        query = query.or(
+          `student_id.eq.${user?.id},and(student_id.is.null,group_id.in.(${groupIds.join(',')}))`
+        );
       } else {
         query = query.eq('student_id', user?.id);
       }
