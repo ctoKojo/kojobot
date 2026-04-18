@@ -53,7 +53,7 @@ import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { logUpdate, logDelete } from '@/lib/activityLogger';
 import { isSessionEndedCairo } from '@/lib/sessionTimeGuard';
 import { getSessionStatusBadge } from '@/lib/statusBadges';
-import { resolveSessions, type ResolvedSession } from '@/lib/sessionResolver';
+import { resolveSessions, getMakeupBadgeText, type ResolvedSession } from '@/lib/sessionResolver';
 
 type Session = ResolvedSession;
 
