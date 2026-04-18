@@ -1250,7 +1250,12 @@ export default function SessionDetails() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-xl">
-                  {isRTL ? `سيشن ${session.session_number}` : `Session ${session.session_number}`}
+                  {(() => {
+                    const displayNum = role === 'student'
+                      ? (session.content_number ?? session.session_number)
+                      : session.session_number;
+                    return isRTL ? `سيشن ${displayNum}` : `Session ${displayNum}`;
+                  })()}
                   {session.topic && (
                     <span className="text-muted-foreground font-normal ml-2">
                       - {language === 'ar' ? (session.topic_ar || session.topic) : session.topic}
