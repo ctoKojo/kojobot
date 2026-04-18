@@ -42,7 +42,6 @@ async function getCurriculumExpectations(
     .eq('level_id', levelId)
     .eq('session_number', contentNumber)
     .eq('is_active', true)
-    .eq('is_published', true)
     .limit(1)
     .maybeSingle();
 
