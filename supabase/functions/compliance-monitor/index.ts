@@ -7,6 +7,26 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ============================================================
+// V2 Constants — Compliance Monitor Rules
+// ============================================================
+const MONITORING_START_DATE = '2026-04-17'; // System officially started monitoring
+const RACE_BUFFER_MINUTES = 5;              // Buffer to avoid race with instructor in-progress work
+const RESCAN_COOLDOWN_HOURS = 6;            // Minimum hours before re-scanning the same session
+
+// Grace periods per warning type (in MINUTES)
+const GRACE_PERIODS = {
+  attendance: 60,         // 1 hour after session end (fast SLA)
+  evaluation: 60 * 24,    // 24 hours
+  quiz: 60 * 24,          // 24 hours
+  assignment: 60 * 24,    // 24 hours
+} as const;
+
+const BATCH_SIZE = 500;
+// Anti-starvation split: 70% oldest, 30% recent (last 3 days)
+const RECENT_WINDOW_DAYS = 3;
+const RECENT_BATCH_RATIO = 0.3;
+
 interface CompletedSession {
   id: string;
   session_date: string;
@@ -16,16 +36,21 @@ interface CompletedSession {
   level_id: string | null;
   duration_minutes?: number;
   group_id: string;
+  status: string;
+  cancellation_reason: string | null;
+  last_compliance_scan_at: string | null;
   groups: {
     instructor_id: string;
     name: string;
     name_ar: string;
     starting_session_number: number | null;
+    is_active: boolean;
+    status: string;
   };
 }
 
-// Cache curriculum lookups within a single run to avoid repeated queries
-const curriculumCache = new Map<string, { expectsQuiz: boolean; expectsAssignment: boolean }>();
+// Cache curriculum lookups within a single run
+const curriculumCache = new Map<string, { expectsQuiz: boolean; expectsAssignment: boolean } | null>();
 
 async function getCurriculumExpectations(
   supabase: any,
@@ -36,18 +61,20 @@ async function getCurriculumExpectations(
   const key = `${levelId}::${contentNumber}`;
   if (curriculumCache.has(key)) return curriculumCache.get(key)!;
 
+  // Use latest active version per (level_id, session_number)
   const { data } = await supabase
     .from('curriculum_sessions')
-    .select('quiz_id, assignment_title, assignment_attachment_url')
+    .select('quiz_id, assignment_attachment_url, version')
     .eq('level_id', levelId)
     .eq('session_number', contentNumber)
     .eq('is_active', true)
+    .order('version', { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (!data) {
-    curriculumCache.set(key, { expectsQuiz: false, expectsAssignment: false });
-    return curriculumCache.get(key)!;
+    curriculumCache.set(key, null); // No curriculum requirements at all → caller should skip
+    return null;
   }
   const result = {
     expectsQuiz: !!data.quiz_id,
@@ -57,15 +84,176 @@ async function getCurriculumExpectations(
   return result;
 }
 
-// Check if session's grace period (end + 60 min) has passed in Cairo time
-function isPastGracePeriod(sessionDate: string, sessionTime: string, durationMinutes: number): boolean {
+// ============================================================
+// Grace period check — type-specific (gap: separated grace periods)
+// ============================================================
+function isPastGracePeriod(
+  sessionDate: string,
+  sessionTime: string,
+  durationMinutes: number,
+  graceMinutes: number
+): boolean {
   // Cairo offset is +03:00 (no DST since 2014)
   const sessionEnd = new Date(`${sessionDate}T${sessionTime}+03:00`);
-  sessionEnd.setMinutes(sessionEnd.getMinutes() + durationMinutes + 60);
+  // gap #6: race buffer added on top of grace
+  const totalMinutes = durationMinutes + graceMinutes + RACE_BUFFER_MINUTES;
+  sessionEnd.setMinutes(sessionEnd.getMinutes() + totalMinutes);
   return Date.now() >= sessionEnd.getTime();
 }
 
-const BATCH_SIZE = 500;
+// Eligible groups cache (per run): groupId → has any active student
+const groupHasStudentsCache = new Map<string, boolean>();
+async function groupHasActiveStudents(supabase: any, groupId: string): Promise<boolean> {
+  if (groupHasStudentsCache.has(groupId)) return groupHasStudentsCache.get(groupId)!;
+  const { count } = await supabase
+    .from('group_students')
+    .select('*', { count: 'exact', head: true })
+    .eq('group_id', groupId)
+    .eq('is_active', true);
+  const has = (count || 0) > 0;
+  groupHasStudentsCache.set(groupId, has);
+  return has;
+}
+
+// ============================================================
+// Eligibility filter (unified) — all checks share these rules
+// ============================================================
+function isCanceled(s: CompletedSession): boolean {
+  return s.status === 'canceled' || (s.cancellation_reason !== null && s.cancellation_reason !== '');
+}
+
+function isLegacy(s: CompletedSession): boolean {
+  const startingNum = s.groups.starting_session_number || 1;
+  return startingNum > 1 && s.session_number < startingNum;
+}
+
+async function isEligible(supabase: any, s: CompletedSession): Promise<boolean> {
+  if (s.session_date < MONITORING_START_DATE) return false;
+  if (isCanceled(s)) return false;
+  if (isLegacy(s)) return false;
+  if (!s.groups.is_active) return false;
+  if (['frozen', 'completed', 'canceled'].includes(s.groups.status)) return false;
+  if (!(await groupHasActiveStudents(supabase, s.group_id))) return false;
+  return true;
+}
+
+// ============================================================
+// Anti-starvation batch: 70% oldest unscanned + 30% recent
+// ============================================================
+const SESSION_SELECT = `id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, status, cancellation_reason, last_compliance_scan_at, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active)`;
+
+async function fetchEligibleSessions(supabase: any, todayStr: string): Promise<CompletedSession[]> {
+  const recentLimit = Math.floor(BATCH_SIZE * RECENT_BATCH_RATIO);
+  const oldestLimit = BATCH_SIZE - recentLimit;
+  const recentCutoff = getCairoDatePlusDays(-RECENT_WINDOW_DAYS);
+  const cooldownCutoff = new Date(Date.now() - RESCAN_COOLDOWN_HOURS * 60 * 60 * 1000).toISOString();
+
+  // Oldest unscanned (or scanned > cooldown ago)
+  const { data: oldest } = await supabase
+    .from('sessions')
+    .select(SESSION_SELECT)
+    .in('status', ['completed', 'scheduled'])
+    .gte('session_date', MONITORING_START_DATE)
+    .lte('session_date', todayStr)
+    .or(`last_compliance_scan_at.is.null,last_compliance_scan_at.lt.${cooldownCutoff}`)
+    .order('session_date', { ascending: true })
+    .order('session_time', { ascending: true })
+    .limit(oldestLimit);
+
+  // Recent window (last 3 days) — fresh sessions get priority too
+  const { data: recent } = await supabase
+    .from('sessions')
+    .select(SESSION_SELECT)
+    .in('status', ['completed', 'scheduled'])
+    .gte('session_date', recentCutoff)
+    .lte('session_date', todayStr)
+    .or(`last_compliance_scan_at.is.null,last_compliance_scan_at.lt.${cooldownCutoff}`)
+    .order('session_date', { ascending: false })
+    .limit(recentLimit);
+
+  // Merge and dedupe
+  const merged = new Map<string, CompletedSession>();
+  for (const s of (oldest || []) as unknown as CompletedSession[]) merged.set(s.id, s);
+  for (const s of (recent || []) as unknown as CompletedSession[]) merged.set(s.id, s);
+  return Array.from(merged.values());
+}
+
+// Touch last_compliance_scan_at for a batch of session ids
+async function markScanned(supabase: any, sessionIds: string[]): Promise<void> {
+  if (sessionIds.length === 0) return;
+  // Process in chunks of 200 to keep request small
+  for (let i = 0; i < sessionIds.length; i += 200) {
+    const chunk = sessionIds.slice(i, i + 200);
+    await supabase
+      .from('sessions')
+      .update({ last_compliance_scan_at: new Date().toISOString() })
+      .in('id', chunk);
+  }
+}
+
+// ============================================================
+// Insert warning with race re-check (gap #3) + scan-lag tracking
+// ============================================================
+interface InsertWarningParams {
+  supabase: any;
+  session: CompletedSession;
+  warningType: 'no_quiz' | 'no_assignment' | 'no_attendance' | 'no_evaluation';
+  reason: string;
+  reasonAr: string;
+  notifTitle: string;
+  notifTitleAr: string;
+  notifMessage: string;
+  notifMessageAr: string;
+  // Re-check function: returns true if warning is STILL warranted (condition still missing)
+  recheckCondition: () => Promise<boolean>;
+}
+
+async function insertWarningWithRecheck(p: InsertWarningParams): Promise<'inserted' | 'duplicate' | 'race_resolved' | 'error'> {
+  // 1) Idempotency check
+  const { data: existing } = await p.supabase
+    .from('instructor_warnings').select('id')
+    .eq('session_id', p.session.id)
+    .eq('warning_type', p.warningType)
+    .eq('is_active', true)
+    .limit(1).maybeSingle();
+  if (existing) return 'duplicate';
+
+  // 2) Race re-check: re-verify condition right before insert (gap #3)
+  const stillMissing = await p.recheckCondition();
+  if (!stillMissing) return 'race_resolved';
+
+  // 3) Insert
+  const { error: insertError } = await p.supabase
+    .from('instructor_warnings').insert({
+      instructor_id: p.session.groups.instructor_id,
+      session_id: p.session.id,
+      warning_type: p.warningType,
+      reason: p.reason,
+      reason_ar: p.reasonAr,
+    });
+
+  if (insertError) {
+    console.error(`[${p.warningType} insert error]`, insertError);
+    return 'error';
+  }
+
+  // 4) Notification (best-effort — don't fail the warning if it errors)
+  await p.supabase.from('notifications').insert({
+    user_id: p.session.groups.instructor_id,
+    title: p.notifTitle, title_ar: p.notifTitleAr,
+    message: p.notifMessage, message_ar: p.notifMessageAr,
+    type: 'warning', category: 'compliance',
+  });
+
+  return 'inserted';
+}
+
+// Compute scan lag in seconds (now - session end time)
+function computeScanLagSeconds(session: CompletedSession): number {
+  const sessionEnd = new Date(`${session.session_date}T${session.session_time}+03:00`);
+  sessionEnd.setMinutes(sessionEnd.getMinutes() + (session.duration_minutes ?? 60));
+  return Math.max(0, Math.floor((Date.now() - sessionEnd.getTime()) / 1000));
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -101,12 +289,20 @@ serve(async (req) => {
 
   const startTime = Date.now();
   const TIMEOUT_MS = 30000;
-  const CIRCUIT_BREAKER_THRESHOLD = 0.8; // 80%
+  const CIRCUIT_BREAKER_THRESHOLD = 0.8;
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // Create scan run record at the start
+  const { data: scanRun } = await supabase
+    .from('compliance_scan_runs')
+    .insert({ scan_type: 'compliance-monitor' })
+    .select('id')
+    .single();
+  const scanRunId = scanRun?.id;
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const results = {
       instructorWarnings: 0,
       studentWarnings: 0,
@@ -115,319 +311,231 @@ serve(async (req) => {
       slaWarnings: 0,
       metricsUpdated: 0,
       bonusRecommendations: 0,
+      autoResolved: 0,
+      sessionsScanned: 0,
+      warningsSkipped: 0,
+      raceResolved: 0,
+      avgScanLagSeconds: 0,
       errors: [] as string[],
       circuitBreakerTriggered: false,
     };
 
     const now = new Date();
-    // Use Cairo SSOT instead of brittle toLocaleString→new Date parsing
     const cairo = getCairoNow();
     const todayStr = cairo.today;
     const currentTime = cairo.timeHHMMSS;
     const currentMonth = getCairoCurrentMonth();
 
-    console.log(`[Compliance Monitor] Running at ${todayStr} ${currentTime} Egypt time`);
+    console.log(`[Compliance Monitor V2] Running at ${todayStr} ${currentTime} Cairo time`);
 
     const checkCircuitBreaker = (): boolean => {
       const elapsed = Date.now() - startTime;
       if (elapsed > TIMEOUT_MS * CIRCUIT_BREAKER_THRESHOLD) {
-        console.warn(`[Circuit Breaker] Triggered at ${elapsed}ms (${Math.round(elapsed/TIMEOUT_MS*100)}% of timeout)`);
+        console.warn(`[Circuit Breaker] Triggered at ${elapsed}ms`);
         results.circuitBreakerTriggered = true;
         return true;
       }
       return false;
     };
 
-    const isLegacySession = (session: CompletedSession): boolean => {
-      const startingNum = session.groups.starting_session_number || 1;
-      if (startingNum > 1 && session.session_number < startingNum) return true;
-      return false;
-    };
+    // ========================================
+    // Fetch eligible sessions ONCE (anti-starvation 70/30)
+    // ========================================
+    const allSessions = await fetchEligibleSessions(supabase, todayStr);
+    results.sessionsScanned = allSessions.length;
+    console.log(`[Compliance Monitor V2] Fetched ${allSessions.length} sessions for scanning`);
+
+    // Compute average scan lag for telemetry
+    if (allSessions.length > 0) {
+      const totalLag = allSessions.reduce((sum, s) => sum + computeScanLagSeconds(s), 0);
+      results.avgScanLagSeconds = Math.floor(totalLag / allSessions.length);
+    }
+
+    // Pre-filter eligible sessions
+    const eligibleSessions: CompletedSession[] = [];
+    for (const s of allSessions) {
+      if (isLegacy(s)) results.skippedLegacySessions++;
+      if (await isEligible(supabase, s)) {
+        eligibleSessions.push(s);
+      }
+    }
+    console.log(`[Compliance Monitor V2] ${eligibleSessions.length} eligible after filter`);
 
     // ========================================
-    // Section 1: Check sessions without quiz (curriculum-aware, time-based)
+    // Section 1: no_quiz (curriculum-aware, 24h grace)
     // ========================================
     try {
-      const sixtyDaysAgo = getCairoDatePlusDays(-60);
-      const { data: sessionsForQuiz, error: quizError } = await supabase
-        .from('sessions')
-        .select(`id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active)`)
-        .in('status', ['completed', 'scheduled'])
-        .in('groups.status', ['active', 'pending'])
-        .eq('groups.is_active', true)
-        .gte('session_date', sixtyDaysAgo)
-        .lte('session_date', todayStr)
-        .order('session_date', { ascending: true })
-        .limit(BATCH_SIZE);
+      for (const session of eligibleSessions) {
+        if (checkCircuitBreaker()) break;
+        if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60, GRACE_PERIODS.quiz)) continue;
 
-      if (quizError) {
-        results.errors.push(`Quiz check error: ${quizError.message}`);
-      } else if (sessionsForQuiz) {
-        for (const session of sessionsForQuiz as unknown as CompletedSession[]) {
-          if (checkCircuitBreaker()) break;
-          if (isLegacySession(session)) { results.skippedLegacySessions++; continue; }
-          // Time-based: only act if grace period passed
-          if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60)) continue;
+        const expect = await getCurriculumExpectations(supabase, session.level_id, session.content_number);
+        if (!expect || !expect.expectsQuiz) { results.warningsSkipped++; continue; }
 
-          // Curriculum-aware: skip if this session does not expect a quiz
-          const expect = await getCurriculumExpectations(supabase, session.level_id, session.content_number);
-          if (expect && !expect.expectsQuiz) continue;
-
-          const { data: quizAssignment } = await supabase
+        const recheck = async () => {
+          const { data } = await supabase
             .from('quiz_assignments').select('id').eq('session_id', session.id).limit(1).maybeSingle();
+          return !data;
+        };
 
-          if (!quizAssignment) {
-            // Idempotency: check existing active warning (partial unique indexes don't play well with PostgREST upsert)
-            const { data: existing } = await supabase
-              .from('instructor_warnings').select('id')
-              .eq('session_id', session.id).eq('warning_type', 'no_quiz').eq('is_active', true)
-              .limit(1).maybeSingle();
+        const result = await insertWarningWithRecheck({
+          supabase, session, warningType: 'no_quiz',
+          reason: `No quiz assigned for Session ${session.session_number} (${session.groups.name})`,
+          reasonAr: `لم يتم تعيين كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
+          notifTitle: 'Warning: Missing Quiz', notifTitleAr: 'تحذير: كويز مفقود',
+          notifMessage: `You didn't add a quiz for Session ${session.session_number} (${session.groups.name})`,
+          notifMessageAr: `لم تقم بإضافة كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
+          recheckCondition: recheck,
+        });
 
-            if (!existing) {
-              const { error: insertError } = await supabase
-                .from('instructor_warnings')
-                .insert({
-                  instructor_id: session.groups.instructor_id,
-                  session_id: session.id,
-                  warning_type: 'no_quiz',
-                  reason: `No quiz assigned for Session ${session.session_number} (${session.groups.name})`,
-                  reason_ar: `لم يتم تعيين كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                });
-
-              if (!insertError) {
-                results.instructorWarnings++;
-                await supabase.from('notifications').insert({
-                  user_id: session.groups.instructor_id,
-                  title: 'Warning: Missing Quiz', title_ar: 'تحذير: كويز مفقود',
-                  message: `You didn't add a quiz for Session ${session.session_number} (${session.groups.name})`,
-                  message_ar: `لم تقم بإضافة كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                  type: 'warning', category: 'compliance',
-                });
-              } else {
-                console.error('[no_quiz insert error]', insertError);
-              }
-            }
-          }
-        }
+        if (result === 'inserted') results.instructorWarnings++;
+        else if (result === 'race_resolved') results.raceResolved++;
+        else if (result === 'duplicate') results.warningsSkipped++;
       }
-    } catch (e) {
-      results.errors.push(`Section 1 error: ${e.message}`);
+    } catch (e: any) {
+      results.errors.push(`Section 1 (no_quiz) error: ${e.message}`);
     }
 
     // ========================================
-    // Section 2: Sessions without attendance (time-based)
+    // Section 2: no_attendance (60min grace)
+    // Trigger when (present + absent) = 0 (gap #4)
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
-        const sixtyDaysAgoAtt = getCairoDatePlusDays(-60);
-        const { data: completedSessions, error: attendanceCheckError } = await supabase
-          .from('sessions')
-          .select(`id, session_date, session_time, session_number, content_number, level_id, group_id, duration_minutes, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active)`)
-          .in('status', ['completed', 'scheduled'])
-          .in('groups.status', ['active', 'pending'])
-          .eq('groups.is_active', true)
-          .gte('session_date', sixtyDaysAgoAtt)
-          .lte('session_date', todayStr)
-          .order('session_date', { ascending: true })
-          .limit(BATCH_SIZE);
+        for (const session of eligibleSessions) {
+          if (checkCircuitBreaker()) break;
+          if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60, GRACE_PERIODS.attendance)) continue;
 
-        if (attendanceCheckError) {
-          results.errors.push(`Attendance check error: ${attendanceCheckError.message}`);
-        } else if (completedSessions) {
-          for (const session of completedSessions as unknown as CompletedSession[]) {
-            if (checkCircuitBreaker()) break;
-            if (isLegacySession(session)) continue;
-            if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60)) continue;
+          const { count: attendanceCount } = await supabase
+            .from('attendance').select('*', { count: 'exact', head: true })
+            .eq('session_id', session.id)
+            .in('status', ['present', 'absent']);
 
-            const { count: attendanceCount } = await supabase
-              .from('attendance').select('*', { count: 'exact', head: true }).eq('session_id', session.id);
+          if ((attendanceCount || 0) > 0) continue; // Some attendance exists → ok
 
-            if (attendanceCount === 0) {
-              const { data: existing } = await supabase
-                .from('instructor_warnings').select('id')
-                .eq('session_id', session.id).eq('warning_type', 'no_attendance').eq('is_active', true)
-                .limit(1).maybeSingle();
+          const recheck = async () => {
+            const { count } = await supabase
+              .from('attendance').select('*', { count: 'exact', head: true })
+              .eq('session_id', session.id)
+              .in('status', ['present', 'absent']);
+            return (count || 0) === 0;
+          };
 
-              if (!existing) {
-                const { error: insertError } = await supabase
-                  .from('instructor_warnings')
-                  .insert({
-                    instructor_id: session.groups.instructor_id,
-                    session_id: session.id,
-                    warning_type: 'no_attendance',
-                    reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})`,
-                    reason_ar: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                  });
+          const result = await insertWarningWithRecheck({
+            supabase, session, warningType: 'no_attendance',
+            reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})`,
+            reasonAr: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
+            notifTitle: 'Warning: Missing Attendance', notifTitleAr: 'تحذير: حضور مفقود',
+            notifMessage: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})`,
+            notifMessageAr: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
+            recheckCondition: recheck,
+          });
 
-                if (!insertError) {
-                  results.instructorWarnings++;
-                  await supabase.from('notifications').insert({
-                    user_id: session.groups.instructor_id,
-                    title: 'Warning: Missing Attendance', title_ar: 'تحذير: حضور مفقود',
-                    message: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})`,
-                    message_ar: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                    type: 'warning', category: 'compliance',
-                  });
-                } else {
-                  console.error('[no_attendance insert error]', insertError);
-                }
-              }
-            }
-          }
+          if (result === 'inserted') results.instructorWarnings++;
+          else if (result === 'race_resolved') results.raceResolved++;
+          else if (result === 'duplicate') results.warningsSkipped++;
         }
       }
-    } catch (e) {
-      results.errors.push(`Section 2 error: ${e.message}`);
+    } catch (e: any) {
+      results.errors.push(`Section 2 (no_attendance) error: ${e.message}`);
     }
 
     // ========================================
-    // Section 3: Sessions without assignment (curriculum-aware, 24h+)
+    // Section 3: no_assignment (curriculum-aware, 24h grace)
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
-        const yesterdayStr = getCairoDatePlusDays(-1);
-        const sixtyDaysAgo = getCairoDatePlusDays(-60);
+        for (const session of eligibleSessions) {
+          if (checkCircuitBreaker()) break;
+          if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60, GRACE_PERIODS.assignment)) continue;
 
-        const { data: oldSessions, error: assignmentCheckError } = await supabase
-          .from('sessions')
-          .select(`id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active)`)
-          .in('status', ['completed', 'scheduled'])
-          .in('groups.status', ['active', 'pending'])
-          .eq('groups.is_active', true)
-          .gte('session_date', sixtyDaysAgo)
-          .lte('session_date', yesterdayStr)
-          .order('session_date', { ascending: true })
-          .limit(BATCH_SIZE);
+          const expect = await getCurriculumExpectations(supabase, session.level_id, session.content_number);
+          if (!expect || !expect.expectsAssignment) { results.warningsSkipped++; continue; }
 
-        if (assignmentCheckError) {
-          results.errors.push(`Assignment check error: ${assignmentCheckError.message}`);
-        } else if (oldSessions) {
-          for (const session of oldSessions as unknown as CompletedSession[]) {
-            if (checkCircuitBreaker()) break;
-            if (isLegacySession(session)) continue;
-
-            // Curriculum-aware: skip if this session does not expect an assignment
-            const expect = await getCurriculumExpectations(supabase, session.level_id, session.content_number);
-            if (expect && !expect.expectsAssignment) continue;
-
-            const { data: assignment } = await supabase
+          const recheck = async () => {
+            const { data } = await supabase
               .from('assignments').select('id').eq('session_id', session.id).limit(1).maybeSingle();
+            return !data;
+          };
 
-            if (!assignment) {
-              const { data: existing } = await supabase
-                .from('instructor_warnings').select('id')
-                .eq('session_id', session.id).eq('warning_type', 'no_assignment').eq('is_active', true)
-                .limit(1).maybeSingle();
+          const result = await insertWarningWithRecheck({
+            supabase, session, warningType: 'no_assignment',
+            reason: `No assignment uploaded for Session ${session.session_number} within 24 hours (${session.groups.name})`,
+            reasonAr: `لم يتم رفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
+            notifTitle: 'Warning: Missing Assignment', notifTitleAr: 'تحذير: واجب مفقود',
+            notifMessage: `You didn't upload an assignment for Session ${session.session_number} within 24 hours (${session.groups.name})`,
+            notifMessageAr: `لم تقم برفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
+            recheckCondition: recheck,
+          });
 
-              if (!existing) {
-                const { error: insertError } = await supabase
-                  .from('instructor_warnings')
-                  .insert({
-                    instructor_id: session.groups.instructor_id,
-                    session_id: session.id,
-                    warning_type: 'no_assignment',
-                    reason: `No assignment uploaded for Session ${session.session_number} within 24 hours (${session.groups.name})`,
-                    reason_ar: `لم يتم رفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
-                  });
-
-                if (!insertError) {
-                  results.instructorWarnings++;
-                  await supabase.from('notifications').insert({
-                    user_id: session.groups.instructor_id,
-                    title: 'Warning: Missing Assignment', title_ar: 'تحذير: واجب مفقود',
-                    message: `You didn't upload an assignment for Session ${session.session_number} within 24 hours (${session.groups.name})`,
-                    message_ar: `لم تقم برفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
-                    type: 'warning', category: 'compliance',
-                  });
-                } else {
-                  console.error('[no_assignment insert error]', insertError);
-                }
-              }
-            }
-          }
+          if (result === 'inserted') results.instructorWarnings++;
+          else if (result === 'race_resolved') results.raceResolved++;
+          else if (result === 'duplicate') results.warningsSkipped++;
         }
       }
-    } catch (e) {
-      results.errors.push(`Section 3 error: ${e.message}`);
+    } catch (e: any) {
+      results.errors.push(`Section 3 (no_assignment) error: ${e.message}`);
     }
 
     // ========================================
-    // Section 3b: Sessions missing student evaluations (student-set comparison)
+    // Section 3b: no_evaluation (24h grace)
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
-        const sixtyDaysAgo = getCairoDatePlusDays(-60);
-        const { data: evalSessions, error: evalSessErr } = await supabase
-          .from('sessions')
-          .select(`id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active)`)
-          .in('status', ['completed', 'scheduled'])
-          .in('groups.status', ['active', 'pending'])
-          .eq('groups.is_active', true)
-          .gte('session_date', sixtyDaysAgo)
-          .lte('session_date', todayStr)
-          .order('session_date', { ascending: true })
-          .limit(BATCH_SIZE);
+        for (const session of eligibleSessions) {
+          if (checkCircuitBreaker()) break;
+          if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60, GRACE_PERIODS.evaluation)) continue;
 
-        if (evalSessErr) {
-          results.errors.push(`Evaluation check error: ${evalSessErr.message}`);
-        } else if (evalSessions) {
-          for (const session of evalSessions as unknown as CompletedSession[]) {
-            if (checkCircuitBreaker()) break;
-            if (isLegacySession(session)) continue;
-            if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60)) continue;
+          const { data: presentStudents } = await supabase
+            .from('attendance').select('student_id').eq('session_id', session.id).eq('status', 'present');
+          const presentSet = new Set((presentStudents || []).map((s: any) => s.student_id));
+          if (presentSet.size === 0) continue;
 
-            const { data: presentStudents } = await supabase
+          const { data: evaluatedStudents } = await supabase
+            .from('session_evaluations').select('student_id').eq('session_id', session.id);
+          const evalSet = new Set((evaluatedStudents || []).map((s: any) => s.student_id));
+          const missing = [...presentSet].filter((id) => !evalSet.has(id));
+          if (missing.length === 0) continue;
+
+          const recheck = async () => {
+            const { data: present2 } = await supabase
               .from('attendance').select('student_id').eq('session_id', session.id).eq('status', 'present');
-
-            const presentSet = new Set((presentStudents || []).map((s: any) => s.student_id));
-            if (presentSet.size === 0) continue;
-
-            const { data: evaluatedStudents } = await supabase
+            const p2 = new Set((present2 || []).map((s: any) => s.student_id));
+            const { data: ev2 } = await supabase
               .from('session_evaluations').select('student_id').eq('session_id', session.id);
+            const e2 = new Set((ev2 || []).map((s: any) => s.student_id));
+            return [...p2].some((id) => !e2.has(id));
+          };
 
-            const evalSet = new Set((evaluatedStudents || []).map((s: any) => s.student_id));
-            const missing = [...presentSet].filter((id) => !evalSet.has(id));
+          const missingCount = missing.length;
+          const result = await insertWarningWithRecheck({
+            supabase, session, warningType: 'no_evaluation',
+            reason: `Missing evaluations for ${missingCount} student(s) in Session ${session.session_number} (${session.groups.name})`,
+            reasonAr: `تقييمات ناقصة لـ ${missingCount} طالب في السيشن ${session.session_number} (${session.groups.name_ar})`,
+            notifTitle: 'Warning: Missing Evaluations', notifTitleAr: 'تحذير: تقييمات ناقصة',
+            notifMessage: `You didn't evaluate ${missingCount} student(s) for Session ${session.session_number} (${session.groups.name})`,
+            notifMessageAr: `لم تقم بتقييم ${missingCount} طالب للسيشن ${session.session_number} (${session.groups.name_ar})`,
+            recheckCondition: recheck,
+          });
 
-            if (missing.length > 0) {
-              const { data: existing } = await supabase
-                .from('instructor_warnings').select('id')
-                .eq('session_id', session.id).eq('warning_type', 'no_evaluation').eq('is_active', true)
-                .limit(1).maybeSingle();
-
-              if (!existing) {
-                const { error: insertError } = await supabase
-                  .from('instructor_warnings')
-                  .insert({
-                    instructor_id: session.groups.instructor_id,
-                    session_id: session.id,
-                    warning_type: 'no_evaluation',
-                    reason: `Missing evaluations for ${missing.length} student(s) in Session ${session.session_number} (${session.groups.name})`,
-                    reason_ar: `تقييمات ناقصة لـ ${missing.length} طالب في السيشن ${session.session_number} (${session.groups.name_ar})`,
-                  });
-
-                if (!insertError) {
-                  results.instructorWarnings++;
-                  await supabase.from('notifications').insert({
-                    user_id: session.groups.instructor_id,
-                    title: 'Warning: Missing Evaluations', title_ar: 'تحذير: تقييمات ناقصة',
-                    message: `You didn't evaluate ${missing.length} student(s) for Session ${session.session_number} (${session.groups.name})`,
-                    message_ar: `لم تقم بتقييم ${missing.length} طالب للسيشن ${session.session_number} (${session.groups.name_ar})`,
-                    type: 'warning', category: 'compliance',
-                  });
-                } else {
-                  console.error('[no_evaluation insert error]', insertError);
-                }
-              }
-            }
-          }
+          if (result === 'inserted') results.instructorWarnings++;
+          else if (result === 'race_resolved') results.raceResolved++;
+          else if (result === 'duplicate') results.warningsSkipped++;
         }
       }
-    } catch (e) {
-      results.errors.push(`Section 3b (Evaluations) error: ${e.message}`);
+    } catch (e: any) {
+      results.errors.push(`Section 3b (no_evaluation) error: ${e.message}`);
+    }
+
+    // Mark all scanned sessions to enforce cooldown
+    try {
+      await markScanned(supabase, eligibleSessions.map(s => s.id));
+    } catch (e: any) {
+      results.errors.push(`markScanned error: ${e.message}`);
     }
 
     // ========================================
-    // Section 4: Student deadline warnings
+    // Section 4: Student deadline warnings (unchanged behavior)
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
@@ -472,7 +580,7 @@ serve(async (req) => {
                   .eq('warning_type', 'deadline').eq('is_active', true).maybeSingle();
 
                 if (!existingWarning) {
-                  let issuedBy = null;
+                  let issuedBy: string | null = null;
                   if (assignment.group_id) {
                     const { data: group } = await supabase.from('groups').select('instructor_id').eq('id', assignment.group_id).maybeSingle();
                     issuedBy = group?.instructor_id;
@@ -499,34 +607,24 @@ serve(async (req) => {
           }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       results.errors.push(`Section 4 error: ${e.message}`);
     }
 
     // ========================================
-    // MODULE A: SLA Monitoring Engine
+    // MODULE A: SLA workload precompute (unchanged)
     // ========================================
-
-    // Pre-compute instructor workload map (once for all SLA checks)
     const instructorWorkloadMap = new Map<string, number>();
     const instructorSLAMap = new Map<string, number>();
 
     try {
       if (!checkCircuitBreaker()) {
-        // Get all active instructors and their student counts
         const { data: instructorGroups } = await supabase
           .from('groups').select('instructor_id').eq('is_active', true).not('instructor_id', 'is', null);
 
         const instructorIds = [...new Set((instructorGroups || []).map(g => g.instructor_id).filter(Boolean))];
 
         for (const instructorId of instructorIds) {
-          const { count } = await supabase
-            .from('group_students')
-            .select('*', { count: 'exact', head: true })
-            .in('group_id', (instructorGroups || []).filter(g => g.instructor_id === instructorId).map(g => g.instructor_id))
-            .eq('is_active', true);
-
-          // Actually count students properly via groups
           const { data: instrGroups } = await supabase
             .from('groups').select('id').eq('instructor_id', instructorId).eq('is_active', true);
           const groupIds = (instrGroups || []).map(g => g.id);
@@ -541,39 +639,34 @@ serve(async (req) => {
 
           instructorWorkloadMap.set(instructorId, studentCount);
 
-          // Dynamic SLA based on workload
           let slaHours = 48;
           if (studentCount > 30) slaHours = 96;
           else if (studentCount >= 20) slaHours = 72;
           instructorSLAMap.set(instructorId, slaHours);
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       results.errors.push(`Workload precompute error: ${e.message}`);
     }
 
     // ========================================
-    // Section 5: Message SLA Monitoring
+    // Section 5: Message SLA Monitoring (unchanged)
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
-        // Get all instructor user_ids
         const { data: instructorRoles } = await supabase
           .from('user_roles').select('user_id').eq('role', 'instructor');
         const instructorUserIds = (instructorRoles || []).map(r => r.user_id);
 
-        // Get all student user_ids
         const { data: studentRoles } = await supabase
           .from('user_roles').select('user_id').eq('role', 'student');
         const studentUserIds = new Set((studentRoles || []).map(r => r.user_id));
 
         if (instructorUserIds.length > 0) {
-          // Get all conversations where instructors participate
           const { data: instructorParticipations } = await supabase
             .from('conversation_participants').select('conversation_id, user_id')
             .in('user_id', instructorUserIds);
 
-          // Group by conversation to find instructor-student conversations
           const convInstructorMap = new Map<string, string>();
           for (const p of (instructorParticipations || [])) {
             convInstructorMap.set(p.conversation_id, p.user_id);
@@ -584,7 +677,6 @@ serve(async (req) => {
 
             const slaHours = instructorSLAMap.get(instructorId) || 48;
 
-            // Get the latest message in conversation
             const { data: latestMessages } = await supabase
               .from('messages').select('sender_id, created_at')
               .eq('conversation_id', convId).is('deleted_at', null)
@@ -593,19 +685,14 @@ serve(async (req) => {
             if (!latestMessages || latestMessages.length === 0) continue;
 
             const lastMsg = latestMessages[0];
-
-            // Freeze SLA: if last message is from the instructor, skip
             if (lastMsg.sender_id === instructorId) continue;
-
-            // Only care if last message is from a student
             if (!studentUserIds.has(lastMsg.sender_id)) continue;
 
             const msgTime = new Date(lastMsg.created_at).getTime();
             const hoursSince = (now.getTime() - msgTime) / (1000 * 60 * 60);
 
-            if (hoursSince < slaHours / 2) continue; // Not yet at reminder threshold
+            if (hoursSince < slaHours / 2) continue;
 
-            // Prevent Reminder Spam: check if reminder sent in last 12h
             const { data: recentReminder } = await supabase
               .from('performance_events').select('id')
               .eq('instructor_id', instructorId).eq('event_type', 'reminder_sent')
@@ -613,13 +700,11 @@ serve(async (req) => {
               .limit(1).maybeSingle();
 
             if (hoursSince >= slaHours) {
-              // Determine severity
               const overHours = hoursSince - slaHours;
               let severity = 'minor';
               if (overHours > 72) severity = 'critical';
               else if (overHours > 24) severity = 'major';
 
-              // Cap critical escalation: check if active critical warning exists in 30 days
               if (severity === 'critical') {
                 const { data: existingCritical } = await supabase
                   .from('instructor_warnings').select('id')
@@ -629,7 +714,6 @@ serve(async (req) => {
                   .limit(1).maybeSingle();
 
                 if (existingCritical) {
-                  // Log escalation event instead
                   await supabase.from('performance_events').insert({
                     instructor_id: instructorId, event_type: 'escalation_event',
                     reference_id: convId, reference_type: 'conversation',
@@ -639,7 +723,6 @@ serve(async (req) => {
                 }
               }
 
-              // Deduplication
               const { data: existingWarning } = await supabase
                 .from('instructor_warnings').select('id')
                 .eq('instructor_id', instructorId).eq('warning_type', 'no_reply')
@@ -655,7 +738,6 @@ serve(async (req) => {
                 results.slaWarnings++;
               }
             } else if (!recentReminder) {
-              // Send reminder (half SLA reached)
               await supabase.from('notifications').insert({
                 user_id: instructorId, type: 'info', category: 'compliance',
                 title: 'Reminder: Pending Student Message', title_ar: 'تذكير: رسالة طالب بانتظار الرد',
@@ -673,12 +755,12 @@ serve(async (req) => {
           }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       results.errors.push(`Section 5 (Message SLA) error: ${e.message}`);
     }
 
     // ========================================
-    // Section 6: Grading SLA Monitoring
+    // Section 6: Grading SLA Monitoring (unchanged)
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
@@ -699,7 +781,6 @@ serve(async (req) => {
 
             if (hoursSince < slaHours / 2) continue;
 
-            // Prevent Reminder Spam
             const { data: recentReminder } = await supabase
               .from('performance_events').select('id')
               .eq('instructor_id', instructorId).eq('event_type', 'reminder_sent')
@@ -712,7 +793,6 @@ serve(async (req) => {
               if (overHours > 72) severity = 'critical';
               else if (overHours > 24) severity = 'major';
 
-              // Cap critical
               if (severity === 'critical') {
                 const { data: existingCritical } = await supabase
                   .from('instructor_warnings').select('id')
@@ -731,7 +811,6 @@ serve(async (req) => {
                 }
               }
 
-              // Deduplication
               const { data: existingWarning } = await supabase
                 .from('instructor_warnings').select('id')
                 .eq('instructor_id', instructorId).eq('warning_type', 'late_grading')
@@ -764,12 +843,12 @@ serve(async (req) => {
           }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       results.errors.push(`Section 6 (Grading SLA) error: ${e.message}`);
     }
 
     // ========================================
-    // MODULE B: Metrics Engine (Section 7)
+    // MODULE B: Metrics Engine (unchanged)
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
@@ -780,13 +859,11 @@ serve(async (req) => {
           if (checkCircuitBreaker()) break;
           const instructorId = role.user_id;
 
-          // Count warnings this month (rolling 30 days)
           const { count: warningCount } = await supabase
             .from('instructor_warnings').select('*', { count: 'exact', head: true })
             .eq('instructor_id', instructorId).eq('is_active', true)
             .gte('created_at', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
-          // Count reminders this month
           const { count: reminderCount } = await supabase
             .from('performance_events').select('*', { count: 'exact', head: true })
             .eq('instructor_id', instructorId).eq('event_type', 'reminder_sent')
@@ -794,17 +871,13 @@ serve(async (req) => {
 
           const totalStudents = instructorWorkloadMap.get(instructorId) || 0;
 
-          // Count groups
           const { count: groupCount } = await supabase
             .from('groups').select('*', { count: 'exact', head: true })
             .eq('instructor_id', instructorId).eq('is_active', true);
 
-          // Avg reply time (simplified: count messages replied within the month)
-          // For now, use 0 as placeholder - will be refined with actual message analysis
           const avgReply = 0;
           const avgGrading = 0;
 
-          // Compute quality score
           const { data: scoreResult } = await supabase.rpc('compute_quality_score', {
             p_warnings: warningCount || 0,
             p_reminders: reminderCount || 0,
@@ -815,7 +888,6 @@ serve(async (req) => {
 
           let qualityScore = scoreResult || 100;
 
-          // Consistency Bonus: +5 if 0 warnings for 3 consecutive months
           const threeMonthsAgo = new Date(now);
           threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
           const { count: recentWarnings } = await supabase
@@ -827,7 +899,6 @@ serve(async (req) => {
             qualityScore = Math.min(100, qualityScore + 5);
           }
 
-          // UPSERT metrics
           await supabase.from('instructor_performance_metrics').upsert({
             instructor_id: instructorId,
             month: currentMonth,
@@ -844,17 +915,15 @@ serve(async (req) => {
           results.metricsUpdated++;
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       results.errors.push(`Section 7 (Metrics) error: ${e.message}`);
     }
 
     // ========================================
-    // MODULE C: Incentive Engine (Section 8)
+    // MODULE C: Incentive Engine (unchanged)
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
-        // Only run on last day of month
-        // Use Cairo day to determine last day of month
         const tomorrowCairo = getCairoDatePlusDays(1);
         const isLastDayOfMonth = tomorrowCairo.endsWith('-01');
 
@@ -866,7 +935,6 @@ serve(async (req) => {
             if (checkCircuitBreaker()) break;
             const instructorId = role.user_id;
 
-            // Check if 0 no_reply and 0 late_grading this month
             const { count: noReplyCount } = await supabase
               .from('instructor_warnings').select('*', { count: 'exact', head: true })
               .eq('instructor_id', instructorId).eq('is_active', true)
@@ -874,19 +942,16 @@ serve(async (req) => {
               .gte('created_at', currentMonth);
 
             if ((noReplyCount || 0) === 0) {
-              // Check no existing recommendation this month
               const { data: existingRec } = await supabase
                 .from('performance_events').select('id')
                 .eq('instructor_id', instructorId).eq('event_type', 'bonus_recommended')
                 .gte('created_at', currentMonth).limit(1).maybeSingle();
 
               if (!existingRec) {
-                // Get current metrics
                 const { data: metrics } = await supabase
                   .from('instructor_performance_metrics').select('quality_score, total_students, total_groups')
                   .eq('instructor_id', instructorId).eq('month', currentMonth).maybeSingle();
 
-                // Get instructor name
                 const { data: profile } = await supabase
                   .from('profiles').select('full_name, full_name_ar').eq('user_id', instructorId).maybeSingle();
 
@@ -901,13 +966,12 @@ serve(async (req) => {
                   },
                 });
 
-                // Notify admins
                 const { data: admins } = await supabase
                   .from('user_roles').select('user_id').eq('role', 'admin');
 
                 for (const admin of (admins || [])) {
                   await supabase.from('notifications').insert({
-                    user_id: admin.user_id, type: 'info', category: 'admin',
+                    user_id: admin.user_id, type: 'info', category: 'compliance',
                     title: 'Bonus Recommendation', title_ar: 'توصية مكافأة',
                     message: `${profile?.full_name || 'Instructor'} achieved 0 SLA violations this month. Consider a bonus.`,
                     message_ar: `${profile?.full_name_ar || 'المدرب'} حقق 0 مخالفات SLA هذا الشهر. يُنصح بمكافأة.`,
@@ -921,12 +985,12 @@ serve(async (req) => {
           }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       results.errors.push(`Section 8 (Incentive) error: ${e.message}`);
     }
 
     // ========================================
-    // MODULE D-2: Exam SLA Timeout Check (Section 9a)
+    // Exam SLA Timeout (unchanged)
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
@@ -934,33 +998,54 @@ serve(async (req) => {
         if (slaError) {
           results.errors.push(`Section 9a (Exam SLA) error: ${slaError.message}`);
         } else {
-          console.log(`[Compliance Monitor] Exam SLA check: ${JSON.stringify(slaResult)}`);
+          console.log(`[Compliance Monitor V2] Exam SLA: ${JSON.stringify(slaResult)}`);
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       results.errors.push(`Section 9a (Exam SLA) error: ${e.message}`);
     }
 
     // ========================================
-    // MODULE D: System Health (Section 9)
+    // System Health (unchanged)
     // ========================================
     try {
       const executionTimeMs = Date.now() - startTime;
-
       await supabase.from('system_health_metrics').upsert({
         date: todayStr,
         total_reminders: results.slaReminders,
         total_warnings: results.instructorWarnings + results.slaWarnings,
-        total_deductions: 0, // Tracked by process-deductions
+        total_deductions: 0,
         avg_execution_time_ms: executionTimeMs,
         errors_count: results.errors.length,
       }, { onConflict: 'date' });
-    } catch (e) {
+    } catch (e: any) {
       results.errors.push(`Section 9 (Health) error: ${e.message}`);
     }
 
     const totalTime = Date.now() - startTime;
-    console.log(`[Compliance Monitor] Complete in ${totalTime}ms. Warnings: ${results.instructorWarnings + results.slaWarnings}, Reminders: ${results.slaReminders}, Metrics: ${results.metricsUpdated}, Errors: ${results.errors.length}`);
+    console.log(`[Compliance Monitor V2] Complete in ${totalTime}ms. Scanned: ${results.sessionsScanned}, Warnings: ${results.instructorWarnings + results.slaWarnings}, Skipped: ${results.warningsSkipped}, RaceResolved: ${results.raceResolved}, AvgScanLag: ${results.avgScanLagSeconds}s, Errors: ${results.errors.length}`);
+
+    // Finalize scan run record
+    if (scanRunId) {
+      await supabase.from('compliance_scan_runs').update({
+        finished_at: new Date().toISOString(),
+        execution_time_ms: totalTime,
+        sessions_scanned: results.sessionsScanned,
+        warnings_created: results.instructorWarnings + results.slaWarnings,
+        warnings_skipped: results.warningsSkipped + results.raceResolved,
+        warnings_auto_resolved: results.autoResolved,
+        avg_scan_lag_seconds: results.avgScanLagSeconds,
+        errors: results.errors,
+        metadata: {
+          studentWarnings: results.studentWarnings,
+          slaReminders: results.slaReminders,
+          metricsUpdated: results.metricsUpdated,
+          bonusRecommendations: results.bonusRecommendations,
+          circuitBreakerTriggered: results.circuitBreakerTriggered,
+          skippedLegacySessions: results.skippedLegacySessions,
+        },
+      }).eq('id', scanRunId);
+    }
 
     return new Response(
       JSON.stringify({ success: true, timestamp: now.toISOString(), execution_ms: totalTime, results }),
@@ -968,6 +1053,13 @@ serve(async (req) => {
     );
   } catch (error: unknown) {
     console.error('Compliance monitor error:', error);
+    if (scanRunId) {
+      await supabase.from('compliance_scan_runs').update({
+        finished_at: new Date().toISOString(),
+        execution_time_ms: Date.now() - startTime,
+        errors: [{ message: (error as any)?.message ?? 'Internal error' }],
+      }).eq('id', scanRunId);
+    }
     return new Response(
       JSON.stringify({ success: false, error: 'Internal server error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
