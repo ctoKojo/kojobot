@@ -5507,6 +5507,7 @@ export type Database = {
         }
         Returns: Json
       }
+      verify_cron_token: { Args: { p_token: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "instructor" | "student" | "reception" | "parent"
