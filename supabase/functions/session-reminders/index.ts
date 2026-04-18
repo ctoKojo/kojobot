@@ -28,8 +28,9 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const cronSecret = Deno.env.get('CRON_SECRET')
 
-    // Authentication check - require admin role
+    // Authentication: accept service role, CRON_SECRET, or admin user JWT
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
@@ -38,35 +39,38 @@ Deno.serve(async (req) => {
       )
     }
 
-    const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    })
-
     const token = authHeader.replace('Bearer ', '')
-    const { data: claimsData, error: claimsError } = await userSupabase.auth.getClaims(token)
+    const isServiceRole = token === serviceRoleKey
+    const isCronAuth = !!cronSecret && token === cronSecret
 
-    if (claimsError || !claimsData?.claims) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    if (!isServiceRole && !isCronAuth) {
+      // Fallback: validate admin user JWT for manual invocations
+      const userSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      })
+      const { data: claimsData, error: claimsError } = await userSupabase.auth.getClaims(token)
 
-    const userId = claimsData.claims.sub as string
+      if (claimsError || !claimsData?.claims) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
 
-    // Check if user is admin
-    const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
-    const { data: roleData } = await adminSupabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .single()
+      const userId = claimsData.claims.sub as string
+      const adminSupabase = createClient(supabaseUrl, serviceRoleKey)
+      const { data: roleData } = await adminSupabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single()
 
-    if (roleData?.role !== 'admin') {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden - Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      if (roleData?.role !== 'admin') {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden - Admin access required' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
     }
 
     console.log('Starting session reminder check...')
