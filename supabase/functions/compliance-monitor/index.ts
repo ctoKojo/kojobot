@@ -81,7 +81,18 @@ serve(async (req) => {
   const isCronAuth = cronSecret && token === cronSecret;
 
   if (!isServiceRole && !isCronAuth) {
-    console.log('[Compliance Monitor] Request rejected: not service role or cron');
+    // Temporary diagnostic — partial fingerprints only, never full secrets
+    console.log('[Compliance Monitor] Auth failed', {
+      hasAuth: !!authHeader,
+      tokenLen: token.length,
+      tokenPrefix: token.substring(0, 6),
+      tokenSuffix: token.substring(token.length - 6),
+      cronSecretSet: !!cronSecret,
+      cronSecretLen: cronSecret?.length ?? 0,
+      cronSecretPrefix: cronSecret?.substring(0, 6) ?? '',
+      cronSecretSuffix: (cronSecret ?? '').substring((cronSecret ?? '').length - 6),
+      serviceKeyLen: supabaseKey?.length ?? 0,
+    });
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
