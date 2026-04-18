@@ -234,7 +234,10 @@ export default function MySessions() {
     return (
       s.curriculum.student_pdf_available ||
       s.curriculum.summary_video_url ||
-      s.curriculum.full_video_url
+      s.curriculum.full_video_url ||
+      // Always show the section if user lacks access — locked promo buttons render
+      !s.curriculum.can_view_summary_video ||
+      !s.curriculum.can_view_full_video
     );
   };
 
