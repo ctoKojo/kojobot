@@ -114,8 +114,11 @@ export default function SessionsPage() {
 
   const fetchData = async () => {
     try {
-      let groupsQuery = supabase.from('groups').select('id, name, name_ar, schedule_day, schedule_time, status').eq('is_active', true);
-      
+      let groupsQuery = supabase
+        .from('groups')
+        .select('id, name, name_ar, schedule_day, schedule_time, status')
+        .eq('is_active', true);
+
       if (role === 'instructor' && user) {
         groupsQuery = groupsQuery.eq('instructor_id', user.id);
       }
@@ -123,10 +126,14 @@ export default function SessionsPage() {
       const { data: groupsData } = await groupsQuery;
       setGroups(groupsData || []);
 
-      let sessionsQuery = supabase.from('sessions').select('*').order('session_number', { ascending: true });
+      // 1. Fetch raw original sessions
+      let sessionsQuery = supabase
+        .from('sessions')
+        .select('*')
+        .order('session_number', { ascending: true });
 
       if (role === 'instructor' && user && groupsData) {
-        const groupIds = groupsData.map(g => g.id);
+        const groupIds = groupsData.map((g) => g.id);
         if (groupIds.length > 0) {
           sessionsQuery = sessionsQuery.in('group_id', groupIds);
         }
@@ -134,12 +141,12 @@ export default function SessionsPage() {
 
       const { data: sessionsData } = await sessionsQuery;
 
-      // Also fetch confirmed individual makeup sessions and surface them
-      // alongside regular sessions so reception/admin/instructors can see
-      // them in the daily/upcoming sessions view.
+      // 2. Fetch confirmed makeup overrides
       let makeupQuery = supabase
         .from('makeup_sessions')
-        .select('id, group_id, scheduled_date, scheduled_time, status, notes, assigned_instructor_id, original_session_id, student_id')
+        .select(
+          'id, group_id, scheduled_date, scheduled_time, status, notes, assigned_instructor_id, original_session_id, student_id, student_confirmed'
+        )
         .eq('student_confirmed', true)
         .in('status', ['scheduled', 'completed']);
 
@@ -149,59 +156,36 @@ export default function SessionsPage() {
 
       const { data: makeupData } = await makeupQuery;
 
-      // Pull the original session's metadata (number/content) so the makeup
-      // row can show meaningful labels.
-      const originalIds = Array.from(
-        new Set((makeupData || []).map((m: any) => m.original_session_id).filter(Boolean))
+      // 3. For makeups whose original isn't in the session list (e.g. instructor
+      //    only sees their own groups but the makeup belongs to another group),
+      //    pull originals metadata so we can still surface them.
+      const knownIds = new Set((sessionsData || []).map((s: any) => s.id));
+      const orphanIds = Array.from(
+        new Set(
+          (makeupData || [])
+            .map((m: any) => m.original_session_id)
+            .filter((id: string) => id && !knownIds.has(id))
+        )
       );
-      let originalsMap = new Map<string, any>();
-      if (originalIds.length > 0) {
-        const { data: originals } = await supabase
+      const originalsLookup = new Map<string, any>();
+      if (orphanIds.length > 0) {
+        const { data: orphans } = await supabase
           .from('sessions')
-          .select('id, session_number, content_number, duration_minutes, attendance_mode, session_link')
-          .in('id', originalIds);
-        originalsMap = new Map((originals || []).map((s: any) => [s.id, s]));
+          .select(
+            'id, group_id, session_number, content_number, duration_minutes, attendance_mode, session_link, topic, topic_ar'
+          )
+          .in('id', orphanIds);
+        (orphans || []).forEach((o: any) => originalsLookup.set(o.id, o));
       }
 
-      // Group makeup sessions that share the same original session + group + date + time
-      // so that a single co-scheduled makeup session is shown as ONE row, not one per student.
-      const makeupGroupsMap = new Map<string, any[]>();
-      (makeupData || []).forEach((m: any) => {
-        const key = `${m.group_id}|${m.original_session_id}|${m.scheduled_date}|${m.scheduled_time}|${m.assigned_instructor_id || ''}`;
-        if (!makeupGroupsMap.has(key)) makeupGroupsMap.set(key, []);
-        makeupGroupsMap.get(key)!.push(m);
-      });
+      // 4. Resolve: original + override → single logical session per row.
+      const resolved = resolveSessions(
+        (sessionsData || []) as any,
+        (makeupData || []) as any,
+        { originalsLookup }
+      );
 
-      const existingSessionIds = new Set((sessionsData || []).map((s: any) => s.id));
-
-      const makeupRows: Session[] = Array.from(makeupGroupsMap.values())
-        // Skip makeup rows whose original session is already shown in the regular list
-        // for the current viewer (prevents duplicate rows).
-        .filter((group) => !existingSessionIds.has(group[0].original_session_id))
-        .map((group) => {
-          const first = group[0];
-          const orig = originalsMap.get(first.original_session_id) || {};
-          return {
-            // Use the original session id so navigation/details opens the real session.
-            id: first.original_session_id,
-            group_id: first.group_id,
-            session_date: first.scheduled_date,
-            session_time: first.scheduled_time,
-            duration_minutes: orig.duration_minutes ?? 60,
-            topic: null,
-            topic_ar: null,
-            status: first.status,
-            notes: first.notes,
-            session_number: orig.session_number ?? null,
-            content_number: orig.content_number ?? null,
-            is_makeup: true,
-            makeup_session_id: first.id,
-            attendance_mode: orig.attendance_mode ?? null,
-            session_link: orig.session_link ?? null,
-          };
-        });
-
-      setSessions([...(sessionsData || []), ...makeupRows]);
+      setSessions(resolved);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
