@@ -53,24 +53,9 @@ import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { logUpdate, logDelete } from '@/lib/activityLogger';
 import { isSessionEndedCairo } from '@/lib/sessionTimeGuard';
 import { getSessionStatusBadge } from '@/lib/statusBadges';
+import { resolveSessions, type ResolvedSession } from '@/lib/sessionResolver';
 
-interface Session {
-  id: string;
-  group_id: string;
-  session_date: string;
-  session_time: string;
-  duration_minutes: number;
-  topic: string | null;
-  topic_ar: string | null;
-  status: string;
-  notes: string | null;
-  session_number: number | null;
-  content_number: number | null;
-  is_makeup: boolean;
-  makeup_session_id: string | null;
-  attendance_mode?: string | null;
-  session_link?: string | null;
-}
+type Session = ResolvedSession;
 
 // Helper: display content_number as primary, session_number as secondary when different
 const getSessionLabel = (session: { content_number: number | null; session_number: number | null }, isRTL: boolean) => {
