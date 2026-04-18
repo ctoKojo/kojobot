@@ -35,6 +35,8 @@ interface ExamCandidate {
   group_id: string;
   current_level_id: string;
   status: string;
+  outcome: string | null;
+  exam_retry_count: number;
   exam_scheduled_at: string | null;
   exam_submitted_at: string | null;
   graded_at: string | null;
@@ -49,7 +51,10 @@ interface ExamCandidate {
   final_exam_quiz_id: string | null;
 }
 
-type FilterType = 'all' | 'awaiting_exam' | 'exam_scheduled' | 'graded';
+type FilterType = 'all' | 'awaiting_exam' | 'exam_scheduled' | 'graded' | 'failed';
+
+const isFailedOutcome = (o: string | null | undefined) =>
+  o === 'failed' || o === 'failed_exam' || o === 'failed_total';
 
 export default function FinalExams() {
   const { isRTL, language } = useLanguage();
