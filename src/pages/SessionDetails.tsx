@@ -2175,7 +2175,8 @@ export default function SessionDetails() {
                         </SelectContent>
                       </Select>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
 
                 {!allStudentsSelected && (
