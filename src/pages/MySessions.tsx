@@ -22,6 +22,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { PdfDownloadButton } from '@/components/PdfDownloadButton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface AttendedSession {
   id: string;
