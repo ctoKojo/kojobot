@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { logSubmit, logView } from '@/lib/activityLogger';
+import { AttachmentViewer } from '@/components/AttachmentViewer';
 
 interface Assignment {
   id: string;
@@ -321,15 +322,10 @@ export default function SubmitAssignment() {
             {assignment?.attachment_url && (
               <div className="p-4 rounded-lg border bg-muted/50">
                 <p className="text-sm font-medium mb-2">{isRTL ? 'مرفقات الواجب:' : 'Assignment Attachments:'}</p>
-                <a
-                  href={assignment.attachment_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline flex items-center gap-2"
-                >
-                  {getFileIcon(assignment.attachment_type)}
-                  {isRTL ? 'عرض المرفق' : 'View Attachment'}
-                </a>
+                <AttachmentViewer
+                  url={assignment.attachment_url}
+                  type={assignment.attachment_type}
+                />
               </div>
             )}
           </CardContent>
@@ -475,19 +471,16 @@ export default function SubmitAssignment() {
                     </Button>
                   </div>
                 ) : submission?.attachment_url && !isRevisionRequested ? (
-                  <div className="p-4 rounded-lg border bg-muted/50 flex items-center justify-between">
+                  <div className="p-4 rounded-lg border bg-muted/50 flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3">
                       {getFileIcon(submission.attachment_type)}
                       <div>
                         <p className="font-medium">{isRTL ? 'ملف مرفق سابق' : 'Previous attached file'}</p>
-                        <a 
-                          href={submission.attachment_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline"
-                        >
-                          {isRTL ? 'عرض الملف' : 'View file'}
-                        </a>
+                        <AttachmentViewer
+                          url={submission.attachment_url}
+                          type={submission.attachment_type}
+                          label={isRTL ? 'عرض الملف' : 'View file'}
+                        />
                       </div>
                     </div>
                     <Button

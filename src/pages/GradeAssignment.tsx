@@ -13,6 +13,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { AttachmentViewer } from '@/components/AttachmentViewer';
 
 interface Submission {
   id: string;
@@ -324,20 +325,15 @@ export default function GradeAssignment() {
             )}
 
             {submission?.attachment_url && (
-              <div className="p-4 rounded-lg border flex items-center justify-between">
+              <div className="p-4 rounded-lg border flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3">
                   {getFileIcon(submission.attachment_type)}
                   <span>{isRTL ? 'ملف مرفق' : 'Attached file'}</span>
                 </div>
-                <a
-                  href={submission.attachment_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-primary hover:underline"
-                >
-                  <Download className="w-4 h-4" />
-                  {isRTL ? 'تحميل' : 'Download'}
-                </a>
+                <AttachmentViewer
+                  url={submission.attachment_url}
+                  type={submission.attachment_type}
+                />
               </div>
             )}
 
