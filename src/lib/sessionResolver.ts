@@ -132,10 +132,11 @@ function applyOverride(
     ...original,
     session_date: winner.scheduled_date,
     session_time: winner.scheduled_time,
-    // Keep original status when the makeup hasn't actually run yet —
-    // the override is about WHEN/WHO, not academic outcome.
-    status:
-      winner.status === 'completed' ? 'completed' : original.status,
+    // The override represents the actual occurrence — its status reflects
+    // the rescheduled event lifecycle (scheduled / completed / cancelled),
+    // NOT the original session row (which may already be 'completed' when
+    // a makeup is created from a cancellation/absence).
+    status: winner.status || original.status,
     notes: winner.notes ?? original.notes,
     is_makeup: true,
     makeup_session_id: winner.id,
