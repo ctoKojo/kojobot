@@ -188,6 +188,19 @@ export default function TakeQuiz() {
 
       if (assignmentError) throw assignmentError;
 
+      // Authorization guard: a per-student assignment (student_id IS NOT NULL)
+      // must match the current user. Group-level assignments (student_id IS NULL)
+      // are open to all students in the group.
+      if ((assignmentData as any).student_id && (assignmentData as any).student_id !== user?.id) {
+        toast({
+          variant: 'destructive',
+          title: isRTL ? 'غير مصرح' : 'Not authorized',
+          description: isRTL ? 'هذا الكويز ليس مخصصاً لك' : 'This quiz is not assigned to you',
+        });
+        navigate('/my-quizzes');
+        return;
+      }
+
       // Apply per-student window override (e.g. makeup session window)
       try {
         const { data: eff } = await supabase.rpc('get_effective_quiz_window', {
