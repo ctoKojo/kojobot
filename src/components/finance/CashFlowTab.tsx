@@ -202,6 +202,8 @@ export function CashFlowTab() {
       // Build detailed academic renewals by month
       const academicDetailsByMonth: Record<string, AcademicRenewalDetail[]> = {};
       const academicByMonth: Record<string, number> = {};
+      // Per-month aggregates: total expected, total paid, remaining to collect
+      const academicTotalsByMonth: Record<string, { totalExpected: number; totalPaid: number; totalRemaining: number; renewedCount: number; notRenewedCount: number }> = {};
 
       nearCompletion.forEach(({ studentId, groupName, scheduleDay, remaining, immediate, nextLevelId }) => {
         const completionDate = immediate ? new Date() : estimateCompletionDate(scheduleDay, remaining);
