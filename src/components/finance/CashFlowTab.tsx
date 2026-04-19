@@ -35,6 +35,10 @@ interface AcademicRenewalDetail {
   remaining: number;
   amount: number;
   estimatedDate: Date;
+  renewalStatus: 'renewed' | 'not_renewed';
+  paidOnNew: number;       // for renewed
+  remainingOnNew: number;  // for not_renewed (= amount)
+  totalNew: number;        // for not_renewed (full new package price)
 }
 
 interface Projection {
@@ -61,7 +65,7 @@ export function CashFlowTab() {
       const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
       const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString().split('T')[0];
 
-      const [paymentsRes, expensesRes, subsThisMonthRes, subsNextMonthRes, allActiveSubsRes, progressRes] = await Promise.all([
+      const [paymentsRes, expensesRes, subsThisMonthRes, subsNextMonthRes, allActiveSubsRes, progressRes, attendanceRes, levelsRes, plansRes] = await Promise.all([
         supabase.from('payments').select('amount, payment_date').gte('payment_date', sixMonthsAgoStr),
         supabase.from('expenses').select('amount, expense_date').gte('expense_date', sixMonthsAgoStr),
         supabase.from('subscriptions').select('id, installment_amount, next_payment_date, payment_type, remaining_amount, end_date').eq('status', 'active').gte('next_payment_date', thisMonthStart).lte('next_payment_date', thisMonthEnd),
@@ -71,13 +75,20 @@ export function CashFlowTab() {
           student_id,
           group_id,
           status,
+          current_level_id,
           groups!group_student_progress_group_id_fkey (
             id, name, schedule_day, last_delivered_content_number, is_active, status
           ),
           levels!group_student_progress_current_level_id_fkey (
-            expected_sessions_count
+            expected_sessions_count, level_order, track_id
           )
         `).in('status', ['in_progress', 'awaiting_exam', 'exam_scheduled', 'graded']),
+        // For per-student last attended content
+        supabase.from('attendance').select('student_id, status, sessions!attendance_session_id_fkey(group_id, content_number)').eq('status', 'present'),
+        // All levels for next-level lookup
+        supabase.from('levels').select('id, name, name_ar, level_order, track_id, is_active').eq('is_active', true).order('level_order'),
+        // Pricing plans for new-package amount estimate
+        supabase.from('subscriptions').select('student_id, level_id, total_amount, paid_amount, remaining_amount, status').in('status', ['active']),
       ]);
 
       const payments = paymentsRes.data || [];
@@ -104,13 +115,38 @@ export function CashFlowTab() {
 
       const dueNextMonth = (subsNextMonthRes.data || []).reduce((sum: number, s: any) => sum + Number(s.installment_amount || 0), 0);
 
+      // ---- Per-student last attended content map: key = `${studentId}::${groupId}` ----
+      const attendanceRows = (attendanceRes.data || []) as any[];
+      const studentLastContentMap: Record<string, number> = {};
+      attendanceRows.forEach((row: any) => {
+        const sess = row.sessions;
+        if (!sess || sess.content_number == null) return;
+        const key = `${row.student_id}::${sess.group_id}`;
+        const prev = studentLastContentMap[key] || 0;
+        if (Number(sess.content_number) > prev) studentLastContentMap[key] = Number(sess.content_number);
+      });
+
+      // ---- Levels: map level_order → next level id (per track) ----
+      const allLevels = (levelsRes.data || []) as any[];
+      const findNextLevelId = (currentOrder: number, trackId: string | null): string | null => {
+        const candidates = allLevels
+          .filter((l: any) => l.level_order > currentOrder && (trackId == null || l.track_id == null || l.track_id === trackId))
+          .sort((a: any, b: any) => a.level_order - b.level_order);
+        return candidates[0]?.id ?? null;
+      };
+
+      // Index all student subscriptions by student_id (for renewal lookup)
+      const allStudentSubs = (plansRes.data || []) as any[];
+
       // ---- Academic renewal projections ----
       const progressRows = (progressRes.data || []) as any[];
-      const nearCompletion: { studentId: string; groupId: string; groupName: string; scheduleDay: string; remaining: number; immediate: boolean }[] = [];
+      const nearCompletion: { studentId: string; groupId: string; groupName: string; scheduleDay: string; remaining: number; immediate: boolean; nextLevelId: string | null }[] = [];
       progressRows.forEach((row: any) => {
         const g = row.groups;
         const l = row.levels;
         if (!g || !l || g.is_active !== true || g.status !== 'active') return;
+
+        const nextLevelId = findNextLevelId(Number(l.level_order || 0), l.track_id || null);
 
         // Students past in_progress (awaiting/scheduled/graded) → renewal expected this month
         const advancedStatuses = ['awaiting_exam', 'exam_scheduled', 'graded'];
@@ -122,13 +158,15 @@ export function CashFlowTab() {
             scheduleDay: g.schedule_day,
             remaining: 0,
             immediate: true,
+            nextLevelId,
           });
           return;
         }
 
         const expected = Number(l.expected_sessions_count || 0);
-        const delivered = Number(g.last_delivered_content_number || 0);
-        const remaining = expected - delivered;
+        // Use student's actual last attended content (fallback to group delivered if no attendance)
+        const studentDelivered = studentLastContentMap[`${row.student_id}::${g.id}`] ?? Number(g.last_delivered_content_number || 0);
+        const remaining = expected - studentDelivered;
         if (remaining > 0 && remaining <= 13) {
           nearCompletion.push({
             studentId: row.student_id,
@@ -137,6 +175,7 @@ export function CashFlowTab() {
             scheduleDay: g.schedule_day,
             remaining,
             immediate: false,
+            nextLevelId,
           });
         }
       });
@@ -164,11 +203,29 @@ export function CashFlowTab() {
       const academicDetailsByMonth: Record<string, AcademicRenewalDetail[]> = {};
       const academicByMonth: Record<string, number> = {};
 
-      nearCompletion.forEach(({ studentId, groupName, scheduleDay, remaining, immediate }) => {
+      nearCompletion.forEach(({ studentId, groupName, scheduleDay, remaining, immediate, nextLevelId }) => {
         const completionDate = immediate ? new Date() : estimateCompletionDate(scheduleDay, remaining);
         const monthKey = `${completionDate.getFullYear()}-${completionDate.getMonth()}`;
-        const amount = studentSubMap[studentId] || 0;
-        if (amount <= 0) return;
+        const expectedNewPackage = studentSubMap[studentId] || 0;
+        if (expectedNewPackage <= 0) return;
+
+        // Determine renewal status — does student already have an active sub for the next level?
+        const newSub = nextLevelId
+          ? allStudentSubs.find((s: any) => s.student_id === studentId && s.level_id === nextLevelId)
+          : null;
+
+        const renewalStatus: 'renewed' | 'not_renewed' = newSub ? 'renewed' : 'not_renewed';
+        const totalNew = newSub ? Number(newSub.total_amount || 0) : expectedNewPackage;
+        const paidOnNew = newSub ? Number(newSub.paid_amount || 0) : 0;
+        const remainingOnNew = newSub ? Number(newSub.remaining_amount || 0) : expectedNewPackage;
+
+        // Amount that still needs to come in (for cash-flow projection):
+        // - If renewed → remaining on new sub (could be 0)
+        // - If not renewed → full expected package
+        const amount = renewalStatus === 'renewed' ? remainingOnNew : expectedNewPackage;
+        if (amount <= 0 && renewalStatus === 'renewed') {
+          // fully paid renewal — still show in detail table (status only) but don't add to projection
+        }
 
         academicByMonth[monthKey] = (academicByMonth[monthKey] || 0) + amount;
         if (!academicDetailsByMonth[monthKey]) academicDetailsByMonth[monthKey] = [];
@@ -179,6 +236,10 @@ export function CashFlowTab() {
           remaining,
           amount,
           estimatedDate: completionDate,
+          renewalStatus,
+          paidOnNew,
+          remainingOnNew,
+          totalNew,
         });
       });
 
@@ -502,34 +563,72 @@ function AcademicMonthSection({ monthLabel, details, total, isRTL }: {
                 <TableHead>{isRTL ? 'المجموعة' : 'Group'}</TableHead>
                 <TableHead className="text-center">{isRTL ? 'سيشنات متبقية' : 'Remaining'}</TableHead>
                 <TableHead className="text-center">{isRTL ? 'تاريخ الانتهاء المتوقع' : 'Est. Completion'}</TableHead>
-                <TableHead className={isRTL ? 'text-left' : 'text-right'}>{isRTL ? 'مبلغ التجديد' : 'Renewal Amount'}</TableHead>
+                <TableHead className="text-center">{isRTL ? 'حالة التجديد' : 'Renewal Status'}</TableHead>
+                <TableHead className={isRTL ? 'text-left' : 'text-right'}>{isRTL ? 'تفاصيل المبلغ' : 'Amount Details'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {details.sort((a, b) => a.remaining - b.remaining).map((d) => (
-                <TableRow key={`${d.studentId}-${d.groupName}`}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <User className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm font-medium">{d.studentName}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs">{d.groupName}</Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={d.remaining <= 2 ? 'destructive' : 'secondary'} className="text-xs">
-                      {d.remaining} {isRTL ? 'سيشن' : 'sessions'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center text-xs text-muted-foreground">
-                    {d.estimatedDate.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })}
-                  </TableCell>
-                  <TableCell className={`font-semibold text-purple-600 ${isRTL ? 'text-left' : 'text-right'}`}>
-                    {d.amount} {isRTL ? 'ج.م' : 'EGP'}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {details.sort((a, b) => a.remaining - b.remaining).map((d) => {
+                const isRenewed = d.renewalStatus === 'renewed';
+                return (
+                  <TableRow key={`${d.studentId}-${d.groupName}`}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-sm font-medium">{d.studentName}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">{d.groupName}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={d.remaining <= 2 ? 'destructive' : 'secondary'} className="text-xs">
+                        {d.remaining} {isRTL ? 'سيشن' : 'sessions'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center text-xs text-muted-foreground">
+                      {d.estimatedDate.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {isRenewed ? (
+                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-xs">
+                          {isRTL ? 'تم التجديد' : 'Renewed'}
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-xs">
+                          {isRTL ? 'لم يتم التجديد' : 'Not Renewed'}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className={`font-semibold ${isRTL ? 'text-left' : 'text-right'}`}>
+                      {isRenewed ? (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-emerald-600 text-sm">
+                            {isRTL ? 'مدفوع: ' : 'Paid: '}{d.paidOnNew} {isRTL ? 'ج.م' : 'EGP'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {isRTL ? 'من ' : 'of '}{d.totalNew} {isRTL ? 'ج.م' : 'EGP'}
+                          </span>
+                          {d.remainingOnNew > 0 && (
+                            <span className="text-xs text-amber-600">
+                              {isRTL ? 'متبقي: ' : 'Remaining: '}{d.remainingOnNew} {isRTL ? 'ج.م' : 'EGP'}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-amber-600 text-sm">
+                            {isRTL ? 'متبقي: ' : 'Remaining: '}{d.remainingOnNew} {isRTL ? 'ج.م' : 'EGP'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {isRTL ? 'من ' : 'of '}{d.totalNew} {isRTL ? 'ج.م' : 'EGP'}
+                          </span>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
