@@ -67,7 +67,8 @@ export default function FinanceDataQuality() {
     <DashboardLayout>
       <PageHeader
         title={isRTL ? 'جودة البيانات المالية' : 'Financial Data Quality'}
-        description={isRTL ? 'مراقبة المشاكل وإصلاحها قبل الإقفال' : 'Monitor & fix issues before period close'}
+        subtitle={isRTL ? 'مراقبة المشاكل وإصلاحها قبل الإقفال' : 'Monitor & fix issues before period close'}
+        icon={AlertTriangle}
       />
 
       <div className="grid gap-4 md:grid-cols-2 mb-4">

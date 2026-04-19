@@ -37,7 +37,8 @@ export default function FinanceReports() {
     <DashboardLayout>
       <PageHeader
         title={isRTL ? 'التقارير المالية' : 'Financial Reports'}
-        description={isRTL ? 'ميزان مراجعة، قائمة دخل، ميزانية، تدفقات نقدية' : 'Trial balance, income statement, balance sheet, cash flow'}
+        subtitle={isRTL ? 'ميزان مراجعة، قائمة دخل، ميزانية، تدفقات نقدية' : 'Trial balance, income statement, balance sheet, cash flow'}
+        icon={Lock}
       />
 
       <Card className="mb-4">

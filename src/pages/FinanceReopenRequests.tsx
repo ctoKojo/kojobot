@@ -57,7 +57,8 @@ export default function FinanceReopenRequests() {
     <DashboardLayout>
       <PageHeader
         title={isRTL ? 'طلبات إعادة فتح الفترات' : 'Period Reopen Requests'}
-        description={isRTL ? 'موافقة مزدوجة — الموافق ≠ الطالب' : 'Dual approval — approver ≠ requester'}
+        subtitle={isRTL ? 'موافقة مزدوجة — الموافق ≠ الطالب' : 'Dual approval — approver ≠ requester'}
+        icon={CheckCircle2}
       />
 
       <Card>

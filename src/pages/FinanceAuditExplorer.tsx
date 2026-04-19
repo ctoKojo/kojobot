@@ -53,7 +53,8 @@ export default function FinanceAuditExplorer() {
     <DashboardLayout>
       <PageHeader
         title={isRTL ? 'مستكشف التدقيق' : 'Audit Explorer'}
-        description={isRTL ? 'سجل التدقيق غير القابل للتعديل + تحقق سلسلة الـ hash' : 'Tamper-evident audit log & hash chain verification'}
+        subtitle={isRTL ? 'سجل التدقيق غير القابل للتعديل + تحقق سلسلة الـ hash' : 'Tamper-evident audit log & hash chain verification'}
+        icon={ShieldCheck}
       />
 
       <Card>

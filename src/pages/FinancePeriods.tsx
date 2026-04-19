@@ -135,7 +135,8 @@ export default function FinancePeriods() {
     <DashboardLayout>
       <PageHeader
         title={isRTL ? 'الفترات المالية' : 'Financial Periods'}
-        description={isRTL ? 'إدارة إقفال الفترات الشهرية وفتحها' : 'Manage monthly closing & reopening'}
+        subtitle={isRTL ? 'إدارة إقفال الفترات الشهرية وفتحها' : 'Manage monthly closing & reopening'}
+        icon={Lock}
       />
 
       <Card>
