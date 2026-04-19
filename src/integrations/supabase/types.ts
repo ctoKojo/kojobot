@@ -1191,6 +1191,39 @@ export type Database = {
           },
         ]
       }
+      data_quality_issues: {
+        Row: {
+          details: Json
+          detected_at: string
+          entity_id: string
+          entity_table: string
+          id: string
+          issue_type: Database["public"]["Enums"]["data_quality_issue_type"]
+          resolved_at: string | null
+          status: string
+        }
+        Insert: {
+          details?: Json
+          detected_at?: string
+          entity_id: string
+          entity_table: string
+          id?: string
+          issue_type: Database["public"]["Enums"]["data_quality_issue_type"]
+          resolved_at?: string | null
+          status?: string
+        }
+        Update: {
+          details?: Json
+          detected_at?: string
+          entity_id?: string
+          entity_table?: string
+          id?: string
+          issue_type?: Database["public"]["Enums"]["data_quality_issue_type"]
+          resolved_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -3153,6 +3186,7 @@ export type Database = {
           created_at: string
           financial_period_month: string
           id: string
+          installment_id: string | null
           notes: string | null
           payment_date: string
           payment_method: string
@@ -3171,6 +3205,7 @@ export type Database = {
           created_at?: string
           financial_period_month?: string
           id?: string
+          installment_id?: string | null
           notes?: string | null
           payment_date?: string
           payment_method?: string
@@ -3189,6 +3224,7 @@ export type Database = {
           created_at?: string
           financial_period_month?: string
           id?: string
+          installment_id?: string | null
           notes?: string | null
           payment_date?: string
           payment_method?: string
@@ -3203,6 +3239,13 @@ export type Database = {
             | null
         }
         Relationships: [
+          {
+            foreignKeyName: "payments_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_installments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payments_subscription_id_fkey"
             columns: ["subscription_id"]
@@ -5332,6 +5375,59 @@ export type Database = {
           },
         ]
       }
+      subscription_installments: {
+        Row: {
+          amount: number
+          created_at: string
+          due_date: string
+          id: string
+          installment_number: number
+          notes: string | null
+          paid_amount: number
+          paid_at: string | null
+          status: Database["public"]["Enums"]["installment_status"]
+          student_id: string
+          subscription_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          due_date: string
+          id?: string
+          installment_number: number
+          notes?: string | null
+          paid_amount?: number
+          paid_at?: string | null
+          status?: Database["public"]["Enums"]["installment_status"]
+          student_id: string
+          subscription_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_date?: string
+          id?: string
+          installment_number?: number
+          notes?: string | null
+          paid_amount?: number
+          paid_at?: string | null
+          status?: Database["public"]["Enums"]["installment_status"]
+          student_id?: string
+          subscription_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_installments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_requests: {
         Row: {
           amount_cents: number | null
@@ -5638,6 +5734,47 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unresolved_payments: {
+        Row: {
+          detected_at: string
+          id: string
+          payment_id: string
+          reason: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          detected_at?: string
+          id?: string
+          payment_id: string
+          reason: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          detected_at?: string
+          id?: string
+          payment_id?: string
+          reason?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unresolved_payments_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: true
+            referencedRelation: "payments"
             referencedColumns: ["id"]
           },
         ]
@@ -6140,6 +6277,7 @@ export type Database = {
         }
         Returns: number
       }
+      backfill_payment_installments: { Args: never; Returns: Json }
       backfill_quiz_audit_batch: { Args: { p_limit?: number }; Returns: number }
       calculate_student_renewal_status: {
         Args: { p_user_id: string }
@@ -6170,10 +6308,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_data_quality_for_close: {
+        Args: { p_period_month: string }
+        Returns: boolean
+      }
       check_exam_sla_timeouts: { Args: never; Returns: Json }
       check_group_completion: {
         Args: { p_group_id: string }
         Returns: undefined
+      }
+      check_payment_data_quality: {
+        Args: { p_period_month?: string }
+        Returns: Json
       }
       check_payroll_reconciliation_for_close: {
         Args: { p_period_month: string }
@@ -6306,6 +6452,10 @@ export type Database = {
       }
       ensure_financial_period: { Args: { p_date: string }; Returns: string }
       freeze_quiz_version: { Args: { p_quiz_id: string }; Returns: string }
+      generate_subscription_installments: {
+        Args: { p_subscription_id: string }
+        Returns: number
+      }
       generate_voucher_no: {
         Args: {
           p_date?: string
@@ -6313,6 +6463,20 @@ export type Database = {
         }
         Returns: string
       }
+      get_aging_receivables: {
+        Args: { p_as_of_date?: string }
+        Returns: {
+          current_due: number
+          overdue_1_30: number
+          overdue_31_60: number
+          overdue_61_90: number
+          overdue_90_plus: number
+          student_id: string
+          student_name: string
+          total_outstanding: number
+        }[]
+      }
+      get_aging_summary: { Args: { p_as_of_date?: string }; Returns: Json }
       get_coa_tree: {
         Args: never
         Returns: {
@@ -6673,6 +6837,18 @@ export type Database = {
             }
             Returns: Json
           }
+      record_payment_with_installment: {
+        Args: {
+          p_amount: number
+          p_installment_id: string
+          p_notes?: string
+          p_payment_date?: string
+          p_payment_method: Database["public"]["Enums"]["payment_method_type"]
+          p_subscription_id: string
+          p_transfer_type?: Database["public"]["Enums"]["transfer_method_type"]
+        }
+        Returns: string
+      }
       record_salary_payment_atomic: {
         Args: {
           p_base_amount: number
@@ -6710,6 +6886,14 @@ export type Database = {
           p_transfer?: Database["public"]["Enums"]["transfer_method_type"]
         }
         Returns: string
+      }
+      resolve_unresolved_payment: {
+        Args: {
+          p_installment_id: string
+          p_resolution_notes?: string
+          p_unresolved_id: string
+        }
+        Returns: undefined
       }
       reverse_journal_entry: {
         Args: { p_entry_id: string; p_reason: string }
@@ -6819,9 +7003,16 @@ export type Database = {
         | "acknowledged"
         | "rebuilt"
         | "false_positive"
+      data_quality_issue_type:
+        | "unlinked_payment"
+        | "amount_mismatch"
+        | "orphan_paid_installment"
+        | "duplicate_link"
+        | "cancelled_subscription_with_payment"
       employment_status: "permanent" | "training" | "terminated"
       financial_period_status: "open" | "review" | "closed" | "reopened"
       group_type: "kojo_squad" | "kojo_core" | "kojo_x"
+      installment_status: "pending" | "partial" | "paid" | "cancelled"
       journal_entry_status: "draft" | "posted" | "reversed"
       journal_source_type:
         | "payment"
@@ -6995,9 +7186,17 @@ export const Constants = {
         "rebuilt",
         "false_positive",
       ],
+      data_quality_issue_type: [
+        "unlinked_payment",
+        "amount_mismatch",
+        "orphan_paid_installment",
+        "duplicate_link",
+        "cancelled_subscription_with_payment",
+      ],
       employment_status: ["permanent", "training", "terminated"],
       financial_period_status: ["open", "review", "closed", "reopened"],
       group_type: ["kojo_squad", "kojo_core", "kojo_x"],
+      installment_status: ["pending", "partial", "paid", "cancelled"],
       journal_entry_status: ["draft", "posted", "reversed"],
       journal_source_type: [
         "payment",
