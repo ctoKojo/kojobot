@@ -49,7 +49,11 @@ interface Snapshot {
   finalized_by: string | null;
 }
 
-export function SalariesTab() {
+interface SalariesTabProps {
+  selectedMonth?: string; // 'YYYY-MM'
+}
+
+export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
   const { isRTL, language } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -67,27 +71,36 @@ export function SalariesTab() {
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [saving, setSaving] = useState(false);
 
+  // Compute current month string from selectedMonth or "now"
+  function buildMonthStr(monthKey?: string): string {
+    if (monthKey) {
+      const [y, m] = monthKey.split('-');
+      return `${y}-${m.padStart(2, '0')}-01`;
+    }
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  }
+
+  const currentMonth = buildMonthStr(selectedMonth);
+  const isCurrentCalendarMonth = !selectedMonth || selectedMonth === (() => {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+  })();
+
   // Salary form
   const [salaryForm, setSalaryForm] = useState({ employee_id: '', employee_type: 'instructor', base_salary: '', effective_from: new Date().toISOString().split('T')[0] });
 
   // Adjustment form (bonus/deduction via salary_events)
   const [adjustForm, setAdjustForm] = useState({
-    employee_id: '', month: currentMonthStr(),
+    employee_id: '', month: currentMonth,
     type: 'deduction' as 'deduction' | 'bonus',
     amount: 0, reason: '', reason_ar: '',
   });
 
   // Pay form
-  const [payForm, setPayForm] = useState({ employee_id: '', month: currentMonthStr(), payment_method: 'cash', notes: '' });
+  const [payForm, setPayForm] = useState({ employee_id: '', month: currentMonth, payment_method: 'cash', notes: '' });
 
-  function currentMonthStr() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-  }
-
-  const currentMonth = currentMonthStr();
-
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [currentMonth]);
 
   const fetchData = async () => {
     setLoading(true);
