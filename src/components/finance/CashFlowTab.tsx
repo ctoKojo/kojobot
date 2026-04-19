@@ -540,10 +540,10 @@ export function CashFlowTab() {
   );
 }
 
-function AcademicMonthSection({ monthLabel, details, total, isRTL }: {
+function AcademicMonthSection({ monthLabel, details, totals, isRTL }: {
   monthLabel: string;
   details: AcademicRenewalDetail[];
-  total: number;
+  totals: { totalExpected: number; totalPaid: number; totalRemaining: number; renewedCount: number; notRenewedCount: number };
   isRTL: boolean;
 }) {
   const [open, setOpen] = useState(true);
@@ -552,18 +552,34 @@ function AcademicMonthSection({ monthLabel, details, total, isRTL }: {
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
         <Button variant="ghost" className="w-full justify-between p-3 h-auto rounded-lg border bg-muted/20 hover:bg-muted/40">
-          <div className="flex items-center gap-3">
-            <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-              {monthLabel}
-            </Badge>
-            <span className="text-sm font-medium">
-              {isRTL ? `${details.length} طالب` : `${details.length} student${details.length > 1 ? 's' : ''}`}
-            </span>
-            <span className="text-sm font-bold text-purple-600">
-              {total} {isRTL ? 'ج.م' : 'EGP'}
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-start">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                {monthLabel}
+              </Badge>
+              <span className="text-sm font-medium">
+                {isRTL ? `${details.length} طالب` : `${details.length} student${details.length > 1 ? 's' : ''}`}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              <span className="text-amber-600 dark:text-amber-400 font-bold">
+                {isRTL ? 'متبقي تحصيله: ' : 'Remaining to collect: '}
+                {totals.totalRemaining.toLocaleString()} {isRTL ? 'ج.م' : 'EGP'}
+              </span>
+              <span className="text-emerald-600 dark:text-emerald-400">
+                {isRTL ? 'محصّل: ' : 'Collected: '}
+                {totals.totalPaid.toLocaleString()} {isRTL ? 'ج.م' : 'EGP'}
+              </span>
+              <span className="text-muted-foreground">
+                {isRTL ? 'إجمالي متوقع: ' : 'Total expected: '}
+                {totals.totalExpected.toLocaleString()} {isRTL ? 'ج.م' : 'EGP'}
+              </span>
+              <span className="text-muted-foreground">
+                ({isRTL ? `جدد: ${totals.renewedCount} • لم يجدد: ${totals.notRenewedCount}` : `Renewed: ${totals.renewedCount} • Pending: ${totals.notRenewedCount}`})
+              </span>
+            </div>
           </div>
-          {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          {open ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>
