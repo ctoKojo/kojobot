@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Search } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDate } from '@/lib/timeUtils';
 import { getMonthRange } from './MonthSelector';
+import { PaymentMethodFields, PaymentMethodValue, initialPaymentMethodValue, PaymentMethodFieldsHandle } from './PaymentMethodFields';
+import { ReceiptViewButton } from './ReceiptViewButton';
 
 const CATEGORIES = [
   { value: 'rent', en: 'Rent', ar: 'إيجار' },
@@ -41,6 +43,8 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [saving, setSaving] = useState(false);
+  const [paymentMethodValue, setPaymentMethodValue] = useState<PaymentMethodValue>(initialPaymentMethodValue);
+  const paymentMethodRef = useRef<PaymentMethodFieldsHandle>(null);
   const [form, setForm] = useState({
     category: 'other',
     description: '',
@@ -64,26 +68,50 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
 
   const handleSubmit = async () => {
     if (!form.description || !form.amount) return;
+    if (!paymentMethodRef.current?.validate()) return;
     setSaving(true);
-    const { error } = await supabase.from('expenses').insert({
-      category: form.category,
-      description: form.description,
-      description_ar: form.description_ar || null,
-      amount: Number(form.amount),
-      expense_date: form.expense_date,
-      is_recurring: form.is_recurring,
-      notes: form.notes || null,
-      recorded_by: user?.id,
-    } as any);
-    if (error) {
-      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: error.message });
-    } else {
+    try {
+      const isTransfer = paymentMethodValue.payment_method === 'transfer';
+      // 1) Insert expense (pending_receipt if transfer)
+      const { data: inserted, error } = await supabase
+        .from('expenses')
+        .insert({
+          category: form.category,
+          description: form.description,
+          description_ar: form.description_ar || null,
+          amount: Number(form.amount),
+          expense_date: form.expense_date,
+          is_recurring: form.is_recurring,
+          notes: form.notes || null,
+          recorded_by: user?.id,
+          payment_method: paymentMethodValue.payment_method,
+          transfer_type: paymentMethodValue.transfer_type,
+          receipt_status: isTransfer ? 'pending_receipt' : 'completed',
+        } as any)
+        .select('id')
+        .single();
+      if (error) throw error;
+
+      // 2) Transfer flow → upload + attach
+      if (isTransfer && inserted?.id) {
+        const path = await paymentMethodRef.current!.uploadReceipt('expenses', inserted.id);
+        const { error: attachErr } = await (supabase.rpc as any)('attach_expense_receipt', {
+          p_expense_id: inserted.id,
+          p_receipt_path: path,
+        });
+        if (attachErr) throw attachErr;
+      }
+
       toast({ title: isRTL ? 'تم إضافة المصروف' : 'Expense added' });
       setDialogOpen(false);
       setForm({ category: 'other', description: '', description_ar: '', amount: '', expense_date: new Date().toISOString().split('T')[0], is_recurring: false, notes: '' });
+      setPaymentMethodValue(initialPaymentMethodValue);
       fetchExpenses();
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: e.message });
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -147,21 +175,35 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
               <TableHead className="font-semibold">{isRTL ? 'التصنيف' : 'Category'}</TableHead>
               <TableHead className="font-semibold">{isRTL ? 'الوصف' : 'Description'}</TableHead>
               <TableHead className="font-semibold">{isRTL ? 'المبلغ' : 'Amount'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'الطريقة' : 'Method'}</TableHead>
               <TableHead className="font-semibold">{isRTL ? 'متكرر' : 'Recurring'}</TableHead>
               <TableHead className="w-[60px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8">{isRTL ? 'جاري التحميل...' : 'Loading...'}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8">{isRTL ? 'جاري التحميل...' : 'Loading...'}</TableCell></TableRow>
             ) : paginated.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{isRTL ? 'لا توجد مصروفات' : 'No expenses found'}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{isRTL ? 'لا توجد مصروفات' : 'No expenses found'}</TableCell></TableRow>
             ) : paginated.map(e => (
               <TableRow key={e.id}>
                 <TableCell>{formatDate(e.expense_date)}</TableCell>
                 <TableCell><Badge variant="outline">{getCategoryLabel(e.category)}</Badge></TableCell>
                 <TableCell>{isRTL && e.description_ar ? e.description_ar : e.description}</TableCell>
                 <TableCell className="font-medium text-destructive">{e.amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="secondary" className="font-normal text-xs">
+                      {e.payment_method === 'cash'
+                        ? (isRTL ? 'كاش' : 'Cash')
+                        : e.transfer_type === 'bank' ? (isRTL ? 'بنكي' : 'Bank')
+                        : e.transfer_type === 'instapay' ? 'InstaPay'
+                        : e.transfer_type === 'wallet' ? (isRTL ? 'محفظة' : 'Wallet')
+                        : (isRTL ? 'تحويل' : 'Transfer')}
+                    </Badge>
+                    <ReceiptViewButton path={e.receipt_url} size="icon" />
+                  </div>
+                </TableCell>
                 <TableCell>{e.is_recurring ? (isRTL ? 'نعم' : 'Yes') : '-'}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="icon" onClick={() => handleDelete(e.id)}>
@@ -206,6 +248,12 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
             <div><Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>
               <Input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
             </div>
+            <PaymentMethodFields
+              ref={paymentMethodRef}
+              value={paymentMethodValue}
+              onChange={setPaymentMethodValue}
+              disabled={saving}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>

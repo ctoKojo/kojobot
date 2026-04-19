@@ -27,6 +27,9 @@ import { NetProfitTab } from '@/components/finance/NetProfitTab';
 import { PaymentTrackerTab } from '@/components/finance/PaymentTrackerTab';
 import { CashFlowTab } from '@/components/finance/CashFlowTab';
 import { MonthSelector, getCurrentMonthKey, getMonthRange, isCurrentMonth } from '@/components/finance/MonthSelector';
+import { PaymentMethodFields, PaymentMethodValue, initialPaymentMethodValue, PaymentMethodFieldsHandle } from '@/components/finance/PaymentMethodFields';
+import { ReceiptViewButton } from '@/components/finance/ReceiptViewButton';
+import { useRef } from 'react';
 
 export default function Finance() {
   const { isRTL, language } = useLanguage();
@@ -40,7 +43,8 @@ export default function Finance() {
   const [savingPayment, setSavingPayment] = useState(false);
   const [selectedSub, setSelectedSub] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethodValue, setPaymentMethodValue] = useState<PaymentMethodValue>(initialPaymentMethodValue);
+  const paymentMethodRef = useRef<PaymentMethodFieldsHandle>(null);
   const [paymentNotes, setPaymentNotes] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportPeriod, setReportPeriod] = useState('6');
@@ -182,7 +186,7 @@ export default function Finance() {
   const openPaymentDialog = (sub: any) => {
     setSelectedSub(sub);
     setPaymentAmount(sub.installment_amount || sub.remaining_amount || 0);
-    setPaymentMethod('cash');
+    setPaymentMethodValue(initialPaymentMethodValue);
     setPaymentNotes('');
     setPaymentDate(new Date().toISOString().split('T')[0]);
     setPaymentDialog(true);
@@ -190,38 +194,48 @@ export default function Finance() {
 
   const handleRecordPayment = async () => {
     if (!selectedSub || paymentAmount <= 0 || savingPayment) return;
+    if (!paymentMethodRef.current?.validate()) return;
     setSavingPayment(true);
     try {
+      const wasSuspended = selectedSub.is_suspended;
+      const isTransfer = paymentMethodValue.payment_method === 'transfer';
 
-    const wasSuspended = selectedSub.is_suspended;
+      // 1) Insert payment via RPC (returns payment_id; for transfer status='pending_receipt')
+      const { data: result, error } = await (supabase.rpc as any)('record_payment_atomic', {
+        p_subscription_id: selectedSub.id,
+        p_student_id: selectedSub.student_id,
+        p_amount: paymentAmount,
+        p_payment_method: paymentMethodValue.payment_method,
+        p_payment_date: paymentDate,
+        p_payment_type: 'regular',
+        p_notes: paymentNotes || null,
+        p_recorded_by: user?.id || null,
+        p_transfer_type: paymentMethodValue.transfer_type,
+      });
 
-    // Use atomic RPC to prevent double payments from concurrent admins
-    const { data: result, error } = await supabase.rpc('record_payment_atomic', {
-      p_subscription_id: selectedSub.id,
-      p_student_id: selectedSub.student_id,
-      p_amount: paymentAmount,
-      p_payment_method: paymentMethod,
-      p_payment_date: paymentDate,
-      p_payment_type: 'regular',
-      p_notes: paymentNotes || null,
-      p_recorded_by: user?.id || null,
-    });
+      if (error) throw new Error(error.message);
+      const res = result as any;
+      if (res?.error) throw new Error(res.error);
 
-    if (error) throw new Error(error.message);
+      // 2) Transfer flow: upload receipt, then attach
+      if (isTransfer && res.payment_id) {
+        const path = await paymentMethodRef.current!.uploadReceipt('payments', res.payment_id);
+        const { error: attachErr } = await (supabase.rpc as any)('attach_payment_receipt', {
+          p_payment_id: res.payment_id,
+          p_receipt_path: path,
+        });
+        if (attachErr) throw new Error(attachErr.message);
+      }
 
-    const res = result as any;
-    if (res?.error) throw new Error(res.error);
+      await notificationService.notifyPaymentRecorded(selectedSub.student_id, paymentAmount, Math.max(0, res.new_remaining));
+      if (wasSuspended) {
+        await notificationService.notifyAccountReactivated(selectedSub.student_id);
+      }
 
-    // Send notifications
-    await notificationService.notifyPaymentRecorded(selectedSub.student_id, paymentAmount, Math.max(0, res.new_remaining));
-    if (wasSuspended) {
-      await notificationService.notifyAccountReactivated(selectedSub.student_id);
-    }
-
-    toast({ title: isRTL ? 'تم تسجيل الدفعة بنجاح' : 'Payment recorded successfully' });
-    setPaymentDialog(false);
-    queryClient.invalidateQueries({ queryKey: ['finance-data'] });
-    queryClient.invalidateQueries({ queryKey: ['payment-tracker'] });
+      toast({ title: isRTL ? 'تم تسجيل الدفعة بنجاح' : 'Payment recorded successfully' });
+      setPaymentDialog(false);
+      queryClient.invalidateQueries({ queryKey: ['finance-data'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-tracker'] });
     } catch (e: any) {
       toast({ title: isRTL ? 'خطأ' : 'Error', description: e.message, variant: 'destructive' });
     } finally {
@@ -673,9 +687,17 @@ export default function Finance() {
                         <TableCell className="font-semibold text-emerald-600">{p.amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
                         <TableCell className="text-sm">{formatDate(p.payment_date, language)}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="font-normal">
-                            {p.payment_method === 'cash' ? (isRTL ? 'كاش' : 'Cash') : (isRTL ? 'تحويل' : 'Transfer')}
-                          </Badge>
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="secondary" className="font-normal">
+                              {p.payment_method === 'cash'
+                                ? (isRTL ? 'كاش' : 'Cash')
+                                : p.transfer_type === 'bank' ? (isRTL ? 'تحويل بنكي' : 'Bank')
+                                : p.transfer_type === 'instapay' ? 'InstaPay'
+                                : p.transfer_type === 'wallet' ? (isRTL ? 'محفظة' : 'Wallet')
+                                : (isRTL ? 'تحويل' : 'Transfer')}
+                            </Badge>
+                            <ReceiptViewButton path={p.receipt_url} size="icon" />
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -745,14 +767,12 @@ export default function Finance() {
                 </div>
                 <div><Label>{isRTL ? 'المبلغ' : 'Amount'}</Label>
                   <Input type="number" value={paymentAmount} onChange={e => setPaymentAmount(+e.target.value)} /></div>
-                <div><Label>{isRTL ? 'طريقة الدفع' : 'Payment Method'}</Label>
-                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">{isRTL ? 'كاش' : 'Cash'}</SelectItem>
-                      <SelectItem value="transfer">{isRTL ? 'تحويل بنكي' : 'Bank Transfer'}</SelectItem>
-                    </SelectContent>
-                  </Select></div>
+                <PaymentMethodFields
+                  ref={paymentMethodRef}
+                  value={paymentMethodValue}
+                  onChange={setPaymentMethodValue}
+                  disabled={savingPayment}
+                />
                 <div><Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>
                   <Input value={paymentNotes} onChange={e => setPaymentNotes(e.target.value)} /></div>
                 <div><Label>{isRTL ? 'تاريخ الدفع الفعلي' : 'Actual Payment Date'}</Label>
