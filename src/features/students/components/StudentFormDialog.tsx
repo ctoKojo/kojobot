@@ -352,12 +352,15 @@ export function StudentFormDialog({
               notes: formData.sub_notes || null, discount_percentage: dPct,
             }).select().single();
             if (!subErr && formData.sub_paid_amount > 0 && sub) {
-              await supabase.from('payments').insert({
-                subscription_id: sub.id, student_id: data.user_id,
-                amount: formData.sub_paid_amount, payment_date: formData.payment_date,
-                payment_method: 'cash', payment_type: 'prior_payment',
-                notes: isRTL ? 'دفعة مسبقة عند إنشاء الاشتراك' : 'Prior payment on subscription creation',
-                recorded_by: user?.id,
+              await (supabase.rpc as any)('record_payment_atomic', {
+                p_subscription_id: sub.id,
+                p_student_id: data.user_id,
+                p_amount: formData.sub_paid_amount,
+                p_payment_date: formData.payment_date,
+                p_payment_type: 'prior_payment',
+                p_payment_method: 'cash',
+                p_transfer_type: null,
+                p_notes: isRTL ? 'دفعة مسبقة عند إنشاء الاشتراك' : 'Prior payment on subscription creation',
               });
             }
           }
