@@ -29,6 +29,9 @@ import {
   ClipboardList,
   ClipboardCheck,
   Target,
+  Lock,
+  ShieldCheck,
+  FileText,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -120,6 +123,11 @@ export function AppSidebar() {
             label: 'Finance', labelAr: 'المالية',
             items: [
               { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['admin'] },
+              { title: isRTL ? 'التقارير المالية' : 'Financial Reports', url: '/finance/reports', icon: FileText, roles: ['admin'] },
+              { title: isRTL ? 'الفترات المالية' : 'Periods', url: '/finance/periods', icon: Lock, roles: ['admin'] },
+              { title: isRTL ? 'مستكشف التدقيق' : 'Audit Explorer', url: '/finance/audit', icon: ShieldCheck, roles: ['admin'] },
+              { title: isRTL ? 'جودة البيانات' : 'Data Quality', url: '/finance/data-quality', icon: AlertTriangle, roles: ['admin'] },
+              { title: isRTL ? 'طلبات إعادة الفتح' : 'Reopen Requests', url: '/finance/reopen-requests', icon: RefreshCw, roles: ['admin'] },
               { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['admin'] },
               { title: isRTL ? 'قواعد الخصم' : 'Deduction Rules', url: '/deduction-rules', icon: AlertTriangle, roles: ['admin'] },
               { title: isRTL ? 'طلبات الاشتراك' : 'Subscription Requests', url: '/subscription-requests', icon: ClipboardList, roles: ['admin'] },
