@@ -26,6 +26,7 @@ import { SalariesTab } from '@/components/finance/SalariesTab';
 import { NetProfitTab } from '@/components/finance/NetProfitTab';
 import { PaymentTrackerTab } from '@/components/finance/PaymentTrackerTab';
 import { CashFlowTab } from '@/components/finance/CashFlowTab';
+import { MonthSelector, getCurrentMonthKey, getMonthRange, isCurrentMonth } from '@/components/finance/MonthSelector';
 
 export default function Finance() {
   const { isRTL, language } = useLanguage();
@@ -50,6 +51,9 @@ export default function Finance() {
   const [payPage, setPayPage] = useState(1);
   const [payPageSize, setPayPageSize] = useState(10);
   const [detailDialog, setDetailDialog] = useState<'outstanding' | 'overdue' | 'revenue' | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthKey());
+  const monthRange = useMemo(() => getMonthRange(selectedMonth), [selectedMonth]);
+  const viewingCurrentMonth = isCurrentMonth(selectedMonth);
 
   const fetchFinanceData = async () => {
     const { data: plans } = await supabase.from('pricing_plans').select('id, name, name_ar').eq('is_active', true);
