@@ -194,6 +194,30 @@ export type Database = {
         }
         Relationships: []
       }
+      approved_financial_rpcs: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          description: string | null
+          rpc_name: string
+          version: number
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          description?: string | null
+          rpc_name: string
+          version?: number
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          description?: string | null
+          rpc_name?: string
+          version?: number
+        }
+        Relationships: []
+      }
       assessment_events: {
         Row: {
           actor_id: string | null
@@ -1249,10 +1273,17 @@ export type Database = {
           description: string
           description_ar: string | null
           expense_date: string
+          financial_period_month: string
           id: string
           is_recurring: boolean
           notes: string | null
+          payment_method: Database["public"]["Enums"]["payment_method_type"]
+          receipt_status: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url: string | null
           recorded_by: string
+          transfer_type:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Insert: {
           amount: number
@@ -1261,10 +1292,17 @@ export type Database = {
           description: string
           description_ar?: string | null
           expense_date?: string
+          financial_period_month?: string
           id?: string
           is_recurring?: boolean
           notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          receipt_status?: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url?: string | null
           recorded_by: string
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Update: {
           amount?: number
@@ -1273,10 +1311,68 @@ export type Database = {
           description?: string
           description_ar?: string | null
           expense_date?: string
+          financial_period_month?: string
           id?: string
           is_recurring?: boolean
           notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          receipt_status?: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url?: string | null
           recorded_by?: string
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
+        }
+        Relationships: []
+      }
+      financial_periods: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          opened_at: string
+          period_month: string
+          reopen_reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          review_started_at: string | null
+          review_started_by: string | null
+          status: Database["public"]["Enums"]["financial_period_status"]
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          period_month: string
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          review_started_at?: string | null
+          review_started_by?: string | null
+          status?: Database["public"]["Enums"]["financial_period_status"]
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          period_month?: string
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          review_started_at?: string | null
+          review_started_by?: string | null
+          status?: Database["public"]["Enums"]["financial_period_status"]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2648,38 +2744,56 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          financial_period_month: string
           id: string
           notes: string | null
           payment_date: string
           payment_method: string
           payment_type: string
+          receipt_status: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url: string | null
           recorded_by: string
           student_id: string
           subscription_id: string
+          transfer_type:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Insert: {
           amount: number
           created_at?: string
+          financial_period_month?: string
           id?: string
           notes?: string | null
           payment_date?: string
           payment_method?: string
           payment_type?: string
+          receipt_status?: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url?: string | null
           recorded_by: string
           student_id: string
           subscription_id: string
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Update: {
           amount?: number
           created_at?: string
+          financial_period_month?: string
           id?: string
           notes?: string | null
           payment_date?: string
           payment_method?: string
           payment_type?: string
+          receipt_status?: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url?: string | null
           recorded_by?: string
           student_id?: string
           subscription_id?: string
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Relationships: [
           {
@@ -3882,6 +3996,7 @@ export type Database = {
           deduction_reason_ar: string | null
           deductions: number
           employee_id: string
+          financial_period_month: string
           id: string
           month: string
           net_amount: number | null
@@ -3889,8 +4004,13 @@ export type Database = {
           paid_by: string | null
           paid_date: string | null
           payment_method: string | null
+          receipt_status: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url: string | null
           salary_id: string | null
           status: string
+          transfer_type:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Insert: {
           base_amount?: number
@@ -3902,6 +4022,7 @@ export type Database = {
           deduction_reason_ar?: string | null
           deductions?: number
           employee_id: string
+          financial_period_month?: string
           id?: string
           month: string
           net_amount?: number | null
@@ -3909,8 +4030,13 @@ export type Database = {
           paid_by?: string | null
           paid_date?: string | null
           payment_method?: string | null
+          receipt_status?: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url?: string | null
           salary_id?: string | null
           status?: string
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Update: {
           base_amount?: number
@@ -3922,6 +4048,7 @@ export type Database = {
           deduction_reason_ar?: string | null
           deductions?: number
           employee_id?: string
+          financial_period_month?: string
           id?: string
           month?: string
           net_amount?: number | null
@@ -3929,8 +4056,13 @@ export type Database = {
           paid_by?: string | null
           paid_date?: string | null
           payment_method?: string | null
+          receipt_status?: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url?: string | null
           salary_id?: string | null
           status?: string
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Relationships: [
           {
@@ -3969,6 +4101,42 @@ export type Database = {
           start_date?: string
           theme_key?: string
           timezone?: string
+        }
+        Relationships: []
+      }
+      security_violations: {
+        Row: {
+          attempted_by_role: string | null
+          attempted_by_user: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          operation: string
+          query_snippet: string | null
+          table_name: string
+          violation_type: string
+        }
+        Insert: {
+          attempted_by_role?: string | null
+          attempted_by_user?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          operation: string
+          query_snippet?: string | null
+          table_name: string
+          violation_type: string
+        }
+        Update: {
+          attempted_by_role?: string | null
+          attempted_by_user?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          operation?: string
+          query_snippet?: string | null
+          table_name?: string
+          violation_type?: string
         }
         Relationships: []
       }
@@ -5328,6 +5496,18 @@ export type Database = {
         Args: { p_group_id: string }
         Returns: Json
       }
+      attach_expense_receipt: {
+        Args: { p_expense_id: string; p_receipt_path: string }
+        Returns: undefined
+      }
+      attach_payment_receipt: {
+        Args: { p_payment_id: string; p_receipt_path: string }
+        Returns: undefined
+      }
+      attach_salary_receipt: {
+        Args: { p_receipt_path: string; p_salary_payment_id: string }
+        Returns: undefined
+      }
       auto_resolve_warning: {
         Args: {
           p_reason?: string
@@ -5340,6 +5520,10 @@ export type Database = {
       calculate_student_renewal_status: {
         Args: { p_user_id: string }
         Returns: Json
+      }
+      can_view_payment_receipt: {
+        Args: { p_object_name: string }
+        Returns: boolean
       }
       check_and_increment_chatbot_rate: {
         Args: { p_student_id: string }
@@ -5453,6 +5637,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      ensure_financial_period: { Args: { p_date: string }; Returns: string }
       freeze_quiz_version: { Args: { p_quiz_id: string }; Returns: string }
       get_conversation_participant_profiles: {
         Args: { p_user_ids: string[] }
@@ -5637,11 +5822,13 @@ export type Database = {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
       }
+      is_period_writable: { Args: { p_date: string }; Returns: boolean }
       is_student: { Args: { _user_id: string }; Returns: boolean }
       mark_student_repeat: {
         Args: { p_group_id: string; p_student_id: string }
         Returns: Json
       }
+      mark_via_rpc: { Args: never; Returns: undefined }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -5673,18 +5860,67 @@ export type Database = {
         Args: { p_employee_id: string; p_month: string }
         Returns: undefined
       }
-      record_payment_atomic: {
+      record_expense_atomic: {
         Args: {
           p_amount: number
+          p_category?: string
+          p_description: string
+          p_description_ar?: string
+          p_expense_date?: string
+          p_is_recurring?: boolean
           p_notes?: string
-          p_payment_date: string
-          p_payment_method: string
-          p_payment_type?: string
-          p_recorded_by?: string
-          p_student_id: string
-          p_subscription_id: string
+          p_payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          p_transfer_type?: Database["public"]["Enums"]["transfer_method_type"]
         }
-        Returns: Json
+        Returns: string
+      }
+      record_payment_atomic:
+        | {
+            Args: {
+              p_amount: number
+              p_notes?: string
+              p_payment_date: string
+              p_payment_method?: Database["public"]["Enums"]["payment_method_type"]
+              p_payment_type: string
+              p_student_id: string
+              p_subscription_id: string
+              p_transfer_type?: Database["public"]["Enums"]["transfer_method_type"]
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_notes?: string
+              p_payment_date: string
+              p_payment_method: string
+              p_payment_type?: string
+              p_recorded_by?: string
+              p_student_id: string
+              p_subscription_id: string
+            }
+            Returns: Json
+          }
+      record_salary_payment_atomic: {
+        Args: {
+          p_base_amount: number
+          p_bonus?: number
+          p_bonus_reason?: string
+          p_deduction_reason?: string
+          p_deductions?: number
+          p_employee_id: string
+          p_month: string
+          p_notes?: string
+          p_paid_date?: string
+          p_payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          p_salary_id: string
+          p_transfer_type?: Database["public"]["Enums"]["transfer_method_type"]
+        }
+        Returns: string
+      }
+      register_financial_rpc: {
+        Args: { p_description?: string; p_rpc_name: string; p_version?: number }
+        Returns: undefined
       }
       repair_orphaned_sessions: { Args: never; Returns: Json }
       reschedule_failed_final_exam: {
@@ -5784,6 +6020,7 @@ export type Database = {
         | "appeal_resolved"
         | "version_frozen"
       employment_status: "permanent" | "training" | "terminated"
+      financial_period_status: "open" | "review" | "closed" | "reopened"
       group_type: "kojo_squad" | "kojo_core" | "kojo_x"
       manual_override_reason:
         | "student_appeal"
@@ -5791,7 +6028,10 @@ export type Database = {
         | "system_error_fix"
         | "rubric_adjustment"
         | "other"
+      payment_method_type: "cash" | "transfer"
+      receipt_status_type: "not_required" | "pending_receipt" | "completed"
       subscription_type: "kojo_squad" | "kojo_core" | "kojo_x"
+      transfer_method_type: "bank" | "instapay" | "wallet"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5930,6 +6170,7 @@ export const Constants = {
         "version_frozen",
       ],
       employment_status: ["permanent", "training", "terminated"],
+      financial_period_status: ["open", "review", "closed", "reopened"],
       group_type: ["kojo_squad", "kojo_core", "kojo_x"],
       manual_override_reason: [
         "student_appeal",
@@ -5938,7 +6179,10 @@ export const Constants = {
         "rubric_adjustment",
         "other",
       ],
+      payment_method_type: ["cash", "transfer"],
+      receipt_status_type: ["not_required", "pending_receipt", "completed"],
       subscription_type: ["kojo_squad", "kojo_core", "kojo_x"],
+      transfer_method_type: ["bank", "instapay", "wallet"],
     },
   },
 } as const

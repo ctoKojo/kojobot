@@ -153,16 +153,16 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
       if (error) throw error;
 
       if (paidAmount > 0 && sub) {
-        await supabase.from('payments').insert({
-          subscription_id: sub.id,
-          student_id: studentId,
-          amount: paidAmount,
-          payment_date: paymentDate,
-          payment_method: 'cash',
-          payment_type: 'prior_payment',
-          notes: isRTL ? 'دفعة مسبقة عند إنشاء الاشتراك' : 'Prior payment on subscription creation',
-          recorded_by: user?.id,
-        } as any);
+        await (supabase.rpc as any)('record_payment_atomic', {
+          p_subscription_id: sub.id,
+          p_student_id: studentId,
+          p_amount: paidAmount,
+          p_payment_date: paymentDate,
+          p_payment_type: 'prior_payment',
+          p_payment_method: 'cash',
+          p_transfer_type: null,
+          p_notes: isRTL ? 'دفعة مسبقة عند إنشاء الاشتراك' : 'Prior payment on subscription creation',
+        });
       }
 
       // If student is in a started group, call RPC to auto-assign dates

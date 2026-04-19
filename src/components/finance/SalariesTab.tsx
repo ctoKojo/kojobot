@@ -214,23 +214,20 @@ export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
 
       const isTransfer = payMethodValue.payment_method === 'transfer';
 
-      // Create final salary_payments record
-      const { data: inserted, error: payError } = await supabase.from('salary_payments').insert({
-        employee_id: payForm.employee_id,
-        salary_id: getEmployeeSalary(payForm.employee_id)?.id || null,
-        month: payForm.month,
-        base_amount: snapshot.base_amount,
-        bonus: snapshot.total_bonuses,
-        deductions: snapshot.total_deductions,
-        status: 'paid',
-        paid_date: new Date().toISOString().split('T')[0],
-        paid_by: user?.id,
-        payment_method: payMethodValue.payment_method,
-        transfer_type: payMethodValue.transfer_type,
-        receipt_status: isTransfer ? 'pending_receipt' : 'completed',
-        notes: payForm.notes || null,
-      } as any).select('id').single();
-
+      // Create final salary_payments record via approved RPC
+      const { data: insertedId, error: payError } = await (supabase.rpc as any)('record_salary_payment_atomic', {
+        p_employee_id: payForm.employee_id,
+        p_salary_id: getEmployeeSalary(payForm.employee_id)?.id || null,
+        p_month: payForm.month,
+        p_base_amount: snapshot.base_amount,
+        p_bonus: snapshot.total_bonuses,
+        p_deductions: snapshot.total_deductions,
+        p_payment_method: payMethodValue.payment_method,
+        p_transfer_type: payMethodValue.transfer_type,
+        p_paid_date: new Date().toISOString().split('T')[0],
+        p_notes: payForm.notes || null,
+      });
+      const inserted = insertedId ? { id: insertedId as string } : null;
       if (payError) throw payError;
 
       if (isTransfer && inserted?.id) {
