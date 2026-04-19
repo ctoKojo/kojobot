@@ -68,26 +68,50 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
 
   const handleSubmit = async () => {
     if (!form.description || !form.amount) return;
+    if (!paymentMethodRef.current?.validate()) return;
     setSaving(true);
-    const { error } = await supabase.from('expenses').insert({
-      category: form.category,
-      description: form.description,
-      description_ar: form.description_ar || null,
-      amount: Number(form.amount),
-      expense_date: form.expense_date,
-      is_recurring: form.is_recurring,
-      notes: form.notes || null,
-      recorded_by: user?.id,
-    } as any);
-    if (error) {
-      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: error.message });
-    } else {
+    try {
+      const isTransfer = paymentMethodValue.payment_method === 'transfer';
+      // 1) Insert expense (pending_receipt if transfer)
+      const { data: inserted, error } = await supabase
+        .from('expenses')
+        .insert({
+          category: form.category,
+          description: form.description,
+          description_ar: form.description_ar || null,
+          amount: Number(form.amount),
+          expense_date: form.expense_date,
+          is_recurring: form.is_recurring,
+          notes: form.notes || null,
+          recorded_by: user?.id,
+          payment_method: paymentMethodValue.payment_method,
+          transfer_type: paymentMethodValue.transfer_type,
+          receipt_status: isTransfer ? 'pending_receipt' : 'completed',
+        } as any)
+        .select('id')
+        .single();
+      if (error) throw error;
+
+      // 2) Transfer flow → upload + attach
+      if (isTransfer && inserted?.id) {
+        const path = await paymentMethodRef.current!.uploadReceipt('expenses', inserted.id);
+        const { error: attachErr } = await (supabase.rpc as any)('attach_expense_receipt', {
+          p_expense_id: inserted.id,
+          p_receipt_path: path,
+        });
+        if (attachErr) throw attachErr;
+      }
+
       toast({ title: isRTL ? 'تم إضافة المصروف' : 'Expense added' });
       setDialogOpen(false);
       setForm({ category: 'other', description: '', description_ar: '', amount: '', expense_date: new Date().toISOString().split('T')[0], is_recurring: false, notes: '' });
+      setPaymentMethodValue(initialPaymentMethodValue);
       fetchExpenses();
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: e.message });
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
