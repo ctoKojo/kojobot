@@ -5642,6 +5642,26 @@ export type Database = {
           },
         ]
       }
+      mv_account_balances_monthly: {
+        Row: {
+          account_id: string | null
+          last_activity_at: string | null
+          line_count: number | null
+          net_balance: number | null
+          period_month: string | null
+          total_credit: number | null
+          total_debit: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       placement_v2_student_view: {
         Row: {
           attempt_number: number | null
@@ -5940,6 +5960,15 @@ export type Database = {
         Args: { p_student_id: string }
         Returns: undefined
       }
+      check_balance_integrity: {
+        Args: {
+          p_account_id: string
+          p_account_type: Database["public"]["Enums"]["balance_account_type"]
+          p_cached: number
+          p_method?: Database["public"]["Enums"]["balance_alert_method"]
+        }
+        Returns: boolean
+      }
       check_exam_sla_timeouts: { Args: never; Returns: Json }
       check_group_completion: {
         Args: { p_group_id: string }
@@ -5974,6 +6003,14 @@ export type Database = {
         Returns: Json
       }
       complete_makeup_session: { Args: { p_session_id: string }; Returns: Json }
+      compute_customer_balance: {
+        Args: { p_customer_account_id: string }
+        Returns: number
+      }
+      compute_employee_balance: {
+        Args: { p_employee_account_id: string }
+        Returns: number
+      }
       compute_level_grade_for_student: {
         Args: { p_group_id: string; p_student_id: string }
         Returns: Json
@@ -6160,6 +6197,14 @@ export type Database = {
           total_count: number
         }[]
       }
+      get_or_create_customer_account: {
+        Args: { p_student_id: string }
+        Returns: string
+      }
+      get_or_create_employee_account: {
+        Args: { p_employee_id: string }
+        Returns: string
+      }
       get_parent_auth_info: {
         Args: { parent_ids: string[] }
         Returns: {
@@ -6212,6 +6257,18 @@ export type Database = {
         Args: { p_submission_id: string }
         Returns: Json
       }
+      get_trial_balance: {
+        Args: { p_period_month?: string }
+        Returns: {
+          account_code: string
+          account_name: string
+          account_name_ar: string
+          account_type: Database["public"]["Enums"]["account_type"]
+          net_balance: number
+          total_credit: number
+          total_debit: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -6256,6 +6313,12 @@ export type Database = {
         Args: { lock_key: string }
         Returns: undefined
       }
+      post_expense_journal: { Args: { p_expense_id: string }; Returns: string }
+      post_payment_journal: { Args: { p_payment_id: string }; Returns: string }
+      post_salary_journal: {
+        Args: { p_salary_payment_id: string }
+        Returns: string
+      }
       private_get_cron_secret: { Args: never; Returns: string }
       private_get_service_role_key: { Args: never; Returns: string }
       publish_curriculum: {
@@ -6269,6 +6332,14 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      rebuild_customer_balance: {
+        Args: { p_customer_account_id: string }
+        Returns: number
+      }
+      rebuild_employee_balance: {
+        Args: { p_employee_account_id: string }
+        Returns: number
       }
       rebuild_salary_snapshot: {
         Args: { p_employee_id: string; p_month: string }
@@ -6332,6 +6403,7 @@ export type Database = {
         }
         Returns: string
       }
+      refresh_account_balances_mv: { Args: never; Returns: undefined }
       register_financial_rpc: {
         Args: { p_description?: string; p_rpc_name: string; p_version?: number }
         Returns: undefined
@@ -6340,6 +6412,17 @@ export type Database = {
       reschedule_failed_final_exam: {
         Args: { p_date: string; p_duration: number; p_progress_id: string }
         Returns: Json
+      }
+      resolve_cash_account: {
+        Args: {
+          p_method: Database["public"]["Enums"]["payment_method_type"]
+          p_transfer?: Database["public"]["Enums"]["transfer_method_type"]
+        }
+        Returns: string
+      }
+      reverse_journal_entry: {
+        Args: { p_entry_id: string; p_reason: string }
+        Returns: string
       }
       save_attendance: {
         Args: { p_group_id: string; p_records: Json; p_session_id: string }
