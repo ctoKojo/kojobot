@@ -687,9 +687,17 @@ export default function Finance() {
                         <TableCell className="font-semibold text-emerald-600">{p.amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
                         <TableCell className="text-sm">{formatDate(p.payment_date, language)}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="font-normal">
-                            {p.payment_method === 'cash' ? (isRTL ? 'كاش' : 'Cash') : (isRTL ? 'تحويل' : 'Transfer')}
-                          </Badge>
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="secondary" className="font-normal">
+                              {p.payment_method === 'cash'
+                                ? (isRTL ? 'كاش' : 'Cash')
+                                : p.transfer_type === 'bank' ? (isRTL ? 'تحويل بنكي' : 'Bank')
+                                : p.transfer_type === 'instapay' ? 'InstaPay'
+                                : p.transfer_type === 'wallet' ? (isRTL ? 'محفظة' : 'Wallet')
+                                : (isRTL ? 'تحويل' : 'Transfer')}
+                            </Badge>
+                            <ReceiptViewButton path={p.receipt_url} size="icon" />
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

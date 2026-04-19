@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Search } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDate } from '@/lib/timeUtils';
 import { getMonthRange } from './MonthSelector';
+import { PaymentMethodFields, PaymentMethodValue, initialPaymentMethodValue, PaymentMethodFieldsHandle } from './PaymentMethodFields';
+import { ReceiptViewButton } from './ReceiptViewButton';
 
 const CATEGORIES = [
   { value: 'rent', en: 'Rent', ar: 'إيجار' },
@@ -41,6 +43,8 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [saving, setSaving] = useState(false);
+  const [paymentMethodValue, setPaymentMethodValue] = useState<PaymentMethodValue>(initialPaymentMethodValue);
+  const paymentMethodRef = useRef<PaymentMethodFieldsHandle>(null);
   const [form, setForm] = useState({
     category: 'other',
     description: '',
