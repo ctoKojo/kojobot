@@ -563,34 +563,72 @@ function AcademicMonthSection({ monthLabel, details, total, isRTL }: {
                 <TableHead>{isRTL ? 'المجموعة' : 'Group'}</TableHead>
                 <TableHead className="text-center">{isRTL ? 'سيشنات متبقية' : 'Remaining'}</TableHead>
                 <TableHead className="text-center">{isRTL ? 'تاريخ الانتهاء المتوقع' : 'Est. Completion'}</TableHead>
-                <TableHead className={isRTL ? 'text-left' : 'text-right'}>{isRTL ? 'مبلغ التجديد' : 'Renewal Amount'}</TableHead>
+                <TableHead className="text-center">{isRTL ? 'حالة التجديد' : 'Renewal Status'}</TableHead>
+                <TableHead className={isRTL ? 'text-left' : 'text-right'}>{isRTL ? 'تفاصيل المبلغ' : 'Amount Details'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {details.sort((a, b) => a.remaining - b.remaining).map((d) => (
-                <TableRow key={`${d.studentId}-${d.groupName}`}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <User className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm font-medium">{d.studentName}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs">{d.groupName}</Badge>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={d.remaining <= 2 ? 'destructive' : 'secondary'} className="text-xs">
-                      {d.remaining} {isRTL ? 'سيشن' : 'sessions'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-center text-xs text-muted-foreground">
-                    {d.estimatedDate.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })}
-                  </TableCell>
-                  <TableCell className={`font-semibold text-purple-600 ${isRTL ? 'text-left' : 'text-right'}`}>
-                    {d.amount} {isRTL ? 'ج.م' : 'EGP'}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {details.sort((a, b) => a.remaining - b.remaining).map((d) => {
+                const isRenewed = d.renewalStatus === 'renewed';
+                return (
+                  <TableRow key={`${d.studentId}-${d.groupName}`}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-sm font-medium">{d.studentName}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">{d.groupName}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={d.remaining <= 2 ? 'destructive' : 'secondary'} className="text-xs">
+                        {d.remaining} {isRTL ? 'سيشن' : 'sessions'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-center text-xs text-muted-foreground">
+                      {d.estimatedDate.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {isRenewed ? (
+                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-xs">
+                          {isRTL ? 'تم التجديد' : 'Renewed'}
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-xs">
+                          {isRTL ? 'لم يتم التجديد' : 'Not Renewed'}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className={`font-semibold ${isRTL ? 'text-left' : 'text-right'}`}>
+                      {isRenewed ? (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-emerald-600 text-sm">
+                            {isRTL ? 'مدفوع: ' : 'Paid: '}{d.paidOnNew} {isRTL ? 'ج.م' : 'EGP'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {isRTL ? 'من ' : 'of '}{d.totalNew} {isRTL ? 'ج.م' : 'EGP'}
+                          </span>
+                          {d.remainingOnNew > 0 && (
+                            <span className="text-xs text-amber-600">
+                              {isRTL ? 'متبقي: ' : 'Remaining: '}{d.remainingOnNew} {isRTL ? 'ج.م' : 'EGP'}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-amber-600 text-sm">
+                            {isRTL ? 'متبقي: ' : 'Remaining: '}{d.remainingOnNew} {isRTL ? 'ج.م' : 'EGP'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {isRTL ? 'من ' : 'of '}{d.totalNew} {isRTL ? 'ج.م' : 'EGP'}
+                          </span>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
