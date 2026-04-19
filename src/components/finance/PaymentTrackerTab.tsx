@@ -154,18 +154,18 @@ export function PaymentTrackerTab({ selectedMonth }: PaymentTrackerTabProps = {}
     if (!s.next_payment_date) return false;
     const npd = new Date(s.next_payment_date);
     return npd >= thisMonthStart && npd <= thisMonthEnd;
-  }).sort((a, b) => new Date(a.next_payment_date!).getTime() - new Date(b.next_payment_date!).getTime()), [subs]);
+  }).sort((a, b) => new Date(a.next_payment_date!).getTime() - new Date(b.next_payment_date!).getTime()), [subs, anchor]);
 
   const dueNextMonth = useMemo(() => subs.filter(s => {
     if (!s.next_payment_date) return false;
     const npd = new Date(s.next_payment_date);
     return npd >= nextMonthStart && npd <= nextMonthEnd;
-  }).sort((a, b) => new Date(a.next_payment_date!).getTime() - new Date(b.next_payment_date!).getTime()), [subs]);
+  }).sort((a, b) => new Date(a.next_payment_date!).getTime() - new Date(b.next_payment_date!).getTime()), [subs, anchor]);
 
   const expiringSoon = useMemo(() => subs.filter(s => {
     if (!s.end_date) return false;
     const ed = new Date(s.end_date);
-    return ed >= now && ed <= fifteenDaysLater;
+    return ed >= realNow && ed <= fifteenDaysLater;
   }), [subs]);
 
   const suspendedCount = useMemo(() => subs.filter(s => s.is_suspended).length, [subs]);
