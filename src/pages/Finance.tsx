@@ -43,7 +43,8 @@ export default function Finance() {
   const [savingPayment, setSavingPayment] = useState(false);
   const [selectedSub, setSelectedSub] = useState<any>(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethodValue, setPaymentMethodValue] = useState<PaymentMethodValue>(initialPaymentMethodValue);
+  const paymentMethodRef = useRef<PaymentMethodFieldsHandle>(null);
   const [paymentNotes, setPaymentNotes] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportPeriod, setReportPeriod] = useState('6');
@@ -185,7 +186,7 @@ export default function Finance() {
   const openPaymentDialog = (sub: any) => {
     setSelectedSub(sub);
     setPaymentAmount(sub.installment_amount || sub.remaining_amount || 0);
-    setPaymentMethod('cash');
+    setPaymentMethodValue(initialPaymentMethodValue);
     setPaymentNotes('');
     setPaymentDate(new Date().toISOString().split('T')[0]);
     setPaymentDialog(true);
@@ -193,38 +194,48 @@ export default function Finance() {
 
   const handleRecordPayment = async () => {
     if (!selectedSub || paymentAmount <= 0 || savingPayment) return;
+    if (!paymentMethodRef.current?.validate()) return;
     setSavingPayment(true);
     try {
+      const wasSuspended = selectedSub.is_suspended;
+      const isTransfer = paymentMethodValue.payment_method === 'transfer';
 
-    const wasSuspended = selectedSub.is_suspended;
+      // 1) Insert payment via RPC (returns payment_id; for transfer status='pending_receipt')
+      const { data: result, error } = await supabase.rpc('record_payment_atomic', {
+        p_subscription_id: selectedSub.id,
+        p_student_id: selectedSub.student_id,
+        p_amount: paymentAmount,
+        p_payment_method: paymentMethodValue.payment_method,
+        p_payment_date: paymentDate,
+        p_payment_type: 'regular',
+        p_notes: paymentNotes || null,
+        p_recorded_by: user?.id || null,
+        p_transfer_type: paymentMethodValue.transfer_type,
+      });
 
-    // Use atomic RPC to prevent double payments from concurrent admins
-    const { data: result, error } = await supabase.rpc('record_payment_atomic', {
-      p_subscription_id: selectedSub.id,
-      p_student_id: selectedSub.student_id,
-      p_amount: paymentAmount,
-      p_payment_method: paymentMethod,
-      p_payment_date: paymentDate,
-      p_payment_type: 'regular',
-      p_notes: paymentNotes || null,
-      p_recorded_by: user?.id || null,
-    });
+      if (error) throw new Error(error.message);
+      const res = result as any;
+      if (res?.error) throw new Error(res.error);
 
-    if (error) throw new Error(error.message);
+      // 2) Transfer flow: upload receipt, then attach
+      if (isTransfer && res.payment_id) {
+        const path = await paymentMethodRef.current!.uploadReceipt('payments', res.payment_id);
+        const { error: attachErr } = await supabase.rpc('attach_payment_receipt', {
+          p_payment_id: res.payment_id,
+          p_receipt_path: path,
+        });
+        if (attachErr) throw new Error(attachErr.message);
+      }
 
-    const res = result as any;
-    if (res?.error) throw new Error(res.error);
+      await notificationService.notifyPaymentRecorded(selectedSub.student_id, paymentAmount, Math.max(0, res.new_remaining));
+      if (wasSuspended) {
+        await notificationService.notifyAccountReactivated(selectedSub.student_id);
+      }
 
-    // Send notifications
-    await notificationService.notifyPaymentRecorded(selectedSub.student_id, paymentAmount, Math.max(0, res.new_remaining));
-    if (wasSuspended) {
-      await notificationService.notifyAccountReactivated(selectedSub.student_id);
-    }
-
-    toast({ title: isRTL ? 'تم تسجيل الدفعة بنجاح' : 'Payment recorded successfully' });
-    setPaymentDialog(false);
-    queryClient.invalidateQueries({ queryKey: ['finance-data'] });
-    queryClient.invalidateQueries({ queryKey: ['payment-tracker'] });
+      toast({ title: isRTL ? 'تم تسجيل الدفعة بنجاح' : 'Payment recorded successfully' });
+      setPaymentDialog(false);
+      queryClient.invalidateQueries({ queryKey: ['finance-data'] });
+      queryClient.invalidateQueries({ queryKey: ['payment-tracker'] });
     } catch (e: any) {
       toast({ title: isRTL ? 'خطأ' : 'Error', description: e.message, variant: 'destructive' });
     } finally {
