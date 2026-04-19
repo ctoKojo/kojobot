@@ -3212,6 +3212,194 @@ export type Database = {
           },
         ]
       }
+      payroll_adjustments: {
+        Row: {
+          adjustment_type: Database["public"]["Enums"]["payroll_adjustment_type"]
+          amount: number
+          applied_in_period: string
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string
+          employee_id: string
+          id: string
+          payroll_run_id: string | null
+          payroll_run_line_id: string | null
+          reason: string
+          reason_ar: string | null
+          status: string
+        }
+        Insert: {
+          adjustment_type: Database["public"]["Enums"]["payroll_adjustment_type"]
+          amount: number
+          applied_in_period: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by: string
+          employee_id: string
+          id?: string
+          payroll_run_id?: string | null
+          payroll_run_line_id?: string | null
+          reason: string
+          reason_ar?: string | null
+          status?: string
+        }
+        Update: {
+          adjustment_type?: Database["public"]["Enums"]["payroll_adjustment_type"]
+          amount?: number
+          applied_in_period?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string
+          employee_id?: string
+          id?: string
+          payroll_run_id?: string | null
+          payroll_run_line_id?: string | null
+          reason?: string
+          reason_ar?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_adjustments_payroll_run_id_fkey"
+            columns: ["payroll_run_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_adjustments_payroll_run_line_id_fkey"
+            columns: ["payroll_run_line_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_run_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_run_lines: {
+        Row: {
+          base_salary: number
+          created_at: string
+          employee_id: string
+          employee_type: string
+          id: string
+          net_amount: number
+          notes: string | null
+          payroll_run_id: string
+          salary_payment_id: string | null
+          total_bonuses: number
+          total_deductions: number
+        }
+        Insert: {
+          base_salary: number
+          created_at?: string
+          employee_id: string
+          employee_type: string
+          id?: string
+          net_amount: number
+          notes?: string | null
+          payroll_run_id: string
+          salary_payment_id?: string | null
+          total_bonuses?: number
+          total_deductions?: number
+        }
+        Update: {
+          base_salary?: number
+          created_at?: string
+          employee_id?: string
+          employee_type?: string
+          id?: string
+          net_amount?: number
+          notes?: string | null
+          payroll_run_id?: string
+          salary_payment_id?: string | null
+          total_bonuses?: number
+          total_deductions?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_run_lines_payroll_run_id_fkey"
+            columns: ["payroll_run_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_runs: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          created_by: string
+          employee_count: number
+          employee_group: Database["public"]["Enums"]["payroll_employee_group"]
+          id: string
+          notes: string | null
+          paid_at: string | null
+          period_month: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["payroll_run_status"]
+          total_bonuses: number
+          total_deductions: number
+          total_gross: number
+          total_net: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by: string
+          employee_count?: number
+          employee_group?: Database["public"]["Enums"]["payroll_employee_group"]
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          period_month: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["payroll_run_status"]
+          total_bonuses?: number
+          total_deductions?: number
+          total_gross?: number
+          total_net?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_at?: string
+          created_by?: string
+          employee_count?: number
+          employee_group?: Database["public"]["Enums"]["payroll_employee_group"]
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          period_month?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["payroll_run_status"]
+          total_bonuses?: number
+          total_deductions?: number
+          total_gross?: number
+          total_net?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       performance_events: {
         Row: {
           created_at: string
@@ -5914,6 +6102,11 @@ export type Database = {
         Args: { p_alert_id: string; p_notes?: string }
         Returns: undefined
       }
+      approve_payroll_adjustment: {
+        Args: { p_adjustment_id: string }
+        Returns: undefined
+      }
+      approve_payroll_run: { Args: { p_run_id: string }; Returns: undefined }
       archive_group: { Args: { p_group_id: string }; Returns: undefined }
       assign_student_to_group: {
         Args: { p_new_group_id: string; p_student_id: string }
@@ -5956,6 +6149,10 @@ export type Database = {
         Args: { p_object_name: string }
         Returns: boolean
       }
+      cancel_payroll_run: {
+        Args: { p_reason: string; p_run_id: string }
+        Returns: undefined
+      }
       check_and_increment_chatbot_rate: {
         Args: { p_student_id: string }
         Returns: Json
@@ -5977,6 +6174,10 @@ export type Database = {
       check_group_completion: {
         Args: { p_group_id: string }
         Returns: undefined
+      }
+      check_payroll_reconciliation_for_close: {
+        Args: { p_period_month: string }
+        Returns: boolean
       }
       check_quiz_achievements: {
         Args: { p_percentage: number; p_student_id: string }
@@ -6066,6 +6267,24 @@ export type Database = {
           p_student_id: string
         }
         Returns: Json
+      }
+      create_payroll_adjustment: {
+        Args: {
+          p_adjustment_type: Database["public"]["Enums"]["payroll_adjustment_type"]
+          p_amount: number
+          p_applied_in_period: string
+          p_employee_id: string
+          p_reason: string
+          p_reason_ar?: string
+        }
+        Returns: string
+      }
+      create_payroll_run: {
+        Args: {
+          p_employee_group?: Database["public"]["Enums"]["payroll_employee_group"]
+          p_period_month: string
+        }
+        Returns: string
       }
       delete_email: {
         Args: { message_id: number; queue_name: string }
@@ -6361,6 +6580,14 @@ export type Database = {
         }
         Returns: number
       }
+      pay_payroll_run: {
+        Args: {
+          p_payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          p_run_id: string
+          p_transfer_type?: Database["public"]["Enums"]["transfer_method_type"]
+        }
+        Returns: Json
+      }
       pg_advisory_xact_lock_wrapper: {
         Args: { lock_key: string }
         Returns: undefined
@@ -6400,6 +6627,10 @@ export type Database = {
       rebuild_salary_snapshot: {
         Args: { p_employee_id: string; p_month: string }
         Returns: undefined
+      }
+      reconcile_payroll_to_ledger: {
+        Args: { p_period_month: string }
+        Returns: Json
       }
       record_expense_atomic: {
         Args: {
@@ -6464,6 +6695,10 @@ export type Database = {
         Args: { p_description?: string; p_rpc_name: string; p_version?: number }
         Returns: undefined
       }
+      reject_payroll_adjustment: {
+        Args: { p_adjustment_id: string }
+        Returns: undefined
+      }
       repair_orphaned_sessions: { Args: never; Returns: Json }
       reschedule_failed_final_exam: {
         Args: { p_date: string; p_duration: number; p_progress_id: string }
@@ -6517,6 +6752,10 @@ export type Database = {
       student_choose_track_and_upgrade: {
         Args: { p_chosen_track_id?: string; p_group_id: string }
         Returns: Json
+      }
+      submit_payroll_run_for_review: {
+        Args: { p_run_id: string }
+        Returns: undefined
       }
       transfer_student_to_group: {
         Args: {
@@ -6600,6 +6839,13 @@ export type Database = {
         | "other"
       normal_side_type: "debit" | "credit"
       payment_method_type: "cash" | "transfer"
+      payroll_adjustment_type:
+        | "bonus"
+        | "deduction"
+        | "correction"
+        | "reimbursement"
+      payroll_employee_group: "instructor" | "reception" | "all"
+      payroll_run_status: "draft" | "review" | "approved" | "paid" | "cancelled"
       receipt_status_type: "not_required" | "pending_receipt" | "completed"
       subscription_type: "kojo_squad" | "kojo_core" | "kojo_x"
       transfer_method_type: "bank" | "instapay" | "wallet"
@@ -6771,6 +7017,14 @@ export const Constants = {
       ],
       normal_side_type: ["debit", "credit"],
       payment_method_type: ["cash", "transfer"],
+      payroll_adjustment_type: [
+        "bonus",
+        "deduction",
+        "correction",
+        "reimbursement",
+      ],
+      payroll_employee_group: ["instructor", "reception", "all"],
+      payroll_run_status: ["draft", "review", "approved", "paid", "cancelled"],
       receipt_status_type: ["not_required", "pending_receipt", "completed"],
       subscription_type: ["kojo_squad", "kojo_core", "kojo_x"],
       transfer_method_type: ["bank", "instapay", "wallet"],
