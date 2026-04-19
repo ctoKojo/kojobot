@@ -1273,10 +1273,17 @@ export type Database = {
           description: string
           description_ar: string | null
           expense_date: string
+          financial_period_month: string
           id: string
           is_recurring: boolean
           notes: string | null
+          payment_method: Database["public"]["Enums"]["payment_method_type"]
+          receipt_status: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url: string | null
           recorded_by: string
+          transfer_type:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Insert: {
           amount: number
@@ -1285,10 +1292,17 @@ export type Database = {
           description: string
           description_ar?: string | null
           expense_date?: string
+          financial_period_month: string
           id?: string
           is_recurring?: boolean
           notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          receipt_status?: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url?: string | null
           recorded_by: string
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Update: {
           amount?: number
@@ -1297,10 +1311,68 @@ export type Database = {
           description?: string
           description_ar?: string | null
           expense_date?: string
+          financial_period_month?: string
           id?: string
           is_recurring?: boolean
           notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          receipt_status?: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url?: string | null
           recorded_by?: string
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
+        }
+        Relationships: []
+      }
+      financial_periods: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          opened_at: string
+          period_month: string
+          reopen_reason: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          review_started_at: string | null
+          review_started_by: string | null
+          status: Database["public"]["Enums"]["financial_period_status"]
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          period_month: string
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          review_started_at?: string | null
+          review_started_by?: string | null
+          status?: Database["public"]["Enums"]["financial_period_status"]
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          period_month?: string
+          reopen_reason?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          review_started_at?: string | null
+          review_started_by?: string | null
+          status?: Database["public"]["Enums"]["financial_period_status"]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2672,38 +2744,56 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          financial_period_month: string
           id: string
           notes: string | null
           payment_date: string
           payment_method: string
           payment_type: string
+          receipt_status: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url: string | null
           recorded_by: string
           student_id: string
           subscription_id: string
+          transfer_type:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Insert: {
           amount: number
           created_at?: string
+          financial_period_month: string
           id?: string
           notes?: string | null
           payment_date?: string
           payment_method?: string
           payment_type?: string
+          receipt_status?: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url?: string | null
           recorded_by: string
           student_id: string
           subscription_id: string
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Update: {
           amount?: number
           created_at?: string
+          financial_period_month?: string
           id?: string
           notes?: string | null
           payment_date?: string
           payment_method?: string
           payment_type?: string
+          receipt_status?: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url?: string | null
           recorded_by?: string
           student_id?: string
           subscription_id?: string
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Relationships: [
           {
@@ -3906,6 +3996,7 @@ export type Database = {
           deduction_reason_ar: string | null
           deductions: number
           employee_id: string
+          financial_period_month: string
           id: string
           month: string
           net_amount: number | null
@@ -3913,8 +4004,13 @@ export type Database = {
           paid_by: string | null
           paid_date: string | null
           payment_method: string | null
+          receipt_status: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url: string | null
           salary_id: string | null
           status: string
+          transfer_type:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Insert: {
           base_amount?: number
@@ -3926,6 +4022,7 @@ export type Database = {
           deduction_reason_ar?: string | null
           deductions?: number
           employee_id: string
+          financial_period_month: string
           id?: string
           month: string
           net_amount?: number | null
@@ -3933,8 +4030,13 @@ export type Database = {
           paid_by?: string | null
           paid_date?: string | null
           payment_method?: string | null
+          receipt_status?: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url?: string | null
           salary_id?: string | null
           status?: string
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Update: {
           base_amount?: number
@@ -3946,6 +4048,7 @@ export type Database = {
           deduction_reason_ar?: string | null
           deductions?: number
           employee_id?: string
+          financial_period_month?: string
           id?: string
           month?: string
           net_amount?: number | null
@@ -3953,8 +4056,13 @@ export type Database = {
           paid_by?: string | null
           paid_date?: string | null
           payment_method?: string | null
+          receipt_status?: Database["public"]["Enums"]["receipt_status_type"]
+          receipt_url?: string | null
           salary_id?: string | null
           status?: string
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
         }
         Relationships: [
           {
@@ -5401,6 +5509,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      can_view_payment_receipt: {
+        Args: { p_object_name: string }
+        Returns: boolean
+      }
       check_and_increment_chatbot_rate: {
         Args: { p_student_id: string }
         Returns: Json
@@ -5513,6 +5625,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      ensure_financial_period: { Args: { p_date: string }; Returns: string }
       freeze_quiz_version: { Args: { p_quiz_id: string }; Returns: string }
       get_conversation_participant_profiles: {
         Args: { p_user_ids: string[] }
@@ -5697,6 +5810,7 @@ export type Database = {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
       }
+      is_period_writable: { Args: { p_date: string }; Returns: boolean }
       is_student: { Args: { _user_id: string }; Returns: boolean }
       mark_student_repeat: {
         Args: { p_group_id: string; p_student_id: string }
@@ -5849,6 +5963,7 @@ export type Database = {
         | "appeal_resolved"
         | "version_frozen"
       employment_status: "permanent" | "training" | "terminated"
+      financial_period_status: "open" | "review" | "closed" | "reopened"
       group_type: "kojo_squad" | "kojo_core" | "kojo_x"
       manual_override_reason:
         | "student_appeal"
@@ -5856,7 +5971,10 @@ export type Database = {
         | "system_error_fix"
         | "rubric_adjustment"
         | "other"
+      payment_method_type: "cash" | "transfer"
+      receipt_status_type: "not_required" | "pending_receipt" | "completed"
       subscription_type: "kojo_squad" | "kojo_core" | "kojo_x"
+      transfer_method_type: "bank" | "instapay" | "wallet"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5995,6 +6113,7 @@ export const Constants = {
         "version_frozen",
       ],
       employment_status: ["permanent", "training", "terminated"],
+      financial_period_status: ["open", "review", "closed", "reopened"],
       group_type: ["kojo_squad", "kojo_core", "kojo_x"],
       manual_override_reason: [
         "student_appeal",
@@ -6003,7 +6122,10 @@ export const Constants = {
         "rubric_adjustment",
         "other",
       ],
+      payment_method_type: ["cash", "transfer"],
+      receipt_status_type: ["not_required", "pending_receipt", "completed"],
       subscription_type: ["kojo_squad", "kojo_core", "kojo_x"],
+      transfer_method_type: ["bank", "instapay", "wallet"],
     },
   },
 } as const
