@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDate } from '@/lib/timeUtils';
+import { getMonthRange } from './MonthSelector';
 
 const CATEGORIES = [
   { value: 'rent', en: 'Rent', ar: 'إيجار' },
@@ -24,7 +25,11 @@ const CATEGORIES = [
   { value: 'other', en: 'Other', ar: 'أخرى' },
 ];
 
-export function ExpensesTab() {
+interface ExpensesTabProps {
+  selectedMonth?: string; // 'YYYY-MM' — when set, filter expenses to this month only
+}
+
+export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
   const { isRTL, language } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -87,6 +92,12 @@ export function ExpensesTab() {
   };
 
   const filtered = expenses
+    .filter(e => {
+      if (!selectedMonth) return true;
+      const { start, end } = getMonthRange(selectedMonth);
+      const ed = new Date(e.expense_date);
+      return ed >= start && ed <= end;
+    })
     .filter(e => filterCategory === 'all' || e.category === filterCategory)
     .filter(e => !search || e.description?.toLowerCase().includes(search.toLowerCase()) || e.description_ar?.includes(search));
 

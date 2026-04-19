@@ -26,6 +26,7 @@ import { SalariesTab } from '@/components/finance/SalariesTab';
 import { NetProfitTab } from '@/components/finance/NetProfitTab';
 import { PaymentTrackerTab } from '@/components/finance/PaymentTrackerTab';
 import { CashFlowTab } from '@/components/finance/CashFlowTab';
+import { MonthSelector, getCurrentMonthKey, getMonthRange, isCurrentMonth } from '@/components/finance/MonthSelector';
 
 export default function Finance() {
   const { isRTL, language } = useLanguage();
@@ -50,6 +51,9 @@ export default function Finance() {
   const [payPage, setPayPage] = useState(1);
   const [payPageSize, setPayPageSize] = useState(10);
   const [detailDialog, setDetailDialog] = useState<'outstanding' | 'overdue' | 'revenue' | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthKey());
+  const monthRange = useMemo(() => getMonthRange(selectedMonth), [selectedMonth]);
+  const viewingCurrentMonth = isCurrentMonth(selectedMonth);
 
   const fetchFinanceData = async () => {
     const { data: plans } = await supabase.from('pricing_plans').select('id, name, name_ar').eq('is_active', true);
@@ -80,30 +84,28 @@ export default function Finance() {
     const salData = salRes.data || [];
 
     const active = enriched.filter((s: any) => s.status === 'active');
-    const now = new Date();
-    
-    // Calculate current month's revenue from actual payments
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    // Use SELECTED month range for monthly stats
+    const { start: monthStart, end: monthEnd } = monthRange;
     const totalRevenue = payData.reduce((sum: number, p: any) => {
       const pd = new Date(p.payment_date);
-      if (pd >= thisMonthStart && pd <= thisMonthEnd) return sum + Number(p.amount || 0);
+      if (pd >= monthStart && pd <= monthEnd) return sum + Number(p.amount || 0);
       return sum;
     }, 0);
 
-    // Current month expenses
+    // Selected month expenses
     const thisMonthExpenses = expData.reduce((sum: number, e: any) => {
       const ed = new Date(e.expense_date);
-      if (ed >= thisMonthStart && ed <= thisMonthEnd) return sum + Number(e.amount || 0);
+      if (ed >= monthStart && ed <= monthEnd) return sum + Number(e.amount || 0);
       return sum;
     }, 0);
 
-    // Current month salaries
-    const thisMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    // Selected month salaries
+    const monthKey = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`;
     const thisMonthSalaries = salData.reduce((sum: number, s: any) => {
       const sd = new Date(s.month);
       const sKey = `${sd.getFullYear()}-${String(sd.getMonth() + 1).padStart(2, '0')}`;
-      if (sKey === thisMonthKey) return sum + Number(s.net_amount || 0);
+      if (sKey === monthKey) return sum + Number(s.net_amount || 0);
       return sum;
     }, 0);
 
@@ -127,7 +129,7 @@ export default function Finance() {
   };
 
   const { data: financeData, isLoading: loading } = useQuery({
-    queryKey: ['finance-data'],
+    queryKey: ['finance-data', selectedMonth],
     queryFn: fetchFinanceData,
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
@@ -284,9 +286,16 @@ export default function Finance() {
   const subTotalPages = Math.max(1, Math.ceil(filtered.length / subPageSize));
   const paginatedSubs = filtered.slice((subPage - 1) * subPageSize, subPage * subPageSize);
 
-  // Paginated payments
-  const payTotalPages = Math.max(1, Math.ceil(payments.length / payPageSize));
-  const paginatedPayments = payments.slice((payPage - 1) * payPageSize, payPage * payPageSize);
+  // Paginated payments — filtered by selected month
+  const monthFilteredPayments = useMemo(() => {
+    const { start, end } = monthRange;
+    return payments.filter((p: any) => {
+      const pd = new Date(p.payment_date);
+      return pd >= start && pd <= end;
+    });
+  }, [payments, monthRange]);
+  const payTotalPages = Math.max(1, Math.ceil(monthFilteredPayments.length / payPageSize));
+  const paginatedPayments = monthFilteredPayments.slice((payPage - 1) * payPageSize, payPage * payPageSize);
 
   // formatDate centralized in timeUtils.ts (SSOT)
 
@@ -294,21 +303,31 @@ export default function Finance() {
     <DashboardLayout title={isRTL ? 'الإدارة المالية' : 'Finance Management'}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/20">
-            <DollarSign className="h-5 w-5 text-white" />
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/20">
+              <DollarSign className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">{isRTL ? 'الإدارة المالية' : 'Finance Management'}</h1>
+              <p className="text-sm text-muted-foreground">{isRTL ? 'إدارة الاشتراكات والمدفوعات والتقارير المالية' : 'Manage subscriptions, payments and financial reports'}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold">{isRTL ? 'الإدارة المالية' : 'Finance Management'}</h1>
-            <p className="text-sm text-muted-foreground">{isRTL ? 'إدارة الاشتراكات والمدفوعات والتقارير المالية' : 'Manage subscriptions, payments and financial reports'}</p>
+          {/* Month Selector — controls expenses, salaries, payments, net profit views */}
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-xs text-muted-foreground">{isRTL ? 'الشهر المالي' : 'Financial month'}</span>
+            <MonthSelector value={selectedMonth} onChange={setSelectedMonth} monthsBack={24} monthsForward={0} />
+            {!viewingCurrentMonth && (
+              <span className="text-xs text-amber-600 dark:text-amber-400">{isRTL ? 'عرض شهر سابق — العمليات معطلة' : 'Viewing past month — actions disabled'}</span>
+            )}
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats — reflect the SELECTED month */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
           {[
-            { key: 'revenue', label: isRTL ? 'إيرادات الشهر الحالي' : 'This Month Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600', adminOnly: true, clickable: true },
-            { key: 'netprofit', label: isRTL ? 'صافي الربح الشهري' : 'Monthly Net Profit', value: `${stats.netProfit} ${isRTL ? 'ج.م' : 'EGP'}`, icon: stats.netProfit >= 0 ? TrendingUp : TrendingUp, gradient: stats.netProfit >= 0 ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600', adminOnly: true, clickable: false },
+            { key: 'revenue', label: isRTL ? `إيرادات ${viewingCurrentMonth ? 'الشهر الحالي' : 'الشهر المختار'}` : `${viewingCurrentMonth ? 'This Month' : 'Selected Month'} Revenue`, value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600', adminOnly: true, clickable: true },
+            { key: 'netprofit', label: isRTL ? 'صافي ربح الشهر' : 'Net Profit', value: `${stats.netProfit} ${isRTL ? 'ج.م' : 'EGP'}`, icon: stats.netProfit >= 0 ? TrendingUp : TrendingUp, gradient: stats.netProfit >= 0 ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600', adminOnly: true, clickable: false },
             { key: 'outstanding', label: isRTL ? 'المبالغ المستحقة' : 'Outstanding', value: `${stats.totalOutstanding} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, gradient: 'from-amber-500 to-orange-500', adminOnly: true, clickable: true },
             { key: 'active', label: isRTL ? 'اشتراكات نشطة' : 'Active', value: stats.activeCount, icon: Users, gradient: 'from-blue-500 to-blue-600', adminOnly: false, clickable: false },
             { key: 'overdue', label: isRTL ? 'متأخرين' : 'Overdue', value: stats.overdueCount, icon: AlertTriangle, gradient: 'from-red-500 to-red-600', adminOnly: false, clickable: true },
@@ -482,12 +501,12 @@ export default function Finance() {
                     ))}
                   </TableBody>
                 </Table>
-                {payments.length > 0 && (
+                {monthFilteredPayments.length > 0 && (
                   <DataTablePagination
                     currentPage={payPage}
                     totalPages={payTotalPages}
                     pageSize={payPageSize}
-                    totalCount={payments.length}
+                    totalCount={monthFilteredPayments.length}
                     hasNextPage={payPage < payTotalPages}
                     hasPreviousPage={payPage > 1}
                     onPageChange={setPayPage}
@@ -498,9 +517,9 @@ export default function Finance() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="expenses"><ExpensesTab /></TabsContent>
-          <TabsContent value="salaries"><SalariesTab /></TabsContent>
-          <TabsContent value="profit"><NetProfitTab /></TabsContent>
+          <TabsContent value="expenses"><ExpensesTab selectedMonth={selectedMonth} /></TabsContent>
+          <TabsContent value="salaries"><SalariesTab selectedMonth={selectedMonth} /></TabsContent>
+          <TabsContent value="profit"><NetProfitTab selectedMonth={selectedMonth} /></TabsContent>
 
           <TabsContent value="reports">
             <div className="space-y-4">
@@ -597,7 +616,7 @@ export default function Finance() {
               </div>
             </div>
           </TabsContent>
-          <TabsContent value="tracker"><PaymentTrackerTab /></TabsContent>
+          <TabsContent value="tracker"><PaymentTrackerTab selectedMonth={selectedMonth} /></TabsContent>
           <TabsContent value="cashflow"><CashFlowTab /></TabsContent>
         </Tabs>
 
@@ -644,11 +663,7 @@ export default function Finance() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payments.filter((p: any) => {
-                      const now = new Date();
-                      const pd = new Date(p.payment_date);
-                      return pd.getMonth() === now.getMonth() && pd.getFullYear() === now.getFullYear();
-                    }).map((p: any) => (
+                    {monthFilteredPayments.map((p: any) => (
                       <TableRow key={p.id} className="hover:bg-muted/30 transition-colors">
                         <TableCell>
                           <button className="text-start hover:underline font-medium" onClick={() => { setDetailDialog(null); navigate(`/student/${p.subscriptions?.student_id || p.student_id}`); }}>
