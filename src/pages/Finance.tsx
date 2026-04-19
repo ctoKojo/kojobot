@@ -84,30 +84,28 @@ export default function Finance() {
     const salData = salRes.data || [];
 
     const active = enriched.filter((s: any) => s.status === 'active');
-    const now = new Date();
-    
-    // Calculate current month's revenue from actual payments
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    // Use SELECTED month range for monthly stats
+    const { start: monthStart, end: monthEnd } = monthRange;
     const totalRevenue = payData.reduce((sum: number, p: any) => {
       const pd = new Date(p.payment_date);
-      if (pd >= thisMonthStart && pd <= thisMonthEnd) return sum + Number(p.amount || 0);
+      if (pd >= monthStart && pd <= monthEnd) return sum + Number(p.amount || 0);
       return sum;
     }, 0);
 
-    // Current month expenses
+    // Selected month expenses
     const thisMonthExpenses = expData.reduce((sum: number, e: any) => {
       const ed = new Date(e.expense_date);
-      if (ed >= thisMonthStart && ed <= thisMonthEnd) return sum + Number(e.amount || 0);
+      if (ed >= monthStart && ed <= monthEnd) return sum + Number(e.amount || 0);
       return sum;
     }, 0);
 
-    // Current month salaries
-    const thisMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    // Selected month salaries
+    const monthKey = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`;
     const thisMonthSalaries = salData.reduce((sum: number, s: any) => {
       const sd = new Date(s.month);
       const sKey = `${sd.getFullYear()}-${String(sd.getMonth() + 1).padStart(2, '0')}`;
-      if (sKey === thisMonthKey) return sum + Number(s.net_amount || 0);
+      if (sKey === monthKey) return sum + Number(s.net_amount || 0);
       return sum;
     }, 0);
 
