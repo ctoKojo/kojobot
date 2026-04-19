@@ -230,6 +230,14 @@ export function CashFlowTab() {
         }
 
         academicByMonth[monthKey] = (academicByMonth[monthKey] || 0) + amount;
+        if (!academicTotalsByMonth[monthKey]) {
+          academicTotalsByMonth[monthKey] = { totalExpected: 0, totalPaid: 0, totalRemaining: 0, renewedCount: 0, notRenewedCount: 0 };
+        }
+        academicTotalsByMonth[monthKey].totalExpected += totalNew;
+        academicTotalsByMonth[monthKey].totalPaid += paidOnNew;
+        academicTotalsByMonth[monthKey].totalRemaining += amount;
+        if (renewalStatus === 'renewed') academicTotalsByMonth[monthKey].renewedCount += 1;
+        else academicTotalsByMonth[monthKey].notRenewedCount += 1;
         if (!academicDetailsByMonth[monthKey]) academicDetailsByMonth[monthKey] = [];
         academicDetailsByMonth[monthKey].push({
           studentId,
