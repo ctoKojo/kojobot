@@ -5917,6 +5917,39 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_failures: {
+        Row: {
+          attempted_at: string
+          attempted_by: string | null
+          coordinator_name: string
+          error_detail: string | null
+          error_message: string
+          failed_at_step: string
+          id: string
+          input_payload: Json
+        }
+        Insert: {
+          attempted_at?: string
+          attempted_by?: string | null
+          coordinator_name: string
+          error_detail?: string | null
+          error_message: string
+          failed_at_step: string
+          id?: string
+          input_payload: Json
+        }
+        Update: {
+          attempted_at?: string
+          attempted_by?: string | null
+          coordinator_name?: string
+          error_detail?: string | null
+          error_message?: string
+          failed_at_step?: string
+          id?: string
+          input_payload?: Json
+        }
+        Relationships: []
+      }
       typing_indicators: {
         Row: {
           conversation_id: string
@@ -6614,6 +6647,18 @@ export type Database = {
         }
         Returns: number
       }
+      coordinate_expense_transaction: {
+        Args: { p_expense_data: Json }
+        Returns: Json
+      }
+      coordinate_payment_transaction: {
+        Args: { p_payment_data: Json }
+        Returns: Json
+      }
+      coordinate_salary_payment_transaction: {
+        Args: { p_salary_data: Json }
+        Returns: Json
+      }
       create_curriculum_quiz: { Args: { p_session_id: string }; Returns: Json }
       create_group_makeup_sessions: {
         Args: {
@@ -6973,6 +7018,16 @@ export type Database = {
           p_source_rpc?: string
         }
         Returns: string
+      }
+      log_transaction_failure: {
+        Args: {
+          p_coordinator: string
+          p_detail?: string
+          p_error: string
+          p_payload: Json
+          p_step: string
+        }
+        Returns: undefined
       }
       mark_student_repeat: {
         Args: { p_group_id: string; p_student_id: string }
