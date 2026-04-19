@@ -6505,6 +6505,10 @@ export type Database = {
         Returns: undefined
       }
       cancel_reopen_request: { Args: { p_request_id: string }; Returns: Json }
+      check_account_balance_integrity: {
+        Args: { p_account_id: string; p_account_type: string }
+        Returns: Json
+      }
       check_and_increment_chatbot_rate: {
         Args: { p_student_id: string }
         Returns: Json
@@ -7015,6 +7019,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      rebuild_account_balance: {
+        Args: { p_account_id: string; p_account_type: string }
+        Returns: Json
       }
       rebuild_balance_from_alert: {
         Args: { p_alert_id: string }
