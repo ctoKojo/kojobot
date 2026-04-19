@@ -35,6 +35,10 @@ interface AcademicRenewalDetail {
   remaining: number;
   amount: number;
   estimatedDate: Date;
+  renewalStatus: 'renewed' | 'not_renewed';
+  paidOnNew: number;       // for renewed
+  remainingOnNew: number;  // for not_renewed (= amount)
+  totalNew: number;        // for not_renewed (full new package price)
 }
 
 interface Projection {
