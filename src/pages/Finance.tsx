@@ -27,6 +27,9 @@ import { NetProfitTab } from '@/components/finance/NetProfitTab';
 import { PaymentTrackerTab } from '@/components/finance/PaymentTrackerTab';
 import { CashFlowTab } from '@/components/finance/CashFlowTab';
 import { MonthSelector, getCurrentMonthKey, getMonthRange, isCurrentMonth } from '@/components/finance/MonthSelector';
+import { PaymentMethodFields, PaymentMethodValue, initialPaymentMethodValue, PaymentMethodFieldsHandle } from '@/components/finance/PaymentMethodFields';
+import { ReceiptViewButton } from '@/components/finance/ReceiptViewButton';
+import { useRef } from 'react';
 
 export default function Finance() {
   const { isRTL, language } = useLanguage();
