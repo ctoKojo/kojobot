@@ -296,21 +296,31 @@ export default function Finance() {
     <DashboardLayout title={isRTL ? 'الإدارة المالية' : 'Finance Management'}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/20">
-            <DollarSign className="h-5 w-5 text-white" />
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/20">
+              <DollarSign className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">{isRTL ? 'الإدارة المالية' : 'Finance Management'}</h1>
+              <p className="text-sm text-muted-foreground">{isRTL ? 'إدارة الاشتراكات والمدفوعات والتقارير المالية' : 'Manage subscriptions, payments and financial reports'}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold">{isRTL ? 'الإدارة المالية' : 'Finance Management'}</h1>
-            <p className="text-sm text-muted-foreground">{isRTL ? 'إدارة الاشتراكات والمدفوعات والتقارير المالية' : 'Manage subscriptions, payments and financial reports'}</p>
+          {/* Month Selector — controls expenses, salaries, payments, net profit views */}
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-xs text-muted-foreground">{isRTL ? 'الشهر المالي' : 'Financial month'}</span>
+            <MonthSelector value={selectedMonth} onChange={setSelectedMonth} monthsBack={24} monthsForward={0} />
+            {!viewingCurrentMonth && (
+              <span className="text-xs text-amber-600 dark:text-amber-400">{isRTL ? 'عرض شهر سابق — العمليات معطلة' : 'Viewing past month — actions disabled'}</span>
+            )}
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats — reflect the SELECTED month */}
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
           {[
-            { key: 'revenue', label: isRTL ? 'إيرادات الشهر الحالي' : 'This Month Revenue', value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600', adminOnly: true, clickable: true },
-            { key: 'netprofit', label: isRTL ? 'صافي الربح الشهري' : 'Monthly Net Profit', value: `${stats.netProfit} ${isRTL ? 'ج.م' : 'EGP'}`, icon: stats.netProfit >= 0 ? TrendingUp : TrendingUp, gradient: stats.netProfit >= 0 ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600', adminOnly: true, clickable: false },
+            { key: 'revenue', label: isRTL ? `إيرادات ${viewingCurrentMonth ? 'الشهر الحالي' : 'الشهر المختار'}` : `${viewingCurrentMonth ? 'This Month' : 'Selected Month'} Revenue`, value: `${stats.totalRevenue} ${isRTL ? 'ج.م' : 'EGP'}`, icon: TrendingUp, gradient: 'from-emerald-500 to-emerald-600', adminOnly: true, clickable: true },
+            { key: 'netprofit', label: isRTL ? 'صافي ربح الشهر' : 'Net Profit', value: `${stats.netProfit} ${isRTL ? 'ج.م' : 'EGP'}`, icon: stats.netProfit >= 0 ? TrendingUp : TrendingUp, gradient: stats.netProfit >= 0 ? 'from-green-500 to-green-600' : 'from-red-500 to-red-600', adminOnly: true, clickable: false },
             { key: 'outstanding', label: isRTL ? 'المبالغ المستحقة' : 'Outstanding', value: `${stats.totalOutstanding} ${isRTL ? 'ج.م' : 'EGP'}`, icon: DollarSign, gradient: 'from-amber-500 to-orange-500', adminOnly: true, clickable: true },
             { key: 'active', label: isRTL ? 'اشتراكات نشطة' : 'Active', value: stats.activeCount, icon: Users, gradient: 'from-blue-500 to-blue-600', adminOnly: false, clickable: false },
             { key: 'overdue', label: isRTL ? 'متأخرين' : 'Overdue', value: stats.overdueCount, icon: AlertTriangle, gradient: 'from-red-500 to-red-600', adminOnly: false, clickable: true },
