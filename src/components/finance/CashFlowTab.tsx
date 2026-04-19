@@ -202,6 +202,8 @@ export function CashFlowTab() {
       // Build detailed academic renewals by month
       const academicDetailsByMonth: Record<string, AcademicRenewalDetail[]> = {};
       const academicByMonth: Record<string, number> = {};
+      // Per-month aggregates: total expected, total paid, remaining to collect
+      const academicTotalsByMonth: Record<string, { totalExpected: number; totalPaid: number; totalRemaining: number; renewedCount: number; notRenewedCount: number }> = {};
 
       nearCompletion.forEach(({ studentId, groupName, scheduleDay, remaining, immediate, nextLevelId }) => {
         const completionDate = immediate ? new Date() : estimateCompletionDate(scheduleDay, remaining);
@@ -228,6 +230,14 @@ export function CashFlowTab() {
         }
 
         academicByMonth[monthKey] = (academicByMonth[monthKey] || 0) + amount;
+        if (!academicTotalsByMonth[monthKey]) {
+          academicTotalsByMonth[monthKey] = { totalExpected: 0, totalPaid: 0, totalRemaining: 0, renewedCount: 0, notRenewedCount: 0 };
+        }
+        academicTotalsByMonth[monthKey].totalExpected += totalNew;
+        academicTotalsByMonth[monthKey].totalPaid += paidOnNew;
+        academicTotalsByMonth[monthKey].totalRemaining += amount;
+        if (renewalStatus === 'renewed') academicTotalsByMonth[monthKey].renewedCount += 1;
+        else academicTotalsByMonth[monthKey].notRenewedCount += 1;
         if (!academicDetailsByMonth[monthKey]) academicDetailsByMonth[monthKey] = [];
         academicDetailsByMonth[monthKey].push({
           studentId,
@@ -284,7 +294,7 @@ export function CashFlowTab() {
       const currentMonthKey = `${now.getFullYear()}-${now.getMonth()}`;
       const academicThisMonth = academicByMonth[currentMonthKey] || 0;
 
-      return { payments, expenses, unpaidThisMonth, dueNextMonth, projections, academicThisMonth, nearCompletionCount: nearCompletion.length, academicDetailsByMonth };
+      return { payments, expenses, unpaidThisMonth, dueNextMonth, projections, academicThisMonth, nearCompletionCount: nearCompletion.length, academicDetailsByMonth, academicTotalsByMonth };
     },
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
@@ -298,6 +308,7 @@ export function CashFlowTab() {
   const academicThisMonth = cashFlowData?.academicThisMonth || 0;
   const nearCompletionCount = cashFlowData?.nearCompletionCount || 0;
   const academicDetailsByMonth = cashFlowData?.academicDetailsByMonth || {};
+  const academicTotalsByMonth = cashFlowData?.academicTotalsByMonth || {};
 
   const now = new Date();
   const thisMonthStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -487,12 +498,13 @@ export function CashFlowTab() {
             {projections.map((p) => {
               const details = academicDetailsByMonth[p.monthKey] || [];
               if (details.length === 0) return null;
+              const totals = academicTotalsByMonth[p.monthKey] || { totalExpected: 0, totalPaid: 0, totalRemaining: 0, renewedCount: 0, notRenewedCount: 0 };
               return (
                 <AcademicMonthSection
                   key={p.monthKey}
                   monthLabel={p.month}
                   details={details}
-                  total={p.academicRenewals}
+                  totals={totals}
                   isRTL={isRTL}
                 />
               );
@@ -528,10 +540,10 @@ export function CashFlowTab() {
   );
 }
 
-function AcademicMonthSection({ monthLabel, details, total, isRTL }: {
+function AcademicMonthSection({ monthLabel, details, totals, isRTL }: {
   monthLabel: string;
   details: AcademicRenewalDetail[];
-  total: number;
+  totals: { totalExpected: number; totalPaid: number; totalRemaining: number; renewedCount: number; notRenewedCount: number };
   isRTL: boolean;
 }) {
   const [open, setOpen] = useState(true);
@@ -540,18 +552,34 @@ function AcademicMonthSection({ monthLabel, details, total, isRTL }: {
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
         <Button variant="ghost" className="w-full justify-between p-3 h-auto rounded-lg border bg-muted/20 hover:bg-muted/40">
-          <div className="flex items-center gap-3">
-            <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-              {monthLabel}
-            </Badge>
-            <span className="text-sm font-medium">
-              {isRTL ? `${details.length} طالب` : `${details.length} student${details.length > 1 ? 's' : ''}`}
-            </span>
-            <span className="text-sm font-bold text-purple-600">
-              {total} {isRTL ? 'ج.م' : 'EGP'}
-            </span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-start">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                {monthLabel}
+              </Badge>
+              <span className="text-sm font-medium">
+                {isRTL ? `${details.length} طالب` : `${details.length} student${details.length > 1 ? 's' : ''}`}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              <span className="text-amber-600 dark:text-amber-400 font-bold">
+                {isRTL ? 'متبقي تحصيله: ' : 'Remaining to collect: '}
+                {totals.totalRemaining.toLocaleString()} {isRTL ? 'ج.م' : 'EGP'}
+              </span>
+              <span className="text-emerald-600 dark:text-emerald-400">
+                {isRTL ? 'محصّل: ' : 'Collected: '}
+                {totals.totalPaid.toLocaleString()} {isRTL ? 'ج.م' : 'EGP'}
+              </span>
+              <span className="text-muted-foreground">
+                {isRTL ? 'إجمالي متوقع: ' : 'Total expected: '}
+                {totals.totalExpected.toLocaleString()} {isRTL ? 'ج.م' : 'EGP'}
+              </span>
+              <span className="text-muted-foreground">
+                ({isRTL ? `جدد: ${totals.renewedCount} • لم يجدد: ${totals.notRenewedCount}` : `Renewed: ${totals.renewedCount} • Pending: ${totals.notRenewedCount}`})
+              </span>
+            </div>
           </div>
-          {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          {open ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>
