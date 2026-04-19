@@ -663,11 +663,7 @@ export default function Finance() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payments.filter((p: any) => {
-                      const now = new Date();
-                      const pd = new Date(p.payment_date);
-                      return pd.getMonth() === now.getMonth() && pd.getFullYear() === now.getFullYear();
-                    }).map((p: any) => (
+                    {monthFilteredPayments.map((p: any) => (
                       <TableRow key={p.id} className="hover:bg-muted/30 transition-colors">
                         <TableCell>
                           <button className="text-start hover:underline font-medium" onClick={() => { setDetailDialog(null); navigate(`/student/${p.subscriptions?.student_id || p.student_id}`); }}>
