@@ -129,7 +129,7 @@ export default function Finance() {
   };
 
   const { data: financeData, isLoading: loading } = useQuery({
-    queryKey: ['finance-data'],
+    queryKey: ['finance-data', selectedMonth],
     queryFn: fetchFinanceData,
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
