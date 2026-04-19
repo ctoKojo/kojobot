@@ -3619,6 +3619,42 @@ export type Database = {
         }
         Relationships: []
       }
+      period_close_locks: {
+        Row: {
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          locked_at: string
+          locked_by: string
+          operation: string
+          period_month: string
+          released_at: string | null
+          status: string
+        }
+        Insert: {
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          locked_at?: string
+          locked_by: string
+          operation: string
+          period_month: string
+          released_at?: string | null
+          status?: string
+        }
+        Update: {
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          locked_at?: string
+          locked_by?: string
+          operation?: string
+          period_month?: string
+          released_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       placement_v2_attempt_questions: {
         Row: {
           attempt_id: string
@@ -6507,6 +6543,10 @@ export type Database = {
         Args: { p_alert_id: string; p_notes?: string }
         Returns: undefined
       }
+      acquire_period_operation_lock: {
+        Args: { p_operation: string; p_period_month: string }
+        Returns: string
+      }
       approve_payroll_adjustment: {
         Args: { p_adjustment_id: string }
         Returns: undefined
@@ -6630,6 +6670,10 @@ export type Database = {
         Returns: Json
       }
       close_period_v2: {
+        Args: { p_notes?: string; p_period_month: string }
+        Returns: Json
+      }
+      close_period_v2_inner: {
         Args: { p_notes?: string; p_period_month: string }
         Returns: Json
       }
@@ -7213,7 +7257,15 @@ export type Database = {
         Args: { p_adjustment_id: string }
         Returns: undefined
       }
+      release_period_operation_lock: {
+        Args: { p_error?: string; p_lock_id: string; p_status: string }
+        Returns: undefined
+      }
       reopen_period: {
+        Args: { p_period_month: string; p_reason: string }
+        Returns: Json
+      }
+      reopen_period_inner: {
         Args: { p_period_month: string; p_reason: string }
         Returns: Json
       }
