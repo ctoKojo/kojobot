@@ -4724,6 +4724,36 @@ export type Database = {
           },
         ]
       }
+      reporting_rpcs_registry: {
+        Row: {
+          description: string | null
+          last_compliance_check: string | null
+          last_compliance_status: string | null
+          must_use_router: boolean
+          registered_at: string
+          registered_by: string | null
+          rpc_name: string
+        }
+        Insert: {
+          description?: string | null
+          last_compliance_check?: string | null
+          last_compliance_status?: string | null
+          must_use_router?: boolean
+          registered_at?: string
+          registered_by?: string | null
+          rpc_name: string
+        }
+        Update: {
+          description?: string | null
+          last_compliance_check?: string | null
+          last_compliance_status?: string | null
+          must_use_router?: boolean
+          registered_at?: string
+          registered_by?: string | null
+          rpc_name?: string
+        }
+        Relationships: []
+      }
       salary_events: {
         Row: {
           amount: number
@@ -6491,6 +6521,10 @@ export type Database = {
         Returns: Json
       }
       archive_group: { Args: { p_group_id: string }; Returns: undefined }
+      assert_report_via_router: {
+        Args: { p_period_month?: string }
+        Returns: undefined
+      }
       assign_student_to_group: {
         Args: { p_new_group_id: string; p_student_id: string }
         Returns: Json
@@ -6713,6 +6747,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      enforce_router_usage: { Args: never; Returns: Json }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
@@ -7218,6 +7253,7 @@ export type Database = {
         Args: { p_group_id: string; p_records: Json; p_session_id: string }
         Returns: Json
       }
+      scan_reporting_compliance: { Args: never; Returns: Json }
       schedule_final_exam_for_students: {
         Args: {
           p_date: string
