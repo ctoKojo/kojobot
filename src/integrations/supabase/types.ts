@@ -194,6 +194,30 @@ export type Database = {
         }
         Relationships: []
       }
+      approved_financial_rpcs: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          description: string | null
+          rpc_name: string
+          version: number
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          description?: string | null
+          rpc_name: string
+          version?: number
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          description?: string | null
+          rpc_name?: string
+          version?: number
+        }
+        Relationships: []
+      }
       assessment_events: {
         Row: {
           actor_id: string | null
@@ -3972,6 +3996,42 @@ export type Database = {
         }
         Relationships: []
       }
+      security_violations: {
+        Row: {
+          attempted_by_role: string | null
+          attempted_by_user: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          operation: string
+          query_snippet: string | null
+          table_name: string
+          violation_type: string
+        }
+        Insert: {
+          attempted_by_role?: string | null
+          attempted_by_user?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          operation: string
+          query_snippet?: string | null
+          table_name: string
+          violation_type: string
+        }
+        Update: {
+          attempted_by_role?: string | null
+          attempted_by_user?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          operation?: string
+          query_snippet?: string | null
+          table_name?: string
+          violation_type?: string
+        }
+        Relationships: []
+      }
       session_cancellation_logs: {
         Row: {
           cancelled_at: string
@@ -5642,6 +5702,7 @@ export type Database = {
         Args: { p_group_id: string; p_student_id: string }
         Returns: Json
       }
+      mark_via_rpc: { Args: never; Returns: undefined }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -5685,6 +5746,10 @@ export type Database = {
           p_subscription_id: string
         }
         Returns: Json
+      }
+      register_financial_rpc: {
+        Args: { p_description?: string; p_rpc_name: string; p_version?: number }
+        Returns: undefined
       }
       repair_orphaned_sessions: { Args: never; Returns: Json }
       reschedule_failed_final_exam: {
