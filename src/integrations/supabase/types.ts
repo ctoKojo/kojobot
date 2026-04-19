@@ -5383,6 +5383,10 @@ export type Database = {
         Returns: Json
       }
       complete_makeup_session: { Args: { p_session_id: string }; Returns: Json }
+      compute_level_grade_for_student: {
+        Args: { p_group_id: string; p_student_id: string }
+        Returns: Json
+      }
       compute_level_grades_batch: {
         Args: { p_group_id: string }
         Returns: Json

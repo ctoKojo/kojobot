@@ -369,17 +369,21 @@ export function QuizResultsDialog({
         })
         .eq('id', selectedStudent.submission_id);
 
-      // If this is a final exam, automatically compute level grades
-      if (isFinalExam && groupId) {
+      // If this is a final exam, compute the level grade for THIS student only.
+      // We never recompute peers — each student's exam is graded independently.
+      if (isFinalExam && groupId && selectedStudent?.student_id) {
         try {
-          const { data: gradeResult, error: gradeError } = await supabase.rpc('compute_level_grades_batch', { p_group_id: groupId });
+          const { data: gradeResult, error: gradeError } = await supabase.rpc(
+            'compute_level_grade_for_student',
+            { p_student_id: selectedStudent.student_id, p_group_id: groupId }
+          );
           if (gradeError) {
-            console.error('Error computing level grades:', gradeError);
+            console.error('Error computing level grade for student:', gradeError);
           } else {
-            console.log('Level grades computed:', gradeResult);
+            console.log('Student level grade computed:', gradeResult);
           }
         } catch (e) {
-          console.error('Error in compute_level_grades_batch:', e);
+          console.error('Error in compute_level_grade_for_student:', e);
         }
       }
 
