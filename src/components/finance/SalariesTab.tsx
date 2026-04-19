@@ -296,7 +296,8 @@ export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
   };
 
   const openPayDialog = (emp: any) => {
-    setPayForm({ employee_id: emp.user_id, month: currentMonth, payment_method: 'cash', notes: '' });
+    setPayForm({ employee_id: emp.user_id, month: currentMonth, notes: '' });
+    setPayMethodValue(initialPaymentMethodValue);
     setSelectedEmployee(emp);
     setPayDialog(true);
   };
@@ -537,12 +538,13 @@ export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
                   <TableHead>{isRTL ? 'بونص' : 'Bonus'}</TableHead>
                   <TableHead>{isRTL ? 'خصومات' : 'Deductions'}</TableHead>
                   <TableHead>{isRTL ? 'الصافي' : 'Net'}</TableHead>
+                  <TableHead>{isRTL ? 'الطريقة' : 'Method'}</TableHead>
                   <TableHead>{isRTL ? 'التاريخ' : 'Paid Date'}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {salaryPayments.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{isRTL ? 'لا يوجد سجلات صرف' : 'No payment records'}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{isRTL ? 'لا يوجد سجلات صرف' : 'No payment records'}</TableCell></TableRow>
                 ) : salaryPayments.map(p => {
                   const emp = employees.find(e => e.user_id === p.employee_id);
                   return (
@@ -553,6 +555,19 @@ export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
                       <TableCell className="text-green-600">{Number(p.bonus) > 0 ? `+${p.bonus}` : '-'}</TableCell>
                       <TableCell className="text-destructive">{Number(p.deductions) > 0 ? `-${p.deductions}` : '-'}</TableCell>
                       <TableCell className="font-bold">{p.net_amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="secondary" className="font-normal text-xs">
+                            {p.payment_method === 'cash'
+                              ? (isRTL ? 'كاش' : 'Cash')
+                              : p.transfer_type === 'bank' ? (isRTL ? 'بنكي' : 'Bank')
+                              : p.transfer_type === 'instapay' ? 'InstaPay'
+                              : p.transfer_type === 'wallet' ? (isRTL ? 'محفظة' : 'Wallet')
+                              : (isRTL ? 'تحويل' : 'Transfer')}
+                          </Badge>
+                          <ReceiptViewButton path={p.receipt_url} size="icon" />
+                        </div>
+                      </TableCell>
                       <TableCell className="text-sm">{p.paid_date || '-'}</TableCell>
                     </TableRow>
                   );
@@ -667,15 +682,12 @@ export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
                 </div>
               ) : null;
             })()}
-            <div><Label>{isRTL ? 'طريقة الدفع' : 'Payment Method'}</Label>
-              <Select value={payForm.payment_method} onValueChange={v => setPayForm({ ...payForm, payment_method: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">{isRTL ? 'كاش' : 'Cash'}</SelectItem>
-                  <SelectItem value="transfer">{isRTL ? 'تحويل بنكي' : 'Bank Transfer'}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <PaymentMethodFields
+              ref={payMethodRef}
+              value={payMethodValue}
+              onChange={setPayMethodValue}
+              disabled={saving}
+            />
             <div><Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>
               <Input value={payForm.notes} onChange={e => setPayForm({ ...payForm, notes: e.target.value })} />
             </div>
