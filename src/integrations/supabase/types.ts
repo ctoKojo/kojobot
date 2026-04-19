@@ -533,6 +533,116 @@ export type Database = {
           },
         ]
       }
+      balance_alerts: {
+        Row: {
+          account_id: string
+          account_type: Database["public"]["Enums"]["balance_account_type"]
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          cached_balance: number
+          computed_balance: number
+          detected_at: string
+          detected_by: string | null
+          detected_by_method: Database["public"]["Enums"]["balance_alert_method"]
+          difference: number
+          id: string
+          notes: string | null
+          rebuilt_at: string | null
+          rebuilt_by: string | null
+          status: Database["public"]["Enums"]["balance_alert_status"]
+        }
+        Insert: {
+          account_id: string
+          account_type: Database["public"]["Enums"]["balance_account_type"]
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          cached_balance: number
+          computed_balance: number
+          detected_at?: string
+          detected_by?: string | null
+          detected_by_method: Database["public"]["Enums"]["balance_alert_method"]
+          difference: number
+          id?: string
+          notes?: string | null
+          rebuilt_at?: string | null
+          rebuilt_by?: string | null
+          status?: Database["public"]["Enums"]["balance_alert_status"]
+        }
+        Update: {
+          account_id?: string
+          account_type?: Database["public"]["Enums"]["balance_account_type"]
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          cached_balance?: number
+          computed_balance?: number
+          detected_at?: string
+          detected_by?: string | null
+          detected_by_method?: Database["public"]["Enums"]["balance_alert_method"]
+          difference?: number
+          id?: string
+          notes?: string | null
+          rebuilt_at?: string | null
+          rebuilt_by?: string | null
+          status?: Database["public"]["Enums"]["balance_alert_status"]
+        }
+        Relationships: []
+      }
+      chart_of_accounts: {
+        Row: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_control: boolean
+          is_system: boolean
+          name: string
+          name_ar: string
+          normal_side: Database["public"]["Enums"]["normal_side_type"]
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_control?: boolean
+          is_system?: boolean
+          name: string
+          name_ar: string
+          normal_side: Database["public"]["Enums"]["normal_side_type"]
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_type?: Database["public"]["Enums"]["account_type"]
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_control?: boolean
+          is_system?: boolean
+          name?: string
+          name_ar?: string
+          normal_side?: Database["public"]["Enums"]["normal_side_type"]
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chatbot_conversations: {
         Row: {
           age_group_id: string | null
@@ -1029,6 +1139,58 @@ export type Database = {
           },
         ]
       }
+      customer_accounts: {
+        Row: {
+          cached_balance: number
+          cached_balance_at: string
+          control_account_id: string
+          created_at: string
+          id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          cached_balance?: number
+          cached_balance_at?: string
+          control_account_id: string
+          created_at?: string
+          id?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          cached_balance?: number
+          cached_balance_at?: string
+          control_account_id?: string
+          created_at?: string
+          id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_accounts_control_account_id_fkey"
+            columns: ["control_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_accounts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "customer_accounts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "vw_user_identity"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1115,6 +1277,58 @@ export type Database = {
           used_at?: string | null
         }
         Relationships: []
+      }
+      employee_accounts: {
+        Row: {
+          cached_balance: number
+          cached_balance_at: string
+          control_account_id: string
+          created_at: string
+          employee_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          cached_balance?: number
+          cached_balance_at?: string
+          control_account_id: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          cached_balance?: number
+          cached_balance_at?: string
+          control_account_id?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_accounts_control_account_id_fkey"
+            columns: ["control_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_accounts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "employee_accounts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "vw_user_identity"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       employee_salaries: {
         Row: {
@@ -1844,6 +2058,155 @@ export type Database = {
           warning_type?: string | null
         }
         Relationships: []
+      }
+      journal_entries: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          description_ar: string | null
+          entry_date: string
+          financial_period_month: string
+          id: string
+          posted_at: string | null
+          posted_by: string | null
+          reversal_of_entry_id: string | null
+          reversed_by_entry_id: string | null
+          source: Database["public"]["Enums"]["journal_source_type"]
+          source_id: string | null
+          status: Database["public"]["Enums"]["journal_entry_status"]
+          total_credit: number
+          total_debit: number
+          updated_at: string
+          voucher_no: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          description_ar?: string | null
+          entry_date: string
+          financial_period_month: string
+          id?: string
+          posted_at?: string | null
+          posted_by?: string | null
+          reversal_of_entry_id?: string | null
+          reversed_by_entry_id?: string | null
+          source: Database["public"]["Enums"]["journal_source_type"]
+          source_id?: string | null
+          status?: Database["public"]["Enums"]["journal_entry_status"]
+          total_credit?: number
+          total_debit?: number
+          updated_at?: string
+          voucher_no: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          description_ar?: string | null
+          entry_date?: string
+          financial_period_month?: string
+          id?: string
+          posted_at?: string | null
+          posted_by?: string | null
+          reversal_of_entry_id?: string | null
+          reversed_by_entry_id?: string | null
+          source?: Database["public"]["Enums"]["journal_source_type"]
+          source_id?: string | null
+          status?: Database["public"]["Enums"]["journal_entry_status"]
+          total_credit?: number
+          total_debit?: number
+          updated_at?: string
+          voucher_no?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entries_reversal_of_entry_id_fkey"
+            columns: ["reversal_of_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_reversed_by_entry_id_fkey"
+            columns: ["reversed_by_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journal_entry_lines: {
+        Row: {
+          account_id: string
+          credit: number
+          customer_account_id: string | null
+          debit: number
+          description: string | null
+          employee_account_id: string | null
+          financial_period_month: string
+          id: string
+          journal_entry_id: string
+          line_no: number
+          posted_at: string | null
+        }
+        Insert: {
+          account_id: string
+          credit?: number
+          customer_account_id?: string | null
+          debit?: number
+          description?: string | null
+          employee_account_id?: string | null
+          financial_period_month: string
+          id?: string
+          journal_entry_id: string
+          line_no: number
+          posted_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          credit?: number
+          customer_account_id?: string | null
+          debit?: number
+          description?: string | null
+          employee_account_id?: string | null
+          financial_period_month?: string
+          id?: string
+          journal_entry_id?: string
+          line_no?: number
+          posted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_customer_account_id_fkey"
+            columns: ["customer_account_id"]
+            isOneToOne: false
+            referencedRelation: "customer_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_employee_account_id_fkey"
+            columns: ["employee_account_id"]
+            isOneToOne: false
+            referencedRelation: "employee_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       landing_features: {
         Row: {
@@ -2739,6 +3102,50 @@ export type Database = {
           student_id?: string
         }
         Relationships: []
+      }
+      payment_accounts: {
+        Row: {
+          created_at: string
+          gl_account_id: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          payment_method: Database["public"]["Enums"]["payment_method_type"]
+          transfer_type:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
+        }
+        Insert: {
+          created_at?: string
+          gl_account_id: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          payment_method: Database["public"]["Enums"]["payment_method_type"]
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
+        }
+        Update: {
+          created_at?: string
+          gl_account_id?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          transfer_type?:
+            | Database["public"]["Enums"]["transfer_method_type"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_accounts_gl_account_id_fkey"
+            columns: ["gl_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
@@ -5235,6 +5642,26 @@ export type Database = {
           },
         ]
       }
+      mv_account_balances_monthly: {
+        Row: {
+          account_id: string | null
+          last_activity_at: string | null
+          line_count: number | null
+          net_balance: number | null
+          period_month: string | null
+          total_credit: number | null
+          total_debit: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       placement_v2_student_view: {
         Row: {
           attempt_number: number | null
@@ -5483,6 +5910,10 @@ export type Database = {
       }
     }
     Functions: {
+      acknowledge_balance_alert: {
+        Args: { p_alert_id: string; p_notes?: string }
+        Returns: undefined
+      }
       archive_group: { Args: { p_group_id: string }; Returns: undefined }
       assign_student_to_group: {
         Args: { p_new_group_id: string; p_student_id: string }
@@ -5533,6 +5964,15 @@ export type Database = {
         Args: { p_student_id: string }
         Returns: undefined
       }
+      check_balance_integrity: {
+        Args: {
+          p_account_id: string
+          p_account_type: Database["public"]["Enums"]["balance_account_type"]
+          p_cached: number
+          p_method?: Database["public"]["Enums"]["balance_alert_method"]
+        }
+        Returns: boolean
+      }
       check_exam_sla_timeouts: { Args: never; Returns: Json }
       check_group_completion: {
         Args: { p_group_id: string }
@@ -5567,6 +6007,14 @@ export type Database = {
         Returns: Json
       }
       complete_makeup_session: { Args: { p_session_id: string }; Returns: Json }
+      compute_customer_balance: {
+        Args: { p_customer_account_id: string }
+        Returns: number
+      }
+      compute_employee_balance: {
+        Args: { p_employee_account_id: string }
+        Returns: number
+      }
       compute_level_grade_for_student: {
         Args: { p_group_id: string; p_student_id: string }
         Returns: Json
@@ -5639,6 +6087,29 @@ export type Database = {
       }
       ensure_financial_period: { Args: { p_date: string }; Returns: string }
       freeze_quiz_version: { Args: { p_quiz_id: string }; Returns: string }
+      generate_voucher_no: {
+        Args: {
+          p_date?: string
+          p_source: Database["public"]["Enums"]["journal_source_type"]
+        }
+        Returns: string
+      }
+      get_coa_tree: {
+        Args: never
+        Returns: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          code: string
+          current_balance: number
+          id: string
+          is_active: boolean
+          is_control: boolean
+          is_system: boolean
+          name: string
+          name_ar: string
+          normal_side: Database["public"]["Enums"]["normal_side_type"]
+          parent_id: string
+        }[]
+      }
       get_conversation_participant_profiles: {
         Args: { p_user_ids: string[] }
         Returns: {
@@ -5690,6 +6161,22 @@ export type Database = {
           version: number
         }[]
       }
+      get_customer_ledger: {
+        Args: { p_limit?: number; p_student_id: string }
+        Returns: {
+          credit: number
+          debit: number
+          description: string
+          description_ar: string
+          entry_date: string
+          je_id: string
+          posted_at: string
+          running_balance: number
+          source: Database["public"]["Enums"]["journal_source_type"]
+          source_id: string
+          voucher_no: string
+        }[]
+      }
       get_effective_assignment_due: {
         Args: { p_assignment_id: string; p_student_id: string }
         Returns: {
@@ -5704,6 +6191,22 @@ export type Database = {
           extra_minutes: number
           source: string
           start_time: string
+        }[]
+      }
+      get_employee_ledger: {
+        Args: { p_employee_id: string; p_limit?: number }
+        Returns: {
+          credit: number
+          debit: number
+          description: string
+          description_ar: string
+          entry_date: string
+          je_id: string
+          posted_at: string
+          running_balance: number
+          source: Database["public"]["Enums"]["journal_source_type"]
+          source_id: string
+          voucher_no: string
         }[]
       }
       get_group_level_status: { Args: { p_group_id: string }; Returns: Json }
@@ -5745,6 +6248,14 @@ export type Database = {
           sum_total_score: number
           total_count: number
         }[]
+      }
+      get_or_create_customer_account: {
+        Args: { p_student_id: string }
+        Returns: string
+      }
+      get_or_create_employee_account: {
+        Args: { p_employee_id: string }
+        Returns: string
       }
       get_parent_auth_info: {
         Args: { parent_ids: string[] }
@@ -5798,6 +6309,18 @@ export type Database = {
         Args: { p_submission_id: string }
         Returns: Json
       }
+      get_trial_balance: {
+        Args: { p_period_month?: string }
+        Returns: {
+          account_code: string
+          account_name: string
+          account_name_ar: string
+          account_type: Database["public"]["Enums"]["account_type"]
+          net_balance: number
+          total_credit: number
+          total_debit: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -5842,6 +6365,12 @@ export type Database = {
         Args: { lock_key: string }
         Returns: undefined
       }
+      post_expense_journal: { Args: { p_expense_id: string }; Returns: string }
+      post_payment_journal: { Args: { p_payment_id: string }; Returns: string }
+      post_salary_journal: {
+        Args: { p_salary_payment_id: string }
+        Returns: string
+      }
       private_get_cron_secret: { Args: never; Returns: string }
       private_get_service_role_key: { Args: never; Returns: string }
       publish_curriculum: {
@@ -5855,6 +6384,18 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      rebuild_balance_from_alert: {
+        Args: { p_alert_id: string }
+        Returns: Json
+      }
+      rebuild_customer_balance: {
+        Args: { p_customer_account_id: string }
+        Returns: number
+      }
+      rebuild_employee_balance: {
+        Args: { p_employee_account_id: string }
+        Returns: number
       }
       rebuild_salary_snapshot: {
         Args: { p_employee_id: string; p_month: string }
@@ -5918,6 +6459,7 @@ export type Database = {
         }
         Returns: string
       }
+      refresh_account_balances_mv: { Args: never; Returns: undefined }
       register_financial_rpc: {
         Args: { p_description?: string; p_rpc_name: string; p_version?: number }
         Returns: undefined
@@ -5926,6 +6468,17 @@ export type Database = {
       reschedule_failed_final_exam: {
         Args: { p_date: string; p_duration: number; p_progress_id: string }
         Returns: Json
+      }
+      resolve_cash_account: {
+        Args: {
+          p_method: Database["public"]["Enums"]["payment_method_type"]
+          p_transfer?: Database["public"]["Enums"]["transfer_method_type"]
+        }
+        Returns: string
+      }
+      reverse_journal_entry: {
+        Args: { p_entry_id: string; p_reason: string }
+        Returns: string
       }
       save_attendance: {
         Args: { p_group_id: string; p_records: Json; p_session_id: string }
@@ -6010,6 +6563,7 @@ export type Database = {
       verify_cron_token: { Args: { p_token: string }; Returns: boolean }
     }
     Enums: {
+      account_type: "asset" | "liability" | "equity" | "revenue" | "expense"
       app_role: "admin" | "instructor" | "student" | "reception" | "parent"
       assessment_event_type:
         | "submitted"
@@ -6019,15 +6573,32 @@ export type Database = {
         | "appeal_opened"
         | "appeal_resolved"
         | "version_frozen"
+      balance_account_type: "customer" | "employee" | "gl"
+      balance_alert_method: "trigger" | "page" | "cron"
+      balance_alert_status:
+        | "pending"
+        | "acknowledged"
+        | "rebuilt"
+        | "false_positive"
       employment_status: "permanent" | "training" | "terminated"
       financial_period_status: "open" | "review" | "closed" | "reopened"
       group_type: "kojo_squad" | "kojo_core" | "kojo_x"
+      journal_entry_status: "draft" | "posted" | "reversed"
+      journal_source_type:
+        | "payment"
+        | "expense"
+        | "salary"
+        | "manual"
+        | "adjustment"
+        | "closing"
+        | "reversal"
       manual_override_reason:
         | "student_appeal"
         | "teacher_correction"
         | "system_error_fix"
         | "rubric_adjustment"
         | "other"
+      normal_side_type: "debit" | "credit"
       payment_method_type: "cash" | "transfer"
       receipt_status_type: "not_required" | "pending_receipt" | "completed"
       subscription_type: "kojo_squad" | "kojo_core" | "kojo_x"
@@ -6159,6 +6730,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_type: ["asset", "liability", "equity", "revenue", "expense"],
       app_role: ["admin", "instructor", "student", "reception", "parent"],
       assessment_event_type: [
         "submitted",
@@ -6169,9 +6741,27 @@ export const Constants = {
         "appeal_resolved",
         "version_frozen",
       ],
+      balance_account_type: ["customer", "employee", "gl"],
+      balance_alert_method: ["trigger", "page", "cron"],
+      balance_alert_status: [
+        "pending",
+        "acknowledged",
+        "rebuilt",
+        "false_positive",
+      ],
       employment_status: ["permanent", "training", "terminated"],
       financial_period_status: ["open", "review", "closed", "reopened"],
       group_type: ["kojo_squad", "kojo_core", "kojo_x"],
+      journal_entry_status: ["draft", "posted", "reversed"],
+      journal_source_type: [
+        "payment",
+        "expense",
+        "salary",
+        "manual",
+        "adjustment",
+        "closing",
+        "reversal",
+      ],
       manual_override_reason: [
         "student_appeal",
         "teacher_correction",
@@ -6179,6 +6769,7 @@ export const Constants = {
         "rubric_adjustment",
         "other",
       ],
+      normal_side_type: ["debit", "credit"],
       payment_method_type: ["cash", "transfer"],
       receipt_status_type: ["not_required", "pending_receipt", "completed"],
       subscription_type: ["kojo_squad", "kojo_core", "kojo_x"],
