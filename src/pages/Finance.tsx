@@ -501,12 +501,12 @@ export default function Finance() {
                     ))}
                   </TableBody>
                 </Table>
-                {payments.length > 0 && (
+                {monthFilteredPayments.length > 0 && (
                   <DataTablePagination
                     currentPage={payPage}
                     totalPages={payTotalPages}
                     pageSize={payPageSize}
-                    totalCount={payments.length}
+                    totalCount={monthFilteredPayments.length}
                     hasNextPage={payPage < payTotalPages}
                     hasPreviousPage={payPage > 1}
                     onPageChange={setPayPage}
