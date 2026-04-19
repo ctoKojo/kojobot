@@ -1292,7 +1292,7 @@ export type Database = {
           description: string
           description_ar?: string | null
           expense_date?: string
-          financial_period_month: string
+          financial_period_month?: string
           id?: string
           is_recurring?: boolean
           notes?: string | null
@@ -2762,7 +2762,7 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
-          financial_period_month: string
+          financial_period_month?: string
           id?: string
           notes?: string | null
           payment_date?: string
@@ -4022,7 +4022,7 @@ export type Database = {
           deduction_reason_ar?: string | null
           deductions?: number
           employee_id: string
-          financial_period_month: string
+          financial_period_month?: string
           id?: string
           month: string
           net_amount?: number | null
