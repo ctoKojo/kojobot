@@ -286,9 +286,16 @@ export default function Finance() {
   const subTotalPages = Math.max(1, Math.ceil(filtered.length / subPageSize));
   const paginatedSubs = filtered.slice((subPage - 1) * subPageSize, subPage * subPageSize);
 
-  // Paginated payments
-  const payTotalPages = Math.max(1, Math.ceil(payments.length / payPageSize));
-  const paginatedPayments = payments.slice((payPage - 1) * payPageSize, payPage * payPageSize);
+  // Paginated payments — filtered by selected month
+  const monthFilteredPayments = useMemo(() => {
+    const { start, end } = monthRange;
+    return payments.filter((p: any) => {
+      const pd = new Date(p.payment_date);
+      return pd >= start && pd <= end;
+    });
+  }, [payments, monthRange]);
+  const payTotalPages = Math.max(1, Math.ceil(monthFilteredPayments.length / payPageSize));
+  const paginatedPayments = monthFilteredPayments.slice((payPage - 1) * payPageSize, payPage * payPageSize);
 
   // formatDate centralized in timeUtils.ts (SSOT)
 
