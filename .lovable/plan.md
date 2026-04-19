@@ -1,174 +1,255 @@
-# نظام طرق الدفع وإيصالات التحويل (Production-Grade)
 
-## الهدف
-عند تسجيل أي **دفعة اشتراك / مصروف / راتب**، يحدد الأدمن أو الريسيبشن:
-1. **طريقة الدفع**: كاش / تحويل
-2. لو **تحويل** → نوع التحويل: تحويل بنكي / إنستا باي / محفظة إلكترونية
-3. لو **تحويل** → رفع إيصال (صورة أو PDF) — **إجباري**
+
+# Final Implementation Plan: MVP-Safe Audit-Grade Accounting System
+
+## معالجة الـ 4 ملاحظات الحرجة الأخيرة
+
+### 1. RPC-Only Enforcement (Bulletproof Middleware)
+
+**المشكلة**: لو أي bypass في الـ enforcement layer = النظام ينهار.
+
+**الحل: 3 طبقات متراكبة (defense in depth)**
+
+```text
+Layer A — RLS صارم على الجداول المالية:
+  CREATE POLICY "no_direct_access" ON payments USING (false) WITH CHECK (false);
+  (نفس الشيء على expenses, salary_payments, journal_*, payroll_*)
+  → service_role + authenticated كلهم محرومين من direct DML
+
+Layer B — Session-context guard:
+  - كل RPC مالي يبدأ بـ: PERFORM set_config('app.via_rpc', 'true', true);
+  - Trigger BEFORE INSERT/UPDATE/DELETE على كل جدول مالي:
+    IF current_setting('app.via_rpc', true) IS DISTINCT FROM 'true' THEN
+      RAISE EXCEPTION 'DIRECT_DML_FORBIDDEN: Use RPC % instead', TG_TABLE_NAME;
+    END IF;
+  - الـ setting بـ is_local=true → يبطل تلقائياً نهاية الـ transaction
+  - حتى لو حد عمل SET app.via_rpc من client → RLS=false هيرفض
+
+Layer C — Approved RPC registry:
+  - جدول approved_financial_rpcs(rpc_name text PK, version int)
+  - كل RPC مالي معتمد في الـ registry
+  - Trigger يفحص current_query() يحتوي على RPC من الـ registry
+  - منع طريق ثالث: لو RLS اتفك بالخطأ، الـ trigger هيمسك
+```
+
+**النتيجة**: 3 طبقات مستقلة. لازم 3 يفشلوا في نفس الوقت عشان bypass يحصل.
 
 ---
 
-## 1) قاعدة البيانات — Migration
+### 2. Materialized Views Refresh Strategy
 
-### ENUMs (بدل text عشان نمنع garbage data)
-```sql
-CREATE TYPE public.payment_method_type AS ENUM ('cash', 'transfer');
-CREATE TYPE public.transfer_method_type AS ENUM ('bank', 'instapay', 'wallet');
-```
+**المشكلة**: لو الـ refresh مش مضبوط → أرقام outdated في close period = كارثة.
 
-### تحديث الجداول
-- `payments`: إضافة `transfer_type transfer_method_type NULL` + `receipt_url text NULL`
-  (`payment_method` موجود text → نحوّله لـ ENUM `payment_method_type`)
-- `expenses`: إضافة `payment_method payment_method_type NOT NULL DEFAULT 'cash'` + `transfer_type` + `receipt_url`
-- `salary_payments`: نفس الإضافات
+**الحل: Hybrid Refresh Pattern**
 
-### Validation Trigger (على الـ 3 جداول)
-```sql
--- لو transfer لازم transfer_type + receipt_url
--- لو cash لازم transfer_type IS NULL و receipt_url IS NULL
-```
-SSOT للـ validation — الفرونت بيمنع UX سيء، التريجر بيمنع أي bypass.
+```text
+استراتيجية مدروسة لكل MV:
 
-### Backward Compatibility
-كل السجلات القديمة `payment_method='cash'` تبقى valid (الأعمدة الجديدة nullable للـ cash).
+mv_account_balances_monthly (الأهم):
+  - REFRESH MATERIALIZED VIEW CONCURRENTLY في كل journal posting
+  - عبر AFTER trigger على journal_entries (status changed to 'posted')
+  - استخدام pg_advisory_xact_lock عشان مفيش race condition
+  - تكلفة: ~100ms لكل posting لكنه مضمون
 
----
+mv_aging_summary (متوسط الأهمية):
+  - Incremental update عبر trigger على payments
+  - Full refresh كل 15 دقيقة عبر cron
+  - في close period: force refresh قبل take_snapshot
 
-## 2) Storage — Bucket خاص
+mv_payroll_totals (نادر الاستخدام):
+  - Refresh on-demand فقط
+  - في approve_payroll_run: REFRESH قبل ما تسجل الـ totals
 
-### الإنشاء
-```sql
-INSERT INTO storage.buckets (id, name, public) VALUES ('payment-receipts', 'payment-receipts', false);
-```
+في close_period (CRITICAL):
+  Step 1: Lock financial_periods FOR UPDATE
+  Step 2: REFRESH ALL materialized views CONCURRENTLY
+  Step 3: Validate trial balance from refreshed MVs
+  Step 4: Take snapshot من الـ MVs (مش من live tables)
+  Step 5: Mark period closed + take snapshot
 
-### بنية المسار (مع versioning ضد الـ overwrite)
-```
-payments/{payment_id}/{uuid}.{ext}
-expenses/{expense_id}/{uuid}.{ext}
-salaries/{salary_id}/{uuid}.{ext}
-```
-كل ملف بـ `uuid` فريد → لو اترفع ملف بديل ما يعملش overwrite + ينفع نحتفظ بـ history.
-
-### RLS Policies (Ownership-aware)
-- **Admin / Reception**: read + write على كل الـ bucket
-- **Parent**: read فقط للإيصالات اللي الـ `payment.subscription.student_id` بيرجع لطفل من أطفاله (join عبر `parent_students`)
-- **Student**: read فقط للإيصالات اللي تخصه (`payments` تابعة لاشتراكه)
-- **Instructor**: ممنوع
-- باقي الـ folders (expenses/salaries) → admin/reception فقط
-
-policies بتعتمد على `public.has_role()` + helper SECURITY DEFINER function للـ ownership check يعمل join على `payments → subscriptions → student_id` ويتحقق انها تخص الـ user الحالي.
-
----
-
-## 3) Flow رفع الإيصال (يحل مشكلة "لا يوجد id قبل insert")
-
-### Pattern: Insert-then-Upload-then-Update (atomic عبر RPC)
-
-```
-[1] Frontend: المستخدم يملأ الفورم + يختار ملف الإيصال (لسه ما اترفعش)
-[2] Frontend → RPC `record_payment_atomic` (transfer_type + receipt_pending=true)
-[3] Backend: insert payment → return payment_id (status='pending_receipt' لو transfer)
-[4] Frontend: upload الملف على path = `payments/{payment_id}/{crypto.randomUUID()}.{ext}`
-[5] Frontend → RPC `attach_payment_receipt(payment_id, receipt_path)`
-[6] Backend RPC:
-    - يتحقق إن الملف موجود فعلاً في الـ bucket (storage.objects lookup)
-    - يتحقق إن الـ path يبدأ بـ `payments/{payment_id}/`
-    - يتحقق إن الـ uploader = recorded_by (من auth.uid())
-    - update payments.receipt_url + status='completed'
-[7] لو فشل [4] أو [5] خلال 60 ثانية → cron يمسح الـ pending payments بدون receipt
-```
-
-نفس النمط لـ `expenses` و `salary_payments`.
-
-**ملاحظة**: للحالات البسيطة (cash) → insert واحد بدون أي خطوة رفع.
-
----
-
-## 4) RPC Updates
-
-### `record_payment_atomic` (existing — extend)
-بارامترات جديدة:
-- `p_payment_method payment_method_type`
-- `p_transfer_type transfer_method_type DEFAULT NULL`
-
-السلوك:
-- لو `cash` → ينشئ payment status='completed' فوراً
-- لو `transfer` → ينشئ payment status='pending_receipt'، يرجع `payment_id` للفرونت يكمل رفع
-
-### `attach_payment_receipt(p_payment_id, p_receipt_path)` (NEW)
-- SECURITY DEFINER
-- يتحقق من:
-  1. الـ payment موجود + status='pending_receipt'
-  2. الـ uploader = `recorded_by`
-  3. `p_receipt_path` يبدأ بـ `payments/{p_payment_id}/` (منع path injection)
-  4. الملف موجود فعلاً في `storage.objects` تحت `bucket_id='payment-receipts'`
-  5. صاحب الملف في `storage.objects.owner` = `auth.uid()`
-- بعد كل التحققات → update `receipt_url` + status='completed'
-
-### نظائر للمصروفات والرواتب
-- `attach_expense_receipt(p_expense_id, p_receipt_path)`
-- `attach_salary_receipt(p_salary_payment_id, p_receipt_path)`
-
----
-
-## 5) UI Changes
-
-### Component مشترك جديد
-`src/components/finance/PaymentMethodFields.tsx`
-- props: `value`, `onChange`, `disabled`
-- state: `{ payment_method, transfer_type, receipt_file, receipt_uploading }`
-- يعرض:
-  - Select كاش / تحويل
-  - Select نوع التحويل (يظهر لو transfer)
-  - File input للإيصال (يظهر لو transfer): jpg/png/webp/pdf، حد أقصى 5MB
-- يـ expose helper `isValidForSubmit()` و `uploadReceipt(recordId, folder)` للـ parent
-
-### Receipt Viewer مشترك
-`src/components/finance/ReceiptViewButton.tsx`
-- زرار "📎 الإيصال"
-- **lazy**: ما يولّدش signed URL إلا عند الضغط (مش أثناء render الجدول)
-- يفتح الملف في tab جديد عبر `supabase.storage.from('payment-receipts').createSignedUrl(path, 60)`
-
-### نقاط الإدماج (6 dialogs)
-| الملف | السياق |
-|------|---------|
-| `src/pages/Finance.tsx` (Payment Dialog) | تسجيل دفعة لاشتراك |
-| `src/components/finance/PaymentTrackerTab.tsx` | تسجيل قسط مستحق |
-| `src/components/student/CreateSubscriptionDialog.tsx` | الدفعة المسبقة عند إنشاء اشتراك |
-| `src/features/students/components/StudentFormDialog.tsx` | الدفعة المسبقة عند إنشاء طالب |
-| `src/components/finance/ExpensesTab.tsx` | إضافة مصروف |
-| `src/components/finance/SalariesTab.tsx` | صرف راتب |
-
-### عرض الإيصال (4 tables)
-- `PaymentsHistory.tsx` (داخل بروفايل الطالب)
-- `Finance.tsx` Recent Payments
-- `ExpensesTab.tsx`
-- `SalariesTab.tsx` payment records
-
-كلها بتستخدم `<ReceiptViewButton path={record.receipt_url} />`.
-
----
-
-## 6) ترتيب التنفيذ
-
-```
-1. Migration: ENUMs + columns + bucket + RLS policies + triggers + RPCs
-2. PaymentMethodFields component
-3. ReceiptViewButton component
-4. ربط الـ 6 dialogs
-5. عرض الإيصالات في الـ 4 tables
-6. اختبار end-to-end (cash + كل أنواع التحويل + ownership على parent/student)
+UI Indicator:
+  - كل MV-based widget يعرض "Last refreshed: 2m ago"
+  - زر manual refresh للـ admin
+  - في close flow: progress bar للـ refresh
 ```
 
 ---
 
-## 7) معايير القبول (Production-Grade Checklist)
+### 3. Real-Time Mismatch Detection (UI-First)
 
-- ✅ ENUMs بدل text (منع garbage)
-- ✅ Versioned paths (uuid في المسار، منع overwrite)
-- ✅ Insert→Upload→Attach flow (يحل مشكلة "no id before insert")
-- ✅ Trigger validation كـ SSOT للـ business rule
-- ✅ RPC `attach_*_receipt` يتحقق إن الملف فعلاً موجود وملك للـ uploader (منع path forgery)
-- ✅ RLS ownership-aware للـ parent/student (join عبر student_id)
-- ✅ Lazy signed URLs (performance)
-- ✅ Backward compatible (السجلات القديمة nullable)
+**المشكلة**: cron daily = فجوة 24 ساعة. المستخدم لازم يشوف mismatch فوراً.
+
+**الحل: 3-tier detection system**
+
+```text
+Tier 1 — Inline checks (real-time):
+  - بعد كل payment posting → trigger بيحسب expected balance vs cached
+  - لو فيه فرق > 0.01 → INSERT INTO balance_alerts + إشعار فوري
+  - في UI: notification bell badge أحمر للـ admin
+
+Tier 2 — On-page validation (per-view):
+  - كل ledger page (Customer/Employee) فيه validation hook
+  - useBalanceIntegrity(accountId) hook يحسب الـ balance live من journal
+  - مقارنة مع الـ cached balance
+  - لو mismatch → red banner: "⚠️ Balance mismatch detected. [Rebuild]"
+
+Tier 3 — Cron (fallback only):
+  - Nightly comprehensive scan
+  - يكتشف mismatches اللي فاتت Tier 1+2
+  - يرسل summary email للـ admin
+
+جدول balance_alerts:
+  id, account_type (customer/employee), account_id,
+  cached_balance, computed_balance, difference,
+  detected_at, detected_by_method (trigger/page/cron),
+  status (pending/acknowledged/rebuilt),
+  rebuilt_at, rebuilt_by
+
+UI Dashboard:
+  /finance/integrity → real-time alerts panel
+  - Active alerts (red)
+  - Recent rebuilds (green)
+  - Detection method stats
+```
+
+---
+
+### 4. Installment-Based Aging Data Quality
+
+**المشكلة**: aging يعتمد على `payments.installment_id` → لو data quality ضعيف، aging يبوظ silently.
+
+**الحل: Strict Data Quality Framework**
+
+```text
+Step 1 — Schema enforcement:
+  ALTER TABLE payments ADD COLUMN installment_id uuid;
+  ALTER TABLE payments ADD CONSTRAINT installment_required_for_subscription
+    CHECK (
+      payment_type != 'subscription' 
+      OR installment_id IS NOT NULL
+    );
+
+Step 2 — Backfill (one-time migration):
+  RPC backfill_payment_installments():
+    لكل payment بدون installment_id:
+      - يلاقي subscription المتعلق
+      - يطابق بأقرب installment بنفس المبلغ + لم يُدفع
+      - لو طابق → يربط
+      - لو فشل → يضعه في unresolved_payments table للمراجعة اليدوية
+
+Step 3 — UI enforcement (PaymentDialog):
+  - Dropdown إجباري "Apply to installment:"
+  - يعرض كل installments المعلقة للطالب مرتبة بـ due_date
+  - مفيش طريقة لتسجيل subscription payment بدون اختيار installment
+  - Warning لو الـ amount != installment.amount
+
+Step 4 — Data quality monitoring:
+  Daily cron data_quality_check():
+    - عدد payments بدون installment_id
+    - عدد installments مدفوعة بدون matched payment
+    - عدد payments بـ amount mismatch مع installment
+  
+  UI: /finance/data-quality
+    - Real-time KPIs
+    - One-click fixes (rematch / split / merge)
+    - Block period close لو فيه > 0 unresolved
+
+Step 5 — Aging RPC safety:
+  get_aging_receivables يبدأ بـ:
+    - فحص: هل فيه payments بدون installment_id؟
+    - لو نعم → return error + count
+    - في UI: "Cannot generate aging report. 12 payments need installment linking. [Fix Now]"
+  → Fail loud, مش fail silent
+```
+
+---
+
+## Phased Execution Plan (تنفيذ متدرج)
+
+### Phase 0: Foundation Hardening (Week 1-2)
+- RPC-only enforcement (3 layers)
+- approved_financial_rpcs registry
+- via_rpc session context pattern
+- Test bypass attempts (security validation)
+
+### Phase 1: Period Lock + Receipts (Week 3-4)
+- financial_periods + state machine
+- ENUMs + financial_period_month على الجداول
+- PaymentMethodFields + ReceiptViewButton
+- Receipt upload flow (insert→upload→attach)
+
+### Phase 2: Accounting Core (Week 5-7)
+- chart_of_accounts + payment_accounts
+- journal_entries + lines + balance trigger
+- Auto-posting from payments/expenses/salary
+- Customer + Employee ledgers
+- mv_account_balances_monthly + smart refresh
+- Balance alerts (Tier 1+2)
+
+### Phase 3: Payroll System (Week 8-9)
+- payroll_runs + payroll_adjustments
+- Approval workflow integration
+- Backfill من salary_events
+- Employee ledger reconciliation
+
+### Phase 4: Data Quality + Aging (Week 10)
+- installment_id + backfill
+- Data quality monitoring page
+- Aging report (fail-loud version)
+- UI enforcement في PaymentDialog
+
+### Phase 5: Reports + Snapshots (Week 11-12)
+- Trial Balance + Income Statement + Balance Sheet + Cash Flow
+- financial_snapshots (indexed columns + JSONB details)
+- Read-from-snapshot logic
+- close_period with full MV refresh
+
+### Phase 6: Audit + Reopen (Week 13)
+- financial_audit_log (partitioned)
+- reopen_requests + dual approval
+- Snapshot lineage (parent_snapshot_id)
+- Audit Explorer UI
+
+### Phase 7: Polish + Documentation (Week 14)
+- E2E tests for all flows
+- Performance benchmarks
+- User documentation (Arabic)
+- Accountant training guide
+
+---
+
+## ضمانات Production النهائية
+
+| الضمانة | الآلية | Layers |
+|---------|--------|--------|
+| لا bypass للـ RPC | RLS=false + via_rpc trigger + RPC registry | 3 layers |
+| MVs دائماً fresh | Inline refresh + on-demand + cron | 3 strategies |
+| Mismatch فوري | Trigger + page hook + cron fallback | 3 tiers |
+| Aging دقيق | Constraint + backfill + UI enforcement + monitoring + fail-loud | 5 controls |
+| Snapshot = legal truth | Read-from-snapshot logic + immutability | strict |
+| HR ↔ Accounting sync | Reconciliation RPC + close gate | enforced |
+| Tamper detection | journal hash + audit log + alerts | comprehensive |
+
+---
+
+## القرارات المعمارية النهائية
+
+✅ **Adopted**:
+- 3-layer RPC enforcement (RLS + session context + registry)
+- Hybrid MV refresh (inline critical, on-demand others, cron fallback)
+- 3-tier mismatch detection (real-time UI + page + cron)
+- Strict installment data quality (constraint + UI + monitoring + fail-loud)
+- MVP-safe scope: 7 phases, 14 weeks
+- Single Source of Truth per entity
+- Snapshot = immutable legal truth
+- Reopen = rare event with dual approval
+
+❌ **Rejected (over-engineering)**:
+- Dynamic GRANT/REVOKE
+- Payroll versioning chains
+- ltree lineage
+- Multi-branch / fiscal year (Phase 2 future)
+- Auditor role (admin + approval workflow كافي)
+
+**النتيجة النهائية**: نظام محاسبي audit-grade قابل للتنفيذ في 14 أسبوع، بـ 3 layers حماية حقيقية، وبدون أي single point of failure في كل آلية حرجة.
+
