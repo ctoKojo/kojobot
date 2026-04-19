@@ -5496,6 +5496,18 @@ export type Database = {
         Args: { p_group_id: string }
         Returns: Json
       }
+      attach_expense_receipt: {
+        Args: { p_expense_id: string; p_receipt_path: string }
+        Returns: undefined
+      }
+      attach_payment_receipt: {
+        Args: { p_payment_id: string; p_receipt_path: string }
+        Returns: undefined
+      }
+      attach_salary_receipt: {
+        Args: { p_receipt_path: string; p_salary_payment_id: string }
+        Returns: undefined
+      }
       auto_resolve_warning: {
         Args: {
           p_reason?: string
@@ -5848,18 +5860,63 @@ export type Database = {
         Args: { p_employee_id: string; p_month: string }
         Returns: undefined
       }
-      record_payment_atomic: {
+      record_expense_atomic: {
         Args: {
           p_amount: number
+          p_category?: string
+          p_description: string
+          p_description_ar?: string
+          p_expense_date?: string
+          p_is_recurring?: boolean
           p_notes?: string
-          p_payment_date: string
-          p_payment_method: string
-          p_payment_type?: string
-          p_recorded_by?: string
-          p_student_id: string
-          p_subscription_id: string
+          p_payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          p_transfer_type?: Database["public"]["Enums"]["transfer_method_type"]
         }
-        Returns: Json
+        Returns: string
+      }
+      record_payment_atomic:
+        | {
+            Args: {
+              p_amount: number
+              p_notes?: string
+              p_payment_date: string
+              p_payment_method?: Database["public"]["Enums"]["payment_method_type"]
+              p_payment_type: string
+              p_student_id: string
+              p_subscription_id: string
+              p_transfer_type?: Database["public"]["Enums"]["transfer_method_type"]
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_notes?: string
+              p_payment_date: string
+              p_payment_method: string
+              p_payment_type?: string
+              p_recorded_by?: string
+              p_student_id: string
+              p_subscription_id: string
+            }
+            Returns: Json
+          }
+      record_salary_payment_atomic: {
+        Args: {
+          p_base_amount: number
+          p_bonus?: number
+          p_bonus_reason?: string
+          p_deduction_reason?: string
+          p_deductions?: number
+          p_employee_id: string
+          p_month: string
+          p_notes?: string
+          p_paid_date?: string
+          p_payment_method?: Database["public"]["Enums"]["payment_method_type"]
+          p_salary_id: string
+          p_transfer_type?: Database["public"]["Enums"]["transfer_method_type"]
+        }
+        Returns: string
       }
       register_financial_rpc: {
         Args: { p_description?: string; p_rpc_name: string; p_version?: number }
