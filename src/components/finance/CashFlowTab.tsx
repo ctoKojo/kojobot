@@ -308,6 +308,7 @@ export function CashFlowTab() {
   const academicThisMonth = cashFlowData?.academicThisMonth || 0;
   const nearCompletionCount = cashFlowData?.nearCompletionCount || 0;
   const academicDetailsByMonth = cashFlowData?.academicDetailsByMonth || {};
+  const academicTotalsByMonth = cashFlowData?.academicTotalsByMonth || {};
 
   const now = new Date();
   const thisMonthStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -497,12 +498,13 @@ export function CashFlowTab() {
             {projections.map((p) => {
               const details = academicDetailsByMonth[p.monthKey] || [];
               if (details.length === 0) return null;
+              const totals = academicTotalsByMonth[p.monthKey] || { totalExpected: 0, totalPaid: 0, totalRemaining: 0, renewedCount: 0, notRenewedCount: 0 };
               return (
                 <AcademicMonthSection
                   key={p.monthKey}
                   monthLabel={p.month}
                   details={details}
-                  total={p.academicRenewals}
+                  totals={totals}
                   isRTL={isRTL}
                 />
               );
