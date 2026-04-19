@@ -220,7 +220,7 @@ export default function Finance() {
       // 2) Transfer flow: upload receipt, then attach
       if (isTransfer && res.payment_id) {
         const path = await paymentMethodRef.current!.uploadReceipt('payments', res.payment_id);
-        const { error: attachErr } = await supabase.rpc('attach_payment_receipt', {
+        const { error: attachErr } = await (supabase.rpc as any)('attach_payment_receipt', {
           p_payment_id: res.payment_id,
           p_receipt_path: path,
         });
@@ -759,14 +759,12 @@ export default function Finance() {
                 </div>
                 <div><Label>{isRTL ? 'المبلغ' : 'Amount'}</Label>
                   <Input type="number" value={paymentAmount} onChange={e => setPaymentAmount(+e.target.value)} /></div>
-                <div><Label>{isRTL ? 'طريقة الدفع' : 'Payment Method'}</Label>
-                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">{isRTL ? 'كاش' : 'Cash'}</SelectItem>
-                      <SelectItem value="transfer">{isRTL ? 'تحويل بنكي' : 'Bank Transfer'}</SelectItem>
-                    </SelectContent>
-                  </Select></div>
+                <PaymentMethodFields
+                  ref={paymentMethodRef}
+                  value={paymentMethodValue}
+                  onChange={setPaymentMethodValue}
+                  disabled={savingPayment}
+                />
                 <div><Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>
                   <Input value={paymentNotes} onChange={e => setPaymentNotes(e.target.value)} /></div>
                 <div><Label>{isRTL ? 'تاريخ الدفع الفعلي' : 'Actual Payment Date'}</Label>
