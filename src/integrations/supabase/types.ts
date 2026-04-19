@@ -3619,6 +3619,42 @@ export type Database = {
         }
         Relationships: []
       }
+      period_close_locks: {
+        Row: {
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          locked_at: string
+          locked_by: string
+          operation: string
+          period_month: string
+          released_at: string | null
+          status: string
+        }
+        Insert: {
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          locked_at?: string
+          locked_by: string
+          operation: string
+          period_month: string
+          released_at?: string | null
+          status?: string
+        }
+        Update: {
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          locked_at?: string
+          locked_by?: string
+          operation?: string
+          period_month?: string
+          released_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       placement_v2_attempt_questions: {
         Row: {
           attempt_id: string
@@ -4723,6 +4759,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      reporting_rpcs_registry: {
+        Row: {
+          description: string | null
+          last_compliance_check: string | null
+          last_compliance_status: string | null
+          must_use_router: boolean
+          registered_at: string
+          registered_by: string | null
+          rpc_name: string
+        }
+        Insert: {
+          description?: string | null
+          last_compliance_check?: string | null
+          last_compliance_status?: string | null
+          must_use_router?: boolean
+          registered_at?: string
+          registered_by?: string | null
+          rpc_name: string
+        }
+        Update: {
+          description?: string | null
+          last_compliance_check?: string | null
+          last_compliance_status?: string | null
+          must_use_router?: boolean
+          registered_at?: string
+          registered_by?: string | null
+          rpc_name?: string
+        }
+        Relationships: []
       }
       salary_events: {
         Row: {
@@ -5917,6 +5983,39 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_failures: {
+        Row: {
+          attempted_at: string
+          attempted_by: string | null
+          coordinator_name: string
+          error_detail: string | null
+          error_message: string
+          failed_at_step: string
+          id: string
+          input_payload: Json
+        }
+        Insert: {
+          attempted_at?: string
+          attempted_by?: string | null
+          coordinator_name: string
+          error_detail?: string | null
+          error_message: string
+          failed_at_step: string
+          id?: string
+          input_payload: Json
+        }
+        Update: {
+          attempted_at?: string
+          attempted_by?: string | null
+          coordinator_name?: string
+          error_detail?: string | null
+          error_message?: string
+          failed_at_step?: string
+          id?: string
+          input_payload?: Json
+        }
+        Relationships: []
+      }
       typing_indicators: {
         Row: {
           conversation_id: string
@@ -6444,6 +6543,10 @@ export type Database = {
         Args: { p_alert_id: string; p_notes?: string }
         Returns: undefined
       }
+      acquire_period_operation_lock: {
+        Args: { p_operation: string; p_period_month: string }
+        Returns: string
+      }
       approve_payroll_adjustment: {
         Args: { p_adjustment_id: string }
         Returns: undefined
@@ -6458,6 +6561,10 @@ export type Database = {
         Returns: Json
       }
       archive_group: { Args: { p_group_id: string }; Returns: undefined }
+      assert_report_via_router: {
+        Args: { p_period_month?: string }
+        Returns: undefined
+      }
       assign_student_to_group: {
         Args: { p_new_group_id: string; p_student_id: string }
         Returns: Json
@@ -6566,6 +6673,10 @@ export type Database = {
         Args: { p_notes?: string; p_period_month: string }
         Returns: Json
       }
+      close_period_v2_inner: {
+        Args: { p_notes?: string; p_period_month: string }
+        Returns: Json
+      }
       compare_curriculum_versions: {
         Args: {
           p_age_group_id: string
@@ -6613,6 +6724,18 @@ export type Database = {
           p_warnings: number
         }
         Returns: number
+      }
+      coordinate_expense_transaction: {
+        Args: { p_expense_data: Json }
+        Returns: Json
+      }
+      coordinate_payment_transaction: {
+        Args: { p_payment_data: Json }
+        Returns: Json
+      }
+      coordinate_salary_payment_transaction: {
+        Args: { p_salary_data: Json }
+        Returns: Json
       }
       create_curriculum_quiz: { Args: { p_session_id: string }; Returns: Json }
       create_group_makeup_sessions: {
@@ -6668,6 +6791,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      enforce_router_usage: { Args: never; Returns: Json }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
@@ -6974,6 +7098,16 @@ export type Database = {
         }
         Returns: string
       }
+      log_transaction_failure: {
+        Args: {
+          p_coordinator: string
+          p_detail?: string
+          p_error: string
+          p_payload: Json
+          p_step: string
+        }
+        Returns: undefined
+      }
       mark_student_repeat: {
         Args: { p_group_id: string; p_student_id: string }
         Returns: Json
@@ -7123,7 +7257,15 @@ export type Database = {
         Args: { p_adjustment_id: string }
         Returns: undefined
       }
+      release_period_operation_lock: {
+        Args: { p_error?: string; p_lock_id: string; p_status: string }
+        Returns: undefined
+      }
       reopen_period: {
+        Args: { p_period_month: string; p_reason: string }
+        Returns: Json
+      }
+      reopen_period_inner: {
         Args: { p_period_month: string; p_reason: string }
         Returns: Json
       }
@@ -7163,6 +7305,7 @@ export type Database = {
         Args: { p_group_id: string; p_records: Json; p_session_id: string }
         Returns: Json
       }
+      scan_reporting_compliance: { Args: never; Returns: Json }
       schedule_final_exam_for_students: {
         Args: {
           p_date: string
