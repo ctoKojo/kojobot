@@ -201,7 +201,7 @@ export default function Finance() {
       const isTransfer = paymentMethodValue.payment_method === 'transfer';
 
       // 1) Insert payment via RPC (returns payment_id; for transfer status='pending_receipt')
-      const { data: result, error } = await supabase.rpc('record_payment_atomic', {
+      const { data: result, error } = await (supabase.rpc as any)('record_payment_atomic', {
         p_subscription_id: selectedSub.id,
         p_student_id: selectedSub.student_id,
         p_amount: paymentAmount,
