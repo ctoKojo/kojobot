@@ -510,9 +510,9 @@ export default function Finance() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="expenses"><ExpensesTab /></TabsContent>
-          <TabsContent value="salaries"><SalariesTab /></TabsContent>
-          <TabsContent value="profit"><NetProfitTab /></TabsContent>
+          <TabsContent value="expenses"><ExpensesTab selectedMonth={selectedMonth} /></TabsContent>
+          <TabsContent value="salaries"><SalariesTab selectedMonth={selectedMonth} /></TabsContent>
+          <TabsContent value="profit"><NetProfitTab selectedMonth={selectedMonth} /></TabsContent>
 
           <TabsContent value="reports">
             <div className="space-y-4">
@@ -609,7 +609,7 @@ export default function Finance() {
               </div>
             </div>
           </TabsContent>
-          <TabsContent value="tracker"><PaymentTrackerTab /></TabsContent>
+          <TabsContent value="tracker"><PaymentTrackerTab selectedMonth={selectedMonth} /></TabsContent>
           <TabsContent value="cashflow"><CashFlowTab /></TabsContent>
         </Tabs>
 
