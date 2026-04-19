@@ -38,7 +38,11 @@ interface EnrichedSub {
   paymentStatus?: 'paid' | 'overdue' | 'upcoming';
 }
 
-export function PaymentTrackerTab() {
+interface PaymentTrackerTabProps {
+  selectedMonth?: string; // 'YYYY-MM' — overrides "this month"
+}
+
+export function PaymentTrackerTab({ selectedMonth }: PaymentTrackerTabProps = {}) {
   const { isRTL, language } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -130,12 +134,21 @@ export function PaymentTrackerTab() {
     refetchOnWindowFocus: true,
   });
 
-  const now = new Date();
+  // Anchor month: selectedMonth (calendar) or "now"
+  const anchor = useMemo(() => {
+    if (selectedMonth) {
+      const [y, m] = selectedMonth.split('-').map(Number);
+      return new Date(y, m - 1, 15); // mid-month for safety
+    }
+    return new Date();
+  }, [selectedMonth]);
+  const now = anchor;
+  const realNow = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const thisMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const nextMonthEnd = new Date(now.getFullYear(), now.getMonth() + 2, 0);
-  const fifteenDaysLater = new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000);
+  const fifteenDaysLater = new Date(realNow.getTime() + 15 * 24 * 60 * 60 * 1000);
 
   const dueThisMonth = useMemo(() => subs.filter(s => {
     if (!s.next_payment_date) return false;
