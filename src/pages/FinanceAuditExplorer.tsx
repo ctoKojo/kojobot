@@ -24,7 +24,7 @@ export default function FinanceAuditExplorer() {
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ['audit-log', periodMonth],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_audit_log_for_period', {
+      const { data, error } = await (supabase.rpc as any)('get_audit_log_for_period', {
         p_period_month: periodMonth,
       });
       if (error) throw error;
@@ -35,9 +35,7 @@ export default function FinanceAuditExplorer() {
   const handleVerify = async () => {
     setVerifying(true);
     try {
-      const { data, error } = await supabase.rpc('verify_audit_chain', {
-        p_period_month: periodMonth,
-      });
+      const { data, error } = await (supabase.rpc as any)('verify_audit_chain', {});
       if (error) throw error;
       setVerification(data);
       toast({
