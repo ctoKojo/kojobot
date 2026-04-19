@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DollarSign, Check, Clock, Plus, Minus, Gift, AlertCircle, Lock, Unlock, RotateCcw, Wallet, Printer } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateSalarySlip } from '@/lib/pdfReports';
 import { getRoleLabel } from '@/lib/constants';
 import { formatDate } from '@/lib/timeUtils';
+import { PaymentMethodFields, PaymentMethodValue, initialPaymentMethodValue, PaymentMethodFieldsHandle } from './PaymentMethodFields';
+import { ReceiptViewButton } from './ReceiptViewButton';
 
 interface SalaryEvent {
   id: string;
@@ -98,7 +100,9 @@ export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
   });
 
   // Pay form
-  const [payForm, setPayForm] = useState({ employee_id: '', month: currentMonth, payment_method: 'cash', notes: '' });
+  const [payForm, setPayForm] = useState({ employee_id: '', month: currentMonth, notes: '' });
+  const [payMethodValue, setPayMethodValue] = useState<PaymentMethodValue>(initialPaymentMethodValue);
+  const payMethodRef = useRef<PaymentMethodFieldsHandle>(null);
 
   useEffect(() => { fetchData(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [currentMonth]);
 
@@ -199,42 +203,59 @@ export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
 
   const handlePaySalary = async () => {
     if (!payForm.employee_id) return;
+    if (!payMethodRef.current?.validate()) return;
     setSaving(true);
-    const snapshot = getSnapshot(payForm.employee_id);
-    if (!snapshot || snapshot.status !== 'locked') {
-      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'يجب قفل الشهر أولاً' : 'Month must be locked first' });
-      setSaving(false); return;
+    try {
+      const snapshot = getSnapshot(payForm.employee_id);
+      if (!snapshot || snapshot.status !== 'locked') {
+        toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'يجب قفل الشهر أولاً' : 'Month must be locked first' });
+        setSaving(false); return;
+      }
+
+      const isTransfer = payMethodValue.payment_method === 'transfer';
+
+      // Create final salary_payments record
+      const { data: inserted, error: payError } = await supabase.from('salary_payments').insert({
+        employee_id: payForm.employee_id,
+        salary_id: getEmployeeSalary(payForm.employee_id)?.id || null,
+        month: payForm.month,
+        base_amount: snapshot.base_amount,
+        bonus: snapshot.total_bonuses,
+        deductions: snapshot.total_deductions,
+        status: 'paid',
+        paid_date: new Date().toISOString().split('T')[0],
+        paid_by: user?.id,
+        payment_method: payMethodValue.payment_method,
+        transfer_type: payMethodValue.transfer_type,
+        receipt_status: isTransfer ? 'pending_receipt' : 'completed',
+        notes: payForm.notes || null,
+      } as any).select('id').single();
+
+      if (payError) throw payError;
+
+      if (isTransfer && inserted?.id) {
+        const path = await payMethodRef.current!.uploadReceipt('salaries', inserted.id);
+        const { error: attachErr } = await (supabase.rpc as any)('attach_salary_receipt', {
+          p_salary_payment_id: inserted.id,
+          p_receipt_path: path,
+        });
+        if (attachErr) throw attachErr;
+      }
+
+      // Update snapshot status to paid
+      await supabase.from('salary_month_snapshots')
+        .update({ status: 'paid' } as any)
+        .eq('employee_id', payForm.employee_id).eq('month', currentMonth);
+
+      toast({ title: isRTL ? 'تم صرف الراتب' : 'Salary paid' });
+      setPayDialog(false);
+      setPayMethodValue(initialPaymentMethodValue);
+      fetchData();
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: e.message });
+    } finally {
+      setSaving(false);
     }
-
-    // Create final salary_payments record
-    const { error: payError } = await supabase.from('salary_payments').insert({
-      employee_id: payForm.employee_id,
-      salary_id: getEmployeeSalary(payForm.employee_id)?.id || null,
-      month: payForm.month,
-      base_amount: snapshot.base_amount,
-      bonus: snapshot.total_bonuses,
-      deductions: snapshot.total_deductions,
-      status: 'paid',
-      paid_date: new Date().toISOString().split('T')[0],
-      paid_by: user?.id,
-      payment_method: payForm.payment_method,
-      notes: payForm.notes || null,
-    } as any);
-
-    if (payError) {
-      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: payError.message });
-      setSaving(false); return;
-    }
-
-    // Update snapshot status to paid
-    await supabase.from('salary_month_snapshots')
-      .update({ status: 'paid' } as any)
-      .eq('employee_id', payForm.employee_id).eq('month', currentMonth);
-
-    toast({ title: isRTL ? 'تم صرف الراتب' : 'Salary paid' });
-    setPayDialog(false);
-    fetchData();
-    setSaving(false);
   };
 
   const handleReverseEvent = async (event: SalaryEvent) => {
