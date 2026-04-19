@@ -1572,6 +1572,66 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_role: string | null
+          amount: number | null
+          currency: string | null
+          details: Json
+          entity_id: string
+          entity_type: string
+          entry_hash: string
+          id: string
+          ip_address: unknown
+          occurred_at: string
+          period_month: string | null
+          previous_hash: string | null
+          sequence_number: number
+          source_rpc: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_role?: string | null
+          amount?: number | null
+          currency?: string | null
+          details?: Json
+          entity_id: string
+          entity_type: string
+          entry_hash: string
+          id?: string
+          ip_address?: unknown
+          occurred_at?: string
+          period_month?: string | null
+          previous_hash?: string | null
+          sequence_number?: number
+          source_rpc?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_role?: string | null
+          amount?: number | null
+          currency?: string | null
+          details?: Json
+          entity_id?: string
+          entity_type?: string
+          entry_hash?: string
+          id?: string
+          ip_address?: unknown
+          occurred_at?: string
+          period_month?: string | null
+          previous_hash?: string | null
+          sequence_number?: number
+          source_rpc?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       financial_periods: {
         Row: {
           closed_at: string | null
@@ -4602,6 +4662,68 @@ export type Database = {
           },
         ]
       }
+      reopen_requests: {
+        Row: {
+          affected_areas: string[] | null
+          created_at: string
+          executed_at: string | null
+          id: string
+          period_month: string
+          pre_reopen_snapshot_id: string | null
+          reason: string
+          requested_at: string
+          requested_by: string
+          review_decision: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          affected_areas?: string[] | null
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          period_month: string
+          pre_reopen_snapshot_id?: string | null
+          reason: string
+          requested_at?: string
+          requested_by: string
+          review_decision?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          affected_areas?: string[] | null
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          period_month?: string
+          pre_reopen_snapshot_id?: string | null
+          reason?: string
+          requested_at?: string
+          requested_by?: string
+          review_decision?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reopen_requests_pre_reopen_snapshot_id_fkey"
+            columns: ["pre_reopen_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "financial_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salary_events: {
         Row: {
           amount: number
@@ -6327,6 +6449,14 @@ export type Database = {
         Returns: undefined
       }
       approve_payroll_run: { Args: { p_run_id: string }; Returns: undefined }
+      approve_reopen_request: {
+        Args: {
+          p_decision: string
+          p_request_id: string
+          p_review_notes?: string
+        }
+        Returns: Json
+      }
       archive_group: { Args: { p_group_id: string }; Returns: undefined }
       assign_student_to_group: {
         Args: { p_new_group_id: string; p_student_id: string }
@@ -6374,6 +6504,7 @@ export type Database = {
         Args: { p_reason: string; p_run_id: string }
         Returns: undefined
       }
+      cancel_reopen_request: { Args: { p_request_id: string }; Returns: Json }
       check_and_increment_chatbot_rate: {
         Args: { p_student_id: string }
         Returns: Json
@@ -6564,6 +6695,10 @@ export type Database = {
         }[]
       }
       get_aging_summary: { Args: { p_as_of_date?: string }; Returns: Json }
+      get_audit_log_for_period: {
+        Args: { p_period_month: string }
+        Returns: Json
+      }
       get_balance_sheet: { Args: { p_as_of_date: string }; Returns: Json }
       get_cash_flow_statement: {
         Args: { p_period_month: string }
@@ -6823,6 +6958,18 @@ export type Database = {
       }
       is_period_writable: { Args: { p_date: string }; Returns: boolean }
       is_student: { Args: { _user_id: string }; Returns: boolean }
+      log_financial_action: {
+        Args: {
+          p_action: string
+          p_amount?: number
+          p_details?: Json
+          p_entity_id: string
+          p_entity_type: string
+          p_period_month?: string
+          p_source_rpc?: string
+        }
+        Returns: string
+      }
       mark_student_repeat: {
         Args: { p_group_id: string; p_student_id: string }
         Returns: Json
@@ -6973,6 +7120,14 @@ export type Database = {
         Returns: Json
       }
       repair_orphaned_sessions: { Args: never; Returns: Json }
+      request_period_reopen: {
+        Args: {
+          p_affected_areas?: string[]
+          p_period_month: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       reschedule_failed_final_exam: {
         Args: { p_date: string; p_duration: number; p_progress_id: string }
         Returns: Json
@@ -7078,6 +7233,10 @@ export type Database = {
           p_student_pdf_path: string
           p_student_pdf_size: number
         }
+        Returns: Json
+      }
+      verify_audit_chain: {
+        Args: { p_end_seq?: number; p_start_seq?: number }
         Returns: Json
       }
       verify_cron_token: { Args: { p_token: string }; Returns: boolean }
