@@ -294,7 +294,7 @@ export function CashFlowTab() {
       const currentMonthKey = `${now.getFullYear()}-${now.getMonth()}`;
       const academicThisMonth = academicByMonth[currentMonthKey] || 0;
 
-      return { payments, expenses, unpaidThisMonth, dueNextMonth, projections, academicThisMonth, nearCompletionCount: nearCompletion.length, academicDetailsByMonth };
+      return { payments, expenses, unpaidThisMonth, dueNextMonth, projections, academicThisMonth, nearCompletionCount: nearCompletion.length, academicDetailsByMonth, academicTotalsByMonth };
     },
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
