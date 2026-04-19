@@ -5910,6 +5910,10 @@ export type Database = {
       }
     }
     Functions: {
+      acknowledge_balance_alert: {
+        Args: { p_alert_id: string; p_notes?: string }
+        Returns: undefined
+      }
       archive_group: { Args: { p_group_id: string }; Returns: undefined }
       assign_student_to_group: {
         Args: { p_new_group_id: string; p_student_id: string }
@@ -6090,6 +6094,22 @@ export type Database = {
         }
         Returns: string
       }
+      get_coa_tree: {
+        Args: never
+        Returns: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          code: string
+          current_balance: number
+          id: string
+          is_active: boolean
+          is_control: boolean
+          is_system: boolean
+          name: string
+          name_ar: string
+          normal_side: Database["public"]["Enums"]["normal_side_type"]
+          parent_id: string
+        }[]
+      }
       get_conversation_participant_profiles: {
         Args: { p_user_ids: string[] }
         Returns: {
@@ -6141,6 +6161,22 @@ export type Database = {
           version: number
         }[]
       }
+      get_customer_ledger: {
+        Args: { p_limit?: number; p_student_id: string }
+        Returns: {
+          credit: number
+          debit: number
+          description: string
+          description_ar: string
+          entry_date: string
+          je_id: string
+          posted_at: string
+          running_balance: number
+          source: Database["public"]["Enums"]["journal_source_type"]
+          source_id: string
+          voucher_no: string
+        }[]
+      }
       get_effective_assignment_due: {
         Args: { p_assignment_id: string; p_student_id: string }
         Returns: {
@@ -6155,6 +6191,22 @@ export type Database = {
           extra_minutes: number
           source: string
           start_time: string
+        }[]
+      }
+      get_employee_ledger: {
+        Args: { p_employee_id: string; p_limit?: number }
+        Returns: {
+          credit: number
+          debit: number
+          description: string
+          description_ar: string
+          entry_date: string
+          je_id: string
+          posted_at: string
+          running_balance: number
+          source: Database["public"]["Enums"]["journal_source_type"]
+          source_id: string
+          voucher_no: string
         }[]
       }
       get_group_level_status: { Args: { p_group_id: string }; Returns: Json }
@@ -6332,6 +6384,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      rebuild_balance_from_alert: {
+        Args: { p_alert_id: string }
+        Returns: Json
       }
       rebuild_customer_balance: {
         Args: { p_customer_account_id: string }
