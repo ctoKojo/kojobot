@@ -1623,6 +1623,89 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_snapshots: {
+        Row: {
+          balance_sheet: Json
+          cash_flow_statement: Json
+          cash_inflow: number
+          cash_outflow: number
+          created_at: string
+          created_by: string
+          id: string
+          income_statement: Json
+          net_cash_flow: number
+          net_profit: number
+          notes: string | null
+          parent_snapshot_id: string | null
+          period_month: string
+          snapshot_hash: string
+          snapshot_type: string
+          total_assets: number
+          total_equity: number
+          total_expenses: number
+          total_liabilities: number
+          total_revenue: number
+          total_salaries: number
+          trial_balance: Json
+        }
+        Insert: {
+          balance_sheet?: Json
+          cash_flow_statement?: Json
+          cash_inflow?: number
+          cash_outflow?: number
+          created_at?: string
+          created_by: string
+          id?: string
+          income_statement?: Json
+          net_cash_flow?: number
+          net_profit?: number
+          notes?: string | null
+          parent_snapshot_id?: string | null
+          period_month: string
+          snapshot_hash: string
+          snapshot_type: string
+          total_assets?: number
+          total_equity?: number
+          total_expenses?: number
+          total_liabilities?: number
+          total_revenue?: number
+          total_salaries?: number
+          trial_balance?: Json
+        }
+        Update: {
+          balance_sheet?: Json
+          cash_flow_statement?: Json
+          cash_inflow?: number
+          cash_outflow?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          income_statement?: Json
+          net_cash_flow?: number
+          net_profit?: number
+          notes?: string | null
+          parent_snapshot_id?: string | null
+          period_month?: string
+          snapshot_hash?: string
+          snapshot_type?: string
+          total_assets?: number
+          total_equity?: number
+          total_expenses?: number
+          total_liabilities?: number
+          total_revenue?: number
+          total_salaries?: number
+          trial_balance?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_snapshots_parent_snapshot_id_fkey"
+            columns: ["parent_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "financial_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_level_progress: {
         Row: {
           completed_at: string | null
@@ -6344,6 +6427,10 @@ export type Database = {
         }
         Returns: Json
       }
+      close_period_v2: {
+        Args: { p_notes?: string; p_period_month: string }
+        Returns: Json
+      }
       compare_curriculum_versions: {
         Args: {
           p_age_group_id: string
@@ -6477,6 +6564,11 @@ export type Database = {
         }[]
       }
       get_aging_summary: { Args: { p_as_of_date?: string }; Returns: Json }
+      get_balance_sheet: { Args: { p_as_of_date: string }; Returns: Json }
+      get_cash_flow_statement: {
+        Args: { p_period_month: string }
+        Returns: Json
+      }
       get_coa_tree: {
         Args: never
         Returns: {
@@ -6598,6 +6690,7 @@ export type Database = {
         Returns: number
       }
       get_group_student_count: { Args: { g_id: string }; Returns: number }
+      get_income_statement: { Args: { p_period_month: string }; Returns: Json }
       get_instructor_group_ids: {
         Args: { _instructor_id: string }
         Returns: string[]
@@ -6874,6 +6967,10 @@ export type Database = {
       reject_payroll_adjustment: {
         Args: { p_adjustment_id: string }
         Returns: undefined
+      }
+      reopen_period: {
+        Args: { p_period_month: string; p_reason: string }
+        Returns: Json
       }
       repair_orphaned_sessions: { Args: never; Returns: Json }
       reschedule_failed_final_exam: {
