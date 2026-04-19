@@ -24,7 +24,7 @@ export function useBalanceIntegrity(
     queryKey: ['balance-integrity', accountType, accountId],
     queryFn: async () => {
       if (!accountId) return null;
-      const { data, error } = await supabase.rpc('check_account_balance_integrity', {
+      const { data, error } = await (supabase.rpc as any)('check_account_balance_integrity', {
         p_account_type: accountType,
         p_account_id: accountId,
       });

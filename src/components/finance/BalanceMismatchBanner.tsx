@@ -31,7 +31,7 @@ export function BalanceMismatchBanner({
   const handleRebuild = async () => {
     setRebuilding(true);
     try {
-      const { error } = await supabase.rpc('rebuild_account_balance', {
+      const { error } = await (supabase.rpc as any)('rebuild_account_balance', {
         p_account_type: accountType,
         p_account_id: accountId,
       });
