@@ -9,7 +9,11 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'rec
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 
-export function NetProfitTab() {
+interface NetProfitTabProps {
+  selectedMonth?: string; // anchor 'YYYY-MM' — period ends at this month
+}
+
+export function NetProfitTab({ selectedMonth }: NetProfitTabProps = {}) {
   const { isRTL, language } = useLanguage();
   const [payments, setPayments] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -34,11 +38,14 @@ export function NetProfitTab() {
 
   const monthlyData = useMemo(() => {
     const months = Number(period);
-    const now = new Date();
+    // Anchor end-month: if selectedMonth provided, use it; else current month
+    const anchor = selectedMonth
+      ? (() => { const [y, m] = selectedMonth.split('-').map(Number); return new Date(y, m - 1, 1); })()
+      : new Date();
     const data: any[] = [];
 
     for (let i = months - 1; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const label = d.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', year: '2-digit' });
 
@@ -61,7 +68,7 @@ export function NetProfitTab() {
       data.push({ month: label, key, revenue, expenses: expenseTotal, salaries: salaryTotal, profit });
     }
     return data;
-  }, [payments, expenses, salaryPayments, period, language]);
+  }, [payments, expenses, salaryPayments, period, language, selectedMonth]);
 
   // Current month totals
   const current = monthlyData[monthlyData.length - 1] || { revenue: 0, expenses: 0, salaries: 0, profit: 0 };
