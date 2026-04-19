@@ -175,21 +175,35 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
               <TableHead className="font-semibold">{isRTL ? 'التصنيف' : 'Category'}</TableHead>
               <TableHead className="font-semibold">{isRTL ? 'الوصف' : 'Description'}</TableHead>
               <TableHead className="font-semibold">{isRTL ? 'المبلغ' : 'Amount'}</TableHead>
+              <TableHead className="font-semibold">{isRTL ? 'الطريقة' : 'Method'}</TableHead>
               <TableHead className="font-semibold">{isRTL ? 'متكرر' : 'Recurring'}</TableHead>
               <TableHead className="w-[60px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8">{isRTL ? 'جاري التحميل...' : 'Loading...'}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8">{isRTL ? 'جاري التحميل...' : 'Loading...'}</TableCell></TableRow>
             ) : paginated.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{isRTL ? 'لا توجد مصروفات' : 'No expenses found'}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{isRTL ? 'لا توجد مصروفات' : 'No expenses found'}</TableCell></TableRow>
             ) : paginated.map(e => (
               <TableRow key={e.id}>
                 <TableCell>{formatDate(e.expense_date)}</TableCell>
                 <TableCell><Badge variant="outline">{getCategoryLabel(e.category)}</Badge></TableCell>
                 <TableCell>{isRTL && e.description_ar ? e.description_ar : e.description}</TableCell>
                 <TableCell className="font-medium text-destructive">{e.amount} {isRTL ? 'ج.م' : 'EGP'}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="secondary" className="font-normal text-xs">
+                      {e.payment_method === 'cash'
+                        ? (isRTL ? 'كاش' : 'Cash')
+                        : e.transfer_type === 'bank' ? (isRTL ? 'بنكي' : 'Bank')
+                        : e.transfer_type === 'instapay' ? 'InstaPay'
+                        : e.transfer_type === 'wallet' ? (isRTL ? 'محفظة' : 'Wallet')
+                        : (isRTL ? 'تحويل' : 'Transfer')}
+                    </Badge>
+                    <ReceiptViewButton path={e.receipt_url} size="icon" />
+                  </div>
+                </TableCell>
                 <TableCell>{e.is_recurring ? (isRTL ? 'نعم' : 'Yes') : '-'}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="icon" onClick={() => handleDelete(e.id)}>
@@ -234,6 +248,12 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
             <div><Label>{isRTL ? 'ملاحظات' : 'Notes'}</Label>
               <Input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
             </div>
+            <PaymentMethodFields
+              ref={paymentMethodRef}
+              value={paymentMethodValue}
+              onChange={setPaymentMethodValue}
+              disabled={saving}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
