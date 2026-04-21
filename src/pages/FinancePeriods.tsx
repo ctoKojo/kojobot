@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/shared/PageHeader';
@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Lock, Unlock, AlertTriangle, CheckCircle2, Loader2, Eye } from 'lucide-react';
+import { Lock, Unlock, AlertTriangle, CheckCircle2, Loader2, Eye, Plus } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,6 +41,7 @@ export default function FinancePeriods() {
   const [reopenReason, setReopenReason] = useState('');
   const [working, setWorking] = useState(false);
   const [gateResults, setGateResults] = useState<any>(null);
+  const [creatingMonth, setCreatingMonth] = useState(false);
 
   const { data: periods = [], isLoading } = useQuery<Period[]>({
     queryKey: ['financial-periods'],
@@ -54,6 +55,40 @@ export default function FinancePeriods() {
       return (data ?? []) as Period[];
     },
   });
+
+  // Auto-ensure current month period exists on mount (best-effort, silent)
+  useEffect(() => {
+    (async () => {
+      try {
+        const { error } = await (supabase.rpc as any)('ensure_current_month_period');
+        if (!error) {
+          qc.invalidateQueries({ queryKey: ['financial-periods'] });
+        }
+      } catch {
+        // silent — admin can use the manual button
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCreateCurrentMonth = async () => {
+    setCreatingMonth(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)('ensure_current_month_period');
+      if (error) throw error;
+      const created = (data as any)?.created;
+      toast({
+        title: created
+          ? (isRTL ? '✅ تم إنشاء فترة الشهر الحالي' : '✅ Current month period created')
+          : (isRTL ? 'فترة الشهر الحالي موجودة بالفعل' : 'Current month period already exists'),
+      });
+      qc.invalidateQueries({ queryKey: ['financial-periods'] });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setCreatingMonth(false);
+    }
+  };
 
   const runPreCloseGates = async (period: Period) => {
     setWorking(true);
@@ -141,14 +176,33 @@ export default function FinancePeriods() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{isRTL ? 'الفترات' : 'Periods'}</CardTitle>
-          <CardDescription>
-            {isRTL ? 'آخر 24 شهراً' : 'Last 24 months'}
-          </CardDescription>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle>{isRTL ? 'الفترات' : 'Periods'}</CardTitle>
+              <CardDescription>
+                {isRTL ? 'آخر 24 شهراً' : 'Last 24 months'}
+              </CardDescription>
+            </div>
+            <Button size="sm" variant="outline" onClick={handleCreateCurrentMonth} disabled={creatingMonth}>
+              {creatingMonth ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+              {isRTL ? 'فترة الشهر الحالي' : 'Current month period'}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
+          ) : periods.length === 0 ? (
+            <div className="text-center py-12 space-y-3">
+              <Lock className="h-10 w-10 mx-auto text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">
+                {isRTL ? 'لا توجد فترات مالية بعد' : 'No financial periods yet'}
+              </p>
+              <Button size="sm" onClick={handleCreateCurrentMonth} disabled={creatingMonth}>
+                {creatingMonth ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+                {isRTL ? 'إنشاء فترة الشهر الحالي' : 'Create current month period'}
+              </Button>
+            </div>
           ) : (
             <Table>
               <TableHeader>

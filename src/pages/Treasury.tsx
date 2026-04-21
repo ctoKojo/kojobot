@@ -469,7 +469,137 @@ export default function Treasury() {
             </Card>
           </TabsContent>
 
-          {/* Maintenance Tab — Opening Balance */}
+          {/* Reconciliation Tab */}
+          <TabsContent value="reconciliation" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Scale className="h-5 w-5" />
+                  {isRTL ? 'مطابقة الكاش الفعلي' : 'Cash Reconciliation'}
+                </CardTitle>
+                <CardDescription>
+                  {isRTL ? 'عُدّ الكاش الفعلي اللي معاك. لو في فرق هيتسجّل قيد تسوية.' : 'Count actual cash. Any difference posts an adjustment entry.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg border p-3 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {isRTL ? 'الأرصدة المحسوبة' : 'Computed balances'}
+                  </p>
+                  {reconQuery.isLoading ? (
+                    <Skeleton className="h-16" />
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      {reconQuery.data?.map((r) => (
+                        <div key={r.account_code} className="flex justify-between items-center text-sm py-1 px-2 rounded bg-muted/30">
+                          <span className="font-mono text-xs text-muted-foreground">#{r.account_code} {isRTL ? r.account_name_ar : r.account_name}</span>
+                          <span className="font-mono font-semibold">{formatEGP(Number(r.computed_balance))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs">{isRTL ? 'الحساب' : 'Account'} *</Label>
+                    <Select value={reconAccount} onValueChange={setReconAccount}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1110">{isRTL ? 'نقدي' : 'Cash on Hand'}</SelectItem>
+                        <SelectItem value="1120">{isRTL ? 'بنك' : 'Bank'}</SelectItem>
+                        <SelectItem value="1140">{isRTL ? 'محفظة إلكترونية' : 'E-Wallet'}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">{isRTL ? 'المبلغ الفعلي' : 'Actual amount'} *</Label>
+                    <Input type="number" step="0.01" min="0" placeholder="0.00" value={reconActual} onChange={(e) => setReconActual(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">{isRTL ? 'ملاحظات' : 'Notes'}</Label>
+                    <Input type="text" placeholder={isRTL ? 'عد آخر اليوم' : 'end-of-day count'} value={reconNotes} onChange={(e) => setReconNotes(e.target.value)} />
+                  </div>
+                </div>
+
+                <Button onClick={() => adjustmentMutation.mutate()} disabled={adjustmentMutation.isPending || !reconActual}>
+                  {adjustmentMutation.isPending && <RefreshCw className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'} animate-spin`} />}
+                  {isRTL ? 'قارن وسجّل التسوية' : 'Compare & Post Adjustment'}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Health Tab */}
+          <TabsContent value="health" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Heart className="h-5 w-5" />
+                  {isRTL ? 'فحص صحة الأرصدة' : 'Balance Health Check'}
+                </CardTitle>
+                <CardDescription>
+                  {isRTL ? 'تباينات بين الرصيد المخزّن والمحسوب' : 'Discrepancies between cached and computed balances'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    {alertsQuery.isLoading
+                      ? (isRTL ? 'جارٍ التحقق...' : 'Checking...')
+                      : (alertsQuery.data?.length ?? 0) === 0
+                        ? (isRTL ? '✅ كل الأرصدة سليمة' : '✅ All balances healthy')
+                        : (isRTL ? `${alertsQuery.data?.length} تنبيه معلق` : `${alertsQuery.data?.length} pending alerts`)}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => refreshMvMutation.mutate()} disabled={refreshMvMutation.isPending}>
+                    <RefreshCw className={`h-3 w-3 ${isRTL ? 'ml-1' : 'mr-1'} ${refreshMvMutation.isPending ? 'animate-spin' : ''}`} />
+                    {isRTL ? 'إعادة احتساب' : 'Recompute'}
+                  </Button>
+                </div>
+
+                {alertsQuery.isLoading ? (
+                  <Skeleton className="h-32" />
+                ) : (alertsQuery.data?.length ?? 0) === 0 ? (
+                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-6 text-center space-y-2">
+                    <CheckCircle2 className="h-10 w-10 mx-auto text-emerald-600 dark:text-emerald-400" />
+                    <p className="text-sm font-medium">{isRTL ? 'مفيش تباين' : 'No discrepancies'}</p>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{isRTL ? 'الحساب' : 'Account'}</TableHead>
+                          <TableHead className="text-end">{isRTL ? 'المخزّن' : 'Cached'}</TableHead>
+                          <TableHead className="text-end">{isRTL ? 'المحسوب' : 'Computed'}</TableHead>
+                          <TableHead className="text-end">{isRTL ? 'الفرق' : 'Difference'}</TableHead>
+                          <TableHead>{isRTL ? 'وقت الكشف' : 'Detected'}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {alertsQuery.data?.map((a) => (
+                          <TableRow key={a.id}>
+                            <TableCell className="text-sm font-medium">
+                              <div className="flex items-center gap-2">
+                                <AlertTriangle className="h-4 w-4 text-destructive" />
+                                {a.account_label}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-end font-mono text-sm">{formatEGP(Number(a.cached_balance))}</TableCell>
+                            <TableCell className="text-end font-mono text-sm">{formatEGP(Number(a.computed_balance))}</TableCell>
+                            <TableCell className="text-end font-mono text-sm font-bold text-destructive">{formatEGP(Number(a.difference))}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{format(new Date(a.detected_at), 'yyyy-MM-dd HH:mm')}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Maintenance Tab */}
           <TabsContent value="maintenance" className="space-y-4">
             <Card>
               <CardHeader>
