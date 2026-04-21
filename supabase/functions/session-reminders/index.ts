@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { getCairoTimeWindowDates, getCairoNow } from '../_shared/cairoTime.ts'
+import { resolveStudentRecipients } from '../_shared/recipientResolver.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -199,6 +200,51 @@ Deno.serve(async (req) => {
       } else {
         console.log(`Notification sent for session ${session.id} to instructor ${instructorId}`)
         notificationsSent++
+      }
+
+      // Send email reminders to enrolled students' parents (fallback to student email)
+      try {
+        const { data: enrollments } = await supabase
+          .from('group_enrollments')
+          .select('student_id')
+          .eq('group_id', session.group_id)
+          .eq('status', 'active')
+
+        const studentIds = (enrollments || []).map((e: any) => e.student_id).filter(Boolean)
+        if (studentIds.length === 0) continue
+
+        const { data: studentProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, email, full_name, full_name_ar')
+          .in('user_id', studentIds)
+
+        for (const sp of studentProfiles || []) {
+          const { recipients, skipReason } = await resolveStudentRecipients(supabase, sp.user_id, sp)
+          if (recipients.length === 0) {
+            console.warn(`[session-reminder] Skipped student ${sp.user_id}: ${skipReason}`)
+            continue
+          }
+          const studentDisplayName = sp.full_name_ar || sp.full_name || ''
+          for (const r of recipients) {
+            await supabase.functions.invoke('send-email', {
+              body: {
+                to: r.email,
+                templateName: 'session-reminder',
+                templateData: {
+                  recipientName: r.name,
+                  recipientType: r.recipientType,
+                  studentName: studentDisplayName,
+                  groupName: groupNameAr || groupName,
+                  sessionDate: session.session_date,
+                  sessionTime: session.session_time,
+                },
+                idempotencyKey: `session-reminder-${session.id}-${sp.user_id}-${r.recipientType}-${r.parentId || 'self'}`,
+              },
+            })
+          }
+        }
+      } catch (emailErr) {
+        console.error(`Email reminder failed for session ${session.id}:`, emailErr)
       }
     }
 
