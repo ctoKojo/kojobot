@@ -1233,6 +1233,39 @@ export type Database = {
         }
         Relationships: []
       }
+      email_delivery_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          message_id: string | null
+          occurred_at: string
+          raw_payload: Json
+          recipient_email: string
+          resend_event_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          message_id?: string | null
+          occurred_at?: string
+          raw_payload?: Json
+          recipient_email: string
+          resend_event_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          message_id?: string | null
+          occurred_at?: string
+          raw_payload?: Json
+          recipient_email?: string
+          resend_event_id?: string | null
+        }
+        Relationships: []
+      }
       email_event_catalog: {
         Row: {
           available_variables: Json
@@ -1319,7 +1352,11 @@ export type Database = {
       }
       email_send_log: {
         Row: {
+          bounce_reason: string | null
+          bounce_type: string | null
           created_at: string
+          delivery_status: string | null
+          delivery_status_at: string | null
           error_message: string | null
           id: string
           message_id: string | null
@@ -1329,7 +1366,11 @@ export type Database = {
           template_name: string
         }
         Insert: {
+          bounce_reason?: string | null
+          bounce_type?: string | null
           created_at?: string
+          delivery_status?: string | null
+          delivery_status_at?: string | null
           error_message?: string | null
           id?: string
           message_id?: string | null
@@ -1339,7 +1380,11 @@ export type Database = {
           template_name: string
         }
         Update: {
+          bounce_reason?: string | null
+          bounce_type?: string | null
           created_at?: string
+          delivery_status?: string | null
+          delivery_status_at?: string | null
           error_message?: string | null
           id?: string
           message_id?: string | null
