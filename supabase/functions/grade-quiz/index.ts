@@ -304,7 +304,9 @@ serve(async (req) => {
       answers: validatedAnswers,
       score,
       max_score: maxScore,
-      status: 'submitted',
+      // Persist percentage + final status only when no manual grading is pending
+      percentage: hasOpenEnded ? null : percentage,
+      status: hasOpenEnded ? 'submitted' : 'graded',
       submitted_at: new Date().toISOString(),
       grading_status: gradingStatus,
       manual_score: 0,
