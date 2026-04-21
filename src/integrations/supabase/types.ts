@@ -7389,10 +7389,10 @@ export type Database = {
       validate_group_timeline: {
         Args: never
         Returns: {
-          details: Json
-          group_id: string
-          group_name: string
-          issue_type: string
+          out_details: Json
+          out_group_id: string
+          out_group_name: string
+          out_issue_type: string
         }[]
       }
       verify_audit_chain: {
