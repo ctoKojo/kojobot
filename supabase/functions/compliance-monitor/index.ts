@@ -1158,6 +1158,8 @@ serve(async (req) => {
         avg_scan_lag_seconds: results.avgScanLagSeconds,
         errors: results.errors,
         metadata: {
+          trace_id: RUN_TRACE_ID,
+          settings_version: SETTINGS_VERSION,
           studentWarnings: results.studentWarnings,
           slaReminders: results.slaReminders,
           metricsUpdated: results.metricsUpdated,
