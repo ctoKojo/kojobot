@@ -383,7 +383,10 @@ serve(async (req) => {
   // Create scan run record at the start
   const { data: scanRun } = await supabase
     .from('compliance_scan_runs')
-    .insert({ scan_type: 'compliance-monitor' })
+    .insert({
+      scan_type: 'compliance-monitor',
+      metadata: { trace_id: RUN_TRACE_ID, settings_version: SETTINGS_VERSION, settings: GRACE_CFG },
+    })
     .select('id')
     .single();
   const scanRunId = scanRun?.id;
