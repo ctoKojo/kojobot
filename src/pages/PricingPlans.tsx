@@ -36,7 +36,7 @@ const emptyPlan = {
   price_3_months: 0, price_1_month: 0,
 };
 
-export default function PricingPlans() {
+export default function PricingPlans({ embedded = false }: { embedded?: boolean } = {}) {
   const { isRTL, language } = useLanguage();
   const { role } = useAuth();
   const { toast } = useToast();
@@ -146,9 +146,9 @@ export default function PricingPlans() {
     </Card>
   );
 
-  return (
-    <DashboardLayout title={isRTL ? 'خطط التسعير' : 'Pricing Plans'}>
-      <div className="space-y-6">
+  const content = (
+    <div className="space-y-6">
+      {!embedded && (
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold flex items-center gap-2">
@@ -161,11 +161,18 @@ export default function PricingPlans() {
           </div>
           {!isReadOnly && <Button onClick={openCreate} className="gap-2"><Plus className="h-4 w-4" />{isRTL ? 'إضافة باقة' : 'Add Plan'}</Button>}
         </div>
+      )}
 
-        {renderTable(offlinePlans, isRTL ? 'أوفلاين (حضوري)' : 'Offline (In-Person)')}
-        {renderTable(onlinePlans, isRTL ? 'أونلاين' : 'Online')}
+      {embedded && !isReadOnly && (
+        <div className="flex justify-end">
+          <Button onClick={openCreate} className="gap-2"><Plus className="h-4 w-4" />{isRTL ? 'إضافة باقة' : 'Add Plan'}</Button>
+        </div>
+      )}
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      {renderTable(offlinePlans, isRTL ? 'أوفلاين (حضوري)' : 'Offline (In-Person)')}
+      {renderTable(onlinePlans, isRTL ? 'أونلاين' : 'Online')}
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{editingPlan ? (isRTL ? 'تعديل الباقة' : 'Edit Plan') : (isRTL ? 'إضافة باقة' : 'Add Plan')}</DialogTitle>
@@ -219,9 +226,15 @@ export default function PricingPlans() {
               <Button variant="outline" onClick={() => setDialogOpen(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
               <Button onClick={handleSave}>{isRTL ? 'حفظ' : 'Save'}</Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+
+  if (embedded) return content;
+  return (
+    <DashboardLayout title={isRTL ? 'خطط التسعير' : 'Pricing Plans'}>
+      {content}
     </DashboardLayout>
   );
 }

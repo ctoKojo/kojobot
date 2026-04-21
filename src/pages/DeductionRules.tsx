@@ -48,7 +48,7 @@ const actionOptions = [
   { value: 'suspension_recommendation', labelEn: 'Suspension Recommendation', labelAr: 'توصية بالإيقاف' },
 ];
 
-export default function DeductionRules() {
+export default function DeductionRules({ embedded = false }: { embedded?: boolean } = {}) {
   const { isRTL } = useLanguage();
   const [rules, setRules] = useState<DeductionRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,10 +120,9 @@ export default function DeductionRules() {
     return isRTL ? opt?.labelAr : opt?.labelEn || act;
   };
 
-  return (
-    <DashboardLayout title={isRTL ? 'قواعد الخصم التلقائي' : 'Auto Deduction Rules'}>
-      <div className="space-y-6 max-w-4xl">
-        {/* Header */}
+  const inner = (
+    <div className="space-y-6 max-w-4xl">
+      {!embedded && (
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3">
             <div className="p-2 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 shadow-lg">
@@ -135,6 +134,7 @@ export default function DeductionRules() {
             {isRTL ? 'إدارة قواعد الخصم التلقائي من الرواتب' : 'Manage automatic salary deduction rules'}
           </p>
         </div>
+      )}
 
         {/* Explanation */}
         <Card className="border-dashed">
@@ -297,7 +297,13 @@ export default function DeductionRules() {
             )}
           </CardContent>
         </Card>
-      </div>
+    </div>
+  );
+
+  if (embedded) return inner;
+  return (
+    <DashboardLayout title={isRTL ? 'قواعد الخصم التلقائي' : 'Auto Deduction Rules'}>
+      {inner}
     </DashboardLayout>
   );
 }

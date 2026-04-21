@@ -21,7 +21,7 @@ const statusColors: Record<RequestStatus, string> = {
   closed: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
 };
 
-export default function SubscriptionRequests() {
+export default function SubscriptionRequests({ embedded = false }: { embedded?: boolean } = {}) {
   const { isRTL } = useLanguage();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -78,9 +78,9 @@ export default function SubscriptionRequests() {
 
   const pendingCount = requests?.filter((r) => r.status === "pending").length || 0;
 
-  return (
-    <DashboardLayout>
-      <div className="space-y-6">
+  const inner = (
+    <div className="space-y-6">
+      {!embedded && (
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-3">
@@ -97,6 +97,15 @@ export default function SubscriptionRequests() {
             <p className="text-sm text-muted-foreground mt-1">{l("Manage incoming subscription requests", "إدارة طلبات الاشتراك الواردة")}</p>
           </div>
         </div>
+      )}
+
+      {embedded && pendingCount > 0 && (
+        <div className="flex items-center justify-end">
+          <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+            {pendingCount} {l("pending", "معلق")}
+          </Badge>
+        </div>
+      )}
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3">
@@ -202,7 +211,9 @@ export default function SubscriptionRequests() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </DashboardLayout>
+    </div>
   );
+
+  if (embedded) return inner;
+  return <DashboardLayout>{inner}</DashboardLayout>;
 }

@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
+// Card import removed — embedded children render their own cards
 import { Settings, Tag, Percent, Inbox, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSearchParams } from 'react-router-dom';
@@ -17,14 +17,6 @@ const PageLoader = () => (
     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
   </div>
 );
-
-function EmbeddedPage({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="[&_main]:p-0 [&_.container]:p-0 [&_.container]:max-w-none">
-      <Suspense fallback={<PageLoader />}>{children}</Suspense>
-    </div>
-  );
-}
 
 export default function FinanceSettings() {
   const { isRTL } = useLanguage();
@@ -73,27 +65,23 @@ export default function FinanceSettings() {
             </TabsTrigger>
           </TabsList>
 
-          <Card>
-            <CardContent className="p-0">
-              <TabsContent value="pricing" className="m-0">
-                <EmbeddedPage>
-                  <PricingPlans />
-                </EmbeddedPage>
-              </TabsContent>
-              {isAdmin && (
-                <TabsContent value="deductions" className="m-0">
-                  <EmbeddedPage>
-                    <DeductionRules />
-                  </EmbeddedPage>
-                </TabsContent>
-              )}
-              <TabsContent value="requests" className="m-0">
-                <EmbeddedPage>
-                  <SubscriptionRequests />
-                </EmbeddedPage>
-              </TabsContent>
-            </CardContent>
-          </Card>
+          <TabsContent value="pricing" className="m-0">
+            <Suspense fallback={<PageLoader />}>
+              <PricingPlans embedded />
+            </Suspense>
+          </TabsContent>
+          {isAdmin && (
+            <TabsContent value="deductions" className="m-0">
+              <Suspense fallback={<PageLoader />}>
+                <DeductionRules embedded />
+              </Suspense>
+            </TabsContent>
+          )}
+          <TabsContent value="requests" className="m-0">
+            <Suspense fallback={<PageLoader />}>
+              <SubscriptionRequests embedded />
+            </Suspense>
+          </TabsContent>
         </Tabs>
       </div>
     </DashboardLayout>
