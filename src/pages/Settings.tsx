@@ -12,6 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { AlertTriangle, Plus, Trash2, Save, Clock, Loader2, Bell, Key, CheckCircle, BookOpen, Globe, Star, MessageSquare, Eye, EyeOff } from 'lucide-react';
 import { AcademyClosuresSettings } from '@/components/settings/AcademyClosuresSettings';
+import { ComplianceGracePeriodsSettings } from '@/components/settings/ComplianceGracePeriodsSettings';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -313,6 +314,9 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Compliance Grace Periods - Admin Only */}
+        {role === 'admin' && <ComplianceGracePeriodsSettings isRTL={isRTL} />}
 
         {/* Sibling Discount Settings - Admin Only */}
         {role === 'admin' && <SiblingDiscountSettings isRTL={isRTL} />}
