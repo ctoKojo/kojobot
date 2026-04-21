@@ -82,6 +82,8 @@ const FinanceReports = React.lazy(() => import("./pages/FinanceReports"));
 const FinanceAuditExplorer = React.lazy(() => import("./pages/FinanceAuditExplorer"));
 const FinanceDataQuality = React.lazy(() => import("./pages/FinanceDataQuality"));
 const FinanceReopenRequests = React.lazy(() => import("./pages/FinanceReopenRequests"));
+const FinanceClosing = React.lazy(() => import("./pages/FinanceClosing"));
+const FinanceSettings = React.lazy(() => import("./pages/FinanceSettings"));
 const ComplianceMonitor = React.lazy(() => import("./pages/ComplianceMonitor"));
 
 
@@ -153,6 +155,9 @@ const App = () => (
                   <Route path="/my-makeup-sessions" element={<ProtectedRoute allowedRoles={['student']}><MyMakeupSessions /></ProtectedRoute>} />
                   <Route path="/pricing-plans" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><PricingPlans /></ProtectedRoute>} />
                   <Route path="/finance" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Finance /></ProtectedRoute>} />
+                  <Route path="/finance/closing" element={<ProtectedRoute allowedRoles={['admin']}><FinanceClosing /></ProtectedRoute>} />
+                  <Route path="/finance/settings" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><FinanceSettings /></ProtectedRoute>} />
+                  {/* Legacy direct routes — kept for backwards compatibility, all reachable via /finance/closing or /finance/settings tabs */}
                   <Route path="/finance/periods" element={<ProtectedRoute allowedRoles={['admin']}><FinancePeriods /></ProtectedRoute>} />
                   <Route path="/finance/reports" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><FinanceReports /></ProtectedRoute>} />
                   <Route path="/finance/audit" element={<ProtectedRoute allowedRoles={['admin']}><FinanceAuditExplorer /></ProtectedRoute>} />
