@@ -549,16 +549,18 @@ export default function BulkReminders() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                      <TableHead>{isRTL ? 'ولي الأمر' : 'Parent'}</TableHead>
                       <TableHead>{isRTL ? 'البريد' : 'Email'}</TableHead>
                       <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
                       <TableHead>{isRTL ? 'ملاحظة' : 'Note'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {results.map((r) => (
-                      <TableRow key={r.studentId}>
+                    {results.map((r, idx) => (
+                      <TableRow key={`${r.studentId}-${r.email}-${idx}`}>
                         <TableCell className="font-medium">{r.studentName}</TableCell>
-                        <TableCell>{r.email}</TableCell>
+                        <TableCell>{r.parentName}</TableCell>
+                        <TableCell className="text-xs">{r.email}</TableCell>
                         <TableCell>
                           {r.status === 'success' && (
                             <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" /> {isRTL ? 'تم' : 'Sent'}</Badge>
