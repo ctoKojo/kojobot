@@ -71,8 +71,54 @@ interface NavSection {
   labelAr: string;
   icon?: React.ComponentType<{ className?: string }>;
   items: NavItem[];
-  defaultOpen?: boolean;
+  /** Tailwind color token name used for icon tint + accent bar. */
+  color?: 'primary' | 'success' | 'warning' | 'destructive' | 'kojo-blue' | 'kojo-purple' | 'accent';
 }
+
+const SECTION_COLOR_STYLES: Record<string, { icon: string; bar: string; iconBg: string; ring: string }> = {
+  primary: {
+    icon: 'text-primary',
+    bar: 'bg-primary',
+    iconBg: 'bg-primary/10 group-hover/section:bg-primary/15',
+    ring: 'group-data-[state=open]/section:ring-primary/30',
+  },
+  success: {
+    icon: 'text-success',
+    bar: 'bg-success',
+    iconBg: 'bg-success/10 group-hover/section:bg-success/15',
+    ring: 'group-data-[state=open]/section:ring-success/30',
+  },
+  warning: {
+    icon: 'text-warning',
+    bar: 'bg-warning',
+    iconBg: 'bg-warning/10 group-hover/section:bg-warning/15',
+    ring: 'group-data-[state=open]/section:ring-warning/30',
+  },
+  destructive: {
+    icon: 'text-destructive',
+    bar: 'bg-destructive',
+    iconBg: 'bg-destructive/10 group-hover/section:bg-destructive/15',
+    ring: 'group-data-[state=open]/section:ring-destructive/30',
+  },
+  'kojo-blue': {
+    icon: 'text-kojo-blue',
+    bar: 'bg-kojo-blue',
+    iconBg: 'bg-kojo-blue/10 group-hover/section:bg-kojo-blue/15',
+    ring: 'group-data-[state=open]/section:ring-kojo-blue/30',
+  },
+  'kojo-purple': {
+    icon: 'text-kojo-purple',
+    bar: 'bg-kojo-purple',
+    iconBg: 'bg-kojo-purple/10 group-hover/section:bg-kojo-purple/15',
+    ring: 'group-data-[state=open]/section:ring-kojo-purple/30',
+  },
+  accent: {
+    icon: 'text-accent-foreground',
+    bar: 'bg-accent-foreground/60',
+    iconBg: 'bg-accent group-hover/section:bg-accent/80',
+    ring: 'group-data-[state=open]/section:ring-accent-foreground/20',
+  },
+};
 
 export function AppSidebar() {
   const { t, isRTL } = useLanguage();
