@@ -1,8 +1,12 @@
 // Generic email sender via Resend Gateway (Lovable Connector)
-// Supports template-based and raw HTML emails with logging
+// Supports template-based emails with logging and idempotency
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { z } from 'npm:zod@3.23.8'
+
+import { template as sessionReminderTpl } from '../_shared/email-templates/session-reminder.ts'
+import { template as paymentDueTpl } from '../_shared/email-templates/payment-due.ts'
+import { template as passwordResetTpl } from '../_shared/email-templates/password-reset.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,22 +17,22 @@ const corsHeaders = {
 const GATEWAY_URL = 'https://connector-gateway.lovable.dev/resend'
 const FROM_ADDRESS = 'Kojobot Academy <academy@kojobot.com>'
 
-// Template registry
-const TEMPLATES = {
-  'session-reminder': await import('../_shared/email-templates/session-reminder.ts').then(m => m.template),
-  'payment-due': await import('../_shared/email-templates/payment-due.ts').then(m => m.template),
-  'password-reset': await import('../_shared/email-templates/password-reset.ts').then(m => m.template),
-} as const
+interface EmailTemplate {
+  subject: (data: any) => string
+  render: (data: any) => string
+}
 
-type TemplateName = keyof typeof TEMPLATES
+const TEMPLATES: Record<string, EmailTemplate> = {
+  'session-reminder': sessionReminderTpl,
+  'payment-due': paymentDueTpl,
+  'password-reset': passwordResetTpl,
+}
 
 const RequestSchema = z.object({
   to: z.string().email(),
   templateName: z.enum(['session-reminder', 'payment-due', 'password-reset']),
   templateData: z.record(z.any()).optional(),
   idempotencyKey: z.string().min(1).max(255),
-  // Optional override for direct HTML (admins only — not used by clients)
-  subject: z.string().optional(),
 })
 
 Deno.serve(async (req) => {
@@ -71,7 +75,7 @@ Deno.serve(async (req) => {
 
   const { to, templateName, templateData, idempotencyKey } = parsed.data
 
-  // Idempotency check: skip if already sent
+  // Idempotency: skip if already successfully sent
   const { data: existing } = await supabase
     .from('email_send_log')
     .select('id, status')
@@ -87,13 +91,12 @@ Deno.serve(async (req) => {
     )
   }
 
-  // Render template
-  const tpl = TEMPLATES[templateName as TemplateName]
+  const tpl = TEMPLATES[templateName]
   const data = templateData ?? {}
-  const subject = typeof tpl.subject === 'function' ? tpl.subject(data) : tpl.subject
+  const subject = tpl.subject(data)
   const html = tpl.render(data)
 
-  // Log pending
+  // Log pending attempt
   await supabase.from('email_send_log').insert({
     message_id: idempotencyKey,
     template_name: templateName,
