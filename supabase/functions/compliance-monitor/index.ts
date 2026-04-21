@@ -450,14 +450,25 @@ serve(async (req) => {
 
     // ========================================
     // Section 1: no_quiz (curriculum-aware, 24h grace)
+    // For makeup sessions: dedupe by (instructor + level + content_number)
+    // since quiz is assigned at curriculum/group level, not per student.
     // ========================================
     try {
+      const seenQuizKeys = new Set<string>();
       for (const session of eligibleSessions) {
         if (checkCircuitBreaker()) break;
         if (!isPastGrace(session, GRACE_CFG, 'quiz')) continue;
 
         const expect = await getCurriculumExpectations(supabase, session.level_id, session.content_number);
         if (!expect || !expect.expectsQuiz) { results.warningsSkipped++; continue; }
+
+        // For makeup sessions, collapse multiple per-student synthetic sessions into one warning
+        if (session.is_makeup) {
+          const instructorId = getResponsibleInstructor(session);
+          const dedupKey = `${instructorId}|${session.level_id}|${session.content_number}|no_quiz`;
+          if (seenQuizKeys.has(dedupKey)) { results.warningsSkipped++; continue; }
+          seenQuizKeys.add(dedupKey);
+        }
 
         const recheck = async () => {
           const { data } = await supabase
@@ -533,15 +544,26 @@ serve(async (req) => {
 
     // ========================================
     // Section 3: no_assignment (curriculum-aware, 24h grace)
+    // For makeup sessions: dedupe by (instructor + level + content_number)
+    // since assignment is uploaded at curriculum level, not per student.
     // ========================================
     try {
       if (!checkCircuitBreaker()) {
+        const seenAssignmentKeys = new Set<string>();
         for (const session of eligibleSessions) {
           if (checkCircuitBreaker()) break;
           if (!isPastGrace(session, GRACE_CFG, 'assignment')) continue;
 
           const expect = await getCurriculumExpectations(supabase, session.level_id, session.content_number);
           if (!expect || !expect.expectsAssignment) { results.warningsSkipped++; continue; }
+
+          // For makeup sessions, collapse multiple per-student synthetic sessions into one warning
+          if (session.is_makeup) {
+            const instructorId = getResponsibleInstructor(session);
+            const dedupKey = `${instructorId}|${session.level_id}|${session.content_number}|no_assignment`;
+            if (seenAssignmentKeys.has(dedupKey)) { results.warningsSkipped++; continue; }
+            seenAssignmentKeys.add(dedupKey);
+          }
 
           const recheck = async () => {
             const { data } = await supabase
