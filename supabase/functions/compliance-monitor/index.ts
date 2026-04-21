@@ -53,8 +53,11 @@ interface CompletedSession {
   makeup_sessions?: {
     assigned_instructor_id: string | null;
     original_session_id: string | null;
+    student_id: string | null;
     original_session?: { session_number: number; session_date: string } | null;
   } | null;
+  // Resolved at runtime for makeup sessions
+  _student_name?: { en: string; ar: string } | null;
 }
 
 // Cache curriculum lookups within a single run
@@ -188,7 +191,7 @@ async function isEligible(supabase: any, s: CompletedSession): Promise<boolean> 
 // ============================================================
 // Anti-starvation batch: 70% oldest unscanned + 30% recent
 // ============================================================
-const SESSION_SELECT = `id, session_date, session_time, session_number, content_number, level_id, duration_minutes, end_at, is_makeup, makeup_session_id, group_id, status, cancellation_reason, last_compliance_scan_at, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active), makeup_sessions:makeup_session_id(assigned_instructor_id, original_session_id, original_session:original_session_id(session_number, session_date))`;
+const SESSION_SELECT = `id, session_date, session_time, session_number, content_number, level_id, duration_minutes, end_at, is_makeup, makeup_session_id, group_id, status, cancellation_reason, last_compliance_scan_at, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active), makeup_sessions:makeup_session_id(assigned_instructor_id, original_session_id, student_id, original_session:original_session_id(session_number, session_date))`;
 
 async function fetchEligibleSessions(supabase: any, todayStr: string): Promise<CompletedSession[]> {
   const recentLimit = Math.floor(BATCH_SIZE * RECENT_BATCH_RATIO);
@@ -521,15 +524,46 @@ serve(async (req) => {
             return (count || 0) === 0;
           };
 
-          const ctxEn = makeupCtx(session, false);
-          const ctxAr = makeupCtx(session, true);
+          // Resolve student name for makeup sessions (one-shot lookup)
+          let studentEn = '';
+          let studentAr = '';
+          if (session.is_makeup && session.makeup_sessions?.student_id) {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('full_name, full_name_ar')
+              .eq('user_id', session.makeup_sessions.student_id)
+              .maybeSingle();
+            if (prof) {
+              studentEn = prof.full_name || '';
+              studentAr = prof.full_name_ar || prof.full_name || '';
+            }
+          }
+
+          let reason: string;
+          let reasonAr: string;
+          let notifMessage: string;
+          let notifMessageAr: string;
+
+          if (session.is_makeup && studentEn) {
+            const dateStr = session.session_date;
+            reason = `Attendance not recorded for ${studentEn} (makeup session on ${dateStr})`;
+            reasonAr = `لم يتم تسجيل حضور الطالب ${studentAr} (سيشن تعويضية يوم ${dateStr})`;
+            notifMessage = `You didn't record attendance for ${studentEn} on ${dateStr}`;
+            notifMessageAr = `لم تقم بتسجيل حضور الطالب ${studentAr} يوم ${dateStr}`;
+          } else {
+            reason = `Attendance not recorded for Session ${session.session_number} (${session.groups.name})`;
+            reasonAr = `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`;
+            notifMessage = `You didn't record attendance for Session ${session.session_number} (${session.groups.name})`;
+            notifMessageAr = `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`;
+          }
+
           const result = await insertWarningWithRecheck({
             supabase, session, warningType: 'no_attendance',
-            reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
-            reasonAr: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
+            reason,
+            reasonAr,
             notifTitle: 'Warning: Missing Attendance', notifTitleAr: 'تحذير: حضور مفقود',
-            notifMessage: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
-            notifMessageAr: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
+            notifMessage,
+            notifMessageAr,
             recheckCondition: recheck,
           }, { traceId: RUN_TRACE_ID, settingsVersion: SETTINGS_VERSION });
 
