@@ -32,6 +32,7 @@ import {
   Lock,
   ShieldCheck,
   FileText,
+  Wallet,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
