@@ -146,10 +146,26 @@ Deno.serve(async (req) => {
     )
   }
 
-  const tpl = TEMPLATES[templateName]
   const data = templateData ?? {}
-  const subject = tpl.subject(data)
-  const html = tpl.render(data)
+  const resolved = await resolveTemplate(supabase, templateName, data)
+
+  if (!resolved) {
+    // Either event is disabled by admin, or template not found in DB nor code.
+    await supabase.from('email_send_log').insert({
+      message_id: idempotencyKey,
+      template_name: templateName,
+      recipient_email: to,
+      status: 'skipped',
+      error_message: 'No template available (disabled or unknown template)',
+      metadata: { reason: 'template_not_resolved' },
+    })
+    return new Response(
+      JSON.stringify({ success: true, skipped: 'template_not_resolved' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  const { subject, html } = resolved
 
   // Retry configuration
   const MAX_ATTEMPTS = 3
