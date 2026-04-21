@@ -220,54 +220,83 @@ export default function BulkReminders() {
     }
 
     const targets = students.filter((s) => selectedIds.has(s.user_id));
+
+    // Build recipient list: every linked parent of every selected student
+    type Recipient = { student: StudentRow; parent: ParentInfo | null };
+    const recipients: Recipient[] = [];
+    for (const s of targets) {
+      if (s.parents.length === 0) {
+        recipients.push({ student: s, parent: null });
+      } else {
+        for (const p of s.parents) recipients.push({ student: s, parent: p });
+      }
+    }
+
     setSending(true);
     setResults([]);
-    setProgress({ done: 0, total: targets.length });
+    setProgress({ done: 0, total: recipients.length });
 
     const dueDateStr = format(dueDate!, 'yyyy-MM-dd');
     const dueDateLabel = format(dueDate!, 'PPP', { locale: isRTL ? ar : undefined });
     const out: SendResult[] = [];
 
-    for (let i = 0; i < targets.length; i++) {
-      const s = targets[i];
-      if (!s.email) {
+    for (let i = 0; i < recipients.length; i++) {
+      const { student: s, parent } = recipients[i];
+
+      if (!parent) {
         out.push({
           studentId: s.user_id,
           studentName: s.full_name,
+          parentName: '—',
           email: '—',
           status: 'skipped',
-          message: isRTL ? 'لا يوجد بريد' : 'No email',
+          message: isRTL ? 'لا يوجد ولي أمر مرتبط' : 'No linked parent',
         });
         setResults([...out]);
-        setProgress({ done: i + 1, total: targets.length });
+        setProgress({ done: i + 1, total: recipients.length });
+        continue;
+      }
+
+      if (!parent.email) {
+        out.push({
+          studentId: s.user_id,
+          studentName: s.full_name,
+          parentName: parent.full_name,
+          email: '—',
+          status: 'skipped',
+          message: isRTL ? 'بريد ولي الأمر غير موجود' : 'Parent has no email',
+        });
+        setResults([...out]);
+        setProgress({ done: i + 1, total: recipients.length });
         continue;
       }
 
       const baseKey = reminderType === 'payment-due'
-        ? `bulk-payment-due-${s.user_id}-${dueDateStr}`
-        : `bulk-session-reminder-${s.user_id}-${dueDateStr}-${sessionTime}`;
+        ? `bulk-payment-due-parent-${parent.parent_id}-${s.user_id}-${dueDateStr}`
+        : `bulk-session-reminder-parent-${parent.parent_id}-${s.user_id}-${dueDateStr}-${sessionTime}`;
 
       const templateData: Record<string, any> =
         reminderType === 'payment-due'
           ? {
-              recipientName: s.full_name,
+              recipientName: parent.full_name,
               studentName: s.full_name,
               amount: Number(amount),
               currency,
               dueDate: dueDateLabel,
-              recipientType: 'student',
+              recipientType: 'parent',
             }
           : {
+              recipientName: parent.full_name,
               studentName: s.full_name,
               sessionTitle,
               sessionDate: dueDateLabel,
               sessionTime,
               groupName: groupName || s.group_name || '',
-              recipientType: 'student',
+              recipientType: 'parent',
             };
 
       const r = await sendEmail({
-        to: s.email,
+        to: parent.email,
         templateName: reminderType,
         idempotencyKey: baseKey,
         templateData,
@@ -276,12 +305,13 @@ export default function BulkReminders() {
       out.push({
         studentId: s.user_id,
         studentName: s.full_name,
-        email: s.email,
+        parentName: parent.full_name,
+        email: parent.email,
         status: r.success ? (r.skipped ? 'skipped' : 'success') : 'failed',
         message: r.skipped || r.error,
       });
       setResults([...out]);
-      setProgress({ done: i + 1, total: targets.length });
+      setProgress({ done: i + 1, total: recipients.length });
     }
 
     setSending(false);
