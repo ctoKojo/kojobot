@@ -2123,11 +2123,13 @@ export type Database = {
       }
       instructor_warnings: {
         Row: {
+          content_number: number | null
           created_at: string | null
           id: string
           instructor_id: string
           is_active: boolean | null
           issued_by: string | null
+          level_id: string | null
           reason: string
           reason_ar: string | null
           reference_id: string | null
@@ -2140,14 +2142,17 @@ export type Database = {
           severity: string
           trace_id: string | null
           updated_at: string
+          warning_fingerprint: string | null
           warning_type: string
         }
         Insert: {
+          content_number?: number | null
           created_at?: string | null
           id?: string
           instructor_id: string
           is_active?: boolean | null
           issued_by?: string | null
+          level_id?: string | null
           reason: string
           reason_ar?: string | null
           reference_id?: string | null
@@ -2160,14 +2165,17 @@ export type Database = {
           severity?: string
           trace_id?: string | null
           updated_at?: string
+          warning_fingerprint?: string | null
           warning_type: string
         }
         Update: {
+          content_number?: number | null
           created_at?: string | null
           id?: string
           instructor_id?: string
           is_active?: boolean | null
           issued_by?: string | null
+          level_id?: string | null
           reason?: string
           reason_ar?: string | null
           reference_id?: string | null
@@ -2180,6 +2188,7 @@ export type Database = {
           severity?: string
           trace_id?: string | null
           updated_at?: string
+          warning_fingerprint?: string | null
           warning_type?: string
         }
         Relationships: [
@@ -6170,6 +6179,44 @@ export type Database = {
         }
         Relationships: []
       }
+      warning_dedup_log: {
+        Row: {
+          attempted_at: string
+          attempted_payload: Json
+          existing_warning_id: string | null
+          fingerprint: string
+          id: string
+          reason: string
+          trace_id: string | null
+        }
+        Insert: {
+          attempted_at?: string
+          attempted_payload?: Json
+          existing_warning_id?: string | null
+          fingerprint: string
+          id?: string
+          reason?: string
+          trace_id?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          attempted_payload?: Json
+          existing_warning_id?: string | null
+          fingerprint?: string
+          id?: string
+          reason?: string
+          trace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warning_dedup_log_existing_warning_id_fkey"
+            columns: ["existing_warning_id"]
+            isOneToOne: false
+            referencedRelation: "instructor_warnings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       warnings: {
         Row: {
           assignment_id: string | null
@@ -7107,6 +7154,29 @@ export type Database = {
         }[]
       }
       init_salary_month: { Args: { p_month?: string }; Returns: Json }
+      insert_warning_deduped: {
+        Args: {
+          p_content_number?: number
+          p_instructor_id: string
+          p_issued_by: string
+          p_level_id?: string
+          p_reason: string
+          p_reason_ar: string
+          p_reference_id?: string
+          p_reference_type?: string
+          p_session_id: string
+          p_settings_version: number
+          p_severity: string
+          p_trace_id: string
+          p_warning_type: string
+        }
+        Returns: {
+          existing_id: string
+          fingerprint: string
+          inserted: boolean
+          warning_id: string
+        }[]
+      }
       is_conversation_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean

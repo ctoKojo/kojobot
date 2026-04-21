@@ -81,6 +81,7 @@ const FinanceReports = React.lazy(() => import("./pages/FinanceReports"));
 const FinanceAuditExplorer = React.lazy(() => import("./pages/FinanceAuditExplorer"));
 const FinanceDataQuality = React.lazy(() => import("./pages/FinanceDataQuality"));
 const FinanceReopenRequests = React.lazy(() => import("./pages/FinanceReopenRequests"));
+const ComplianceMonitor = React.lazy(() => import("./pages/ComplianceMonitor"));
 
 
 const Parents = React.lazy(() => import("./pages/Parents"));
@@ -164,6 +165,7 @@ const App = () => (
                   <Route path="/curriculum/session/:sessionId" element={<ProtectedRoute allowedRoles={['admin']}><CurriculumSessionEdit /></ProtectedRoute>} />
                   <Route path="/my-sessions" element={<ProtectedRoute allowedRoles={['student']}><MySessions /></ProtectedRoute>} />
                   <Route path="/ssot-health" element={<ProtectedRoute allowedRoles={['admin']}><SSOTHealth /></ProtectedRoute>} />
+                  <Route path="/compliance-monitor" element={<ProtectedRoute allowedRoles={['admin']}><ComplianceMonitor /></ProtectedRoute>} />
                   <Route path="/leaderboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception']}><Leaderboard /></ProtectedRoute>} />
                   <Route path="/my-finances" element={<ProtectedRoute allowedRoles={['parent']}><MyFinances /></ProtectedRoute>} />
                   <Route path="/subscribe" element={<Subscribe />} />

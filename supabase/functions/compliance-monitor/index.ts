@@ -266,40 +266,38 @@ async function insertWarningWithRecheck(
     return 'error';
   }
 
-  // 1) Idempotency check (covered by partial unique index too)
-  const { data: existing } = await p.supabase
-    .from('instructor_warnings').select('id')
-    .eq('session_id', p.session.id)
-    .eq('warning_type', p.warningType)
-    .eq('instructor_id', instructorId)
-    .eq('is_active', true)
-    .limit(1).maybeSingle();
-  if (existing) return 'duplicate';
-
-  // 2) Race re-check
+  // 1) Race re-check first (cheap signal)
   const stillMissing = await p.recheckCondition();
   if (!stillMissing) return 'race_resolved';
 
-  // 3) Insert with trace + settings version
-  const { error: insertError } = await p.supabase
-    .from('instructor_warnings').insert({
-      instructor_id: instructorId,
-      session_id: p.session.id,
-      warning_type: p.warningType,
-      reason: p.reason,
-      reason_ar: p.reasonAr,
-      trace_id: ctx.traceId,
-      settings_version: ctx.settingsVersion,
-    });
+  // 2) Deterministic dedup via fingerprint RPC
+  const { data: dedupRows, error: dedupErr } = await p.supabase.rpc('insert_warning_deduped', {
+    p_session_id: p.session.id,
+    p_instructor_id: instructorId,
+    p_warning_type: p.warningType,
+    p_reason: p.reason,
+    p_reason_ar: p.reasonAr,
+    p_severity: 'warning',
+    p_issued_by: instructorId,
+    p_settings_version: ctx.settingsVersion,
+    p_trace_id: ctx.traceId,
+    p_level_id: p.session.level_id ?? null,
+    p_content_number: (p.session as { content_number?: number | null }).content_number ?? null,
+    p_reference_id: null,
+    p_reference_type: null,
+  });
 
-  if (insertError) {
-    // Unique-violation = race-inserted by parallel run → treat as duplicate
-    if ((insertError as any).code === '23505') return 'duplicate';
-    console.error(`[${p.warningType} insert error]`, insertError);
+  if (dedupErr) {
+    console.error(`[${p.warningType} insert_warning_deduped]`, dedupErr);
     return 'error';
   }
 
-  // 4) Notification (best-effort)
+  const result = Array.isArray(dedupRows) ? dedupRows[0] : dedupRows;
+  if (!result?.inserted) {
+    return 'duplicate';
+  }
+
+  // 3) Notification (best-effort)
   await p.supabase.from('notifications').insert({
     user_id: instructorId,
     title: p.notifTitle, title_ar: p.notifTitleAr,

@@ -1,38 +1,41 @@
 ---
 name: compliance-warnings-rules
-description: V3 — Compliance monitor مع makeup-aware grace, end_at من DB, settings versioning, trace_id لكل run/warning, anti-spam dedup, auto-resolve triggers
+description: V4 — Deterministic fingerprint dedup, dedicated /compliance-monitor admin page, server-side jsPDF export, scan timeline + anomalies dashboard
 type: feature
 ---
 
-# Compliance Warnings — V3 Production Hardened
+# Compliance Warnings — V4 Production + Observability
 
-## Grace Periods (settings-driven)
-- مصدر القيم: `system_settings.value` تحت `key='compliance_grace_periods'`.
-- المفاتيح: `attendance_minutes`, `quiz_hours`, `assignment_hours`, `evaluation_hours`, `makeup_multiplier` (1.0–3.0).
-- Validation trigger `validate_grace_settings` يفرض الحدود ويزيد `version` تلقائياً.
-- التعديل: admin فقط، RLS ينفذ ذلك. Audit في `activity_logs` بـ `trace_id`.
+## Deterministic Dedup (V4)
+- `instructor_warnings.warning_fingerprint` = `md5(session_id|warning_type|instructor_id|level_id|content_number)` STORED generated column.
+- `idx_warnings_fingerprint_active` UNIQUE WHERE `is_active=true` يضمن استحالة وجود أي إنذار مكرر.
+- `insert_warning_deduped(...)` RPC: SECURITY DEFINER, يحسب الـ fingerprint، يفحص، يدخل، أو يرجع `inserted=false` مع الإنذار الأصلي.
+- `warning_dedup_log` يسجل كل محاولة تكرار بـ `trace_id` و `attempted_payload`.
+- `compliance-monitor/index.ts` يستدعي `insert_warning_deduped` بدل INSERT المباشر — يتم الـ race re-check قبل، والـ RPC تتولى الباقي.
 
-## Time Source of Truth
-- `sessions.start_at` و `sessions.end_at` — `TIMESTAMPTZ` يحسبهم trigger `compute_session_time_bounds` (BEFORE INSERT/UPDATE) بصيغة `local Cairo - INTERVAL '3 hours'` → UTC.
-- الـ edge function يقرأ `end_at` مباشرة (مش يحسبه في JS) — مفيش timezone bugs ولا NaN.
-- `duration_minutes`: `NOT NULL DEFAULT 60 CHECK > 0 AND ≤ 480`.
+## Admin Observability
+- صفحة `/compliance-monitor` (admin only) تحتوي 3 تبويبات:
+  1. **Scan timeline** — آخر 50 run مع `trace_id`, `settings_version`, duration, ومقاييس مفصّلة + زر تنزيل PDF.
+  2. **Anomalies** — قائمة `data_quality_issues` مع فلتر بالنوع وبحث بالـ entity_id.
+  3. **Dedup log** — كل محاولة تكرار: fingerprint, existing_warning_id, trace_id.
+- زر "Run scan now" يستدعي `compliance-monitor` يدويًا.
 
-## Makeup-aware Logic
-- `effectiveGraceSeconds = base * makeup_multiplier` لو `is_makeup=true`.
-- Resolver المدرب: `makeup_sessions.assigned_instructor_id` ?? `groups.instructor_id`.
-- نص الإنذار يضيف `(تعويضية لسيشن YYYY-MM-DD)` بدل رقم السيشن.
-- Anomaly: makeup فيها أكتر من طالب حاضر → يُسجَّل في `data_quality_issues` عبر RPC `log_dq_issue` (idempotent، unique daily index).
-
-## Idempotency & State
-- `instructor_warnings.trace_id` + `settings_version` — كل warning مرتبط بالـ run والـ config اللي بناه.
-- Partial unique index على `(session_id, warning_type, instructor_id) WHERE is_active`.
-- 4 auto-resolve triggers: attendance/assignments/quiz_assignments/session_evaluations يحدّثوا `status='resolved'` و `resolution_reason`.
-
-## Run Telemetry
-- كل run يحجز `compliance_scan_runs` row فيه `metadata.trace_id` و `settings_version`.
-- Structured logs: `compliance_run_started` و `compliance_run_finished` بـ JSON.
+## PDF Export
+- Edge function `export-compliance-report` (Deno + jsPDF + jspdf-autotable).
+- Input: `{ trace_id }`. Output: PDF binary.
+- يجمع: run telemetry + breakdown by type + anomalies + warnings.
+- يفرض role check (admin/reception) عبر JWT.
 
 ## Files
-- `supabase/functions/compliance-monitor/index.ts` — الـ scanner.
-- `supabase/functions/_shared/cairoTime.ts` — IANA Cairo helpers.
-- `src/components/settings/ComplianceGracePeriodsSettings.tsx` — admin UI لتعديل القيم + version display.
+- `supabase/functions/compliance-monitor/index.ts` — يستخدم `insert_warning_deduped` RPC.
+- `supabase/functions/export-compliance-report/index.ts` — PDF generator.
+- `src/pages/ComplianceMonitor.tsx` — لوحة الـ admin.
+- `src/components/settings/ComplianceGracePeriodsSettings.tsx` — UI تعديل القيم.
+- DB: `warning_fingerprint` column, `warning_dedup_log` table, `insert_warning_deduped` RPC.
+
+## V3 Foundations (still active)
+- Grace periods من `system_settings.compliance_grace_periods` مع `validate_grace_settings` trigger.
+- `sessions.start_at`/`end_at` UTC من trigger `compute_session_time_bounds` (Cairo -3h).
+- Makeup-aware grace via `makeup_multiplier` (1.0–3.0).
+- 4 auto-resolve triggers على attendance/assignments/quiz_assignments/session_evaluations.
+- `compliance_scan_runs` يحتفظ بـ `trace_id` و `settings_version` في metadata.
