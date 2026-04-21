@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wallet, Banknote, Smartphone, CreditCard, RefreshCw, Database, ArrowDownCircle, ArrowUpCircle, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Wallet, Banknote, Smartphone, CreditCard, RefreshCw, Database, ArrowDownCircle, ArrowUpCircle, CheckCircle2, AlertCircle, Scale, Heart, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -59,6 +59,9 @@ export default function Treasury() {
   const [openingAmount, setOpeningAmount] = useState<string>('');
   const [openingDate, setOpeningDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [openingNotes, setOpeningNotes] = useState<string>('');
+  const [reconAccount, setReconAccount] = useState<string>('1110');
+  const [reconActual, setReconActual] = useState<string>('');
+  const [reconNotes, setReconNotes] = useState<string>('');
 
   const balancesQuery = useQuery({
     queryKey: ['treasury-balances'],
