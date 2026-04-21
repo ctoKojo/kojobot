@@ -1882,7 +1882,7 @@ export default function SessionDetails() {
                         {language === 'ar' ? student.student_name_ar : student.student_name}
                       </TableCell>
                       <TableCell className="text-center">
-                        {getAttendanceBadge(student.attendance_status)}
+                        {getAttendanceBadge(student.attendance_status, student.compensation_status)}
                       </TableCell>
                       <TableCell className="text-center">
                         {getQuizBadge(student)}
@@ -1905,7 +1905,7 @@ export default function SessionDetails() {
             groupId={session.group_id}
             ageGroupId={group.age_group_id}
             students={students
-              .filter(s => s.attendance_status === 'present' || s.attendance_status === 'late' || s.attendance_status === null)
+              .filter(s => isStudentEffectivelyPresent(s) || s.attendance_status === null)
               .map(s => ({
                 student_id: s.student_id,
                 student_name: s.student_name,
