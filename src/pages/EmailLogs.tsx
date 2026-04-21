@@ -45,11 +45,19 @@ interface EmailLogRow {
   recipient_email: string;
   status: string;
   error_message: string | null;
+  metadata: Record<string, any> | null;
   created_at: string;
 }
 
 interface DedupedRow extends EmailLogRow {
   // The latest row per message_id
+}
+
+interface DetailDialogState {
+  open: boolean;
+  loading: boolean;
+  row: DedupedRow | null;
+  history: EmailLogRow[];
 }
 
 const STATUS_CONFIG: Record<string, { label: string; labelAr: string; variant: 'default' | 'destructive' | 'secondary' | 'outline'; icon: any }> = {
