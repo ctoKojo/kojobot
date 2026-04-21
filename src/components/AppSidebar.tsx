@@ -142,6 +142,7 @@ export function AppSidebar() {
               { title: t.nav.activityLog, url: '/activity-log', icon: Activity, roles: ['admin'] },
               { title: isRTL ? 'مراقبة الالتزام' : 'Compliance Monitor', url: '/compliance-monitor', icon: ShieldCheck, roles: ['admin'] },
               { title: isRTL ? 'سجلات الإيميل' : 'Email Logs', url: '/email-logs', icon: Mail, roles: ['admin'] },
+              { title: isRTL ? 'قوالب الإيميل' : 'Email Templates', url: '/email-templates', icon: FileText, roles: ['admin'] },
               { title: isRTL ? 'تذكيرات جماعية' : 'Bulk Reminders', url: '/bulk-reminders', icon: Send, roles: ['admin', 'reception'] },
             ],
           },
