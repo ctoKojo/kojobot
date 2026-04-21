@@ -258,8 +258,7 @@ export default function Treasury() {
                       <SelectContent>
                         <SelectItem value="all">{isRTL ? 'الكل' : 'All'}</SelectItem>
                         <SelectItem value="1110">{isRTL ? 'نقدي' : 'Cash'}</SelectItem>
-                        <SelectItem value="1120">{isRTL ? 'بنك' : 'Bank'}</SelectItem>
-                        <SelectItem value="1130">InstaPay</SelectItem>
+                        <SelectItem value="1120">{isRTL ? 'بنك (شامل إنستا باي)' : 'Bank (incl. InstaPay)'}</SelectItem>
                         <SelectItem value="1140">{isRTL ? 'محفظة' : 'E-Wallet'}</SelectItem>
                       </SelectContent>
                     </Select>
