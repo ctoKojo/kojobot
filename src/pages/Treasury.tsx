@@ -346,8 +346,15 @@ export default function Treasury() {
         </div>
 
         <Tabs defaultValue="transactions" className="space-y-4">
-          <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-2">
+          <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-2 md:grid-cols-4">
             <TabsTrigger value="transactions">{isRTL ? 'الحركات' : 'Transactions'}</TabsTrigger>
+            <TabsTrigger value="reconciliation">{isRTL ? 'مطابقة الكاش' : 'Reconciliation'}</TabsTrigger>
+            <TabsTrigger value="health">
+              {isRTL ? 'فحص الصحة' : 'Health'}
+              {(alertsQuery.data?.length ?? 0) > 0 && (
+                <Badge variant="destructive" className="ml-2 h-4 px-1 text-[10px]">{alertsQuery.data?.length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="maintenance">{isRTL ? 'الصيانة' : 'Maintenance'}</TabsTrigger>
           </TabsList>
 
