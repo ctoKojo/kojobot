@@ -213,7 +213,36 @@ export default function EmailLogs() {
     }
   };
 
-  return (
+  const openDetail = async (row: DedupedRow) => {
+    setDetail({ open: true, loading: true, row, history: [] });
+    if (!row.message_id) {
+      setDetail({ open: true, loading: false, row, history: [row] });
+      return;
+    }
+    const { data, error } = await supabase
+      .from('email_send_log')
+      .select('*')
+      .eq('message_id', row.message_id)
+      .order('created_at', { ascending: true });
+    if (error) {
+      console.error('Failed to fetch email detail history:', error);
+      setDetail({ open: true, loading: false, row, history: [row] });
+      return;
+    }
+    setDetail({ open: true, loading: false, row, history: (data ?? []) as EmailLogRow[] });
+  };
+
+  // Compute timing info for the detail dialog
+  const detailTiming = (() => {
+    if (!detail.row || detail.history.length === 0) return null;
+    const sorted = [...detail.history].sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
+    const enqueuedAt = sorted.find((r) => r.status === 'pending')?.created_at ?? sorted[0].created_at;
+    const finalRow = [...sorted].reverse().find((r) => r.status !== 'pending') ?? sorted[sorted.length - 1];
+    const finalAt = finalRow.created_at;
+    const durationMs = +new Date(finalAt) - +new Date(enqueuedAt);
+    return { enqueuedAt, finalAt, finalStatus: finalRow.status, durationMs };
+  })();
+
     <DashboardLayout>
       <PageHeader
         title={isArabic ? 'سجل الإيميلات' : 'Email Logs'}
