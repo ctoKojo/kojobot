@@ -127,7 +127,33 @@ export default function Treasury() {
     onError: (e: any) => toast.error(e.message ?? 'Refresh failed'),
   });
 
-  const totalLiquidity = balancesQuery.data?.reduce((s, b) => s + Number(b.balance), 0) ?? 0;
+  // Merge InstaPay (1130) into Bank (1120) — they're the same account operationally
+  const mergedBalances = (() => {
+    const raw = balancesQuery.data ?? [];
+    const bank = raw.find((b) => b.account_code === '1120');
+    const insta = raw.find((b) => b.account_code === '1130');
+    const others = raw.filter((b) => b.account_code !== '1120' && b.account_code !== '1130');
+    const bankMerged: TreasuryBalance | null = (bank || insta)
+      ? {
+          account_code: '1120',
+          account_name: 'Bank (incl. InstaPay)',
+          account_name_ar: 'البنك (شامل إنستا باي)',
+          balance: Number(bank?.balance ?? 0) + Number(insta?.balance ?? 0),
+        }
+      : null;
+    // Order: Cash → Bank(+Insta) → E-Wallet
+    const ordered: TreasuryBalance[] = [];
+    const cash = others.find((b) => b.account_code === '1110');
+    const wallet = others.find((b) => b.account_code === '1140');
+    if (cash) ordered.push(cash);
+    if (bankMerged) ordered.push(bankMerged);
+    if (wallet) ordered.push(wallet);
+    // Append any other unexpected accounts
+    others.filter((b) => b.account_code !== '1110' && b.account_code !== '1140').forEach((b) => ordered.push(b));
+    return ordered;
+  })();
+
+  const totalLiquidity = mergedBalances.reduce((s, b) => s + Number(b.balance), 0);
 
   const getSourceBadge = (source: string) => {
     const map: Record<string, { label: string; labelAr: string; variant: any }> = {
