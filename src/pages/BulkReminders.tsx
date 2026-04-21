@@ -251,10 +251,11 @@ export default function BulkReminders() {
         out.push({
           studentId: s.user_id,
           studentName: s.full_name,
-          parentName: '—',
+          recipientType: 'none',
+          recipientName: '—',
           email: '—',
           status: 'skipped',
-          message: isRTL ? 'لا يوجد ولي أمر مرتبط' : 'No linked parent',
+          message: isRTL ? 'لا يوجد ولي أمر مرتبط بالطالب' : 'No linked parent for this student',
         });
         setResults([...out]);
         setProgress({ done: i + 1, total: recipients.length });
@@ -265,10 +266,13 @@ export default function BulkReminders() {
         out.push({
           studentId: s.user_id,
           studentName: s.full_name,
-          parentName: parent.full_name,
+          recipientType: 'parent',
+          recipientName: parent.full_name,
           email: '—',
           status: 'skipped',
-          message: isRTL ? 'بريد ولي الأمر غير موجود' : 'Parent has no email',
+          message: isRTL
+            ? `بريد ولي الأمر "${parent.full_name}" غير مسجّل`
+            : `Parent "${parent.full_name}" has no email on file`,
         });
         setResults([...out]);
         setProgress({ done: i + 1, total: recipients.length });
