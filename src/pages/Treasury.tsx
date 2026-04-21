@@ -70,15 +70,20 @@ export default function Treasury() {
   const txnsQuery = useQuery({
     queryKey: ['treasury-transactions', filterAccount, filterSource, fromDate, toDate],
     queryFn: async () => {
+      // When user picks "Bank", fetch all then filter to include both 1120 + 1130 (InstaPay merged)
+      const isBankMerged = filterAccount === '1120';
       const { data, error } = await (supabase.rpc as any)('get_treasury_transactions', {
         p_limit: 200,
-        p_account_code: filterAccount === 'all' ? null : filterAccount,
+        p_account_code: filterAccount === 'all' || isBankMerged ? null : filterAccount,
         p_from_date: fromDate || null,
         p_to_date: toDate || null,
         p_source: filterSource === 'all' ? null : filterSource,
       });
       if (error) throw error;
-      return (data ?? []) as TreasuryTxn[];
+      const rows = (data ?? []) as TreasuryTxn[];
+      return isBankMerged
+        ? rows.filter((r) => r.account_code === '1120' || r.account_code === '1130')
+        : rows;
     },
   });
 
@@ -127,7 +132,33 @@ export default function Treasury() {
     onError: (e: any) => toast.error(e.message ?? 'Refresh failed'),
   });
 
-  const totalLiquidity = balancesQuery.data?.reduce((s, b) => s + Number(b.balance), 0) ?? 0;
+  // Merge InstaPay (1130) into Bank (1120) — they're the same account operationally
+  const mergedBalances = (() => {
+    const raw = balancesQuery.data ?? [];
+    const bank = raw.find((b) => b.account_code === '1120');
+    const insta = raw.find((b) => b.account_code === '1130');
+    const others = raw.filter((b) => b.account_code !== '1120' && b.account_code !== '1130');
+    const bankMerged: TreasuryBalance | null = (bank || insta)
+      ? {
+          account_code: '1120',
+          account_name: 'Bank (incl. InstaPay)',
+          account_name_ar: 'البنك (شامل إنستا باي)',
+          balance: Number(bank?.balance ?? 0) + Number(insta?.balance ?? 0),
+        }
+      : null;
+    // Order: Cash → Bank(+Insta) → E-Wallet
+    const ordered: TreasuryBalance[] = [];
+    const cash = others.find((b) => b.account_code === '1110');
+    const wallet = others.find((b) => b.account_code === '1140');
+    if (cash) ordered.push(cash);
+    if (bankMerged) ordered.push(bankMerged);
+    if (wallet) ordered.push(wallet);
+    // Append any other unexpected accounts
+    others.filter((b) => b.account_code !== '1110' && b.account_code !== '1140').forEach((b) => ordered.push(b));
+    return ordered;
+  })();
+
+  const totalLiquidity = mergedBalances.reduce((s, b) => s + Number(b.balance), 0);
 
   const getSourceBadge = (source: string) => {
     const map: Record<string, { label: string; labelAr: string; variant: any }> = {
@@ -162,12 +193,12 @@ export default function Treasury() {
         />
 
         {/* Liquidity Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {balancesQuery.isLoading ? (
-            Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-32" />)
+            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)
           ) : (
             <>
-              {balancesQuery.data?.map((b) => {
+              {mergedBalances.map((b) => {
                 const meta = ACCOUNT_META[b.account_code] ?? { icon: Wallet, gradient: 'from-muted to-muted/50' };
                 const Icon = meta.icon;
                 return (
@@ -198,7 +229,9 @@ export default function Treasury() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold tracking-tight text-primary">{formatEGP(totalLiquidity)}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{isRTL ? 'مجموع 4 حسابات' : '4 accounts sum'}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {isRTL ? `مجموع ${mergedBalances.length} حسابات` : `${mergedBalances.length} accounts sum`}
+                  </p>
                 </CardContent>
               </Card>
             </>
@@ -230,8 +263,7 @@ export default function Treasury() {
                       <SelectContent>
                         <SelectItem value="all">{isRTL ? 'الكل' : 'All'}</SelectItem>
                         <SelectItem value="1110">{isRTL ? 'نقدي' : 'Cash'}</SelectItem>
-                        <SelectItem value="1120">{isRTL ? 'بنك' : 'Bank'}</SelectItem>
-                        <SelectItem value="1130">InstaPay</SelectItem>
+                        <SelectItem value="1120">{isRTL ? 'بنك (شامل إنستا باي)' : 'Bank (incl. InstaPay)'}</SelectItem>
                         <SelectItem value="1140">{isRTL ? 'محفظة' : 'E-Wallet'}</SelectItem>
                       </SelectContent>
                     </Select>
