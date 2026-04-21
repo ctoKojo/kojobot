@@ -7490,6 +7490,14 @@ export type Database = {
         Args: { p_chosen_track_id?: string; p_group_id: string }
         Returns: Json
       }
+      student_has_assignment_access: {
+        Args: { _assignment_id: string; _student_id: string }
+        Returns: boolean
+      }
+      student_has_quiz_access: {
+        Args: { _quiz_assignment_id: string; _student_id: string }
+        Returns: boolean
+      }
       submit_payroll_run_for_review: {
         Args: { p_run_id: string }
         Returns: undefined
