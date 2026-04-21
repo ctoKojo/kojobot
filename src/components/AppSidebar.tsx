@@ -123,6 +123,7 @@ export function AppSidebar() {
             label: 'Finance', labelAr: 'المالية',
             items: [
               { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['admin'] },
+              { title: isRTL ? 'الخزنة' : 'Treasury', url: '/finance/treasury', icon: Wallet, roles: ['admin'] },
               { title: isRTL ? 'التقارير المالية' : 'Financial Reports', url: '/finance/reports', icon: FileText, roles: ['admin'] },
               { title: isRTL ? 'الفترات المالية' : 'Periods', url: '/finance/periods', icon: Lock, roles: ['admin'] },
               { title: isRTL ? 'مستكشف التدقيق' : 'Audit Explorer', url: '/finance/audit', icon: ShieldCheck, roles: ['admin'] },
@@ -271,6 +272,7 @@ export function AppSidebar() {
             label: 'Finance', labelAr: 'المالية',
             items: [
               { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['reception'] },
+              { title: isRTL ? 'الخزنة' : 'Treasury', url: '/finance/treasury', icon: Wallet, roles: ['reception'] },
               { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['reception'] },
               { title: isRTL ? 'طلبات الاشتراك' : 'Subscription Requests', url: '/subscription-requests', icon: ClipboardList, roles: ['reception'] },
             ],
