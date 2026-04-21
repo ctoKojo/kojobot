@@ -37,17 +37,25 @@ import { cn } from '@/lib/utils';
 
 type ReminderType = 'payment-due' | 'session-reminder';
 
+interface ParentInfo {
+  parent_id: string;
+  full_name: string;
+  email: string | null;
+}
+
 interface StudentRow {
   user_id: string;
   full_name: string;
   email: string | null;
   phone: string | null;
   group_name?: string | null;
+  parents: ParentInfo[];
 }
 
 interface SendResult {
   studentId: string;
   studentName: string;
+  parentName: string;
   email: string;
   status: 'success' | 'failed' | 'skipped';
   message?: string;
@@ -102,7 +110,7 @@ export default function BulkReminders() {
         .in('user_id', ids);
       if (profErr) throw profErr;
 
-      // Optional: pull active group names
+      // Pull active group names
       const { data: groupLinks } = await supabase
         .from('group_students')
         .select('student_id, groups(name, name_ar)')
@@ -115,12 +123,40 @@ export default function BulkReminders() {
         if (g) groupMap.set(l.student_id, isRTL ? (g.name_ar || g.name) : (g.name || g.name_ar));
       });
 
+      // Pull linked parents for each student
+      const { data: parentLinks } = await supabase
+        .from('parent_students')
+        .select('student_id, parent_id')
+        .in('student_id', ids);
+
+      const parentIds = Array.from(new Set((parentLinks ?? []).map((l) => l.parent_id)));
+      const parentProfilesMap = new Map<string, { full_name: string; email: string | null }>();
+      if (parentIds.length > 0) {
+        const { data: parentProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', parentIds);
+        (parentProfiles ?? []).forEach((p) => {
+          parentProfilesMap.set(p.user_id, { full_name: p.full_name || '—', email: p.email });
+        });
+      }
+
+      const parentsByStudent = new Map<string, ParentInfo[]>();
+      (parentLinks ?? []).forEach((l) => {
+        const info = parentProfilesMap.get(l.parent_id);
+        if (!info) return;
+        const list = parentsByStudent.get(l.student_id) ?? [];
+        list.push({ parent_id: l.parent_id, full_name: info.full_name, email: info.email });
+        parentsByStudent.set(l.student_id, list);
+      });
+
       const rows: StudentRow[] = (profiles ?? []).map((p) => ({
         user_id: p.user_id,
         full_name: p.full_name || '—',
         email: p.email,
         phone: p.phone,
         group_name: groupMap.get(p.user_id) ?? null,
+        parents: parentsByStudent.get(p.user_id) ?? [],
       }));
 
       // Sort by name
@@ -141,7 +177,10 @@ export default function BulkReminders() {
         s.full_name.toLowerCase().includes(q) ||
         (s.email || '').toLowerCase().includes(q) ||
         (s.phone || '').toLowerCase().includes(q) ||
-        (s.group_name || '').toLowerCase().includes(q),
+        (s.group_name || '').toLowerCase().includes(q) ||
+        s.parents.some(
+          (p) => p.full_name.toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q),
+        ),
     );
   }, [students, search]);
 
@@ -184,54 +223,83 @@ export default function BulkReminders() {
     }
 
     const targets = students.filter((s) => selectedIds.has(s.user_id));
+
+    // Build recipient list: every linked parent of every selected student
+    type Recipient = { student: StudentRow; parent: ParentInfo | null };
+    const recipients: Recipient[] = [];
+    for (const s of targets) {
+      if (s.parents.length === 0) {
+        recipients.push({ student: s, parent: null });
+      } else {
+        for (const p of s.parents) recipients.push({ student: s, parent: p });
+      }
+    }
+
     setSending(true);
     setResults([]);
-    setProgress({ done: 0, total: targets.length });
+    setProgress({ done: 0, total: recipients.length });
 
     const dueDateStr = format(dueDate!, 'yyyy-MM-dd');
     const dueDateLabel = format(dueDate!, 'PPP', { locale: isRTL ? ar : undefined });
     const out: SendResult[] = [];
 
-    for (let i = 0; i < targets.length; i++) {
-      const s = targets[i];
-      if (!s.email) {
+    for (let i = 0; i < recipients.length; i++) {
+      const { student: s, parent } = recipients[i];
+
+      if (!parent) {
         out.push({
           studentId: s.user_id,
           studentName: s.full_name,
+          parentName: '—',
           email: '—',
           status: 'skipped',
-          message: isRTL ? 'لا يوجد بريد' : 'No email',
+          message: isRTL ? 'لا يوجد ولي أمر مرتبط' : 'No linked parent',
         });
         setResults([...out]);
-        setProgress({ done: i + 1, total: targets.length });
+        setProgress({ done: i + 1, total: recipients.length });
+        continue;
+      }
+
+      if (!parent.email) {
+        out.push({
+          studentId: s.user_id,
+          studentName: s.full_name,
+          parentName: parent.full_name,
+          email: '—',
+          status: 'skipped',
+          message: isRTL ? 'بريد ولي الأمر غير موجود' : 'Parent has no email',
+        });
+        setResults([...out]);
+        setProgress({ done: i + 1, total: recipients.length });
         continue;
       }
 
       const baseKey = reminderType === 'payment-due'
-        ? `bulk-payment-due-${s.user_id}-${dueDateStr}`
-        : `bulk-session-reminder-${s.user_id}-${dueDateStr}-${sessionTime}`;
+        ? `bulk-payment-due-parent-${parent.parent_id}-${s.user_id}-${dueDateStr}`
+        : `bulk-session-reminder-parent-${parent.parent_id}-${s.user_id}-${dueDateStr}-${sessionTime}`;
 
       const templateData: Record<string, any> =
         reminderType === 'payment-due'
           ? {
-              recipientName: s.full_name,
+              recipientName: parent.full_name,
               studentName: s.full_name,
               amount: Number(amount),
               currency,
               dueDate: dueDateLabel,
-              recipientType: 'student',
+              recipientType: 'parent',
             }
           : {
+              recipientName: parent.full_name,
               studentName: s.full_name,
               sessionTitle,
               sessionDate: dueDateLabel,
               sessionTime,
               groupName: groupName || s.group_name || '',
-              recipientType: 'student',
+              recipientType: 'parent',
             };
 
       const r = await sendEmail({
-        to: s.email,
+        to: parent.email,
         templateName: reminderType,
         idempotencyKey: baseKey,
         templateData,
@@ -240,12 +308,13 @@ export default function BulkReminders() {
       out.push({
         studentId: s.user_id,
         studentName: s.full_name,
-        email: s.email,
+        parentName: parent.full_name,
+        email: parent.email,
         status: r.success ? (r.skipped ? 'skipped' : 'success') : 'failed',
         message: r.skipped || r.error,
       });
       setResults([...out]);
-      setProgress({ done: i + 1, total: targets.length });
+      setProgress({ done: i + 1, total: recipients.length });
     }
 
     setSending(false);
@@ -265,7 +334,9 @@ export default function BulkReminders() {
       <div className="space-y-6">
         <PageHeader
           title={isRTL ? 'تذكيرات جماعية' : 'Bulk Reminders'}
-          subtitle={isRTL ? 'إرسال تذكيرات الدفع أو الحصص لعدة طلاب دفعة واحدة' : 'Send payment or session reminders to multiple students at once'}
+          subtitle={isRTL
+            ? 'إرسال تذكيرات الدفع أو الحصص لأولياء أمور الطلاب المختارين دفعة واحدة'
+            : 'Send payment or session reminders to the parents of selected students'}
           icon={Send}
         />
 
@@ -391,8 +462,8 @@ export default function BulkReminders() {
                           disabled={sending || filtered.length === 0}
                         />
                       </TableHead>
-                      <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
-                      <TableHead>{isRTL ? 'البريد' : 'Email'}</TableHead>
+                      <TableHead>{isRTL ? 'اسم الطالب' : 'Student'}</TableHead>
+                      <TableHead>{isRTL ? 'أولياء الأمور' : 'Parents'}</TableHead>
                       <TableHead>{isRTL ? 'المجموعة' : 'Group'}</TableHead>
                       <TableHead>{isRTL ? 'الهاتف' : 'Phone'}</TableHead>
                     </TableRow>
@@ -405,23 +476,47 @@ export default function BulkReminders() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filtered.map((s) => (
-                        <TableRow key={s.user_id} className={!s.email ? 'opacity-60' : ''}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedIds.has(s.user_id)}
-                              onCheckedChange={() => toggleOne(s.user_id)}
-                              disabled={sending}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">{s.full_name}</TableCell>
-                          <TableCell>
-                            {s.email || <span className="text-destructive text-xs">{isRTL ? 'لا يوجد' : 'Missing'}</span>}
-                          </TableCell>
-                          <TableCell>{s.group_name || '—'}</TableCell>
-                          <TableCell>{s.phone || '—'}</TableCell>
-                        </TableRow>
-                      ))
+                      filtered.map((s) => {
+                        const parentsWithEmail = s.parents.filter((p) => p.email);
+                        const noParents = s.parents.length === 0;
+                        const noEmails = !noParents && parentsWithEmail.length === 0;
+                        return (
+                          <TableRow key={s.user_id} className={noParents || noEmails ? 'opacity-60' : ''}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedIds.has(s.user_id)}
+                                onCheckedChange={() => toggleOne(s.user_id)}
+                                disabled={sending}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">{s.full_name}</TableCell>
+                            <TableCell>
+                              {noParents ? (
+                                <span className="text-destructive text-xs">
+                                  {isRTL ? 'لا يوجد ولي أمر مرتبط' : 'No linked parent'}
+                                </span>
+                              ) : (
+                                <div className="flex flex-col gap-1">
+                                  {s.parents.map((p) => (
+                                    <div key={p.parent_id} className="text-xs">
+                                      <span className="font-medium">{p.full_name}</span>
+                                      {p.email ? (
+                                        <span className="text-muted-foreground ms-1">— {p.email}</span>
+                                      ) : (
+                                        <span className="text-destructive ms-1">
+                                          ({isRTL ? 'بدون بريد' : 'no email'})
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>{s.group_name || '—'}</TableCell>
+                            <TableCell>{s.phone || '—'}</TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -456,16 +551,18 @@ export default function BulkReminders() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                      <TableHead>{isRTL ? 'ولي الأمر' : 'Parent'}</TableHead>
                       <TableHead>{isRTL ? 'البريد' : 'Email'}</TableHead>
                       <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
                       <TableHead>{isRTL ? 'ملاحظة' : 'Note'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {results.map((r) => (
-                      <TableRow key={r.studentId}>
+                    {results.map((r, idx) => (
+                      <TableRow key={`${r.studentId}-${r.email}-${idx}`}>
                         <TableCell className="font-medium">{r.studentName}</TableCell>
-                        <TableCell>{r.email}</TableCell>
+                        <TableCell>{r.parentName}</TableCell>
+                        <TableCell className="text-xs">{r.email}</TableCell>
                         <TableCell>
                           {r.status === 'success' && (
                             <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" /> {isRTL ? 'تم' : 'Sent'}</Badge>
