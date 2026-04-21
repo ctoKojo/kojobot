@@ -96,6 +96,31 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Send notification email (best-effort)
+    try {
+      const { data: targetProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("email, full_name, full_name_ar")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (targetProfile?.email) {
+        await supabaseAdmin.functions.invoke("send-email", {
+          body: {
+            to: targetProfile.email,
+            templateName: "password-reset",
+            templateData: {
+              recipientName: targetProfile.full_name_ar || targetProfile.full_name || "",
+              newPassword,
+            },
+            idempotencyKey: `password-reset-${userId}-${Date.now()}`,
+          },
+        });
+      }
+    } catch (emailErr) {
+      console.error("Failed to send password reset email:", emailErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

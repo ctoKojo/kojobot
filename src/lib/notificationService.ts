@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { sendEmail, getUserEmail } from '@/lib/emailService';
 
 interface NotificationData {
   user_id: string;
@@ -164,7 +165,7 @@ export const notificationService = {
 
   // Notify about session reminder
   async notifySessionReminder(userId: string, groupName: string, groupNameAr: string, sessionDate: string, sessionTime: string) {
-    return this.create({
+    const result = await this.create({
       user_id: userId,
       title: 'Upcoming Session',
       title_ar: 'سيشن قادم',
@@ -173,6 +174,33 @@ export const notificationService = {
       type: 'info',
       category: 'session',
     });
+
+    // Fire-and-forget session reminder email
+    try {
+      const email = await getUserEmail(userId);
+      if (email) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, full_name_ar')
+          .eq('user_id', userId)
+          .maybeSingle();
+        sendEmail({
+          to: email,
+          templateName: 'session-reminder',
+          templateData: {
+            recipientName: profile?.full_name_ar || profile?.full_name || '',
+            groupName: groupNameAr || groupName,
+            sessionDate,
+            sessionTime,
+          },
+          idempotencyKey: `session-reminder-${userId}-${sessionDate}-${sessionTime}`,
+        });
+      }
+    } catch (err) {
+      console.error('[notifySessionReminder] email error:', err);
+    }
+
+    return result;
   },
 
   // Bulk notify group students
@@ -231,7 +259,7 @@ export const notificationService = {
 
   // Notify about payment due soon
   async notifyPaymentDueSoon(studentId: string, amount: number, dueDate: string) {
-    return this.create({
+    const result = await this.create({
       user_id: studentId,
       title: 'Payment Due Soon',
       title_ar: 'موعد الدفع قريب',
@@ -240,6 +268,32 @@ export const notificationService = {
       type: 'warning',
       category: 'payment',
     });
+
+    // Fire-and-forget email
+    try {
+      const email = await getUserEmail(studentId);
+      if (email) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, full_name_ar')
+          .eq('user_id', studentId)
+          .maybeSingle();
+        sendEmail({
+          to: email,
+          templateName: 'payment-due',
+          templateData: {
+            studentName: profile?.full_name_ar || profile?.full_name || '',
+            amount,
+            dueDate,
+          },
+          idempotencyKey: `payment-due-${studentId}-${dueDate}`,
+        });
+      }
+    } catch (err) {
+      console.error('[notifyPaymentDueSoon] email error:', err);
+    }
+
+    return result;
   },
 
   // Notify when payment is recorded (skip dedup — unique amounts)
