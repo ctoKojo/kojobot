@@ -123,16 +123,9 @@ export function AppSidebar() {
           {
             label: 'Finance', labelAr: 'المالية',
             items: [
-              { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['admin'] },
-              { title: isRTL ? 'الخزنة' : 'Treasury', url: '/finance/treasury', icon: Wallet, roles: ['admin'] },
-              { title: isRTL ? 'التقارير المالية' : 'Financial Reports', url: '/finance/reports', icon: FileText, roles: ['admin'] },
-              { title: isRTL ? 'الفترات المالية' : 'Periods', url: '/finance/periods', icon: Lock, roles: ['admin'] },
-              { title: isRTL ? 'مستكشف التدقيق' : 'Audit Explorer', url: '/finance/audit', icon: ShieldCheck, roles: ['admin'] },
-              { title: isRTL ? 'جودة البيانات' : 'Data Quality', url: '/finance/data-quality', icon: AlertTriangle, roles: ['admin'] },
-              { title: isRTL ? 'طلبات إعادة الفتح' : 'Reopen Requests', url: '/finance/reopen-requests', icon: RefreshCw, roles: ['admin'] },
-              { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['admin'] },
-              { title: isRTL ? 'قواعد الخصم' : 'Deduction Rules', url: '/deduction-rules', icon: AlertTriangle, roles: ['admin'] },
-              { title: isRTL ? 'طلبات الاشتراك' : 'Subscription Requests', url: '/subscription-requests', icon: ClipboardList, roles: ['admin'] },
+              { title: isRTL ? 'الإدارة والخزنة' : 'Finance & Treasury', url: '/finance', icon: DollarSign, roles: ['admin'] },
+              { title: isRTL ? 'الإقفال والتدقيق' : 'Closing & Audit', url: '/finance/closing', icon: Lock, roles: ['admin'] },
+              { title: isRTL ? 'الإعدادات المالية' : 'Finance Settings', url: '/finance/settings', icon: Settings, roles: ['admin'] },
             ],
           },
           {
@@ -272,10 +265,8 @@ export function AppSidebar() {
           {
             label: 'Finance', labelAr: 'المالية',
             items: [
-              { title: isRTL ? 'الإدارة المالية' : 'Finance', url: '/finance', icon: DollarSign, roles: ['reception'] },
-              { title: isRTL ? 'الخزنة' : 'Treasury', url: '/finance/treasury', icon: Wallet, roles: ['reception'] },
-              { title: isRTL ? 'خطط التسعير' : 'Pricing Plans', url: '/pricing-plans', icon: CreditCard, roles: ['reception'] },
-              { title: isRTL ? 'طلبات الاشتراك' : 'Subscription Requests', url: '/subscription-requests', icon: ClipboardList, roles: ['reception'] },
+              { title: isRTL ? 'الإدارة والخزنة' : 'Finance & Treasury', url: '/finance', icon: DollarSign, roles: ['reception'] },
+              { title: isRTL ? 'الإعدادات المالية' : 'Finance Settings', url: '/finance/settings', icon: Settings, roles: ['reception'] },
             ],
           },
         ];
