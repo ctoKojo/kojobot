@@ -152,6 +152,7 @@ export function AppSidebar() {
               { title: isRTL ? 'إعدادات تحديد المستوى' : 'Placement Settings', url: '/placement-test-settings', icon: ClipboardCheck, roles: ['admin'] },
               { title: t.nav.ageGroups, url: '/age-groups', icon: Layers, roles: ['admin'] },
               { title: t.nav.levels, url: '/levels', icon: BookOpen, roles: ['admin'] },
+              { title: isRTL ? 'إعدادات الإشعارات' : 'Notification Settings', url: '/notification-settings', icon: Bell, roles: ['admin'] },
               { title: t.nav.settings, url: '/settings', icon: Settings, roles: ['admin'] },
             ],
           },
