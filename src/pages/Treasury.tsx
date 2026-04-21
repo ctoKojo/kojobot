@@ -135,6 +135,46 @@ export default function Treasury() {
     onError: (e: any) => toast.error(e.message ?? 'Refresh failed'),
   });
 
+  // Opening balance status
+  const openingStatusQuery = useQuery({
+    queryKey: ['treasury-opening-status'],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('get_treasury_opening_balance_status');
+      if (error) throw error;
+      return data as {
+        is_set: boolean;
+        amount?: number;
+        as_of_date?: string;
+        voucher_no?: string;
+        posted_at?: string;
+        description?: string;
+      };
+    },
+  });
+
+  const openingMutation = useMutation({
+    mutationFn: async () => {
+      const amt = parseFloat(openingAmount);
+      if (!isFinite(amt) || amt <= 0) throw new Error(isRTL ? 'أدخل مبلغ صحيح' : 'Enter a valid amount');
+      const { data, error } = await (supabase.rpc as any)('set_treasury_opening_balance', {
+        p_amount: amt,
+        p_as_of_date: openingDate,
+        p_notes: openingNotes || null,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success(isRTL ? 'تم تسجيل الرصيد الافتتاحي' : 'Opening balance set');
+      setOpeningAmount('');
+      setOpeningNotes('');
+      queryClient.invalidateQueries({ queryKey: ['treasury-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['treasury-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['treasury-opening-status'] });
+    },
+    onError: (e: any) => toast.error(e.message ?? 'Failed'),
+  });
+
   // Merge InstaPay (1130) into Bank (1120) — they're the same account operationally
   const mergedBalances = (() => {
     const raw = balancesQuery.data ?? [];
