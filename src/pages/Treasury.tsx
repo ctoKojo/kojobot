@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wallet, Banknote, Smartphone, CreditCard, RefreshCw, Database, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { Wallet, Banknote, Smartphone, CreditCard, RefreshCw, Database, ArrowDownCircle, ArrowUpCircle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -56,6 +56,9 @@ export default function Treasury() {
   const [filterSource, setFilterSource] = useState<string>('all');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [openingAmount, setOpeningAmount] = useState<string>('');
+  const [openingDate, setOpeningDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [openingNotes, setOpeningNotes] = useState<string>('');
 
   const balancesQuery = useQuery({
     queryKey: ['treasury-balances'],
@@ -130,6 +133,46 @@ export default function Treasury() {
       queryClient.invalidateQueries({ queryKey: ['treasury-balances'] });
     },
     onError: (e: any) => toast.error(e.message ?? 'Refresh failed'),
+  });
+
+  // Opening balance status
+  const openingStatusQuery = useQuery({
+    queryKey: ['treasury-opening-status'],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('get_treasury_opening_balance_status');
+      if (error) throw error;
+      return data as {
+        is_set: boolean;
+        amount?: number;
+        as_of_date?: string;
+        voucher_no?: string;
+        posted_at?: string;
+        description?: string;
+      };
+    },
+  });
+
+  const openingMutation = useMutation({
+    mutationFn: async () => {
+      const amt = parseFloat(openingAmount);
+      if (!isFinite(amt) || amt <= 0) throw new Error(isRTL ? 'أدخل مبلغ صحيح' : 'Enter a valid amount');
+      const { data, error } = await (supabase.rpc as any)('set_treasury_opening_balance', {
+        p_amount: amt,
+        p_as_of_date: openingDate,
+        p_notes: openingNotes || null,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success(isRTL ? 'تم تسجيل الرصيد الافتتاحي' : 'Opening balance set');
+      setOpeningAmount('');
+      setOpeningNotes('');
+      queryClient.invalidateQueries({ queryKey: ['treasury-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['treasury-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['treasury-opening-status'] });
+    },
+    onError: (e: any) => toast.error(e.message ?? 'Failed'),
   });
 
   // Merge InstaPay (1130) into Bank (1120) — they're the same account operationally
@@ -355,46 +398,126 @@ export default function Treasury() {
             </Card>
           </TabsContent>
 
-          {/* Maintenance Tab */}
+          {/* Maintenance Tab — Opening Balance */}
           <TabsContent value="maintenance" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Database className="h-5 w-5" />
-                  {isRTL ? 'ترحيل الحركات التاريخية' : 'Historical Backfill'}
+                  {isRTL ? 'الرصيد الافتتاحي للخزنة' : 'Treasury Opening Balance'}
                 </CardTitle>
                 <CardDescription>
                   {isRTL
-                    ? 'يحوّل الدفعات والمصروفات والرواتب القديمة إلى قيود محاسبية. آمن — لا يكرر القيود الموجودة.'
-                    : 'Convert legacy payments, expenses, and salaries into journal entries. Idempotent — never duplicates existing entries.'}
+                    ? 'سجّل رصيد الخزنة الفعلي اليوم. الحركات الجديدة بعد كده هتزيد أو تنقص الرصيد ده تلقائياً. الحركات القديمة (قبل اليوم) هتتجاهل.'
+                    : "Record today's actual treasury cash. New movements will adjust this balance automatically. Legacy movements before today are ignored."}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => backfillMutation.mutate(true)}
-                    disabled={backfillMutation.isPending}
-                  >
-                    {isRTL ? 'معاينة (Dry Run)' : 'Preview (Dry Run)'}
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      if (confirm(isRTL ? 'تأكيد ترحيل القيود التاريخية؟' : 'Confirm backfill historical entries?')) {
-                        backfillMutation.mutate(false);
-                      }
-                    }}
-                    disabled={backfillMutation.isPending}
-                  >
-                    {backfillMutation.isPending && <RefreshCw className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'} animate-spin`} />}
-                    {isRTL ? 'تنفيذ الترحيل' : 'Run Backfill'}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {isRTL
-                    ? 'يجب تشغيل المعاينة أولاً للتحقق من العدد المتوقع.'
-                    : 'Run preview first to verify expected counts.'}
-                </p>
+              <CardContent className="space-y-4">
+                {openingStatusQuery.isLoading ? (
+                  <Skeleton className="h-24" />
+                ) : openingStatusQuery.data?.is_set ? (
+                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2">
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold">
+                      <CheckCircle2 className="h-5 w-5" />
+                      {isRTL ? 'الرصيد الافتتاحي مُسجّل' : 'Opening balance is set'}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground">{isRTL ? 'المبلغ' : 'Amount'}</p>
+                        <p className="font-bold text-lg">{formatEGP(Number(openingStatusQuery.data.amount ?? 0))}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">{isRTL ? 'بتاريخ' : 'As of'}</p>
+                        <p className="font-mono">{openingStatusQuery.data.as_of_date}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">{isRTL ? 'سند' : 'Voucher'}</p>
+                        <p className="font-mono text-xs">{openingStatusQuery.data.voucher_no}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground pt-2 border-t border-border/50">
+                      {isRTL
+                        ? 'لو عايز تعدّل الرصيد ده، لازم تعمل قيد تسوية يدوي من قسم القيود المحاسبية.'
+                        : 'To adjust this balance, post a manual adjustment entry from the journal.'}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 flex items-start gap-2 text-sm">
+                      <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-amber-700 dark:text-amber-300">
+                          {isRTL ? 'تنبيه: عملية لمرة واحدة' : 'One-time operation'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {isRTL
+                            ? 'هيتسجل قيد افتتاحي: مدين النقدية / دائن الرصيد الافتتاحي. مش هتقدر تعمله تاني إلا بقيد تسوية.'
+                            : 'A journal entry will be posted: Debit Cash / Credit Opening Equity. Cannot be re-run without a reversal entry.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <Label htmlFor="ob-amount" className="text-xs">
+                          {isRTL ? 'الرصيد الفعلي (ج.م)' : 'Actual cash (EGP)'} *
+                        </Label>
+                        <Input
+                          id="ob-amount"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={openingAmount}
+                          onChange={(e) => setOpeningAmount(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="ob-date" className="text-xs">
+                          {isRTL ? 'بتاريخ' : 'As of date'} *
+                        </Label>
+                        <Input
+                          id="ob-date"
+                          type="date"
+                          value={openingDate}
+                          onChange={(e) => setOpeningDate(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="ob-notes" className="text-xs">
+                          {isRTL ? 'ملاحظات (اختياري)' : 'Notes (optional)'}
+                        </Label>
+                        <Input
+                          id="ob-notes"
+                          type="text"
+                          placeholder={isRTL ? 'مثلاً: عد الخزنة الفعلي' : 'e.g. physical cash count'}
+                          value={openingNotes}
+                          onChange={(e) => setOpeningNotes(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => {
+                        const amt = parseFloat(openingAmount);
+                        if (!isFinite(amt) || amt <= 0) {
+                          toast.error(isRTL ? 'أدخل مبلغ صحيح' : 'Enter a valid amount');
+                          return;
+                        }
+                        const msg = isRTL
+                          ? `هيتم تسجيل رصيد افتتاحي ${formatEGP(amt)} بتاريخ ${openingDate}. متأكد؟`
+                          : `Will set opening balance to ${formatEGP(amt)} as of ${openingDate}. Confirm?`;
+                        if (confirm(msg)) openingMutation.mutate();
+                      }}
+                      disabled={openingMutation.isPending || !openingAmount}
+                    >
+                      {openingMutation.isPending && (
+                        <RefreshCw className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'} animate-spin`} />
+                      )}
+                      {isRTL ? 'تسجيل الرصيد الافتتاحي' : 'Set Opening Balance'}
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
