@@ -135,6 +135,75 @@ export default function EmailLogs() {
   // Distinct templates for filter dropdown
   const distinctTemplates = Array.from(new Set(rows.map((r) => r.template_name)));
 
+  const buildTestData = (tpl: string) => {
+    const now = new Date();
+    const dateStr = format(now, 'yyyy-MM-dd');
+    if (tpl === 'session-reminder') {
+      return {
+        studentName: 'طالب تجريبي',
+        sessionTitle: 'حصة اختبارية',
+        sessionDate: dateStr,
+        sessionTime: '18:00',
+        groupName: 'مجموعة اختبار',
+        joinUrl: 'https://kojobot.com',
+        recipientType: 'student' as const,
+      };
+    }
+    if (tpl === 'payment-due') {
+      return {
+        studentName: 'طالب تجريبي',
+        amount: 500,
+        currency: 'EGP',
+        dueDate: dateStr,
+        invoiceUrl: 'https://kojobot.com/my-finances',
+      };
+    }
+    // password-reset
+    return {
+      userName: 'مستخدم تجريبي',
+      newPassword: 'TempPass#1234',
+      loginUrl: 'https://kojobot.com/auth',
+    };
+  };
+
+  const handleSendTest = async () => {
+    if (!testEmail || !/.+@.+\..+/.test(testEmail)) {
+      toast({
+        title: isArabic ? 'بريد غير صحيح' : 'Invalid email',
+        description: isArabic ? 'أدخل عنوان بريد إلكتروني صحيح' : 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setTestSending(true);
+    const idempotencyKey = `test-${testTemplate}-${testEmail}-${Date.now()}`;
+    const result = await sendEmail({
+      to: testEmail,
+      templateName: testTemplate,
+      templateData: buildTestData(testTemplate),
+      idempotencyKey,
+    });
+    setTestSending(false);
+
+    if (result.success) {
+      toast({
+        title: isArabic ? 'تم الإرسال' : 'Email sent',
+        description: isArabic
+          ? `تم إرسال إيميل الاختبار إلى ${testEmail}`
+          : `Test email sent to ${testEmail}`,
+      });
+      setTestOpen(false);
+      // Refresh logs after a brief delay
+      setTimeout(fetchLogs, 1000);
+    } else {
+      toast({
+        title: isArabic ? 'فشل الإرسال' : 'Send failed',
+        description: result.error || (isArabic ? 'حدث خطأ غير معروف' : 'Unknown error'),
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <DashboardLayout>
       <PageHeader
@@ -146,10 +215,16 @@ export default function EmailLogs() {
         }
         icon={Mail}
         actions={
-          <Button onClick={fetchLogs} variant="outline" disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''} ${isArabic ? 'ml-2' : 'mr-2'}`} />
-            {isArabic ? 'تحديث' : 'Refresh'}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setTestOpen(true)} variant="default">
+              <Send className={`h-4 w-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+              {isArabic ? 'إرسال اختبار' : 'Send test'}
+            </Button>
+            <Button onClick={fetchLogs} variant="outline" disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''} ${isArabic ? 'ml-2' : 'mr-2'}`} />
+              {isArabic ? 'تحديث' : 'Refresh'}
+            </Button>
+          </div>
         }
       />
 
