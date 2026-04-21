@@ -7386,6 +7386,15 @@ export type Database = {
         }
         Returns: Json
       }
+      validate_group_timeline: {
+        Args: never
+        Returns: {
+          details: Json
+          group_id: string
+          group_name: string
+          issue_type: string
+        }[]
+      }
       verify_audit_chain: {
         Args: { p_end_seq?: number; p_start_seq?: number }
         Returns: Json
@@ -7416,6 +7425,10 @@ export type Database = {
         | "orphan_paid_installment"
         | "duplicate_link"
         | "cancelled_subscription_with_payment"
+        | "session_number_gap"
+        | "counter_mismatch"
+        | "stale_no_upcoming"
+        | "orphan_makeup_sessions"
       employment_status: "permanent" | "training" | "terminated"
       financial_period_status: "open" | "review" | "closed" | "reopened"
       group_type: "kojo_squad" | "kojo_core" | "kojo_x"
@@ -7599,6 +7612,10 @@ export const Constants = {
         "orphan_paid_installment",
         "duplicate_link",
         "cancelled_subscription_with_payment",
+        "session_number_gap",
+        "counter_mismatch",
+        "stale_no_upcoming",
+        "orphan_makeup_sessions",
       ],
       employment_status: ["permanent", "training", "terminated"],
       financial_period_status: ["open", "review", "closed", "reopened"],
