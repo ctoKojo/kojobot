@@ -178,6 +178,67 @@ export default function Treasury() {
     onError: (e: any) => toast.error(e.message ?? 'Failed'),
   });
 
+  // Reconciliation summary
+  const reconQuery = useQuery({
+    queryKey: ['treasury-reconciliation'],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('get_treasury_reconciliation_summary');
+      if (error) throw error;
+      return (data ?? []) as Array<{ account_code: string; account_name: string; account_name_ar: string; computed_balance: number }>;
+    },
+    refetchInterval: 30_000,
+  });
+
+  const adjustmentMutation = useMutation({
+    mutationFn: async () => {
+      const amt = parseFloat(reconActual);
+      if (!isFinite(amt) || amt < 0) throw new Error(isRTL ? 'أدخل مبلغ صحيح' : 'Enter a valid amount');
+      const { data, error } = await (supabase.rpc as any)('record_treasury_adjustment', {
+        p_account_code: reconAccount,
+        p_actual_amount: amt,
+        p_notes: reconNotes || null,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (result: any) => {
+      if (result?.no_adjustment_needed) {
+        toast.success(isRTL ? 'الرصيد مطابق — لا حاجة لتسوية' : 'Balance matches — no adjustment needed');
+      } else {
+        toast.success(
+          isRTL
+            ? `تم تسجيل قيد تسوية ${result.difference > 0 ? 'زيادة' : 'عجز'} بمبلغ ${formatEGP(Math.abs(result.difference))}`
+            : `Recorded ${result.difference > 0 ? 'surplus' : 'shortage'} adjustment of ${formatEGP(Math.abs(result.difference))}`,
+        );
+      }
+      setReconActual('');
+      setReconNotes('');
+      queryClient.invalidateQueries({ queryKey: ['treasury-balances'] });
+      queryClient.invalidateQueries({ queryKey: ['treasury-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['treasury-reconciliation'] });
+    },
+    onError: (e: any) => toast.error(e.message ?? 'Adjustment failed'),
+  });
+
+  // Health check: balance alerts
+  const alertsQuery = useQuery({
+    queryKey: ['treasury-balance-alerts'],
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)('get_pending_balance_alerts');
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        id: string;
+        account_label: string;
+        cached_balance: number;
+        computed_balance: number;
+        difference: number;
+        detected_at: string;
+        status: string;
+      }>;
+    },
+    refetchInterval: 60_000,
+  });
+
   // Merge InstaPay (1130) into Bank (1120) — they're the same account operationally
   const mergedBalances = (() => {
     const raw = balancesQuery.data ?? [];
