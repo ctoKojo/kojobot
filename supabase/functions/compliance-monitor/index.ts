@@ -492,14 +492,14 @@ serve(async (req) => {
       if (!checkCircuitBreaker()) {
         for (const session of eligibleSessions) {
           if (checkCircuitBreaker()) break;
-          if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60, GRACE_PERIODS.attendance)) continue;
+          if (!isPastGrace(session, GRACE_CFG, 'attendance')) continue;
 
           const { count: attendanceCount } = await supabase
             .from('attendance').select('*', { count: 'exact', head: true })
             .eq('session_id', session.id)
             .in('status', ['present', 'absent']);
 
-          if ((attendanceCount || 0) > 0) continue; // Some attendance exists → ok
+          if ((attendanceCount || 0) > 0) continue;
 
           const recheck = async () => {
             const { count } = await supabase
@@ -509,15 +509,17 @@ serve(async (req) => {
             return (count || 0) === 0;
           };
 
+          const ctxEn = makeupCtx(session, false);
+          const ctxAr = makeupCtx(session, true);
           const result = await insertWarningWithRecheck({
             supabase, session, warningType: 'no_attendance',
-            reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})`,
-            reasonAr: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
+            reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
+            reasonAr: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
             notifTitle: 'Warning: Missing Attendance', notifTitleAr: 'تحذير: حضور مفقود',
-            notifMessage: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})`,
-            notifMessageAr: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
+            notifMessage: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
+            notifMessageAr: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
             recheckCondition: recheck,
-          });
+          }, { traceId: RUN_TRACE_ID, settingsVersion: SETTINGS_VERSION });
 
           if (result === 'inserted') results.instructorWarnings++;
           else if (result === 'race_resolved') results.raceResolved++;
