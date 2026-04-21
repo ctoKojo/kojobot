@@ -177,6 +177,33 @@ Deno.serve(async (req) => {
         type: 'info',
         category: 'payment',
       });
+
+      // Send email reminder (best-effort, fire-and-forget)
+      try {
+        const { data: studentProfile } = await supabase
+          .from('profiles')
+          .select('email, full_name, full_name_ar')
+          .eq('user_id', sub.student_id)
+          .maybeSingle();
+
+        if (studentProfile?.email) {
+          await supabase.functions.invoke('send-email', {
+            body: {
+              to: studentProfile.email,
+              templateName: 'payment-due',
+              templateData: {
+                studentName: studentProfile.full_name_ar || studentProfile.full_name || '',
+                amount: sub.installment_amount,
+                dueDate: sub.next_payment_date,
+              },
+              idempotencyKey: `payment-due-${sub.student_id}-${sub.next_payment_date}`,
+            },
+          });
+        }
+      } catch (emailErr) {
+        console.error('Email send failed for payment due:', emailErr);
+      }
+
       warningsSent++;
     }
 
