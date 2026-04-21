@@ -265,7 +265,7 @@ export default function BulkReminders() {
       <div className="space-y-6">
         <PageHeader
           title={isRTL ? 'تذكيرات جماعية' : 'Bulk Reminders'}
-          description={isRTL ? 'إرسال تذكيرات الدفع أو الحصص لعدة طلاب دفعة واحدة' : 'Send payment or session reminders to multiple students at once'}
+          subtitle={isRTL ? 'إرسال تذكيرات الدفع أو الحصص لعدة طلاب دفعة واحدة' : 'Send payment or session reminders to multiple students at once'}
           icon={Send}
         />
 
