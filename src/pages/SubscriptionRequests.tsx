@@ -211,7 +211,9 @@ export default function SubscriptionRequests({ embedded = false }: { embedded?: 
             )}
           </CardContent>
         </Card>
-      </div>
-    </DashboardLayout>
+    </div>
   );
+
+  if (embedded) return inner;
+  return <DashboardLayout>{inner}</DashboardLayout>;
 }

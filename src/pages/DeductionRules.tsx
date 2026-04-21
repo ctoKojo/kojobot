@@ -297,7 +297,13 @@ export default function DeductionRules({ embedded = false }: { embedded?: boolea
             )}
           </CardContent>
         </Card>
-      </div>
+    </div>
+  );
+
+  if (embedded) return inner;
+  return (
+    <DashboardLayout title={isRTL ? 'قواعد الخصم التلقائي' : 'Auto Deduction Rules'}>
+      {inner}
     </DashboardLayout>
   );
 }
