@@ -124,13 +124,13 @@ export default function EmailLogs() {
     <DashboardLayout>
       <PageHeader
         title={isArabic ? 'سجل الإيميلات' : 'Email Logs'}
-        description={
+        subtitle={
           isArabic
             ? 'متابعة حالة الإيميلات المرسلة من النظام'
             : 'Monitor outbound emails sent from the system'
         }
         icon={Mail}
-        action={
+        actions={
           <Button onClick={fetchLogs} variant="outline" disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''} ${isArabic ? 'ml-2' : 'mr-2'}`} />
             {isArabic ? 'تحديث' : 'Refresh'}
