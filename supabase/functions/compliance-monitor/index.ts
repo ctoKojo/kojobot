@@ -8,22 +8,22 @@ const corsHeaders = {
 };
 
 // ============================================================
-// V2 Constants — Compliance Monitor Rules
+// V3 Constants — Compliance Monitor Rules (settings-driven + makeup-aware)
 // ============================================================
-const MONITORING_START_DATE = '2026-04-17'; // System officially started monitoring
-const RACE_BUFFER_MINUTES = 5;              // Buffer to avoid race with instructor in-progress work
-const RESCAN_COOLDOWN_HOURS = 6;            // Minimum hours before re-scanning the same session
+const MONITORING_START_DATE = '2026-04-17';
+const RACE_BUFFER_MINUTES = 5;
+const RESCAN_COOLDOWN_HOURS = 6;
 
-// Grace periods per warning type (in MINUTES)
-const GRACE_PERIODS = {
-  attendance: 60,         // 1 hour after session end (fast SLA)
-  evaluation: 60 * 24,    // 24 hours
-  quiz: 60 * 24,          // 24 hours
-  assignment: 60 * 24,    // 24 hours
-} as const;
+// Default grace periods (overridden by system_settings.compliance_grace_periods)
+const DEFAULT_GRACE = {
+  attendance_minutes: 60,
+  quiz_hours: 24,
+  assignment_hours: 24,
+  evaluation_hours: 24,
+  makeup_multiplier: 1.5,
+};
 
 const BATCH_SIZE = 500;
-// Anti-starvation split: 70% oldest, 30% recent (last 3 days)
 const RECENT_WINDOW_DAYS = 3;
 const RECENT_BATCH_RATIO = 0.3;
 
@@ -35,6 +35,9 @@ interface CompletedSession {
   content_number: number | null;
   level_id: string | null;
   duration_minutes?: number;
+  end_at: string | null;
+  is_makeup: boolean;
+  makeup_session_id: string | null;
   group_id: string;
   status: string;
   cancellation_reason: string | null;
@@ -47,6 +50,11 @@ interface CompletedSession {
     is_active: boolean;
     status: string;
   };
+  makeup_sessions?: {
+    assigned_instructor_id: string | null;
+    original_session_id: string | null;
+    original_session?: { session_number: number; session_date: string } | null;
+  } | null;
 }
 
 // Cache curriculum lookups within a single run
@@ -85,20 +93,60 @@ async function getCurriculumExpectations(
 }
 
 // ============================================================
-// Grace period check — type-specific (gap: separated grace periods)
+// Grace period check — uses end_at from DB (UTC) + makeup multiplier
 // ============================================================
-function isPastGracePeriod(
-  sessionDate: string,
-  sessionTime: string,
-  durationMinutes: number,
-  graceMinutes: number
-): boolean {
-  // Cairo offset is +03:00 (no DST since 2014)
-  const sessionEnd = new Date(`${sessionDate}T${sessionTime}+03:00`);
-  // gap #6: race buffer added on top of grace
-  const totalMinutes = durationMinutes + graceMinutes + RACE_BUFFER_MINUTES;
-  sessionEnd.setMinutes(sessionEnd.getMinutes() + totalMinutes);
-  return Date.now() >= sessionEnd.getTime();
+type GraceType = 'attendance' | 'quiz' | 'assignment' | 'evaluation';
+
+interface GraceConfig {
+  attendance_minutes: number;
+  quiz_hours: number;
+  assignment_hours: number;
+  evaluation_hours: number;
+  makeup_multiplier: number;
+}
+
+function baseGraceSeconds(cfg: GraceConfig, type: GraceType): number {
+  switch (type) {
+    case 'attendance': return Math.ceil(cfg.attendance_minutes * 60);
+    case 'quiz':       return Math.ceil(cfg.quiz_hours * 3600);
+    case 'assignment': return Math.ceil(cfg.assignment_hours * 3600);
+    case 'evaluation': return Math.ceil(cfg.evaluation_hours * 3600);
+  }
+}
+
+function effectiveGraceSeconds(cfg: GraceConfig, type: GraceType, isMakeup: boolean): number {
+  const base = baseGraceSeconds(cfg, type);
+  return isMakeup ? Math.ceil(base * cfg.makeup_multiplier) : base;
+}
+
+function isPastGrace(session: CompletedSession, cfg: GraceConfig, type: GraceType): boolean {
+  // Prefer DB-supplied end_at (UTC). Fallback to computed value if missing.
+  let endMs: number;
+  if (session.end_at) {
+    endMs = new Date(session.end_at).getTime();
+  } else {
+    const sessionEnd = new Date(`${session.session_date}T${session.session_time}+03:00`);
+    sessionEnd.setMinutes(sessionEnd.getMinutes() + (session.duration_minutes ?? 60));
+    endMs = sessionEnd.getTime();
+  }
+  const graceSec = effectiveGraceSeconds(cfg, type, !!session.is_makeup);
+  const raceBufferSec = RACE_BUFFER_MINUTES * 60;
+  return (Date.now() - endMs) / 1000 >= graceSec + raceBufferSec;
+}
+
+// Resolve the responsible instructor (makeup-aware with mandatory fallback)
+function getResponsibleInstructor(s: CompletedSession): string | null {
+  if (s.is_makeup && s.makeup_sessions?.assigned_instructor_id) {
+    return s.makeup_sessions.assigned_instructor_id;
+  }
+  return s.groups?.instructor_id ?? null;
+}
+
+// Build makeup context suffix for warning messages
+function makeupCtx(s: CompletedSession, isAr: boolean): string {
+  if (!s.is_makeup) return '';
+  const d = s.makeup_sessions?.original_session?.session_date ?? '?';
+  return isAr ? ` (تعويضية لسيشن ${d})` : ` (Makeup for ${d})`;
 }
 
 // Eligible groups cache (per run): groupId → has any active student
