@@ -524,15 +524,46 @@ serve(async (req) => {
             return (count || 0) === 0;
           };
 
-          const ctxEn = makeupCtx(session, false);
-          const ctxAr = makeupCtx(session, true);
+          // Resolve student name for makeup sessions (one-shot lookup)
+          let studentEn = '';
+          let studentAr = '';
+          if (session.is_makeup && session.makeup_sessions?.student_id) {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('full_name, full_name_ar')
+              .eq('user_id', session.makeup_sessions.student_id)
+              .maybeSingle();
+            if (prof) {
+              studentEn = prof.full_name || '';
+              studentAr = prof.full_name_ar || prof.full_name || '';
+            }
+          }
+
+          let reason: string;
+          let reasonAr: string;
+          let notifMessage: string;
+          let notifMessageAr: string;
+
+          if (session.is_makeup && studentEn) {
+            const dateStr = session.session_date;
+            reason = `Attendance not recorded for ${studentEn} (makeup session on ${dateStr})`;
+            reasonAr = `لم يتم تسجيل حضور الطالب ${studentAr} (سيشن تعويضية يوم ${dateStr})`;
+            notifMessage = `You didn't record attendance for ${studentEn} on ${dateStr}`;
+            notifMessageAr = `لم تقم بتسجيل حضور الطالب ${studentAr} يوم ${dateStr}`;
+          } else {
+            reason = `Attendance not recorded for Session ${session.session_number} (${session.groups.name})`;
+            reasonAr = `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`;
+            notifMessage = `You didn't record attendance for Session ${session.session_number} (${session.groups.name})`;
+            notifMessageAr = `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`;
+          }
+
           const result = await insertWarningWithRecheck({
             supabase, session, warningType: 'no_attendance',
-            reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
-            reasonAr: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
+            reason,
+            reasonAr,
             notifTitle: 'Warning: Missing Attendance', notifTitleAr: 'تحذير: حضور مفقود',
-            notifMessage: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
-            notifMessageAr: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
+            notifMessage,
+            notifMessageAr,
             recheckCondition: recheck,
           }, { traceId: RUN_TRACE_ID, settingsVersion: SETTINGS_VERSION });
 
