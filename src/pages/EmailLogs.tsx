@@ -369,6 +369,7 @@ export default function EmailLogs() {
                     <TableHead>{isArabic ? 'الحالة' : 'Status'}</TableHead>
                     <TableHead>{isArabic ? 'الوقت' : 'Time'}</TableHead>
                     <TableHead>{isArabic ? 'الخطأ' : 'Error'}</TableHead>
+                    <TableHead className="text-right">{isArabic ? 'تفاصيل' : 'Details'}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -388,13 +389,18 @@ export default function EmailLogs() {
                             {isArabic ? statusCfg.labelAr : statusCfg.label}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                           {format(new Date(row.created_at), 'PPp', {
                             locale: isArabic ? ar : undefined,
                           })}
                         </TableCell>
                         <TableCell className="text-sm text-destructive max-w-xs truncate" title={row.error_message || ''}>
                           {row.error_message || '—'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => openDetail(row)}>
+                            {isArabic ? 'عرض' : 'View'}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
