@@ -41,6 +41,7 @@ export default function FinancePeriods() {
   const [reopenReason, setReopenReason] = useState('');
   const [working, setWorking] = useState(false);
   const [gateResults, setGateResults] = useState<any>(null);
+  const [creatingMonth, setCreatingMonth] = useState(false);
 
   const { data: periods = [], isLoading } = useQuery<Period[]>({
     queryKey: ['financial-periods'],
@@ -54,6 +55,40 @@ export default function FinancePeriods() {
       return (data ?? []) as Period[];
     },
   });
+
+  // Auto-ensure current month period exists on mount (best-effort, silent)
+  useEffect(() => {
+    (async () => {
+      try {
+        const { error } = await (supabase.rpc as any)('ensure_current_month_period');
+        if (!error) {
+          qc.invalidateQueries({ queryKey: ['financial-periods'] });
+        }
+      } catch {
+        // silent — admin can use the manual button
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCreateCurrentMonth = async () => {
+    setCreatingMonth(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)('ensure_current_month_period');
+      if (error) throw error;
+      const created = (data as any)?.created;
+      toast({
+        title: created
+          ? (isRTL ? '✅ تم إنشاء فترة الشهر الحالي' : '✅ Current month period created')
+          : (isRTL ? 'فترة الشهر الحالي موجودة بالفعل' : 'Current month period already exists'),
+      });
+      qc.invalidateQueries({ queryKey: ['financial-periods'] });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setCreatingMonth(false);
+    }
+  };
 
   const runPreCloseGates = async (period: Period) => {
     setWorking(true);
