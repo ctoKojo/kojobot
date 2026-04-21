@@ -22,10 +22,21 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TableSkeleton } from '@/components/ui/table-skeleton';
-import { Mail, RefreshCw, CheckCircle2, XCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Mail, RefreshCw, CheckCircle2, XCircle, Clock, AlertTriangle, Send } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { sendEmail } from '@/lib/emailService';
+import { toast } from '@/hooks/use-toast';
 
 interface EmailLogRow {
   id: string;
