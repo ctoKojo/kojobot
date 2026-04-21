@@ -14,7 +14,7 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type',
 }
 
-const GATEWAY_URL = 'https://connector-gateway.lovable.dev/resend'
+const RESEND_API_URL = 'https://api.resend.com/emails'
 const FROM_ADDRESS = 'Kojobot Academy <academy@kojobot.com>'
 
 interface EmailTemplate {
@@ -40,12 +40,11 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
-  const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+  const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY_DIRECT') ?? Deno.env.get('RESEND_API_KEY')
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-  if (!LOVABLE_API_KEY || !RESEND_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  if (!RESEND_API_KEY || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     console.error('Missing required environment variables')
     return new Response(
       JSON.stringify({ error: 'Server configuration error' }),
@@ -105,12 +104,11 @@ Deno.serve(async (req) => {
   })
 
   try {
-    const response = await fetch(`${GATEWAY_URL}/emails`, {
+    const response = await fetch(RESEND_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'X-Connection-Api-Key': RESEND_API_KEY,
+        Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
         from: FROM_ADDRESS,
