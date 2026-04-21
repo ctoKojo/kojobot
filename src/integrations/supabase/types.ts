@@ -1233,6 +1233,90 @@ export type Database = {
         }
         Relationships: []
       }
+      email_event_catalog: {
+        Row: {
+          available_variables: Json
+          category: string
+          created_at: string
+          description: string | null
+          display_name_ar: string
+          display_name_en: string
+          event_key: string
+          is_active: boolean
+        }
+        Insert: {
+          available_variables?: Json
+          category: string
+          created_at?: string
+          description?: string | null
+          display_name_ar: string
+          display_name_en: string
+          event_key: string
+          is_active?: boolean
+        }
+        Update: {
+          available_variables?: Json
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_name_ar?: string
+          display_name_en?: string
+          event_key?: string
+          is_active?: boolean
+        }
+        Relationships: []
+      }
+      email_event_mappings: {
+        Row: {
+          event_key: string
+          id: string
+          is_enabled: boolean
+          send_to: string
+          template_id: string | null
+          trigger_offset_minutes: number | null
+          updated_at: string
+          updated_by: string | null
+          use_db_template: boolean
+        }
+        Insert: {
+          event_key: string
+          id?: string
+          is_enabled?: boolean
+          send_to?: string
+          template_id?: string | null
+          trigger_offset_minutes?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          use_db_template?: boolean
+        }
+        Update: {
+          event_key?: string
+          id?: string
+          is_enabled?: boolean
+          send_to?: string
+          template_id?: string | null
+          trigger_offset_minutes?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          use_db_template?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_event_mappings_event_key_fkey"
+            columns: ["event_key"]
+            isOneToOne: true
+            referencedRelation: "email_event_catalog"
+            referencedColumns: ["event_key"]
+          },
+          {
+            foreignKeyName: "email_event_mappings_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -1292,6 +1376,48 @@ export type Database = {
           retry_after_until?: string | null
           send_delay_ms?: number
           transactional_email_ttl_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_templates: {
+        Row: {
+          body_html_ar: string
+          body_html_en: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          subject_ar: string
+          subject_en: string
+          updated_at: string
+        }
+        Insert: {
+          body_html_ar: string
+          body_html_en: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          subject_ar: string
+          subject_en: string
+          updated_at?: string
+        }
+        Update: {
+          body_html_ar?: string
+          body_html_en?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          subject_ar?: string
+          subject_en?: string
           updated_at?: string
         }
         Relationships: []
