@@ -576,12 +576,24 @@ serve(async (req) => {
       if (!checkCircuitBreaker()) {
         for (const session of eligibleSessions) {
           if (checkCircuitBreaker()) break;
-          if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60, GRACE_PERIODS.evaluation)) continue;
+          if (!isPastGrace(session, GRACE_CFG, 'evaluation')) continue;
 
           const { data: presentStudents } = await supabase
             .from('attendance').select('student_id').eq('session_id', session.id).eq('status', 'present');
           const presentSet = new Set((presentStudents || []).map((s: any) => s.student_id));
           if (presentSet.size === 0) continue;
+
+          // Anomaly: makeup session with > 1 present student (idempotent via RPC)
+          if (session.is_makeup && presentSet.size > 1) {
+            try {
+              await supabase.rpc('log_dq_issue', {
+                p_issue_type: 'makeup_multi_student_anomaly',
+                p_entity_table: 'sessions',
+                p_entity_id: session.id,
+                p_details: { count: presentSet.size, trace_id: RUN_TRACE_ID },
+              });
+            } catch (_) { /* non-fatal */ }
+          }
 
           const { data: evaluatedStudents } = await supabase
             .from('session_evaluations').select('student_id').eq('session_id', session.id);
@@ -600,15 +612,17 @@ serve(async (req) => {
           };
 
           const missingCount = missing.length;
+          const ctxEn = makeupCtx(session, false);
+          const ctxAr = makeupCtx(session, true);
           const result = await insertWarningWithRecheck({
             supabase, session, warningType: 'no_evaluation',
-            reason: `Missing evaluations for ${missingCount} student(s) in Session ${session.session_number} (${session.groups.name})`,
-            reasonAr: `تقييمات ناقصة لـ ${missingCount} طالب في السيشن ${session.session_number} (${session.groups.name_ar})`,
+            reason: `Missing evaluations for ${missingCount} student(s) in Session ${session.session_number} (${session.groups.name})${ctxEn}`,
+            reasonAr: `تقييمات ناقصة لـ ${missingCount} طالب في السيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
             notifTitle: 'Warning: Missing Evaluations', notifTitleAr: 'تحذير: تقييمات ناقصة',
-            notifMessage: `You didn't evaluate ${missingCount} student(s) for Session ${session.session_number} (${session.groups.name})`,
-            notifMessageAr: `لم تقم بتقييم ${missingCount} طالب للسيشن ${session.session_number} (${session.groups.name_ar})`,
+            notifMessage: `You didn't evaluate ${missingCount} student(s) for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
+            notifMessageAr: `لم تقم بتقييم ${missingCount} طالب للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
             recheckCondition: recheck,
-          });
+          }, { traceId: RUN_TRACE_ID, settingsVersion: SETTINGS_VERSION });
 
           if (result === 'inserted') results.instructorWarnings++;
           else if (result === 'race_resolved') results.raceResolved++;
