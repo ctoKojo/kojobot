@@ -205,10 +205,10 @@ Deno.serve(async (req) => {
       // Send email reminders to enrolled students' parents (fallback to student email)
       try {
         const { data: enrollments } = await supabase
-          .from('group_enrollments')
+          .from('group_students')
           .select('student_id')
           .eq('group_id', session.group_id)
-          .eq('status', 'active')
+          .eq('is_active', true)
 
         const studentIds = (enrollments || []).map((e: any) => e.student_id).filter(Boolean)
         if (studentIds.length === 0) continue
