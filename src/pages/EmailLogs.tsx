@@ -86,6 +86,7 @@ export default function EmailLogs() {
   const [testEmail, setTestEmail] = useState('');
   const [testTemplate, setTestTemplate] = useState<'session-reminder' | 'payment-due' | 'password-reset'>('session-reminder');
   const [testSending, setTestSending] = useState(false);
+  const [detail, setDetail] = useState<DetailDialogState>({ open: false, loading: false, row: null, history: [] });
 
   const isArabic = language === 'ar';
 
