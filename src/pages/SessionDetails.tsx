@@ -1864,45 +1864,88 @@ export default function SessionDetails() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                  <TableHead className="text-center">{isRTL ? 'الحضور' : 'Attendance'}</TableHead>
-                  <TableHead className="text-center">{isRTL ? 'الكويز' : 'Quiz'}</TableHead>
-                  <TableHead className="text-center">{isRTL ? 'الواجب' : 'Assignment'}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                      {role === 'student' 
-                        ? (isRTL ? 'لا توجد بيانات بعد' : 'No data yet')
-                        : (isRTL ? 'لا يوجد طلاب في هذه المجموعة' : 'No students in this group')
-                      }
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  students.map((student) => (
-                    <TableRow key={student.student_id}>
-                      <TableCell className="font-medium">
+            {students.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {role === 'student'
+                  ? (isRTL ? 'لا توجد بيانات بعد' : 'No data yet')
+                  : (isRTL ? 'لا يوجد طلاب في هذه المجموعة' : 'No students in this group')
+                }
+              </div>
+            ) : (
+              <>
+                {/* Mobile: card list */}
+                <div className="md:hidden space-y-3">
+                  {students.map((student) => (
+                    <div
+                      key={student.student_id}
+                      className="rounded-lg border bg-card p-3 space-y-3"
+                    >
+                      <div className="font-medium text-sm">
                         {language === 'ar' ? student.student_name_ar : student.student_name}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {getAttendanceBadge(student.attendance_status, student.compensation_status)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {getQuizBadge(student)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {getAssignmentBadge(student)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="text-muted-foreground">{isRTL ? 'الحضور' : 'Attendance'}</span>
+                          <div className="flex flex-wrap">
+                            {getAttendanceBadge(student.attendance_status, student.compensation_status)}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="text-muted-foreground">{isRTL ? 'الكويز' : 'Quiz'}</span>
+                          <div className="flex flex-wrap">
+                            {getQuizBadge(student)}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="text-muted-foreground">{isRTL ? 'الواجب' : 'Assignment'}</span>
+                          <div className="flex flex-wrap">
+                            {getAssignmentBadge(student)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop: table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableHead className="text-start">{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'الحضور' : 'Attendance'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'الكويز' : 'Quiz'}</TableHead>
+                        <TableHead className="text-center">{isRTL ? 'الواجب' : 'Assignment'}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {students.map((student) => (
+                        <TableRow key={student.student_id}>
+                          <TableCell className="font-medium">
+                            {language === 'ar' ? student.student_name_ar : student.student_name}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex justify-center">
+                              {getAttendanceBadge(student.attendance_status, student.compensation_status)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex justify-center">
+                              {getQuizBadge(student)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex justify-center">
+                              {getAssignmentBadge(student)}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
