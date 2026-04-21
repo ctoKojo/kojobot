@@ -188,12 +188,12 @@ export default function Treasury() {
         />
 
         {/* Liquidity Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {balancesQuery.isLoading ? (
-            Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-32" />)
+            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32" />)
           ) : (
             <>
-              {balancesQuery.data?.map((b) => {
+              {mergedBalances.map((b) => {
                 const meta = ACCOUNT_META[b.account_code] ?? { icon: Wallet, gradient: 'from-muted to-muted/50' };
                 const Icon = meta.icon;
                 return (
