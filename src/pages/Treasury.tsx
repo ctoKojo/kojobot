@@ -56,6 +56,9 @@ export default function Treasury() {
   const [filterSource, setFilterSource] = useState<string>('all');
   const [fromDate, setFromDate] = useState<string>('');
   const [toDate, setToDate] = useState<string>('');
+  const [openingAmount, setOpeningAmount] = useState<string>('');
+  const [openingDate, setOpeningDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [openingNotes, setOpeningNotes] = useState<string>('');
 
   const balancesQuery = useQuery({
     queryKey: ['treasury-balances'],
