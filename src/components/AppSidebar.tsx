@@ -367,12 +367,13 @@ export function AppSidebar() {
   const sectionHasActive = (section: NavSection) =>
     section.items.some((item) => isActive(item.url) || item.children?.some((c) => isActive(c.url)));
 
-  // Track open/closed state per section. Default: defaultOpen prop OR section contains active route
+  // Track open/closed state per section. Default: ALL sections collapsed.
+  // Once the user toggles a section, that choice is remembered for the session.
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
 
   const isSectionOpen = (section: NavSection) => {
     if (section.label in openMap) return openMap[section.label];
-    return section.defaultOpen || sectionHasActive(section);
+    return false; // default closed for all sections
   };
 
   const toggleSection = (label: string, value: boolean) => {
