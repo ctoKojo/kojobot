@@ -6874,6 +6874,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      ensure_current_month_period: { Args: never; Returns: string }
       ensure_financial_period: { Args: { p_date: string }; Returns: string }
       freeze_quiz_version: { Args: { p_quiz_id: string }; Returns: string }
       generate_subscription_installments: {
@@ -7082,6 +7083,22 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_pending_balance_alerts: {
+        Args: never
+        Returns: {
+          account_id: string
+          account_label: string
+          account_type: string
+          cached_balance: number
+          computed_balance: number
+          detected_at: string
+          detected_by_method: string
+          difference: number
+          id: string
+          notes: string
+          status: string
+        }[]
+      }
       get_student_attendance_stats: {
         Args: { p_user_id: string }
         Returns: Json
@@ -7136,6 +7153,15 @@ export type Database = {
         }[]
       }
       get_treasury_opening_balance_status: { Args: never; Returns: Json }
+      get_treasury_reconciliation_summary: {
+        Args: never
+        Returns: {
+          account_code: string
+          account_name: string
+          account_name_ar: string
+          computed_balance: number
+        }[]
+      }
       get_treasury_transactions: {
         Args: {
           p_account_code?: string
@@ -7393,6 +7419,14 @@ export type Database = {
           p_transfer_type?: Database["public"]["Enums"]["transfer_method_type"]
         }
         Returns: string
+      }
+      record_treasury_adjustment: {
+        Args: {
+          p_account_code: string
+          p_actual_amount: number
+          p_notes?: string
+        }
+        Returns: Json
       }
       refresh_account_balances_mv: { Args: never; Returns: undefined }
       register_financial_rpc: {
