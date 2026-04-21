@@ -37,17 +37,25 @@ import { cn } from '@/lib/utils';
 
 type ReminderType = 'payment-due' | 'session-reminder';
 
+interface ParentInfo {
+  parent_id: string;
+  full_name: string;
+  email: string | null;
+}
+
 interface StudentRow {
   user_id: string;
   full_name: string;
   email: string | null;
   phone: string | null;
   group_name?: string | null;
+  parents: ParentInfo[];
 }
 
 interface SendResult {
   studentId: string;
   studentName: string;
+  parentName: string;
   email: string;
   status: 'success' | 'failed' | 'skipped';
   message?: string;
