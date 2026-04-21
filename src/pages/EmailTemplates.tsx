@@ -99,7 +99,7 @@ export default function EmailTemplates() {
         <PageHeader
           icon={Mail}
           title={isRTL ? 'قوالب الإيميل' : 'Email Templates'}
-          description={
+          subtitle={
             isRTL
               ? 'إنشاء وتعديل قوالب الإيميلات وربطها بأحداث النظام'
               : 'Create and edit email templates and map them to system events'
