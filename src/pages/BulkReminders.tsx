@@ -177,7 +177,10 @@ export default function BulkReminders() {
         s.full_name.toLowerCase().includes(q) ||
         (s.email || '').toLowerCase().includes(q) ||
         (s.phone || '').toLowerCase().includes(q) ||
-        (s.group_name || '').toLowerCase().includes(q),
+        (s.group_name || '').toLowerCase().includes(q) ||
+        s.parents.some(
+          (p) => p.full_name.toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q),
+        ),
     );
   }, [students, search]);
 
