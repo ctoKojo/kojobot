@@ -70,15 +70,20 @@ export default function Treasury() {
   const txnsQuery = useQuery({
     queryKey: ['treasury-transactions', filterAccount, filterSource, fromDate, toDate],
     queryFn: async () => {
+      // When user picks "Bank", fetch all then filter to include both 1120 + 1130 (InstaPay merged)
+      const isBankMerged = filterAccount === '1120';
       const { data, error } = await (supabase.rpc as any)('get_treasury_transactions', {
         p_limit: 200,
-        p_account_code: filterAccount === 'all' ? null : filterAccount,
+        p_account_code: filterAccount === 'all' || isBankMerged ? null : filterAccount,
         p_from_date: fromDate || null,
         p_to_date: toDate || null,
         p_source: filterSource === 'all' ? null : filterSource,
       });
       if (error) throw error;
-      return (data ?? []) as TreasuryTxn[];
+      const rows = (data ?? []) as TreasuryTxn[];
+      return isBankMerged
+        ? rows.filter((r) => r.account_code === '1120' || r.account_code === '1130')
+        : rows;
     },
   });
 
