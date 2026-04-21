@@ -191,7 +191,7 @@ async function isEligible(supabase: any, s: CompletedSession): Promise<boolean> 
 // ============================================================
 // Anti-starvation batch: 70% oldest unscanned + 30% recent
 // ============================================================
-const SESSION_SELECT = `id, session_date, session_time, session_number, content_number, level_id, duration_minutes, end_at, is_makeup, makeup_session_id, group_id, status, cancellation_reason, last_compliance_scan_at, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active), makeup_sessions:makeup_session_id(assigned_instructor_id, original_session_id, original_session:original_session_id(session_number, session_date))`;
+const SESSION_SELECT = `id, session_date, session_time, session_number, content_number, level_id, duration_minutes, end_at, is_makeup, makeup_session_id, group_id, status, cancellation_reason, last_compliance_scan_at, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active), makeup_sessions:makeup_session_id(assigned_instructor_id, original_session_id, student_id, original_session:original_session_id(session_number, session_date))`;
 
 async function fetchEligibleSessions(supabase: any, todayStr: string): Promise<CompletedSession[]> {
   const recentLimit = Math.floor(BATCH_SIZE * RECENT_BATCH_RATIO);
