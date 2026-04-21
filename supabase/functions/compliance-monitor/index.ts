@@ -383,7 +383,10 @@ serve(async (req) => {
   // Create scan run record at the start
   const { data: scanRun } = await supabase
     .from('compliance_scan_runs')
-    .insert({ scan_type: 'compliance-monitor' })
+    .insert({
+      scan_type: 'compliance-monitor',
+      metadata: { trace_id: RUN_TRACE_ID, settings_version: SETTINGS_VERSION, settings: GRACE_CFG },
+    })
     .select('id')
     .single();
   const scanRunId = scanRun?.id;
@@ -453,7 +456,7 @@ serve(async (req) => {
     try {
       for (const session of eligibleSessions) {
         if (checkCircuitBreaker()) break;
-        if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60, GRACE_PERIODS.quiz)) continue;
+        if (!isPastGrace(session, GRACE_CFG, 'quiz')) continue;
 
         const expect = await getCurriculumExpectations(supabase, session.level_id, session.content_number);
         if (!expect || !expect.expectsQuiz) { results.warningsSkipped++; continue; }
@@ -464,15 +467,17 @@ serve(async (req) => {
           return !data;
         };
 
+        const ctxEn = makeupCtx(session, false);
+        const ctxAr = makeupCtx(session, true);
         const result = await insertWarningWithRecheck({
           supabase, session, warningType: 'no_quiz',
-          reason: `No quiz assigned for Session ${session.session_number} (${session.groups.name})`,
-          reasonAr: `لم يتم تعيين كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
+          reason: `No quiz assigned for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
+          reasonAr: `لم يتم تعيين كويز للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
           notifTitle: 'Warning: Missing Quiz', notifTitleAr: 'تحذير: كويز مفقود',
-          notifMessage: `You didn't add a quiz for Session ${session.session_number} (${session.groups.name})`,
-          notifMessageAr: `لم تقم بإضافة كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
+          notifMessage: `You didn't add a quiz for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
+          notifMessageAr: `لم تقم بإضافة كويز للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
           recheckCondition: recheck,
-        });
+        }, { traceId: RUN_TRACE_ID, settingsVersion: SETTINGS_VERSION });
 
         if (result === 'inserted') results.instructorWarnings++;
         else if (result === 'race_resolved') results.raceResolved++;
@@ -490,14 +495,14 @@ serve(async (req) => {
       if (!checkCircuitBreaker()) {
         for (const session of eligibleSessions) {
           if (checkCircuitBreaker()) break;
-          if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60, GRACE_PERIODS.attendance)) continue;
+          if (!isPastGrace(session, GRACE_CFG, 'attendance')) continue;
 
           const { count: attendanceCount } = await supabase
             .from('attendance').select('*', { count: 'exact', head: true })
             .eq('session_id', session.id)
             .in('status', ['present', 'absent']);
 
-          if ((attendanceCount || 0) > 0) continue; // Some attendance exists → ok
+          if ((attendanceCount || 0) > 0) continue;
 
           const recheck = async () => {
             const { count } = await supabase
@@ -507,15 +512,17 @@ serve(async (req) => {
             return (count || 0) === 0;
           };
 
+          const ctxEn = makeupCtx(session, false);
+          const ctxAr = makeupCtx(session, true);
           const result = await insertWarningWithRecheck({
             supabase, session, warningType: 'no_attendance',
-            reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})`,
-            reasonAr: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
+            reason: `Attendance not recorded for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
+            reasonAr: `لم يتم تسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
             notifTitle: 'Warning: Missing Attendance', notifTitleAr: 'تحذير: حضور مفقود',
-            notifMessage: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})`,
-            notifMessageAr: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})`,
+            notifMessage: `You didn't record attendance for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
+            notifMessageAr: `لم تقم بتسجيل الحضور للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
             recheckCondition: recheck,
-          });
+          }, { traceId: RUN_TRACE_ID, settingsVersion: SETTINGS_VERSION });
 
           if (result === 'inserted') results.instructorWarnings++;
           else if (result === 'race_resolved') results.raceResolved++;
@@ -533,7 +540,7 @@ serve(async (req) => {
       if (!checkCircuitBreaker()) {
         for (const session of eligibleSessions) {
           if (checkCircuitBreaker()) break;
-          if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60, GRACE_PERIODS.assignment)) continue;
+          if (!isPastGrace(session, GRACE_CFG, 'assignment')) continue;
 
           const expect = await getCurriculumExpectations(supabase, session.level_id, session.content_number);
           if (!expect || !expect.expectsAssignment) { results.warningsSkipped++; continue; }
@@ -544,15 +551,17 @@ serve(async (req) => {
             return !data;
           };
 
+          const ctxEn = makeupCtx(session, false);
+          const ctxAr = makeupCtx(session, true);
           const result = await insertWarningWithRecheck({
             supabase, session, warningType: 'no_assignment',
-            reason: `No assignment uploaded for Session ${session.session_number} within 24 hours (${session.groups.name})`,
-            reasonAr: `لم يتم رفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
+            reason: `No assignment uploaded for Session ${session.session_number} within 24 hours (${session.groups.name})${ctxEn}`,
+            reasonAr: `لم يتم رفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})${ctxAr}`,
             notifTitle: 'Warning: Missing Assignment', notifTitleAr: 'تحذير: واجب مفقود',
-            notifMessage: `You didn't upload an assignment for Session ${session.session_number} within 24 hours (${session.groups.name})`,
-            notifMessageAr: `لم تقم برفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})`,
+            notifMessage: `You didn't upload an assignment for Session ${session.session_number} within 24 hours (${session.groups.name})${ctxEn}`,
+            notifMessageAr: `لم تقم برفع واجب للسيشن ${session.session_number} خلال 24 ساعة (${session.groups.name_ar})${ctxAr}`,
             recheckCondition: recheck,
-          });
+          }, { traceId: RUN_TRACE_ID, settingsVersion: SETTINGS_VERSION });
 
           if (result === 'inserted') results.instructorWarnings++;
           else if (result === 'race_resolved') results.raceResolved++;
@@ -570,12 +579,24 @@ serve(async (req) => {
       if (!checkCircuitBreaker()) {
         for (const session of eligibleSessions) {
           if (checkCircuitBreaker()) break;
-          if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60, GRACE_PERIODS.evaluation)) continue;
+          if (!isPastGrace(session, GRACE_CFG, 'evaluation')) continue;
 
           const { data: presentStudents } = await supabase
             .from('attendance').select('student_id').eq('session_id', session.id).eq('status', 'present');
           const presentSet = new Set((presentStudents || []).map((s: any) => s.student_id));
           if (presentSet.size === 0) continue;
+
+          // Anomaly: makeup session with > 1 present student (idempotent via RPC)
+          if (session.is_makeup && presentSet.size > 1) {
+            try {
+              await supabase.rpc('log_dq_issue', {
+                p_issue_type: 'makeup_multi_student_anomaly',
+                p_entity_table: 'sessions',
+                p_entity_id: session.id,
+                p_details: { count: presentSet.size, trace_id: RUN_TRACE_ID },
+              });
+            } catch (_) { /* non-fatal */ }
+          }
 
           const { data: evaluatedStudents } = await supabase
             .from('session_evaluations').select('student_id').eq('session_id', session.id);
@@ -594,15 +615,17 @@ serve(async (req) => {
           };
 
           const missingCount = missing.length;
+          const ctxEn = makeupCtx(session, false);
+          const ctxAr = makeupCtx(session, true);
           const result = await insertWarningWithRecheck({
             supabase, session, warningType: 'no_evaluation',
-            reason: `Missing evaluations for ${missingCount} student(s) in Session ${session.session_number} (${session.groups.name})`,
-            reasonAr: `تقييمات ناقصة لـ ${missingCount} طالب في السيشن ${session.session_number} (${session.groups.name_ar})`,
+            reason: `Missing evaluations for ${missingCount} student(s) in Session ${session.session_number} (${session.groups.name})${ctxEn}`,
+            reasonAr: `تقييمات ناقصة لـ ${missingCount} طالب في السيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
             notifTitle: 'Warning: Missing Evaluations', notifTitleAr: 'تحذير: تقييمات ناقصة',
-            notifMessage: `You didn't evaluate ${missingCount} student(s) for Session ${session.session_number} (${session.groups.name})`,
-            notifMessageAr: `لم تقم بتقييم ${missingCount} طالب للسيشن ${session.session_number} (${session.groups.name_ar})`,
+            notifMessage: `You didn't evaluate ${missingCount} student(s) for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
+            notifMessageAr: `لم تقم بتقييم ${missingCount} طالب للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
             recheckCondition: recheck,
-          });
+          }, { traceId: RUN_TRACE_ID, settingsVersion: SETTINGS_VERSION });
 
           if (result === 'inserted') results.instructorWarnings++;
           else if (result === 'race_resolved') results.raceResolved++;
@@ -1111,6 +1134,18 @@ serve(async (req) => {
     const totalTime = Date.now() - startTime;
     console.log(`[Compliance Monitor V2] Complete in ${totalTime}ms. Scanned: ${results.sessionsScanned}, Warnings: ${results.instructorWarnings + results.slaWarnings}, Skipped: ${results.warningsSkipped}, RaceResolved: ${results.raceResolved}, AvgScanLag: ${results.avgScanLagSeconds}s, Errors: ${results.errors.length}`);
 
+    console.log(JSON.stringify({
+      event: 'compliance_run_finished',
+      trace_id: RUN_TRACE_ID,
+      settings_version: SETTINGS_VERSION,
+      sessions_scanned: results.sessionsScanned,
+      warnings_created: results.instructorWarnings + results.slaWarnings,
+      duplicates: results.warningsSkipped,
+      race_resolved: results.raceResolved,
+      duration_ms: totalTime,
+      errors_count: results.errors.length,
+    }));
+
     // Finalize scan run record
     if (scanRunId) {
       await supabase.from('compliance_scan_runs').update({
@@ -1123,6 +1158,8 @@ serve(async (req) => {
         avg_scan_lag_seconds: results.avgScanLagSeconds,
         errors: results.errors,
         metadata: {
+          trace_id: RUN_TRACE_ID,
+          settings_version: SETTINGS_VERSION,
           studentWarnings: results.studentWarnings,
           slaReminders: results.slaReminders,
           metricsUpdated: results.metricsUpdated,
