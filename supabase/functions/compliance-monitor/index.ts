@@ -356,6 +356,30 @@ serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  // ===== V3: trace_id + settings snapshot (consistent throughout run) =====
+  const RUN_TRACE_ID = crypto.randomUUID();
+  const RUN_STARTED_AT = new Date().toISOString();
+
+  const { data: settingsRow } = await supabase
+    .from('system_settings')
+    .select('value, version')
+    .eq('key', 'compliance_grace_periods')
+    .maybeSingle();
+
+  const GRACE_CFG: GraceConfig = {
+    ...DEFAULT_GRACE,
+    ...((settingsRow?.value as Partial<GraceConfig>) ?? {}),
+  };
+  const SETTINGS_VERSION = (settingsRow as any)?.version ?? 0;
+
+  console.log(JSON.stringify({
+    event: 'compliance_run_started',
+    trace_id: RUN_TRACE_ID,
+    settings_version: SETTINGS_VERSION,
+    settings: GRACE_CFG,
+    started_at: RUN_STARTED_AT,
+  }));
+
   // Create scan run record at the start
   const { data: scanRun } = await supabase
     .from('compliance_scan_runs')
