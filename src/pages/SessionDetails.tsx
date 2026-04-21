@@ -972,6 +972,10 @@ export default function SessionDetails() {
         notes: null,
       }));
 
+      if (records.length === 0 || records.some((record) => !record.status)) {
+        throw new Error(isRTL ? 'اختار حالة حضور لكل طالب قبل الحفظ' : 'Select an attendance status for every student before saving');
+      }
+
       const { data, error } = await supabase.rpc('save_attendance', {
         p_session_id: session.id,
         p_group_id: session.group_id,
@@ -981,8 +985,19 @@ export default function SessionDetails() {
       if (error) throw error;
 
       const result = data as any;
+      const insertedCount = Number(result?.inserted_count || 0);
+      const rejectedCount = Number(result?.rejected_count || 0);
+
+      if (insertedCount !== records.length) {
+        throw new Error(
+          isRTL
+            ? `لم يتم حفظ كل الحضور: تم حفظ ${insertedCount} من ${records.length}${rejectedCount > 0 ? '، وبعض الطلاب حضورهم مسجل بالفعل' : ''}`
+            : `Attendance was not fully saved: ${insertedCount} of ${records.length} saved${rejectedCount > 0 ? ', some students already had attendance records' : ''}`
+        );
+      }
+
       const parts: string[] = [];
-      if (result?.inserted_count) parts.push(isRTL ? `${result.inserted_count} سجل جديد` : `${result.inserted_count} records inserted`);
+      if (insertedCount) parts.push(isRTL ? `${insertedCount} سجل جديد` : `${insertedCount} records inserted`);
       if (result?.makeups_created > 0) parts.push(isRTL ? `${result.makeups_created} تعويضية جديدة` : `${result.makeups_created} makeups created`);
       if (result?.makeups_cancelled > 0) parts.push(isRTL ? `${result.makeups_cancelled} تعويضية ملغية` : `${result.makeups_cancelled} makeups cancelled`);
       if (result?.instructor_confirmed) parts.push(isRTL ? 'تم تأكيد حضور المدرب' : 'Instructor confirmed');
