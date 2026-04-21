@@ -176,14 +176,33 @@ export default function FinancePeriods() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{isRTL ? 'الفترات' : 'Periods'}</CardTitle>
-          <CardDescription>
-            {isRTL ? 'آخر 24 شهراً' : 'Last 24 months'}
-          </CardDescription>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <CardTitle>{isRTL ? 'الفترات' : 'Periods'}</CardTitle>
+              <CardDescription>
+                {isRTL ? 'آخر 24 شهراً' : 'Last 24 months'}
+              </CardDescription>
+            </div>
+            <Button size="sm" variant="outline" onClick={handleCreateCurrentMonth} disabled={creatingMonth}>
+              {creatingMonth ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+              {isRTL ? 'فترة الشهر الحالي' : 'Current month period'}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
+          ) : periods.length === 0 ? (
+            <div className="text-center py-12 space-y-3">
+              <Lock className="h-10 w-10 mx-auto text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground">
+                {isRTL ? 'لا توجد فترات مالية بعد' : 'No financial periods yet'}
+              </p>
+              <Button size="sm" onClick={handleCreateCurrentMonth} disabled={creatingMonth}>
+                {creatingMonth ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />}
+                {isRTL ? 'إنشاء فترة الشهر الحالي' : 'Create current month period'}
+              </Button>
+            </div>
           ) : (
             <Table>
               <TableHeader>
