@@ -1131,6 +1131,18 @@ serve(async (req) => {
     const totalTime = Date.now() - startTime;
     console.log(`[Compliance Monitor V2] Complete in ${totalTime}ms. Scanned: ${results.sessionsScanned}, Warnings: ${results.instructorWarnings + results.slaWarnings}, Skipped: ${results.warningsSkipped}, RaceResolved: ${results.raceResolved}, AvgScanLag: ${results.avgScanLagSeconds}s, Errors: ${results.errors.length}`);
 
+    console.log(JSON.stringify({
+      event: 'compliance_run_finished',
+      trace_id: RUN_TRACE_ID,
+      settings_version: SETTINGS_VERSION,
+      sessions_scanned: results.sessionsScanned,
+      warnings_created: results.instructorWarnings + results.slaWarnings,
+      duplicates: results.warningsSkipped,
+      race_resolved: results.raceResolved,
+      duration_ms: totalTime,
+      errors_count: results.errors.length,
+    }));
+
     // Finalize scan run record
     if (scanRunId) {
       await supabase.from('compliance_scan_runs').update({
