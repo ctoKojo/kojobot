@@ -224,7 +224,9 @@ export default function Treasury() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold tracking-tight text-primary">{formatEGP(totalLiquidity)}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{isRTL ? 'مجموع 4 حسابات' : '4 accounts sum'}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {isRTL ? `مجموع ${mergedBalances.length} حسابات` : `${mergedBalances.length} accounts sum`}
+                  </p>
                 </CardContent>
               </Card>
             </>
