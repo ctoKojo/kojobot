@@ -95,72 +95,113 @@ Deno.serve(async (req) => {
   const subject = tpl.subject(data)
   const html = tpl.render(data)
 
+  // Retry configuration
+  const MAX_ATTEMPTS = 3
+  const BASE_DELAY_MS = 500 // exponential backoff base
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+  const isRetryableStatus = (s: number) => s === 408 || s === 429 || s >= 500
+
   // Log pending attempt
   await supabase.from('email_send_log').insert({
     message_id: idempotencyKey,
     template_name: templateName,
     recipient_email: to,
     status: 'pending',
+    metadata: { max_attempts: MAX_ATTEMPTS },
   })
 
-  try {
-    const response = await fetch(RESEND_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: FROM_ADDRESS,
-        to: [to],
-        subject,
-        html,
-      }),
-    })
+  let lastError = ''
+  let lastStatus = 0
 
-    const result = await response.json()
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetch(RESEND_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: FROM_ADDRESS,
+          to: [to],
+          subject,
+          html,
+        }),
+      })
 
-    if (!response.ok) {
-      const errorMsg = `Resend API error [${response.status}]: ${JSON.stringify(result)}`
-      console.error(errorMsg)
+      let result: any = null
+      try {
+        result = await response.json()
+      } catch {
+        result = null
+      }
+
+      if (response.ok) {
+        await supabase.from('email_send_log').insert({
+          message_id: idempotencyKey,
+          template_name: templateName,
+          recipient_email: to,
+          status: 'sent',
+          metadata: { resend_id: result?.id, attempt, max_attempts: MAX_ATTEMPTS },
+        })
+        return new Response(
+          JSON.stringify({ success: true, id: result?.id, attempt }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      lastStatus = response.status
+      lastError = `Resend API error [${response.status}]: ${JSON.stringify(result)}`
+      console.error(`Attempt ${attempt}/${MAX_ATTEMPTS} failed:`, lastError)
+
+      // Log this attempt
       await supabase.from('email_send_log').insert({
         message_id: idempotencyKey,
         template_name: templateName,
         recipient_email: to,
-        status: 'failed',
-        error_message: errorMsg.slice(0, 1000),
+        status: isRetryableStatus(response.status) && attempt < MAX_ATTEMPTS ? 'retrying' : 'failed',
+        error_message: lastError.slice(0, 1000),
+        metadata: { attempt, max_attempts: MAX_ATTEMPTS, http_status: response.status },
       })
-      return new Response(
-        JSON.stringify({ success: false, error: errorMsg }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+
+      // Don't retry on non-retryable errors (4xx except 408/429)
+      if (!isRetryableStatus(response.status)) {
+        return new Response(
+          JSON.stringify({ success: false, error: lastError, attempt }),
+          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Wait before next attempt (respect Retry-After if present)
+      if (attempt < MAX_ATTEMPTS) {
+        const retryAfter = response.headers.get('retry-after')
+        const delayMs = retryAfter
+          ? Math.min(parseInt(retryAfter) * 1000, 10000)
+          : BASE_DELAY_MS * Math.pow(2, attempt - 1)
+        await sleep(delayMs)
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error)
+      console.error(`Attempt ${attempt}/${MAX_ATTEMPTS} exception:`, lastError)
+
+      await supabase.from('email_send_log').insert({
+        message_id: idempotencyKey,
+        template_name: templateName,
+        recipient_email: to,
+        status: attempt < MAX_ATTEMPTS ? 'retrying' : 'failed',
+        error_message: lastError.slice(0, 1000),
+        metadata: { attempt, max_attempts: MAX_ATTEMPTS, exception: true },
+      })
+
+      if (attempt < MAX_ATTEMPTS) {
+        await sleep(BASE_DELAY_MS * Math.pow(2, attempt - 1))
+      }
     }
-
-    await supabase.from('email_send_log').insert({
-      message_id: idempotencyKey,
-      template_name: templateName,
-      recipient_email: to,
-      status: 'sent',
-      metadata: { resend_id: result?.id },
-    })
-
-    return new Response(
-      JSON.stringify({ success: true, id: result?.id }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error)
-    console.error('Email send exception:', errorMsg)
-    await supabase.from('email_send_log').insert({
-      message_id: idempotencyKey,
-      template_name: templateName,
-      recipient_email: to,
-      status: 'failed',
-      error_message: errorMsg.slice(0, 1000),
-    })
-    return new Response(
-      JSON.stringify({ success: false, error: errorMsg }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
   }
+
+  // All attempts exhausted
+  return new Response(
+    JSON.stringify({ success: false, error: lastError, attempts: MAX_ATTEMPTS, last_status: lastStatus }),
+    { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  )
 })
