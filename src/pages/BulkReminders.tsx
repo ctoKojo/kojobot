@@ -110,7 +110,7 @@ export default function BulkReminders() {
         .in('user_id', ids);
       if (profErr) throw profErr;
 
-      // Optional: pull active group names
+      // Pull active group names
       const { data: groupLinks } = await supabase
         .from('group_students')
         .select('student_id, groups(name, name_ar)')
@@ -123,12 +123,40 @@ export default function BulkReminders() {
         if (g) groupMap.set(l.student_id, isRTL ? (g.name_ar || g.name) : (g.name || g.name_ar));
       });
 
+      // Pull linked parents for each student
+      const { data: parentLinks } = await supabase
+        .from('parent_students')
+        .select('student_id, parent_id')
+        .in('student_id', ids);
+
+      const parentIds = Array.from(new Set((parentLinks ?? []).map((l) => l.parent_id)));
+      const parentProfilesMap = new Map<string, { full_name: string; email: string | null }>();
+      if (parentIds.length > 0) {
+        const { data: parentProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', parentIds);
+        (parentProfiles ?? []).forEach((p) => {
+          parentProfilesMap.set(p.user_id, { full_name: p.full_name || '—', email: p.email });
+        });
+      }
+
+      const parentsByStudent = new Map<string, ParentInfo[]>();
+      (parentLinks ?? []).forEach((l) => {
+        const info = parentProfilesMap.get(l.parent_id);
+        if (!info) return;
+        const list = parentsByStudent.get(l.student_id) ?? [];
+        list.push({ parent_id: l.parent_id, full_name: info.full_name, email: info.email });
+        parentsByStudent.set(l.student_id, list);
+      });
+
       const rows: StudentRow[] = (profiles ?? []).map((p) => ({
         user_id: p.user_id,
         full_name: p.full_name || '—',
         email: p.email,
         phone: p.phone,
         group_name: groupMap.get(p.user_id) ?? null,
+        parents: parentsByStudent.get(p.user_id) ?? [],
       }));
 
       // Sort by name
