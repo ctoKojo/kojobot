@@ -7135,6 +7135,7 @@ export type Database = {
           balance: number
         }[]
       }
+      get_treasury_opening_balance_status: { Args: never; Returns: Json }
       get_treasury_transactions: {
         Args: {
           p_account_code?: string
@@ -7480,6 +7481,10 @@ export type Database = {
           id: string
           phone: string
         }[]
+      }
+      set_treasury_opening_balance: {
+        Args: { p_amount: number; p_as_of_date?: string; p_notes?: string }
+        Returns: Json
       }
       student_choose_track_and_upgrade: {
         Args: { p_chosen_track_id?: string; p_group_id: string }
