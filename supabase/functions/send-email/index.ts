@@ -14,7 +14,7 @@ const corsHeaders = {
     'authorization, x-client-info, apikey, content-type',
 }
 
-const GATEWAY_URL = 'https://connector-gateway.lovable.dev/resend'
+const RESEND_API_URL = 'https://api.resend.com/emails'
 const FROM_ADDRESS = 'Kojobot Academy <academy@kojobot.com>'
 
 interface EmailTemplate {
