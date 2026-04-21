@@ -54,9 +54,10 @@ interface CompletedSession {
     assigned_instructor_id: string | null;
     original_session_id: string | null;
     student_id: string | null;
-    student?: { full_name: string | null; full_name_ar: string | null } | null;
     original_session?: { session_number: number; session_date: string } | null;
   } | null;
+  // Resolved at runtime for makeup sessions
+  _student_name?: { en: string; ar: string } | null;
 }
 
 // Cache curriculum lookups within a single run
