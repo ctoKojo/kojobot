@@ -1134,8 +1134,16 @@ export default function SessionDetails() {
     }
   };
 
-  const getAttendanceBadge = (status: string | null) => {
+  const isStudentEffectivelyPresent = (student: StudentData) =>
+    student.attendance_status === 'present' ||
+    student.attendance_status === 'late' ||
+    (student.attendance_status === 'absent' && student.compensation_status === 'compensated');
+
+  const getAttendanceBadge = (status: string | null, compensationStatus?: string | null) => {
     if (!status) return <Badge variant="outline" className="text-muted-foreground">{isRTL ? 'غير مسجل' : 'Not recorded'}</Badge>;
+    if (status === 'absent' && compensationStatus === 'compensated') {
+      return <Badge variant="secondary">{isRTL ? 'حضر تعويضي' : 'Made up'}</Badge>;
+    }
     
     const badges: Record<string, JSX.Element> = {
       present: <Badge className="bg-green-500">{isRTL ? 'حاضر' : 'Present'}</Badge>,
@@ -1185,7 +1193,7 @@ export default function SessionDetails() {
   };
 
   // Stats
-  const presentCount = students.filter(s => s.attendance_status === 'present' || s.attendance_status === 'late').length;
+  const presentCount = students.filter(isStudentEffectivelyPresent).length;
   const quizCompletedCount = students.filter(s => s.quiz_status === 'graded' || s.quiz_status === 'submitted').length;
   const assignmentSubmittedCount = students.filter(s => s.assignment_status).length;
 
@@ -1874,7 +1882,7 @@ export default function SessionDetails() {
                         {language === 'ar' ? student.student_name_ar : student.student_name}
                       </TableCell>
                       <TableCell className="text-center">
-                        {getAttendanceBadge(student.attendance_status)}
+                        {getAttendanceBadge(student.attendance_status, student.compensation_status)}
                       </TableCell>
                       <TableCell className="text-center">
                         {getQuizBadge(student)}
@@ -1897,7 +1905,7 @@ export default function SessionDetails() {
             groupId={session.group_id}
             ageGroupId={group.age_group_id}
             students={students
-              .filter(s => s.attendance_status === 'present' || s.attendance_status === 'late' || s.attendance_status === null)
+              .filter(s => isStudentEffectivelyPresent(s) || s.attendance_status === null)
               .map(s => ({
                 student_id: s.student_id,
                 student_name: s.student_name,
