@@ -188,7 +188,7 @@ async function isEligible(supabase: any, s: CompletedSession): Promise<boolean> 
 // ============================================================
 // Anti-starvation batch: 70% oldest unscanned + 30% recent
 // ============================================================
-const SESSION_SELECT = `id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, status, cancellation_reason, last_compliance_scan_at, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active)`;
+const SESSION_SELECT = `id, session_date, session_time, session_number, content_number, level_id, duration_minutes, end_at, is_makeup, makeup_session_id, group_id, status, cancellation_reason, last_compliance_scan_at, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active), makeup_sessions:makeup_session_id(assigned_instructor_id, original_session_id, original_session:original_session_id(session_number, session_date))`;
 
 async function fetchEligibleSessions(supabase: any, todayStr: string): Promise<CompletedSession[]> {
   const recentLimit = Math.floor(BATCH_SIZE * RECENT_BATCH_RATIO);
@@ -256,38 +256,52 @@ interface InsertWarningParams {
   recheckCondition: () => Promise<boolean>;
 }
 
-async function insertWarningWithRecheck(p: InsertWarningParams): Promise<'inserted' | 'duplicate' | 'race_resolved' | 'error'> {
-  // 1) Idempotency check
+async function insertWarningWithRecheck(
+  p: InsertWarningParams,
+  ctx: { traceId: string; settingsVersion: number }
+): Promise<'inserted' | 'duplicate' | 'race_resolved' | 'error'> {
+  const instructorId = getResponsibleInstructor(p.session);
+  if (!instructorId) {
+    console.warn(`[${p.warningType}] no responsible instructor for session ${p.session.id}`);
+    return 'error';
+  }
+
+  // 1) Idempotency check (covered by partial unique index too)
   const { data: existing } = await p.supabase
     .from('instructor_warnings').select('id')
     .eq('session_id', p.session.id)
     .eq('warning_type', p.warningType)
+    .eq('instructor_id', instructorId)
     .eq('is_active', true)
     .limit(1).maybeSingle();
   if (existing) return 'duplicate';
 
-  // 2) Race re-check: re-verify condition right before insert (gap #3)
+  // 2) Race re-check
   const stillMissing = await p.recheckCondition();
   if (!stillMissing) return 'race_resolved';
 
-  // 3) Insert
+  // 3) Insert with trace + settings version
   const { error: insertError } = await p.supabase
     .from('instructor_warnings').insert({
-      instructor_id: p.session.groups.instructor_id,
+      instructor_id: instructorId,
       session_id: p.session.id,
       warning_type: p.warningType,
       reason: p.reason,
       reason_ar: p.reasonAr,
+      trace_id: ctx.traceId,
+      settings_version: ctx.settingsVersion,
     });
 
   if (insertError) {
+    // Unique-violation = race-inserted by parallel run → treat as duplicate
+    if ((insertError as any).code === '23505') return 'duplicate';
     console.error(`[${p.warningType} insert error]`, insertError);
     return 'error';
   }
 
-  // 4) Notification (best-effort — don't fail the warning if it errors)
+  // 4) Notification (best-effort)
   await p.supabase.from('notifications').insert({
-    user_id: p.session.groups.instructor_id,
+    user_id: instructorId,
     title: p.notifTitle, title_ar: p.notifTitleAr,
     message: p.notifMessage, message_ar: p.notifMessageAr,
     type: 'warning', category: 'compliance',
