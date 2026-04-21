@@ -453,7 +453,7 @@ serve(async (req) => {
     try {
       for (const session of eligibleSessions) {
         if (checkCircuitBreaker()) break;
-        if (!isPastGracePeriod(session.session_date, session.session_time, session.duration_minutes ?? 60, GRACE_PERIODS.quiz)) continue;
+        if (!isPastGrace(session, GRACE_CFG, 'quiz')) continue;
 
         const expect = await getCurriculumExpectations(supabase, session.level_id, session.content_number);
         if (!expect || !expect.expectsQuiz) { results.warningsSkipped++; continue; }
@@ -464,15 +464,17 @@ serve(async (req) => {
           return !data;
         };
 
+        const ctxEn = makeupCtx(session, false);
+        const ctxAr = makeupCtx(session, true);
         const result = await insertWarningWithRecheck({
           supabase, session, warningType: 'no_quiz',
-          reason: `No quiz assigned for Session ${session.session_number} (${session.groups.name})`,
-          reasonAr: `لم يتم تعيين كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
+          reason: `No quiz assigned for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
+          reasonAr: `لم يتم تعيين كويز للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
           notifTitle: 'Warning: Missing Quiz', notifTitleAr: 'تحذير: كويز مفقود',
-          notifMessage: `You didn't add a quiz for Session ${session.session_number} (${session.groups.name})`,
-          notifMessageAr: `لم تقم بإضافة كويز للسيشن ${session.session_number} (${session.groups.name_ar})`,
+          notifMessage: `You didn't add a quiz for Session ${session.session_number} (${session.groups.name})${ctxEn}`,
+          notifMessageAr: `لم تقم بإضافة كويز للسيشن ${session.session_number} (${session.groups.name_ar})${ctxAr}`,
           recheckCondition: recheck,
-        });
+        }, { traceId: RUN_TRACE_ID, settingsVersion: SETTINGS_VERSION });
 
         if (result === 'inserted') results.instructorWarnings++;
         else if (result === 'race_resolved') results.raceResolved++;
