@@ -557,30 +557,46 @@ export default function BulkReminders() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                      <TableHead>{isRTL ? 'ولي الأمر' : 'Parent'}</TableHead>
-                      <TableHead>{isRTL ? 'البريد' : 'Email'}</TableHead>
+                      <TableHead>{isRTL ? 'نوع المستلم' : 'Recipient type'}</TableHead>
+                      <TableHead>{isRTL ? 'اسم المستلم' : 'Recipient name'}</TableHead>
+                      <TableHead>{isRTL ? 'البريد المرسل عليه' : 'Email used'}</TableHead>
                       <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                      <TableHead>{isRTL ? 'ملاحظة' : 'Note'}</TableHead>
+                      <TableHead>{isRTL ? 'ملاحظة / سبب التخطي' : 'Note / skip reason'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {results.map((r, idx) => (
                       <TableRow key={`${r.studentId}-${r.email}-${idx}`}>
                         <TableCell className="font-medium">{r.studentName}</TableCell>
-                        <TableCell>{r.parentName}</TableCell>
-                        <TableCell className="text-xs">{r.email}</TableCell>
+                        <TableCell>
+                          {r.recipientType === 'parent' && (
+                            <Badge variant="outline" className="border-primary/40 text-primary">
+                              {isRTL ? 'ولي أمر' : 'Parent'}
+                            </Badge>
+                          )}
+                          {r.recipientType === 'student' && (
+                            <Badge variant="outline" className="border-accent/40">
+                              {isRTL ? 'الطالب' : 'Student'}
+                            </Badge>
+                          )}
+                          {r.recipientType === 'none' && (
+                            <Badge variant="secondary">—</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>{r.recipientName}</TableCell>
+                        <TableCell className="text-xs font-mono">{r.email}</TableCell>
                         <TableCell>
                           {r.status === 'success' && (
-                            <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" /> {isRTL ? 'تم' : 'Sent'}</Badge>
+                            <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" /> {isRTL ? 'تم الإرسال' : 'Sent'}</Badge>
                           )}
                           {r.status === 'failed' && (
                             <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> {isRTL ? 'فشل' : 'Failed'}</Badge>
                           )}
                           {r.status === 'skipped' && (
-                            <Badge variant="secondary">{isRTL ? 'تم تخطيه' : 'Skipped'}</Badge>
+                            <Badge variant="secondary">{isRTL ? 'تم التخطي' : 'Skipped'}</Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-md truncate">{r.message || '—'}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-md">{r.message || '—'}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
