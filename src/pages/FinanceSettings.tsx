@@ -48,7 +48,12 @@ export default function FinanceSettings() {
         />
 
         <Tabs value={activeTab} onValueChange={setTab} className="space-y-4">
-          <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-3">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} md:w-auto md:inline-flex`}>
+            <TabsTrigger value="requests" className="gap-2">
+              <Inbox className="h-4 w-4" />
+              <span className="hidden sm:inline">{isRTL ? 'طلبات الاشتراك' : 'Subscription Requests'}</span>
+              <span className="sm:hidden">{isRTL ? 'الطلبات' : 'Requests'}</span>
+            </TabsTrigger>
             <TabsTrigger value="pricing" className="gap-2">
               <Tag className="h-4 w-4" />
               {isRTL ? 'الباقات' : 'Pricing'}
@@ -56,13 +61,9 @@ export default function FinanceSettings() {
             {isAdmin && (
               <TabsTrigger value="deductions" className="gap-2">
                 <Percent className="h-4 w-4" />
-                {isRTL ? 'الخصومات' : 'Deductions'}
+                {isRTL ? 'قواعد الخصم' : 'Deductions'}
               </TabsTrigger>
             )}
-            <TabsTrigger value="requests" className="gap-2">
-              <Inbox className="h-4 w-4" />
-              {isRTL ? 'طلبات الاشتراك' : 'Subscription Requests'}
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pricing" className="m-0">
