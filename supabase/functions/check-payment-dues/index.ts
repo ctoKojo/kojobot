@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkRateLimit, getClientIP, rateLimitResponse } from "../_shared/rateLimit.ts";
 import { getCairoToday, getCairoDatePlusDays } from "../_shared/cairoTime.ts";
+import { resolveStudentRecipients } from "../_shared/recipientResolver.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -178,7 +179,7 @@ Deno.serve(async (req) => {
         category: 'payment',
       });
 
-      // Send email reminder (best-effort, fire-and-forget)
+      // Send email reminder to parents (with student-email fallback) — best-effort
       try {
         const { data: studentProfile } = await supabase
           .from('profiles')
@@ -186,19 +187,32 @@ Deno.serve(async (req) => {
           .eq('user_id', sub.student_id)
           .maybeSingle();
 
-        if (studentProfile?.email) {
-          await supabase.functions.invoke('send-email', {
-            body: {
-              to: studentProfile.email,
-              templateName: 'payment-due',
-              templateData: {
-                studentName: studentProfile.full_name_ar || studentProfile.full_name || '',
-                amount: sub.installment_amount,
-                dueDate: sub.next_payment_date,
+        const { recipients, skipReason } = await resolveStudentRecipients(
+          supabase,
+          sub.student_id,
+          studentProfile,
+        );
+
+        if (recipients.length === 0) {
+          console.warn(`[payment-due] No recipient for student ${sub.student_id}: ${skipReason}`);
+        } else {
+          const studentDisplayName = studentProfile?.full_name_ar || studentProfile?.full_name || '';
+          for (const r of recipients) {
+            await supabase.functions.invoke('send-email', {
+              body: {
+                to: r.email,
+                templateName: 'payment-due',
+                templateData: {
+                  recipientName: r.name,
+                  recipientType: r.recipientType,
+                  studentName: studentDisplayName,
+                  amount: sub.installment_amount,
+                  dueDate: sub.next_payment_date,
+                },
+                idempotencyKey: `payment-due-${sub.student_id}-${sub.next_payment_date}-${r.recipientType}-${r.parentId || 'self'}`,
               },
-              idempotencyKey: `payment-due-${sub.student_id}-${sub.next_payment_date}`,
-            },
-          });
+            });
+          }
         }
       } catch (emailErr) {
         console.error('Email send failed for payment due:', emailErr);
