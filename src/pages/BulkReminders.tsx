@@ -55,7 +55,8 @@ interface StudentRow {
 interface SendResult {
   studentId: string;
   studentName: string;
-  parentName: string;
+  recipientType: 'parent' | 'student' | 'none';
+  recipientName: string;
   email: string;
   status: 'success' | 'failed' | 'skipped';
   message?: string;
