@@ -145,18 +145,21 @@ export default function Treasury() {
       <div className="container mx-auto p-4 md:p-6 space-y-6">
         <PageHeader
           title={isRTL ? 'الخزنة المالية' : 'Treasury'}
-          description={isRTL ? 'الأرصدة اللحظية وحركات السيولة من دفتر اليومية' : 'Live liquidity balances and cash movements from the journal'}
-        >
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refreshMvMutation.mutate()}
-            disabled={refreshMvMutation.isPending}
-          >
-            <RefreshCw className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'} ${refreshMvMutation.isPending ? 'animate-spin' : ''}`} />
-            {isRTL ? 'تحديث الأرصدة' : 'Refresh Balances'}
-          </Button>
-        </PageHeader>
+          subtitle={isRTL ? 'الأرصدة اللحظية وحركات السيولة من دفتر اليومية' : 'Live liquidity balances and cash movements from the journal'}
+          icon={Wallet}
+          gradient="from-emerald-500 to-blue-500"
+          actions={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refreshMvMutation.mutate()}
+              disabled={refreshMvMutation.isPending}
+            >
+              <RefreshCw className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'} ${refreshMvMutation.isPending ? 'animate-spin' : ''}`} />
+              {isRTL ? 'تحديث الأرصدة' : 'Refresh Balances'}
+            </Button>
+          }
+        />
 
         {/* Liquidity Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
