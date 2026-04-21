@@ -460,8 +460,8 @@ export default function BulkReminders() {
                           disabled={sending || filtered.length === 0}
                         />
                       </TableHead>
-                      <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
-                      <TableHead>{isRTL ? 'البريد' : 'Email'}</TableHead>
+                      <TableHead>{isRTL ? 'اسم الطالب' : 'Student'}</TableHead>
+                      <TableHead>{isRTL ? 'أولياء الأمور' : 'Parents'}</TableHead>
                       <TableHead>{isRTL ? 'المجموعة' : 'Group'}</TableHead>
                       <TableHead>{isRTL ? 'الهاتف' : 'Phone'}</TableHead>
                     </TableRow>
@@ -474,23 +474,47 @@ export default function BulkReminders() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filtered.map((s) => (
-                        <TableRow key={s.user_id} className={!s.email ? 'opacity-60' : ''}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedIds.has(s.user_id)}
-                              onCheckedChange={() => toggleOne(s.user_id)}
-                              disabled={sending}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium">{s.full_name}</TableCell>
-                          <TableCell>
-                            {s.email || <span className="text-destructive text-xs">{isRTL ? 'لا يوجد' : 'Missing'}</span>}
-                          </TableCell>
-                          <TableCell>{s.group_name || '—'}</TableCell>
-                          <TableCell>{s.phone || '—'}</TableCell>
-                        </TableRow>
-                      ))
+                      filtered.map((s) => {
+                        const parentsWithEmail = s.parents.filter((p) => p.email);
+                        const noParents = s.parents.length === 0;
+                        const noEmails = !noParents && parentsWithEmail.length === 0;
+                        return (
+                          <TableRow key={s.user_id} className={noParents || noEmails ? 'opacity-60' : ''}>
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedIds.has(s.user_id)}
+                                onCheckedChange={() => toggleOne(s.user_id)}
+                                disabled={sending}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">{s.full_name}</TableCell>
+                            <TableCell>
+                              {noParents ? (
+                                <span className="text-destructive text-xs">
+                                  {isRTL ? 'لا يوجد ولي أمر مرتبط' : 'No linked parent'}
+                                </span>
+                              ) : (
+                                <div className="flex flex-col gap-1">
+                                  {s.parents.map((p) => (
+                                    <div key={p.parent_id} className="text-xs">
+                                      <span className="font-medium">{p.full_name}</span>
+                                      {p.email ? (
+                                        <span className="text-muted-foreground ms-1">— {p.email}</span>
+                                      ) : (
+                                        <span className="text-destructive ms-1">
+                                          ({isRTL ? 'بدون بريد' : 'no email'})
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>{s.group_name || '—'}</TableCell>
+                            <TableCell>{s.phone || '—'}</TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
