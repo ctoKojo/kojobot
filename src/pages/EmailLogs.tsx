@@ -366,6 +366,63 @@ export default function EmailLogs() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={testOpen} onOpenChange={setTestOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isArabic ? 'إرسال إيميل اختبار' : 'Send test email'}</DialogTitle>
+            <DialogDescription>
+              {isArabic
+                ? 'اختر القالب وأدخل عنوان البريد لاستقبال نسخة تجريبية ببيانات وهمية.'
+                : 'Pick a template and recipient to receive a sample email with dummy data.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{isArabic ? 'القالب' : 'Template'}</Label>
+              <Select value={testTemplate} onValueChange={(v: any) => setTestTemplate(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="session-reminder">
+                    {isArabic ? TEMPLATE_LABELS['session-reminder'].ar : TEMPLATE_LABELS['session-reminder'].en}
+                  </SelectItem>
+                  <SelectItem value="payment-due">
+                    {isArabic ? TEMPLATE_LABELS['payment-due'].ar : TEMPLATE_LABELS['payment-due'].en}
+                  </SelectItem>
+                  <SelectItem value="password-reset">
+                    {isArabic ? TEMPLATE_LABELS['password-reset'].ar : TEMPLATE_LABELS['password-reset'].en}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{isArabic ? 'البريد الإلكتروني للاستقبال' : 'Recipient email'}</Label>
+              <Input
+                type="email"
+                placeholder="you@example.com"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                dir="ltr"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestOpen(false)} disabled={testSending}>
+              {isArabic ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button onClick={handleSendTest} disabled={testSending}>
+              {testSending ? (
+                <RefreshCw className={`h-4 w-4 animate-spin ${isArabic ? 'ml-2' : 'mr-2'}`} />
+              ) : (
+                <Send className={`h-4 w-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+              )}
+              {isArabic ? 'إرسال' : 'Send'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
