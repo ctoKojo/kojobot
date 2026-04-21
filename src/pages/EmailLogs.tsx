@@ -243,6 +243,7 @@ export default function EmailLogs() {
     return { enqueuedAt, finalAt, finalStatus: finalRow.status, durationMs };
   })();
 
+  return (
     <DashboardLayout>
       <PageHeader
         title={isArabic ? 'سجل الإيميلات' : 'Email Logs'}
