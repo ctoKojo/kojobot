@@ -22,18 +22,74 @@ interface EmailTemplate {
   render: (data: any) => string
 }
 
-const TEMPLATES: Record<string, EmailTemplate> = {
+// Built-in code templates (legacy fallback when no DB override exists)
+const CODE_TEMPLATES: Record<string, EmailTemplate> = {
   'session-reminder': sessionReminderTpl,
+  'session-reminder-1h': sessionReminderTpl,
+  'session-reminder-1day': sessionReminderTpl,
   'payment-due': paymentDueTpl,
   'password-reset': passwordResetTpl,
 }
 
+// Accept any event_key from the catalog (validated against DB at runtime).
+// We keep validation loose here to support custom events added via UI.
 const RequestSchema = z.object({
   to: z.string().email(),
-  templateName: z.enum(['session-reminder', 'payment-due', 'password-reset']),
+  templateName: z.string().min(1).max(100),
   templateData: z.record(z.any()).optional(),
   idempotencyKey: z.string().min(1).max(255),
 })
+
+// Simple {{variable}} interpolation. Missing keys render as empty string.
+function renderTemplate(tpl: string, data: Record<string, any>): string {
+  return tpl.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key) => {
+    const v = data[key]
+    return v === undefined || v === null ? '' : String(v)
+  })
+}
+
+// Resolve subject + html for a given templateName, preferring a DB override
+// when use_db_template = true on the event mapping.
+async function resolveTemplate(
+  supabase: ReturnType<typeof createClient>,
+  templateName: string,
+  data: Record<string, any>,
+): Promise<{ subject: string; html: string } | null> {
+  // 1. Check event mapping
+  const { data: mapping } = await supabase
+    .from('email_event_mappings')
+    .select('use_db_template, is_enabled, template_id')
+    .eq('event_key', templateName)
+    .maybeSingle()
+
+  // If mapping exists and is disabled, refuse to send.
+  if (mapping && mapping.is_enabled === false) {
+    return null
+  }
+
+  // 2. DB override path
+  if (mapping?.use_db_template && mapping.template_id) {
+    const { data: tpl } = await supabase
+      .from('email_templates')
+      .select('subject_en, body_html_en, is_active')
+      .eq('id', mapping.template_id)
+      .maybeSingle()
+    if (tpl?.is_active) {
+      return {
+        subject: renderTemplate(tpl.subject_en, data),
+        html: renderTemplate(tpl.body_html_en, data),
+      }
+    }
+  }
+
+  // 3. Code template fallback
+  const codeTpl = CODE_TEMPLATES[templateName]
+  if (codeTpl) {
+    return { subject: codeTpl.subject(data), html: codeTpl.render(data) }
+  }
+
+  return null
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
