@@ -8,22 +8,22 @@ const corsHeaders = {
 };
 
 // ============================================================
-// V2 Constants — Compliance Monitor Rules
+// V3 Constants — Compliance Monitor Rules (settings-driven + makeup-aware)
 // ============================================================
-const MONITORING_START_DATE = '2026-04-17'; // System officially started monitoring
-const RACE_BUFFER_MINUTES = 5;              // Buffer to avoid race with instructor in-progress work
-const RESCAN_COOLDOWN_HOURS = 6;            // Minimum hours before re-scanning the same session
+const MONITORING_START_DATE = '2026-04-17';
+const RACE_BUFFER_MINUTES = 5;
+const RESCAN_COOLDOWN_HOURS = 6;
 
-// Grace periods per warning type (in MINUTES)
-const GRACE_PERIODS = {
-  attendance: 60,         // 1 hour after session end (fast SLA)
-  evaluation: 60 * 24,    // 24 hours
-  quiz: 60 * 24,          // 24 hours
-  assignment: 60 * 24,    // 24 hours
-} as const;
+// Default grace periods (overridden by system_settings.compliance_grace_periods)
+const DEFAULT_GRACE = {
+  attendance_minutes: 60,
+  quiz_hours: 24,
+  assignment_hours: 24,
+  evaluation_hours: 24,
+  makeup_multiplier: 1.5,
+};
 
 const BATCH_SIZE = 500;
-// Anti-starvation split: 70% oldest, 30% recent (last 3 days)
 const RECENT_WINDOW_DAYS = 3;
 const RECENT_BATCH_RATIO = 0.3;
 
@@ -35,6 +35,9 @@ interface CompletedSession {
   content_number: number | null;
   level_id: string | null;
   duration_minutes?: number;
+  end_at: string | null;
+  is_makeup: boolean;
+  makeup_session_id: string | null;
   group_id: string;
   status: string;
   cancellation_reason: string | null;
@@ -47,6 +50,11 @@ interface CompletedSession {
     is_active: boolean;
     status: string;
   };
+  makeup_sessions?: {
+    assigned_instructor_id: string | null;
+    original_session_id: string | null;
+    original_session?: { session_number: number; session_date: string } | null;
+  } | null;
 }
 
 // Cache curriculum lookups within a single run
@@ -85,20 +93,60 @@ async function getCurriculumExpectations(
 }
 
 // ============================================================
-// Grace period check — type-specific (gap: separated grace periods)
+// Grace period check — uses end_at from DB (UTC) + makeup multiplier
 // ============================================================
-function isPastGracePeriod(
-  sessionDate: string,
-  sessionTime: string,
-  durationMinutes: number,
-  graceMinutes: number
-): boolean {
-  // Cairo offset is +03:00 (no DST since 2014)
-  const sessionEnd = new Date(`${sessionDate}T${sessionTime}+03:00`);
-  // gap #6: race buffer added on top of grace
-  const totalMinutes = durationMinutes + graceMinutes + RACE_BUFFER_MINUTES;
-  sessionEnd.setMinutes(sessionEnd.getMinutes() + totalMinutes);
-  return Date.now() >= sessionEnd.getTime();
+type GraceType = 'attendance' | 'quiz' | 'assignment' | 'evaluation';
+
+interface GraceConfig {
+  attendance_minutes: number;
+  quiz_hours: number;
+  assignment_hours: number;
+  evaluation_hours: number;
+  makeup_multiplier: number;
+}
+
+function baseGraceSeconds(cfg: GraceConfig, type: GraceType): number {
+  switch (type) {
+    case 'attendance': return Math.ceil(cfg.attendance_minutes * 60);
+    case 'quiz':       return Math.ceil(cfg.quiz_hours * 3600);
+    case 'assignment': return Math.ceil(cfg.assignment_hours * 3600);
+    case 'evaluation': return Math.ceil(cfg.evaluation_hours * 3600);
+  }
+}
+
+function effectiveGraceSeconds(cfg: GraceConfig, type: GraceType, isMakeup: boolean): number {
+  const base = baseGraceSeconds(cfg, type);
+  return isMakeup ? Math.ceil(base * cfg.makeup_multiplier) : base;
+}
+
+function isPastGrace(session: CompletedSession, cfg: GraceConfig, type: GraceType): boolean {
+  // Prefer DB-supplied end_at (UTC). Fallback to computed value if missing.
+  let endMs: number;
+  if (session.end_at) {
+    endMs = new Date(session.end_at).getTime();
+  } else {
+    const sessionEnd = new Date(`${session.session_date}T${session.session_time}+03:00`);
+    sessionEnd.setMinutes(sessionEnd.getMinutes() + (session.duration_minutes ?? 60));
+    endMs = sessionEnd.getTime();
+  }
+  const graceSec = effectiveGraceSeconds(cfg, type, !!session.is_makeup);
+  const raceBufferSec = RACE_BUFFER_MINUTES * 60;
+  return (Date.now() - endMs) / 1000 >= graceSec + raceBufferSec;
+}
+
+// Resolve the responsible instructor (makeup-aware with mandatory fallback)
+function getResponsibleInstructor(s: CompletedSession): string | null {
+  if (s.is_makeup && s.makeup_sessions?.assigned_instructor_id) {
+    return s.makeup_sessions.assigned_instructor_id;
+  }
+  return s.groups?.instructor_id ?? null;
+}
+
+// Build makeup context suffix for warning messages
+function makeupCtx(s: CompletedSession, isAr: boolean): string {
+  if (!s.is_makeup) return '';
+  const d = s.makeup_sessions?.original_session?.session_date ?? '?';
+  return isAr ? ` (تعويضية لسيشن ${d})` : ` (Makeup for ${d})`;
 }
 
 // Eligible groups cache (per run): groupId → has any active student
@@ -140,7 +188,7 @@ async function isEligible(supabase: any, s: CompletedSession): Promise<boolean> 
 // ============================================================
 // Anti-starvation batch: 70% oldest unscanned + 30% recent
 // ============================================================
-const SESSION_SELECT = `id, session_date, session_time, session_number, content_number, level_id, duration_minutes, group_id, status, cancellation_reason, last_compliance_scan_at, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active)`;
+const SESSION_SELECT = `id, session_date, session_time, session_number, content_number, level_id, duration_minutes, end_at, is_makeup, makeup_session_id, group_id, status, cancellation_reason, last_compliance_scan_at, groups!inner(instructor_id, name, name_ar, starting_session_number, status, is_active), makeup_sessions:makeup_session_id(assigned_instructor_id, original_session_id, original_session:original_session_id(session_number, session_date))`;
 
 async function fetchEligibleSessions(supabase: any, todayStr: string): Promise<CompletedSession[]> {
   const recentLimit = Math.floor(BATCH_SIZE * RECENT_BATCH_RATIO);
@@ -208,38 +256,52 @@ interface InsertWarningParams {
   recheckCondition: () => Promise<boolean>;
 }
 
-async function insertWarningWithRecheck(p: InsertWarningParams): Promise<'inserted' | 'duplicate' | 'race_resolved' | 'error'> {
-  // 1) Idempotency check
+async function insertWarningWithRecheck(
+  p: InsertWarningParams,
+  ctx: { traceId: string; settingsVersion: number }
+): Promise<'inserted' | 'duplicate' | 'race_resolved' | 'error'> {
+  const instructorId = getResponsibleInstructor(p.session);
+  if (!instructorId) {
+    console.warn(`[${p.warningType}] no responsible instructor for session ${p.session.id}`);
+    return 'error';
+  }
+
+  // 1) Idempotency check (covered by partial unique index too)
   const { data: existing } = await p.supabase
     .from('instructor_warnings').select('id')
     .eq('session_id', p.session.id)
     .eq('warning_type', p.warningType)
+    .eq('instructor_id', instructorId)
     .eq('is_active', true)
     .limit(1).maybeSingle();
   if (existing) return 'duplicate';
 
-  // 2) Race re-check: re-verify condition right before insert (gap #3)
+  // 2) Race re-check
   const stillMissing = await p.recheckCondition();
   if (!stillMissing) return 'race_resolved';
 
-  // 3) Insert
+  // 3) Insert with trace + settings version
   const { error: insertError } = await p.supabase
     .from('instructor_warnings').insert({
-      instructor_id: p.session.groups.instructor_id,
+      instructor_id: instructorId,
       session_id: p.session.id,
       warning_type: p.warningType,
       reason: p.reason,
       reason_ar: p.reasonAr,
+      trace_id: ctx.traceId,
+      settings_version: ctx.settingsVersion,
     });
 
   if (insertError) {
+    // Unique-violation = race-inserted by parallel run → treat as duplicate
+    if ((insertError as any).code === '23505') return 'duplicate';
     console.error(`[${p.warningType} insert error]`, insertError);
     return 'error';
   }
 
-  // 4) Notification (best-effort — don't fail the warning if it errors)
+  // 4) Notification (best-effort)
   await p.supabase.from('notifications').insert({
-    user_id: p.session.groups.instructor_id,
+    user_id: instructorId,
     title: p.notifTitle, title_ar: p.notifTitleAr,
     message: p.notifMessage, message_ar: p.notifMessageAr,
     type: 'warning', category: 'compliance',
@@ -293,6 +355,30 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // ===== V3: trace_id + settings snapshot (consistent throughout run) =====
+  const RUN_TRACE_ID = crypto.randomUUID();
+  const RUN_STARTED_AT = new Date().toISOString();
+
+  const { data: settingsRow } = await supabase
+    .from('system_settings')
+    .select('value, version')
+    .eq('key', 'compliance_grace_periods')
+    .maybeSingle();
+
+  const GRACE_CFG: GraceConfig = {
+    ...DEFAULT_GRACE,
+    ...((settingsRow?.value as Partial<GraceConfig>) ?? {}),
+  };
+  const SETTINGS_VERSION = (settingsRow as any)?.version ?? 0;
+
+  console.log(JSON.stringify({
+    event: 'compliance_run_started',
+    trace_id: RUN_TRACE_ID,
+    settings_version: SETTINGS_VERSION,
+    settings: GRACE_CFG,
+    started_at: RUN_STARTED_AT,
+  }));
 
   // Create scan run record at the start
   const { data: scanRun } = await supabase

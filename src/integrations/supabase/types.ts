@@ -134,6 +134,8 @@ export type Database = {
           entity_type: string
           id: string
           ip_address: string | null
+          request_id: string | null
+          trace_id: string | null
           user_agent: string | null
           user_id: string
         }
@@ -145,6 +147,8 @@ export type Database = {
           entity_type: string
           id?: string
           ip_address?: string | null
+          request_id?: string | null
+          trace_id?: string | null
           user_agent?: string | null
           user_id: string
         }
@@ -156,6 +160,8 @@ export type Database = {
           entity_type?: string
           id?: string
           ip_address?: string | null
+          request_id?: string | null
+          trace_id?: string | null
           user_agent?: string | null
           user_id?: string
         }
@@ -1195,6 +1201,7 @@ export type Database = {
         Row: {
           details: Json
           detected_at: string
+          detected_date: string | null
           entity_id: string
           entity_table: string
           id: string
@@ -1205,6 +1212,7 @@ export type Database = {
         Insert: {
           details?: Json
           detected_at?: string
+          detected_date?: string | null
           entity_id: string
           entity_table: string
           id?: string
@@ -1215,6 +1223,7 @@ export type Database = {
         Update: {
           details?: Json
           detected_at?: string
+          detected_date?: string | null
           entity_id?: string
           entity_table?: string
           id?: string
@@ -2123,10 +2132,13 @@ export type Database = {
           reason_ar: string | null
           reference_id: string | null
           reference_type: string | null
+          resolution_reason: string | null
           resolved_at: string | null
           resolved_reason: string | null
           session_id: string | null
+          settings_version: number | null
           severity: string
+          trace_id: string | null
           updated_at: string
           warning_type: string
         }
@@ -2140,10 +2152,13 @@ export type Database = {
           reason_ar?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          resolution_reason?: string | null
           resolved_at?: string | null
           resolved_reason?: string | null
           session_id?: string | null
+          settings_version?: number | null
           severity?: string
+          trace_id?: string | null
           updated_at?: string
           warning_type: string
         }
@@ -2157,10 +2172,13 @@ export type Database = {
           reason_ar?: string | null
           reference_id?: string | null
           reference_type?: string | null
+          resolution_reason?: string | null
           resolved_at?: string | null
           resolved_reason?: string | null
           session_id?: string | null
+          settings_version?: number | null
           severity?: string
+          trace_id?: string | null
           updated_at?: string
           warning_type?: string
         }
@@ -5248,6 +5266,7 @@ export type Database = {
           content_number: number | null
           created_at: string
           duration_minutes: number
+          end_at: string | null
           group_id: string
           id: string
           is_makeup: boolean
@@ -5259,6 +5278,7 @@ export type Database = {
           session_link: string | null
           session_number: number | null
           session_time: string
+          start_at: string | null
           status: string
           topic: string | null
           topic_ar: string | null
@@ -5270,6 +5290,7 @@ export type Database = {
           content_number?: number | null
           created_at?: string
           duration_minutes?: number
+          end_at?: string | null
           group_id: string
           id?: string
           is_makeup?: boolean
@@ -5281,6 +5302,7 @@ export type Database = {
           session_link?: string | null
           session_number?: number | null
           session_time: string
+          start_at?: string | null
           status?: string
           topic?: string | null
           topic_ar?: string | null
@@ -5292,6 +5314,7 @@ export type Database = {
           content_number?: number | null
           created_at?: string
           duration_minutes?: number
+          end_at?: string | null
           group_id?: string
           id?: string
           is_makeup?: boolean
@@ -5303,6 +5326,7 @@ export type Database = {
           session_link?: string | null
           session_number?: number | null
           session_time?: string
+          start_at?: string | null
           status?: string
           topic?: string | null
           topic_ar?: string | null
@@ -5900,6 +5924,7 @@ export type Database = {
           updated_at: string
           updated_by: string | null
           value: Json
+          version: number
         }
         Insert: {
           id?: string
@@ -5907,6 +5932,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           value?: Json
+          version?: number
         }
         Update: {
           id?: string
@@ -5914,6 +5940,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           value?: Json
+          version?: number
         }
         Relationships: []
       }
@@ -7086,6 +7113,18 @@ export type Database = {
       }
       is_period_writable: { Args: { p_date: string }; Returns: boolean }
       is_student: { Args: { _user_id: string }; Returns: boolean }
+      log_dq_issue: {
+        Args: {
+          p_details?: Json
+          p_entity_id: string
+          p_entity_table: string
+          p_issue_type: Database["public"]["Enums"]["data_quality_issue_type"]
+        }
+        Returns: {
+          inserted: boolean
+          issue_id: string
+        }[]
+      }
       log_financial_action: {
         Args: {
           p_action: string
