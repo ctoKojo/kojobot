@@ -1163,12 +1163,20 @@ export default function SessionDetails() {
     if (student.quiz_status === 'in_progress') {
       return <Badge className="bg-yellow-500">{isRTL ? 'جاري' : 'In progress'}</Badge>;
     }
-    
-    const passed = (student.quiz_percentage || 0) >= (quizAssignment.quizzes?.passing_score || 60);
+
+    // Submitted but not yet graded (manual grading pending) — percentage is null
+    if (student.quiz_percentage === null || student.quiz_percentage === undefined) {
+      if (student.quiz_status === 'submitted') {
+        return <Badge className="bg-blue-500">{isRTL ? 'بانتظار التصحيح' : 'Pending grading'}</Badge>;
+      }
+      return <Badge variant="outline" className="text-muted-foreground">—</Badge>;
+    }
+
+    const passed = student.quiz_percentage >= (quizAssignment.quizzes?.passing_score || 60);
     return (
       <div className="flex items-center gap-2">
         <Badge className={passed ? 'bg-green-500' : 'bg-red-500'}>
-          {student.quiz_percentage?.toFixed(0)}%
+          {student.quiz_percentage.toFixed(0)}%
         </Badge>
       </div>
     );
