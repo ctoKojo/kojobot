@@ -45,7 +45,7 @@ interface EmailLogRow {
   recipient_email: string;
   status: string;
   error_message: string | null;
-  metadata: Record<string, any> | null;
+  metadata: any | null;
   created_at: string;
 }
 
