@@ -53,6 +53,8 @@ interface CompletedSession {
   makeup_sessions?: {
     assigned_instructor_id: string | null;
     original_session_id: string | null;
+    student_id: string | null;
+    student?: { full_name: string | null; full_name_ar: string | null } | null;
     original_session?: { session_number: number; session_date: string } | null;
   } | null;
 }
