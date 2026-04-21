@@ -33,6 +33,7 @@ import {
   ShieldCheck,
   FileText,
   Wallet,
+  Mail,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -140,6 +141,7 @@ export function AppSidebar() {
               { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['admin'] },
               { title: t.nav.activityLog, url: '/activity-log', icon: Activity, roles: ['admin'] },
               { title: isRTL ? 'مراقبة الالتزام' : 'Compliance Monitor', url: '/compliance-monitor', icon: ShieldCheck, roles: ['admin'] },
+              { title: isRTL ? 'سجلات الإيميل' : 'Email Logs', url: '/email-logs', icon: Mail, roles: ['admin'] },
             ],
           },
           {
