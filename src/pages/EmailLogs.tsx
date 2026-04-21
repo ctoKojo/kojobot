@@ -22,10 +22,21 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TableSkeleton } from '@/components/ui/table-skeleton';
-import { Mail, RefreshCw, CheckCircle2, XCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Mail, RefreshCw, CheckCircle2, XCircle, Clock, AlertTriangle, Send } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { sendEmail } from '@/lib/emailService';
+import { toast } from '@/hooks/use-toast';
 
 interface EmailLogRow {
   id: string;
@@ -63,6 +74,10 @@ export default function EmailLogs() {
   const [templateFilter, setTemplateFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [stats, setStats] = useState({ total: 0, sent: 0, failed: 0, pending: 0 });
+  const [testOpen, setTestOpen] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [testTemplate, setTestTemplate] = useState<'session-reminder' | 'payment-due' | 'password-reset'>('session-reminder');
+  const [testSending, setTestSending] = useState(false);
 
   const isArabic = language === 'ar';
 
@@ -120,6 +135,75 @@ export default function EmailLogs() {
   // Distinct templates for filter dropdown
   const distinctTemplates = Array.from(new Set(rows.map((r) => r.template_name)));
 
+  const buildTestData = (tpl: string) => {
+    const now = new Date();
+    const dateStr = format(now, 'yyyy-MM-dd');
+    if (tpl === 'session-reminder') {
+      return {
+        studentName: 'طالب تجريبي',
+        sessionTitle: 'حصة اختبارية',
+        sessionDate: dateStr,
+        sessionTime: '18:00',
+        groupName: 'مجموعة اختبار',
+        joinUrl: 'https://kojobot.com',
+        recipientType: 'student' as const,
+      };
+    }
+    if (tpl === 'payment-due') {
+      return {
+        studentName: 'طالب تجريبي',
+        amount: 500,
+        currency: 'EGP',
+        dueDate: dateStr,
+        invoiceUrl: 'https://kojobot.com/my-finances',
+      };
+    }
+    // password-reset
+    return {
+      userName: 'مستخدم تجريبي',
+      newPassword: 'TempPass#1234',
+      loginUrl: 'https://kojobot.com/auth',
+    };
+  };
+
+  const handleSendTest = async () => {
+    if (!testEmail || !/.+@.+\..+/.test(testEmail)) {
+      toast({
+        title: isArabic ? 'بريد غير صحيح' : 'Invalid email',
+        description: isArabic ? 'أدخل عنوان بريد إلكتروني صحيح' : 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setTestSending(true);
+    const idempotencyKey = `test-${testTemplate}-${testEmail}-${Date.now()}`;
+    const result = await sendEmail({
+      to: testEmail,
+      templateName: testTemplate,
+      templateData: buildTestData(testTemplate),
+      idempotencyKey,
+    });
+    setTestSending(false);
+
+    if (result.success) {
+      toast({
+        title: isArabic ? 'تم الإرسال' : 'Email sent',
+        description: isArabic
+          ? `تم إرسال إيميل الاختبار إلى ${testEmail}`
+          : `Test email sent to ${testEmail}`,
+      });
+      setTestOpen(false);
+      // Refresh logs after a brief delay
+      setTimeout(fetchLogs, 1000);
+    } else {
+      toast({
+        title: isArabic ? 'فشل الإرسال' : 'Send failed',
+        description: result.error || (isArabic ? 'حدث خطأ غير معروف' : 'Unknown error'),
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <DashboardLayout>
       <PageHeader
@@ -131,10 +215,16 @@ export default function EmailLogs() {
         }
         icon={Mail}
         actions={
-          <Button onClick={fetchLogs} variant="outline" disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''} ${isArabic ? 'ml-2' : 'mr-2'}`} />
-            {isArabic ? 'تحديث' : 'Refresh'}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setTestOpen(true)} variant="default">
+              <Send className={`h-4 w-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+              {isArabic ? 'إرسال اختبار' : 'Send test'}
+            </Button>
+            <Button onClick={fetchLogs} variant="outline" disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''} ${isArabic ? 'ml-2' : 'mr-2'}`} />
+              {isArabic ? 'تحديث' : 'Refresh'}
+            </Button>
+          </div>
         }
       />
 
@@ -276,6 +366,63 @@ export default function EmailLogs() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={testOpen} onOpenChange={setTestOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isArabic ? 'إرسال إيميل اختبار' : 'Send test email'}</DialogTitle>
+            <DialogDescription>
+              {isArabic
+                ? 'اختر القالب وأدخل عنوان البريد لاستقبال نسخة تجريبية ببيانات وهمية.'
+                : 'Pick a template and recipient to receive a sample email with dummy data.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{isArabic ? 'القالب' : 'Template'}</Label>
+              <Select value={testTemplate} onValueChange={(v: any) => setTestTemplate(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="session-reminder">
+                    {isArabic ? TEMPLATE_LABELS['session-reminder'].ar : TEMPLATE_LABELS['session-reminder'].en}
+                  </SelectItem>
+                  <SelectItem value="payment-due">
+                    {isArabic ? TEMPLATE_LABELS['payment-due'].ar : TEMPLATE_LABELS['payment-due'].en}
+                  </SelectItem>
+                  <SelectItem value="password-reset">
+                    {isArabic ? TEMPLATE_LABELS['password-reset'].ar : TEMPLATE_LABELS['password-reset'].en}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{isArabic ? 'البريد الإلكتروني للاستقبال' : 'Recipient email'}</Label>
+              <Input
+                type="email"
+                placeholder="you@example.com"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                dir="ltr"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestOpen(false)} disabled={testSending}>
+              {isArabic ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button onClick={handleSendTest} disabled={testSending}>
+              {testSending ? (
+                <RefreshCw className={`h-4 w-4 animate-spin ${isArabic ? 'ml-2' : 'mr-2'}`} />
+              ) : (
+                <Send className={`h-4 w-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+              )}
+              {isArabic ? 'إرسال' : 'Send'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
