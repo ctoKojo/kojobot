@@ -6671,6 +6671,10 @@ export type Database = {
         }
         Returns: number
       }
+      backfill_historical_journal_entries: {
+        Args: { p_dry_run?: boolean }
+        Returns: Json
+      }
       backfill_payment_installments: { Args: never; Returns: Json }
       backfill_quiz_audit_batch: { Args: { p_limit?: number }; Returns: number }
       calculate_student_renewal_status: {
@@ -7121,6 +7125,38 @@ export type Database = {
       get_submission_review_payload: {
         Args: { p_submission_id: string }
         Returns: Json
+      }
+      get_treasury_balances: {
+        Args: never
+        Returns: {
+          account_code: string
+          account_name: string
+          account_name_ar: string
+          balance: number
+        }[]
+      }
+      get_treasury_transactions: {
+        Args: {
+          p_account_code?: string
+          p_from_date?: string
+          p_limit?: number
+          p_source?: string
+          p_to_date?: string
+        }
+        Returns: {
+          account_code: string
+          account_name: string
+          credit: number
+          debit: number
+          description: string
+          entry_date: string
+          entry_id: string
+          line_id: string
+          posted_at: string
+          source: string
+          source_id: string
+          voucher_no: string
+        }[]
       }
       get_trial_balance: {
         Args: { p_period_month?: string }

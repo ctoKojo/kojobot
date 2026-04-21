@@ -53,6 +53,7 @@ const MakeupSessions = React.lazy(() => import("./pages/MakeupSessions"));
 const MyMakeupSessions = React.lazy(() => import("./pages/MyMakeupSessions"));
 const PricingPlans = React.lazy(() => import("./pages/PricingPlans"));
 const Finance = React.lazy(() => import("./pages/Finance"));
+const Treasury = React.lazy(() => import("./pages/Treasury"));
 const DeductionRules = React.lazy(() => import("./pages/DeductionRules"));
 const AccountSuspended = React.lazy(() => import("./pages/AccountSuspended"));
 const AccountTerminated = React.lazy(() => import("./pages/AccountTerminated"));
@@ -157,6 +158,7 @@ const App = () => (
                   <Route path="/finance/audit" element={<ProtectedRoute allowedRoles={['admin']}><FinanceAuditExplorer /></ProtectedRoute>} />
                   <Route path="/finance/data-quality" element={<ProtectedRoute allowedRoles={['admin']}><FinanceDataQuality /></ProtectedRoute>} />
                   <Route path="/finance/reopen-requests" element={<ProtectedRoute allowedRoles={['admin']}><FinanceReopenRequests /></ProtectedRoute>} />
+                  <Route path="/finance/treasury" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Treasury /></ProtectedRoute>} />
                   <Route path="/deduction-rules" element={<ProtectedRoute allowedRoles={['admin']}><DeductionRules /></ProtectedRoute>} />
                   <Route path="/messages" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception', 'parent']}><Messages /></ProtectedRoute>} />
                   <Route path="/parents" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Parents /></ProtectedRoute>} />
