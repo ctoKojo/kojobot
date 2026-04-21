@@ -313,7 +313,8 @@ export default function BulkReminders() {
       out.push({
         studentId: s.user_id,
         studentName: s.full_name,
-        parentName: parent.full_name,
+        recipientType: 'parent',
+        recipientName: parent.full_name,
         email: parent.email,
         status: r.success ? (r.skipped ? 'skipped' : 'success') : 'failed',
         message: r.skipped || r.error,
