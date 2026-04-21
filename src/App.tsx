@@ -86,6 +86,7 @@ const FinanceClosing = React.lazy(() => import("./pages/FinanceClosing"));
 const FinanceSettings = React.lazy(() => import("./pages/FinanceSettings"));
 const ComplianceMonitor = React.lazy(() => import("./pages/ComplianceMonitor"));
 const EmailLogs = React.lazy(() => import("./pages/EmailLogs"));
+const BulkReminders = React.lazy(() => import("./pages/BulkReminders"));
 
 
 const Parents = React.lazy(() => import("./pages/Parents"));
@@ -175,6 +176,7 @@ const App = () => (
                   <Route path="/ssot-health" element={<ProtectedRoute allowedRoles={['admin']}><SSOTHealth /></ProtectedRoute>} />
                   <Route path="/compliance-monitor" element={<ProtectedRoute allowedRoles={['admin']}><ComplianceMonitor /></ProtectedRoute>} />
                   <Route path="/email-logs" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><EmailLogs /></ProtectedRoute>} />
+                  <Route path="/bulk-reminders" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><BulkReminders /></ProtectedRoute>} />
                   <Route path="/leaderboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception']}><Leaderboard /></ProtectedRoute>} />
                   <Route path="/my-finances" element={<ProtectedRoute allowedRoles={['parent']}><MyFinances /></ProtectedRoute>} />
                   <Route path="/subscribe" element={<Subscribe />} />
