@@ -74,6 +74,10 @@ export default function EmailLogs() {
   const [templateFilter, setTemplateFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [stats, setStats] = useState({ total: 0, sent: 0, failed: 0, pending: 0 });
+  const [testOpen, setTestOpen] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [testTemplate, setTestTemplate] = useState<'session-reminder' | 'payment-due' | 'password-reset'>('session-reminder');
+  const [testSending, setTestSending] = useState(false);
 
   const isArabic = language === 'ar';
 
