@@ -144,6 +144,7 @@ export function AppSidebar() {
               { title: isRTL ? 'لوحة الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3, roles: ['admin', 'reception'] },
               { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3, roles: ['admin'] },
               { title: t.nav.activityLog, url: '/activity-log', icon: Activity, roles: ['admin'] },
+              { title: isRTL ? 'مراقبة الالتزام' : 'Compliance Monitor', url: '/compliance-monitor', icon: ShieldCheck, roles: ['admin'] },
             ],
           },
           {
