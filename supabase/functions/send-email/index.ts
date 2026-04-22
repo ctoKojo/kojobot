@@ -148,9 +148,35 @@ Deno.serve(async (req) => {
     )
   }
 
-  const { to, templateName, templateData, idempotencyKey, customSubject, customBody } = parsed.data
+  const { to, templateName, templateData, idempotencyKey, customSubject, customBody, audience: audienceArg, skipTelegramFanout } = parsed.data
+  const audience = audienceArg ?? 'student'
+
+  // Resolve mapping early so we can honor admin_channel_override for fan-out
+  const data = templateData ?? {}
+  let resolved: { subject: string; html: string; mapping?: any } | null = null
+
+  if (customSubject && customBody) {
+    resolved = {
+      subject: renderTemplate(customSubject, data),
+      html: renderTemplate(customBody, data),
+    }
+  } else {
+    const baseTpl = await resolveTemplate(supabase, templateName, audience, data)
+    if (baseTpl) {
+      resolved = {
+        subject: customSubject ? renderTemplate(customSubject, data) : baseTpl.subject,
+        html: customBody ? renderTemplate(customBody, data) : baseTpl.html,
+        mapping: baseTpl.mapping,
+      }
+    }
+  }
+
+  // Channel routing rules (admin-controlled):
+  //   admin_channel_override = 'email' | 'telegram' | 'both' | 'auto'
+  const adminChannel: string = resolved?.mapping?.admin_channel_override ?? 'auto'
 
   // Honor per-user channel preferences (email_enabled). Look up user by email.
+  let resolvedUserId: string | null = null
   try {
     const { data: prof } = await supabase
       .from('profiles')
@@ -158,65 +184,46 @@ Deno.serve(async (req) => {
       .eq('email', to)
       .maybeSingle()
     if (prof?.user_id) {
-      const { data: prefs } = await supabase.rpc('get_user_notification_channels', {
-        p_user_id: prof.user_id,
-        p_event_key: templateName,
-      })
-      const emailEnabled = Array.isArray(prefs) ? prefs[0]?.email_enabled : (prefs as any)?.email_enabled
-      if (emailEnabled === false) {
-        return new Response(
-          JSON.stringify({ success: true, skipped: 'email_disabled_by_user' }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+      resolvedUserId = prof.user_id
+
+      if (adminChannel === 'auto') {
+        const { data: prefs } = await supabase.rpc('get_user_notification_channels', {
+          p_user_id: prof.user_id,
+          p_event_key: templateName,
+        })
+        const emailEnabled = Array.isArray(prefs) ? prefs[0]?.email_enabled : (prefs as any)?.email_enabled
+        if (emailEnabled === false) {
+          return new Response(
+            JSON.stringify({ success: true, skipped: 'email_disabled_by_user' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
       }
-      // Fan-out: also send to Telegram if user has it linked + enabled (fire-and-forget)
-      supabase.functions.invoke('send-telegram', {
-        body: {
-          userId: prof.user_id,
-          templateName,
-          templateData: templateData ?? {},
-          customMessage: customBody,
-          idempotencyKey: `${idempotencyKey}-tg`,
-        },
-      }).catch((e) => console.warn('[send-email] telegram fan-out failed:', e?.message))
     }
   } catch (e) {
     console.warn('[send-email] preference lookup failed:', e)
   }
 
-  // Idempotency: skip if already successfully sent
-  const { data: existing } = await supabase
-    .from('email_send_log')
-    .select('id, status')
-    .eq('message_id', idempotencyKey)
-    .eq('status', 'sent')
-    .maybeSingle()
-
-  if (existing) {
-    console.log('Email already sent (idempotent skip)', { idempotencyKey })
+  // Admin set telegram-only -> skip email entirely.
+  if (adminChannel === 'telegram') {
     return new Response(
-      JSON.stringify({ success: true, skipped: 'already_sent' }),
+      JSON.stringify({ success: true, skipped: 'admin_channel_telegram_only' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 
-  const data = templateData ?? {}
-  let resolved: { subject: string; html: string } | null = null
-
-  // If both custom subject and body are provided, use them directly (still interpolated).
-  if (customSubject && customBody) {
-    resolved = {
-      subject: renderTemplate(customSubject, data),
-      html: renderTemplate(customBody, data),
-    }
-  } else {
-    const baseTpl = await resolveTemplate(supabase, templateName, data)
-    if (baseTpl) {
-      resolved = {
-        subject: customSubject ? renderTemplate(customSubject, data) : baseTpl.subject,
-        html: customBody ? renderTemplate(customBody, data) : baseTpl.html,
-      }
-    }
+  // Telegram fan-out only when admin says so (or 'auto' legacy behavior).
+  if (!skipTelegramFanout && resolvedUserId && (adminChannel === 'both' || adminChannel === 'auto')) {
+    supabase.functions.invoke('send-telegram', {
+      body: {
+        userId: resolvedUserId,
+        templateName,
+        templateData: data,
+        customMessage: customBody,
+        audience,
+        idempotencyKey: `${idempotencyKey}-tg`,
+      },
+    }).catch((e) => console.warn('[send-email] telegram fan-out failed:', e?.message))
   }
 
   if (!resolved) {
