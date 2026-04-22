@@ -28,7 +28,16 @@ interface Mapping {
   is_enabled: boolean;
   send_to: string;
   trigger_offset_minutes: number | null;
+  admin_channel_override: 'user_choice' | 'email_only' | 'telegram_only' | 'both' | 'none';
 }
+
+const CHANNEL_LABELS: Record<string, { en: string; ar: string }> = {
+  user_choice: { en: 'User chooses', ar: 'اليوزر يختار' },
+  email_only:  { en: 'Email only',   ar: 'إيميل فقط' },
+  telegram_only: { en: 'Telegram only', ar: 'تيليجرام فقط' },
+  both:        { en: 'Email + Telegram', ar: 'إيميل + تيليجرام' },
+  none:        { en: 'Disabled',     ar: 'موقوف' },
+};
 
 interface Props {
   templates: EmailTemplateRow[];
@@ -91,6 +100,7 @@ export function EventMappingsTab({ templates }: Props) {
       is_enabled: existing?.is_enabled ?? true,
       send_to: existing?.send_to ?? 'student',
       trigger_offset_minutes: existing?.trigger_offset_minutes ?? null,
+      admin_channel_override: existing?.admin_channel_override ?? 'user_choice',
       ...patch,
     };
     const { data, error } = await supabase
