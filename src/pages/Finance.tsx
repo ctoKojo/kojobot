@@ -26,6 +26,7 @@ import { SalariesTab } from '@/components/finance/SalariesTab';
 import { NetProfitTab } from '@/components/finance/NetProfitTab';
 import { PaymentTrackerTab } from '@/components/finance/PaymentTrackerTab';
 import { CashFlowTab } from '@/components/finance/CashFlowTab';
+import { FinanceOverviewTab } from '@/components/finance/FinanceOverviewTab';
 import { MonthSelector, getCurrentMonthKey, getMonthRange, isCurrentMonth } from '@/components/finance/MonthSelector';
 import { PaymentMethodFields, PaymentMethodValue, initialPaymentMethodValue, PaymentMethodFieldsHandle } from '@/components/finance/PaymentMethodFields';
 import { ReceiptViewButton } from '@/components/finance/ReceiptViewButton';
@@ -56,6 +57,7 @@ export default function Finance() {
   const [payPageSize, setPayPageSize] = useState(10);
   const [detailDialog, setDetailDialog] = useState<'outstanding' | 'overdue' | 'revenue' | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthKey());
+  const [activeTab, setActiveTab] = useState<string>('overview');
   const monthRange = useMemo(() => getMonthRange(selectedMonth), [selectedMonth]);
   const viewingCurrentMonth = isCurrentMonth(selectedMonth);
 
@@ -372,8 +374,9 @@ export default function Finance() {
           ))}
         </div>
 
-        <Tabs defaultValue="subscriptions">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="flex-wrap h-auto gap-1 bg-muted/60 p-1.5 rounded-xl">
+            <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'نظرة عامة' : 'Overview'}</TabsTrigger>
             <TabsTrigger value="subscriptions" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'الاشتراكات' : 'Subscriptions'}</TabsTrigger>
             <TabsTrigger value="payments" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'سجل المدفوعات' : 'Payment History'}</TabsTrigger>
             <TabsTrigger value="expenses" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'المصروفات' : 'Expenses'}</TabsTrigger>
@@ -383,6 +386,17 @@ export default function Finance() {
             <TabsTrigger value="tracker" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'متابعة الأقساط' : 'Payment Tracker'}</TabsTrigger>
             {role === 'admin' && <TabsTrigger value="cashflow" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'التدفق النقدي' : 'Cash Flow'}</TabsTrigger>}
           </TabsList>
+
+          <TabsContent value="overview">
+            <FinanceOverviewTab
+              stats={stats}
+              loading={loading}
+              selectedMonth={selectedMonth}
+              isCurrentMonth={viewingCurrentMonth}
+              onTabChange={setActiveTab}
+            />
+          </TabsContent>
+
 
           <TabsContent value="subscriptions">
             <Card className="border-0 shadow-sm">
