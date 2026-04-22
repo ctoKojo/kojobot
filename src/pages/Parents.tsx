@@ -6,13 +6,24 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Search, Phone, Mail, CheckCircle, XCircle, Clock, ShieldCheck, UserPlus } from 'lucide-react';
+import { Users, Search, Phone, Mail, CheckCircle, XCircle, Clock, ShieldCheck, UserPlus, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { notifyEvent } from '@/lib/notifyEvent';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface ParentInfo {
   parent_id: string;
@@ -172,6 +183,29 @@ export default function Parents() {
     setAllParents(prev => prev.filter(p => p.parent_id !== parentId));
   };
 
+  const handleDelete = async (parentId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-parent', {
+        body: { parent_id: parentId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      toast({
+        title: isRTL ? 'تم الحذف' : 'Deleted',
+        description: isRTL ? 'تم حذف حساب ولي الأمر بالكامل' : 'Parent account fully deleted',
+      });
+      setAllParents(prev => prev.filter(p => p.parent_id !== parentId));
+    } catch (err: any) {
+      console.error('delete-parent failed:', err);
+      toast({
+        title: isRTL ? 'فشل الحذف' : 'Delete failed',
+        description: err?.message || (isRTL ? 'حدث خطأ غير متوقع' : 'Unexpected error'),
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getRelLabel = (rel: string) => {
     if (isRTL) {
       switch (rel) { case 'father': return 'أب'; case 'mother': return 'أم'; case 'guardian': return 'وصي'; default: return 'ولي أمر'; }
@@ -266,20 +300,50 @@ export default function Parents() {
                   )}
                 </TableCell>
                 <TableCell className="text-center">
-                  {showActions ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Button size="sm" onClick={() => handleApprove(parent.parent_id)} className="gap-1">
-                        <CheckCircle className="h-3.5 w-3.5" />
-                        {isRTL ? 'موافقة' : 'Approve'}
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleReject(parent.parent_id)} className="gap-1">
-                        <XCircle className="h-3.5 w-3.5" />
-                        {isRTL ? 'رفض' : 'Reject'}
-                      </Button>
-                    </div>
-                  ) : (
-                    <Badge variant="outline">{parent.children.length}</Badge>
-                  )}
+                  <div className="flex items-center justify-center gap-2">
+                    {showActions ? (
+                      <>
+                        <Button size="sm" onClick={() => handleApprove(parent.parent_id)} className="gap-1">
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          {isRTL ? 'موافقة' : 'Approve'}
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleReject(parent.parent_id)} className="gap-1">
+                          <XCircle className="h-3.5 w-3.5" />
+                          {isRTL ? 'رفض' : 'Reject'}
+                        </Button>
+                      </>
+                    ) : (
+                      <Badge variant="outline">{parent.children.length}</Badge>
+                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" title={isRTL ? 'حذف نهائي' : 'Delete permanently'}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'}>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            {isRTL ? 'حذف حساب ولي الأمر؟' : 'Delete parent account?'}
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {isRTL
+                              ? `سيتم حذف حساب "${parent.full_name_ar || parent.full_name || parent.email}" بالكامل من النظام، بما في ذلك الربط بالأبناء والإشعارات وبيانات تسجيل الدخول. هذا الإجراء لا يمكن التراجع عنه.`
+                              : `Account "${parent.full_name || parent.email}" will be permanently deleted, including child links, notifications, and login credentials. This action cannot be undone.`}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>{isRTL ? 'إلغاء' : 'Cancel'}</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(parent.parent_id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {isRTL ? 'حذف نهائي' : 'Delete permanently'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
