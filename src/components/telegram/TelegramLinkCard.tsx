@@ -35,11 +35,11 @@ export function TelegramLinkCard() {
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState<string>('');
 
-  const loadLink = async () => {
-    setLoading(true);
+  const loadLink = async (silent = false) => {
+    if (!silent) setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) {
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
     const { data } = await supabase
@@ -49,7 +49,7 @@ export function TelegramLinkCard() {
       .eq('is_active', true)
       .maybeSingle();
     setLink(data as TelegramLink | null);
-    setLoading(false);
+    if (!silent) setLoading(false);
   };
 
   const loadBotInfo = async () => {
@@ -66,11 +66,11 @@ export function TelegramLinkCard() {
     void loadBotInfo();
   }, []);
 
-  // Auto-refresh link status when a code is active (poll every 4s)
+  // Auto-refresh link status when a code is active (poll every 4s, silent)
   useEffect(() => {
     if (!code || link) return;
     const interval = setInterval(() => {
-      void loadLink();
+      void loadLink(true);
     }, 4000);
     return () => clearInterval(interval);
   }, [code, link]);
