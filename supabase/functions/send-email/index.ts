@@ -171,9 +171,16 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Channel routing rules (admin-controlled):
-  //   admin_channel_override = 'email' | 'telegram' | 'both' | 'auto'
-  const adminChannel: string = resolved?.mapping?.admin_channel_override ?? 'auto'
+  // Channel routing rules (admin-controlled). Allowed values from DB constraint:
+  //   'user_choice' | 'email_only' | 'telegram_only' | 'both' | 'none'
+  const adminChannel: string = resolved?.mapping?.admin_channel_override ?? 'user_choice'
+
+  if (adminChannel === 'none') {
+    return new Response(
+      JSON.stringify({ success: true, skipped: 'admin_channel_none' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
 
   // Honor per-user channel preferences (email_enabled). Look up user by email.
   let resolvedUserId: string | null = null
@@ -186,7 +193,7 @@ Deno.serve(async (req) => {
     if (prof?.user_id) {
       resolvedUserId = prof.user_id
 
-      if (adminChannel === 'auto') {
+      if (adminChannel === 'user_choice') {
         const { data: prefs } = await supabase.rpc('get_user_notification_channels', {
           p_user_id: prof.user_id,
           p_event_key: templateName,
@@ -205,15 +212,15 @@ Deno.serve(async (req) => {
   }
 
   // Admin set telegram-only -> skip email entirely.
-  if (adminChannel === 'telegram') {
+  if (adminChannel === 'telegram_only') {
     return new Response(
       JSON.stringify({ success: true, skipped: 'admin_channel_telegram_only' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 
-  // Telegram fan-out only when admin says so (or 'auto' legacy behavior).
-  if (!skipTelegramFanout && resolvedUserId && (adminChannel === 'both' || adminChannel === 'auto')) {
+  // Telegram fan-out only when admin says so (or user_choice legacy behavior).
+  if (!skipTelegramFanout && resolvedUserId && (adminChannel === 'both' || adminChannel === 'user_choice')) {
     supabase.functions.invoke('send-telegram', {
       body: {
         userId: resolvedUserId,
