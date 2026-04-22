@@ -224,6 +224,7 @@ export function AppSidebar() {
               { title: isRTL ? 'قوالب الإيميل' : 'Email Templates', url: '/email-templates', icon: FileText },
               { title: isRTL ? 'سجلات الإيميل' : 'Email Logs', url: '/email-logs', icon: Mail },
               { title: isRTL ? 'إعدادات الإشعارات' : 'Notification Settings', url: '/notification-settings', icon: Bell },
+              { title: isRTL ? 'صحة الإشعارات' : 'Notifications Health', url: '/notifications-health', icon: Activity },
             ],
           },
           {

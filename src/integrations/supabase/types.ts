@@ -1452,6 +1452,51 @@ export type Database = {
         }
         Relationships: []
       }
+      email_send_log_archive_2026_04: {
+        Row: {
+          bounce_reason: string | null
+          bounce_type: string | null
+          created_at: string | null
+          delivery_status: string | null
+          delivery_status_at: string | null
+          error_message: string | null
+          id: string | null
+          message_id: string | null
+          metadata: Json | null
+          recipient_email: string | null
+          status: string | null
+          template_name: string | null
+        }
+        Insert: {
+          bounce_reason?: string | null
+          bounce_type?: string | null
+          created_at?: string | null
+          delivery_status?: string | null
+          delivery_status_at?: string | null
+          error_message?: string | null
+          id?: string | null
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email?: string | null
+          status?: string | null
+          template_name?: string | null
+        }
+        Update: {
+          bounce_reason?: string | null
+          bounce_type?: string | null
+          created_at?: string | null
+          delivery_status?: string | null
+          delivery_status_at?: string | null
+          error_message?: string | null
+          id?: string | null
+          message_id?: string | null
+          metadata?: Json | null
+          recipient_email?: string | null
+          status?: string | null
+          template_name?: string | null
+        }
+        Relationships: []
+      }
       email_send_state: {
         Row: {
           auth_email_ttl_minutes: number

@@ -124,7 +124,27 @@ async function resolveTemplate(
     }
   }
 
-  // 4. Code template fallback
+  // 4. Convention-based fallback: try `default-{eventKey}` template
+  // This prevents orphan events when an admin forgets to create a mapping.
+  if (!templateName.startsWith('default-')) {
+    const conventionName = `default-${templateName}`
+    const { data: conventionTpl } = await supabase
+      .from('email_templates')
+      .select('subject_en, subject_ar, body_html_en, body_html_ar, is_active')
+      .eq('name', conventionName)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (conventionTpl) {
+      console.log(`[send-email] Using convention fallback: ${conventionName}`)
+      return {
+        subject: renderTemplate(pickSubject(conventionTpl), data),
+        html: renderTemplate(pickHtml(conventionTpl), data),
+        mapping,
+      }
+    }
+  }
+
+  // 5. Code template fallback
   const codeTpl = CODE_TEMPLATES[templateName]
   if (codeTpl) {
     return { subject: codeTpl.subject(data), html: codeTpl.render(data), mapping }
@@ -291,12 +311,14 @@ Deno.serve(async (req) => {
 
   // Retry configuration
   const MAX_ATTEMPTS = 3
-  const BASE_DELAY_MS = 500 // exponential backoff base
+  const BASE_DELAY_MS = 500
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
   const isRetryableStatus = (s: number) => s === 408 || s === 429 || s >= 500
 
-  // Log pending attempt
-  await supabase.from('email_send_log').insert({
+  // ---- LOG: insert single pending row (idempotent via unique partial index) ----
+  // If 2 concurrent requests race, the unique index makes the 2nd INSERT fail.
+  // We catch that and treat it as "already in progress" → skip.
+  const { error: insertErr } = await supabase.from('email_send_log').insert({
     message_id: idempotencyKey,
     template_name: templateName,
     recipient_email: to,
@@ -304,8 +326,47 @@ Deno.serve(async (req) => {
     metadata: { max_attempts: MAX_ATTEMPTS },
   })
 
+  if (insertErr) {
+    // Could be unique constraint violation (concurrent send) or another race
+    console.warn('[send-email] pending insert failed:', insertErr.message)
+    // Re-check if a sent row appeared meanwhile
+    const { data: raceCheck } = await supabase
+      .from('email_send_log')
+      .select('id, status')
+      .eq('message_id', idempotencyKey)
+      .in('status', ['sent', 'pending'])
+      .maybeSingle()
+    if (raceCheck) {
+      return new Response(
+        JSON.stringify({ success: true, skipped: 'in_progress_or_sent' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+  }
+
+  // Helper: finalize the existing pending row (UPDATE not INSERT)
+  const finalizeLog = async (
+    status: 'sent' | 'failed',
+    extraMetadata: Record<string, any>,
+    errorMessage?: string,
+  ) => {
+    const updatePayload: Record<string, any> = {
+      status,
+      metadata: { max_attempts: MAX_ATTEMPTS, ...extraMetadata },
+    }
+    if (errorMessage) updatePayload.error_message = errorMessage.slice(0, 1000)
+
+    const { error: updErr } = await supabase
+      .from('email_send_log')
+      .update(updatePayload)
+      .eq('message_id', idempotencyKey)
+      .eq('status', 'pending') // conditional — never overwrite a 'sent' row
+    if (updErr) console.warn('[send-email] finalize update failed:', updErr.message)
+  }
+
   let lastError = ''
   let lastStatus = 0
+  const attemptHistory: Array<Record<string, any>> = []
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
@@ -324,19 +385,13 @@ Deno.serve(async (req) => {
       })
 
       let result: any = null
-      try {
-        result = await response.json()
-      } catch {
-        result = null
-      }
+      try { result = await response.json() } catch { result = null }
 
       if (response.ok) {
-        await supabase.from('email_send_log').insert({
-          message_id: idempotencyKey,
-          template_name: templateName,
-          recipient_email: to,
-          status: 'sent',
-          metadata: { resend_id: result?.id, attempt, max_attempts: MAX_ATTEMPTS },
+        await finalizeLog('sent', {
+          resend_id: result?.id,
+          attempt,
+          attempt_history: attemptHistory,
         })
         return new Response(
           JSON.stringify({ success: true, id: result?.id, attempt }),
@@ -346,27 +401,17 @@ Deno.serve(async (req) => {
 
       lastStatus = response.status
       lastError = `Resend API error [${response.status}]: ${JSON.stringify(result)}`
+      attemptHistory.push({ attempt, http_status: response.status, error: lastError.slice(0, 200) })
       console.error(`Attempt ${attempt}/${MAX_ATTEMPTS} failed:`, lastError)
 
-      // Log this attempt
-      await supabase.from('email_send_log').insert({
-        message_id: idempotencyKey,
-        template_name: templateName,
-        recipient_email: to,
-        status: isRetryableStatus(response.status) && attempt < MAX_ATTEMPTS ? 'retrying' : 'failed',
-        error_message: lastError.slice(0, 1000),
-        metadata: { attempt, max_attempts: MAX_ATTEMPTS, http_status: response.status },
-      })
-
-      // Don't retry on non-retryable errors (4xx except 408/429)
       if (!isRetryableStatus(response.status)) {
+        await finalizeLog('failed', { attempt, http_status: response.status, attempt_history: attemptHistory }, lastError)
         return new Response(
           JSON.stringify({ success: false, error: lastError, attempt }),
           { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
-      // Wait before next attempt (respect Retry-After if present)
       if (attempt < MAX_ATTEMPTS) {
         const retryAfter = response.headers.get('retry-after')
         const delayMs = retryAfter
@@ -376,16 +421,8 @@ Deno.serve(async (req) => {
       }
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error)
+      attemptHistory.push({ attempt, exception: true, error: lastError.slice(0, 200) })
       console.error(`Attempt ${attempt}/${MAX_ATTEMPTS} exception:`, lastError)
-
-      await supabase.from('email_send_log').insert({
-        message_id: idempotencyKey,
-        template_name: templateName,
-        recipient_email: to,
-        status: attempt < MAX_ATTEMPTS ? 'retrying' : 'failed',
-        error_message: lastError.slice(0, 1000),
-        metadata: { attempt, max_attempts: MAX_ATTEMPTS, exception: true },
-      })
 
       if (attempt < MAX_ATTEMPTS) {
         await sleep(BASE_DELAY_MS * Math.pow(2, attempt - 1))
@@ -394,6 +431,7 @@ Deno.serve(async (req) => {
   }
 
   // All attempts exhausted
+  await finalizeLog('failed', { attempts: MAX_ATTEMPTS, last_status: lastStatus, attempt_history: attemptHistory }, lastError)
   return new Response(
     JSON.stringify({ success: false, error: lastError, attempts: MAX_ATTEMPTS, last_status: lastStatus }),
     { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
