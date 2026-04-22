@@ -27,6 +27,7 @@ import { StudentFiltersPanel } from '@/components/bulk-reminders/StudentFilters'
 import { QuickSelects } from '@/components/bulk-reminders/QuickSelects';
 import { EmailPreviewDialog } from '@/components/bulk-reminders/EmailPreviewDialog';
 import { PresetsManager } from '@/components/bulk-reminders/PresetsManager';
+import { ScheduleSender } from '@/components/bulk-reminders/ScheduleSender';
 import { fetchEnrichedStudents } from '@/components/bulk-reminders/studentLoader';
 import {
   resolveRecipients,
@@ -530,6 +531,18 @@ export default function BulkReminders() {
             )}
           </CardContent>
         </Card>
+
+        {/* Step 4: Schedule (optional) */}
+        <ScheduleSender
+          selectedStudentIds={Array.from(selectedIds)}
+          templateName={templateName}
+          templateData={templateData}
+          customSubject={customSubject}
+          customMessage={customMessage}
+          recipientMode={recipientMode}
+          filters={filters}
+          disabled={sending}
+        />
 
         {/* Results */}
         {results.length > 0 && (
