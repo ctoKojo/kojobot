@@ -246,10 +246,7 @@ export function AppSidebar() {
               { title: isRTL ? 'جدول العمل' : 'My Schedule', url: '/instructor-schedule', icon: CalendarDays },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
               { title: t.nav.notifications, url: '/notifications', icon: Bell },
-            ],
-          },
-          {
-            label: 'Teaching', labelAr: 'التدريس', icon: BookOpen, color: 'kojo-purple',
+              { title: isRTL ? 'إشعاراتي (Telegram)' : 'My Notifications (Telegram)', url: '/my-notifications', icon: Send },
             items: [
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen },
               { title: t.nav.groups, url: '/groups', icon: Calendar },
@@ -275,10 +272,7 @@ export function AppSidebar() {
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
               { title: t.nav.notifications, url: '/notifications', icon: Bell },
-            ],
-          },
-          {
-            label: 'Learning', labelAr: 'التعلم', icon: BookOpen, color: 'kojo-purple',
+              { title: isRTL ? 'إشعاراتي (Telegram)' : 'My Notifications (Telegram)', url: '/my-notifications', icon: Send },
             items: [
               { title: isRTL ? 'سيشناتي' : 'My Sessions', url: '/my-sessions', icon: BookOpen },
               { title: isRTL ? 'سيشناتي التعويضية' : 'Makeup Sessions', url: '/my-makeup-sessions', icon: RefreshCw },
@@ -306,10 +300,7 @@ export function AppSidebar() {
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
               { title: t.nav.notifications, url: '/notifications', icon: Bell },
-            ],
-          },
-          {
-            label: 'Students & People', labelAr: 'الطلاب والأشخاص', icon: GraduationCap, color: 'kojo-blue',
+              { title: isRTL ? 'إشعاراتي (Telegram)' : 'My Notifications (Telegram)', url: '/my-notifications', icon: Send },
             items: [
               { title: t.nav.students, url: '/students', icon: GraduationCap },
               { title: isRTL ? 'أولياء الأمور' : 'Parents', url: '/parents', icon: Users },
@@ -361,10 +352,7 @@ export function AppSidebar() {
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
               { title: t.nav.notifications, url: '/notifications', icon: Bell },
-            ],
-          },
-          {
-            label: 'My Children', labelAr: 'أبنائي', icon: GraduationCap, color: 'kojo-blue',
+              { title: isRTL ? 'إشعاراتي (Telegram)' : 'My Notifications (Telegram)', url: '/my-notifications', icon: Send },
             items: [
               { title: isRTL ? 'الإجازات والأعذار' : 'Leave & Absence', url: '/parent-leave-requests', icon: CalendarDays },
               { title: isRTL ? 'الحساب المالي' : 'Finances', url: '/my-finances', icon: DollarSign },
