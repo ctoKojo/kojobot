@@ -175,6 +175,9 @@ export default function BulkReminders() {
     const out: SendResult[] = [];
     const stamp = new Date().toISOString().slice(0, 10);
 
+    const wantEmail = channel === 'email' || channel === 'both';
+    const wantTelegram = channel === 'telegram' || channel === 'both';
+
     for (let i = 0; i < jobs.length; i++) {
       const { student: s, recipient, skipReason } = jobs[i];
 
@@ -190,24 +193,79 @@ export default function BulkReminders() {
         });
       } else {
         const data = buildAutoTemplateData(recipient, s, {});
-        const idKey = `bulk-${templateName}-${recipient.recipientType}-${recipient.parentId ?? recipient.studentId}-${s.user_id}-${stamp}-${i}`;
-        const r = await sendEmail({
-          to: recipient.email,
-          templateName: isAnnouncement ? 'announcement' : templateName,
-          idempotencyKey: idKey,
-          templateData: data as any,
-          customSubject: isAnnouncement ? announcementSubject : undefined,
-          customBody: isAnnouncement ? announcementBody : undefined,
-        });
-        out.push({
-          studentId: s.user_id,
-          studentName: s.full_name,
-          recipientType: recipient.recipientType,
-          recipientName: recipient.recipientName,
-          email: recipient.email,
-          status: r.success ? (r.skipped ? 'skipped' : 'success') : 'failed',
-          message: r.skipped || r.error,
-        });
+        const recipientUserId = recipient.parentId ?? recipient.studentId;
+        const baseIdKey = `bulk-${templateName}-${recipient.recipientType}-${recipientUserId}-${s.user_id}-${stamp}-${i}`;
+
+        // EMAIL
+        if (wantEmail) {
+          const r = await sendEmail({
+            to: recipient.email,
+            templateName: isAnnouncement ? 'announcement' : templateName,
+            idempotencyKey: `${baseIdKey}-email`,
+            templateData: data as any,
+            customSubject: isAnnouncement ? announcementSubject : undefined,
+            customBody: isAnnouncement ? announcementBody : undefined,
+          });
+          out.push({
+            studentId: s.user_id,
+            studentName: s.full_name,
+            recipientType: recipient.recipientType,
+            recipientName: recipient.recipientName,
+            email: recipient.email,
+            channel: 'email',
+            status: r.success ? (r.skipped ? 'skipped' : 'success') : 'failed',
+            message: r.skipped || r.error,
+          });
+        }
+
+        // TELEGRAM
+        if (wantTelegram) {
+          try {
+            const { data: tgRes, error: tgErr } = await supabase.functions.invoke('send-telegram', {
+              body: {
+                userId: recipientUserId,
+                templateName: isAnnouncement ? 'announcement' : templateName,
+                templateData: data,
+                customMessage: isAnnouncement ? `<b>${announcementSubject}</b>\n\n${announcementBody}` : undefined,
+                idempotencyKey: `${baseIdKey}-tg`,
+                bypassPreferences: true, // admin-driven bulk overrides user prefs
+              },
+            });
+            if (tgErr) {
+              out.push({
+                studentId: s.user_id, studentName: s.full_name,
+                recipientType: recipient.recipientType, recipientName: recipient.recipientName,
+                email: recipient.email, channel: 'telegram',
+                status: 'failed', message: tgErr.message,
+              });
+            } else if (tgRes?.skipped) {
+              out.push({
+                studentId: s.user_id, studentName: s.full_name,
+                recipientType: recipient.recipientType, recipientName: recipient.recipientName,
+                email: recipient.email, channel: 'telegram',
+                status: 'skipped',
+                message: tgRes.reason === 'no_telegram_link'
+                  ? (isRTL ? 'غير مربوط بتيليجرام' : 'Telegram not linked')
+                  : tgRes.reason,
+              });
+            } else {
+              out.push({
+                studentId: s.user_id, studentName: s.full_name,
+                recipientType: recipient.recipientType, recipientName: recipient.recipientName,
+                email: recipient.email, channel: 'telegram',
+                status: tgRes?.success ? 'success' : 'failed',
+                message: tgRes?.error,
+              });
+            }
+          } catch (e: any) {
+            out.push({
+              studentId: s.user_id, studentName: s.full_name,
+              recipientType: recipient.recipientType, recipientName: recipient.recipientName,
+              email: recipient.email, channel: 'telegram',
+              status: 'failed', message: e.message,
+            });
+          }
+        }
       }
       setResults([...out]);
       setProgress({ done: i + 1, total: jobs.length });
