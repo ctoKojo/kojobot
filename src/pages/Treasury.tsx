@@ -741,6 +741,12 @@ export default function Treasury() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <TreasuryTransferDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        balances={balancesQuery.data ?? []}
+      />
     </DashboardLayout>
   );
 }
