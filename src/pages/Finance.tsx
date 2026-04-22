@@ -439,7 +439,7 @@ export default function Finance() {
                       return (
                         <TableRow key={sub.id} className={sub.is_suspended ? 'bg-destructive/5' : isOverdue ? 'bg-warning/5' : ''}>
                           <TableCell>
-                            <button className="text-left hover:underline" onClick={() => navigate(`/student/${sub.student_id}`)}>
+                            <button className="text-start hover:underline" onClick={() => navigate(`/student/${sub.student_id}`)}>
                               <p className="font-medium">{language === 'ar' ? sub.profile?.full_name_ar || sub.profile?.full_name : sub.profile?.full_name}</p>
                               <p className="text-xs text-muted-foreground">{sub.profile?.email}</p>
                             </button>
@@ -462,7 +462,7 @@ export default function Finance() {
                           <TableCell>
                             {Number(sub.remaining_amount) > 0 && (
                               <Button size="sm" variant="outline" onClick={() => openPaymentDialog(sub)}>
-                                <CreditCard className="h-3 w-3 mr-1" />{isRTL ? 'دفعة' : 'Pay'}
+                                <CreditCard className="h-3 w-3 me-1" />{isRTL ? 'دفعة' : 'Pay'}
                               </Button>
                             )}
                           </TableCell>

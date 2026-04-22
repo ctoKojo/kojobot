@@ -243,7 +243,7 @@ export function PaymentTrackerTab({ selectedMonth }: PaymentTrackerTabProps = {}
             {paginated.map(sub => (
               <TableRow key={sub.id} className={sub.paymentStatus === 'overdue' ? 'bg-destructive/5' : sub.paymentStatus === 'paid' ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}>
                 <TableCell>
-                  <button className="text-left hover:underline" onClick={() => navigate(`/student/${sub.student_id}`)}>
+                  <button className="text-start hover:underline" onClick={() => navigate(`/student/${sub.student_id}`)}>
                     {language === 'ar' ? sub.profile?.full_name_ar || sub.profile?.full_name : sub.profile?.full_name}
                   </button>
                 </TableCell>
@@ -258,7 +258,7 @@ export function PaymentTrackerTab({ selectedMonth }: PaymentTrackerTabProps = {}
                 <TableCell>
                   {sub.paymentStatus !== 'paid' && (
                     <Button size="sm" variant="outline" onClick={() => openPayDialog(sub)}>
-                      <CreditCard className="h-3 w-3 mr-1" />{isRTL ? 'دفعة' : 'Pay'}
+                      <CreditCard className="h-3 w-3 me-1" />{isRTL ? 'دفعة' : 'Pay'}
                     </Button>
                   )}
                 </TableCell>
@@ -347,7 +347,7 @@ export function PaymentTrackerTab({ selectedMonth }: PaymentTrackerTabProps = {}
                     <TableCell><Badge className={daysLeft <= 5 ? 'bg-destructive/10 text-destructive' : 'bg-amber-100 text-amber-800'}>{daysLeft} {isRTL ? 'يوم' : 'days'}</Badge></TableCell>
                     <TableCell>
                       <Button size="sm" variant="ghost" onClick={() => navigate(`/student/${sub.student_id}`)}>
-                        <ExternalLink className="h-3 w-3 mr-1" />{isRTL ? 'بروفايل' : 'Profile'}
+                        <ExternalLink className="h-3 w-3 me-1" />{isRTL ? 'بروفايل' : 'Profile'}
                       </Button>
                     </TableCell>
                   </TableRow>
