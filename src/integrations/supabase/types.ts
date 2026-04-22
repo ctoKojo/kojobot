@@ -7599,6 +7599,15 @@ export type Database = {
         }
         Returns: Json
       }
+      record_treasury_opening_balance: {
+        Args: {
+          p_account_code: string
+          p_amount: number
+          p_entry_date?: string
+          p_notes?: string
+        }
+        Returns: Json
+      }
       refresh_account_balances_mv: { Args: never; Returns: undefined }
       register_financial_rpc: {
         Args: { p_description?: string; p_rpc_name: string; p_version?: number }
