@@ -374,8 +374,9 @@ export default function Finance() {
           ))}
         </div>
 
-        <Tabs defaultValue="subscriptions">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="flex-wrap h-auto gap-1 bg-muted/60 p-1.5 rounded-xl">
+            <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'نظرة عامة' : 'Overview'}</TabsTrigger>
             <TabsTrigger value="subscriptions" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'الاشتراكات' : 'Subscriptions'}</TabsTrigger>
             <TabsTrigger value="payments" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'سجل المدفوعات' : 'Payment History'}</TabsTrigger>
             <TabsTrigger value="expenses" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'المصروفات' : 'Expenses'}</TabsTrigger>
@@ -385,6 +386,17 @@ export default function Finance() {
             <TabsTrigger value="tracker" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'متابعة الأقساط' : 'Payment Tracker'}</TabsTrigger>
             {role === 'admin' && <TabsTrigger value="cashflow" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'التدفق النقدي' : 'Cash Flow'}</TabsTrigger>}
           </TabsList>
+
+          <TabsContent value="overview">
+            <FinanceOverviewTab
+              stats={stats}
+              loading={loading}
+              selectedMonth={selectedMonth}
+              isCurrentMonth={viewingCurrentMonth}
+              onTabChange={setActiveTab}
+            />
+          </TabsContent>
+
 
           <TabsContent value="subscriptions">
             <Card className="border-0 shadow-sm">
