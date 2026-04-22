@@ -38,6 +38,11 @@ const RequestSchema = z.object({
   templateName: z.string().min(1).max(100),
   templateData: z.record(z.any()).optional(),
   idempotencyKey: z.string().min(1).max(255),
+  // Optional overrides for bulk reminders / customized sends.
+  // When provided, they override the resolved template's subject/body.
+  // {{variables}} are still interpolated against templateData.
+  customSubject: z.string().min(1).max(998).optional(),
+  customBody: z.string().min(1).max(200000).optional(),
 })
 
 // Simple {{variable}} interpolation. Missing keys render as empty string.
