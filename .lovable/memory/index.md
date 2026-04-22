@@ -130,3 +130,4 @@ Updated: now
 - [Transactional Email System](mem://tech-stack/transactional-email-system) — Dedicated kojobot subdomain
 - [Subscription History Index](mem://tech-stack/subscription-history-index) — Partial unique index for active subs
 - [Notification System Architecture](mem://features/notification-system-architecture) — Convention-based template resolver (default-{event_key}), idempotent UPDATE pattern in send-email, NotificationsHealth dashboard at /notifications-health, 15-min stale-cleanup cron
+- [Notification E2E Shared Resolver](mem://features/notification-e2e-shared-resolver) — `_shared/templateResolver.ts` is the spec. notifications-e2e-test uses it in-process (zero invokes, 6s/54 events). Production send-email/send-telegram still inline — kept stable on purpose.
