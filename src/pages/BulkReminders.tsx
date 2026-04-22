@@ -27,6 +27,7 @@ import { StudentFiltersPanel } from '@/components/bulk-reminders/StudentFilters'
 import { QuickSelects } from '@/components/bulk-reminders/QuickSelects';
 import { EmailPreviewDialog } from '@/components/bulk-reminders/EmailPreviewDialog';
 import { PresetsManager } from '@/components/bulk-reminders/PresetsManager';
+import { ScheduleSender } from '@/components/bulk-reminders/ScheduleSender';
 import { fetchEnrichedStudents } from '@/components/bulk-reminders/studentLoader';
 import {
   resolveRecipients,
