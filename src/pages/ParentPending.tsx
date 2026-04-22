@@ -1,14 +1,42 @@
+import { useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Clock, LogOut, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { LanguageToggle } from '@/components/LanguageToggle';
+import { supabase } from '@/integrations/supabase/client';
+import { resetStatusCache } from '@/components/ProtectedRoute';
 import kojobotLogo from '@/assets/kojobot-main-logo.png';
 
 export default function ParentPending() {
   const { isRTL, language } = useLanguage();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Poll for approval status every 10s and refresh when approved
+  useEffect(() => {
+    if (!user) return;
+
+    const checkApproval = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('is_approved')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (data?.is_approved === true) {
+        resetStatusCache();
+        navigate('/dashboard', { replace: true });
+      }
+    };
+
+    // Check immediately on mount
+    checkApproval();
+
+    const interval = setInterval(checkApproval, 10_000);
+    return () => clearInterval(interval);
+  }, [user, navigate]);
 
   return (
     <div
