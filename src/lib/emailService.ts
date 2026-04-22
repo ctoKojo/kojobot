@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 
-type EmailTemplate = 'session-reminder' | 'payment-due' | 'password-reset';
+type EmailTemplate = string;
 
 interface SendEmailParams {
   to: string;
@@ -12,6 +12,10 @@ interface SendEmailParams {
    * Example: `payment-due-${subscriptionId}-${dueDate}`
    */
   idempotencyKey: string;
+  /** Optional override for the email subject. {{variables}} are interpolated. */
+  customSubject?: string;
+  /** Optional override for the email body HTML. {{variables}} are interpolated. */
+  customBody?: string;
 }
 
 interface SendEmailResult {
