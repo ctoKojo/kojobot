@@ -7489,6 +7489,13 @@ export type Database = {
         Args: { p_age_group_id: string; p_level_id: string }
         Returns: Json
       }
+      purge_historical_journal_entries: {
+        Args: { p_before_date: string; p_sources?: string[] }
+        Returns: {
+          deleted_entries: number
+          deleted_lines: number
+        }[]
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
