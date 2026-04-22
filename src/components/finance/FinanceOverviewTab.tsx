@@ -331,6 +331,7 @@ export function FinanceOverviewTab({
           </Card>
         </div>
       </section>
+      )}
     </div>
   );
 }
