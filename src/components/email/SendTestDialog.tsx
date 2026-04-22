@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -24,6 +24,49 @@ interface Props {
   template: EmailTemplateRow;
 }
 
+interface LinkedEvent {
+  event_key: string;
+  available_variables: Array<{ key: string; label_en?: string; label_ar?: string; sample?: string | number }>;
+  preview_data: Record<string, string | number>;
+}
+
+/**
+ * Build sample data for ALL variables of the linked event so the test send
+ * actually fills the template instead of leaving every {{var}} empty.
+ * Priority: preview_data > variable.sample > "[label]" placeholder.
+ */
+function buildSampleData(
+  events: LinkedEvent[],
+  isRTL: boolean,
+  user: { email?: string | null } | null,
+): Record<string, string | number> {
+  const data: Record<string, string | number> = {
+    recipientName: 'Test Recipient',
+    studentName: 'Test Student',
+    recipientEmail: user?.email ?? 'test@example.com',
+  };
+
+  for (const ev of events) {
+    (ev.available_variables || []).forEach((v) => {
+      if (data[v.key] !== undefined) return;
+      if (v.sample !== undefined && v.sample !== null && v.sample !== '') {
+        data[v.key] = v.sample;
+      } else {
+        data[v.key] = isRTL ? `[${v.label_ar || v.key}]` : `[${v.label_en || v.key}]`;
+      }
+    });
+    if (ev.preview_data && typeof ev.preview_data === 'object') {
+      Object.entries(ev.preview_data).forEach(([k, val]) => {
+        if (val !== null && val !== undefined && val !== '') {
+          data[k] = val as string | number;
+        }
+      });
+    }
+  }
+
+  return data;
+}
+
 export function SendTestDialog({ open, onOpenChange, template }: Props) {
   const { user } = useAuth();
   const { isRTL } = useLanguage();
@@ -31,6 +74,45 @@ export function SendTestDialog({ open, onOpenChange, template }: Props) {
   const [email, setEmail] = useState(user?.email ?? '');
   const [channel, setChannel] = useState<'email' | 'telegram' | 'both'>('email');
   const [sending, setSending] = useState(false);
+  const [linkedEvents, setLinkedEvents] = useState<LinkedEvent[]>([]);
+
+  // Load mappings + linked event catalog so we can build realistic test data
+  // and so Telegram can resolve the template via event_key (it doesn't accept
+  // raw template names).
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      const { data: mappings } = await supabase
+        .from('email_event_mappings')
+        .select('event_key')
+        .eq('template_id', template.id);
+
+      const eventKeys = (mappings || []).map((m) => m.event_key);
+      if (eventKeys.length === 0) {
+        if (!cancelled) setLinkedEvents([]);
+        return;
+      }
+
+      const { data: events } = await supabase
+        .from('email_event_catalog')
+        .select('event_key, available_variables, preview_data')
+        .in('event_key', eventKeys);
+
+      if (!cancelled) {
+        setLinkedEvents(
+          (events || []).map((e) => ({
+            event_key: e.event_key,
+            available_variables: (e.available_variables as any) || [],
+            preview_data: (e.preview_data as any) || {},
+          })),
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, template.id]);
 
   const handleSend = async () => {
     if (channel !== 'telegram' && !email.trim()) {
@@ -42,7 +124,8 @@ export function SendTestDialog({ open, onOpenChange, template }: Props) {
       const errors: string[] = [];
 
       const testIdempotencyKey = `test-${template.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const testData = { recipientName: 'Test Recipient', studentName: 'Test Student' };
+      const testData = buildSampleData(linkedEvents, isRTL, user);
+      const primaryEventKey = linkedEvents[0]?.event_key;
 
       if (channel === 'email' || channel === 'both') {
         const { error } = await supabase.functions.invoke('send-email', {
@@ -62,11 +145,17 @@ export function SendTestDialog({ open, onOpenChange, template }: Props) {
       if (channel === 'telegram' || channel === 'both') {
         if (!user?.id) {
           errors.push('Telegram requires a logged-in user');
+        } else if (!primaryEventKey) {
+          errors.push(
+            isRTL
+              ? 'تيليجرام: القالب مش مربوط بأي حدث — اربطه أولاً من تبويب "الأحداث المرتبطة"'
+              : 'Telegram: template is not linked to any event — link it first from the "Linked events" tab',
+          );
         } else {
           const { error } = await supabase.functions.invoke('send-telegram', {
             body: {
               userId: user.id,
-              templateName: template.name,
+              templateName: primaryEventKey,
               templateData: testData,
               idempotencyKey: `${testIdempotencyKey}-tg`,
               audience: template.audience,
@@ -101,6 +190,8 @@ export function SendTestDialog({ open, onOpenChange, template }: Props) {
       setSending(false);
     }
   };
+
+  const noLinkedEvent = linkedEvents.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -149,6 +240,14 @@ export function SendTestDialog({ open, onOpenChange, template }: Props) {
               {isRTL
                 ? 'تيليجرام يُرسل لحسابك المربوط (لازم يكون مربوط).'
                 : 'Telegram sends to your linked account (must be linked).'}
+            </div>
+          )}
+
+          {noLinkedEvent && (
+            <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded p-2">
+              {isRTL
+                ? 'تحذير: القالب مش مربوط بأي حدث، فالبيانات التجريبية هتكون أساسية فقط، والتيليجرام مش هيشتغل.'
+                : 'Warning: this template is not linked to any event, so test data will be minimal and Telegram will not work.'}
             </div>
           )}
         </div>
