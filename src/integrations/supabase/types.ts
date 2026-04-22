@@ -1346,6 +1346,7 @@ export type Database = {
       }
       email_event_mappings: {
         Row: {
+          admin_channel_override: string
           event_key: string
           id: string
           is_enabled: boolean
@@ -1357,6 +1358,7 @@ export type Database = {
           use_db_template: boolean
         }
         Insert: {
+          admin_channel_override?: string
           event_key: string
           id?: string
           is_enabled?: boolean
@@ -1368,6 +1370,7 @@ export type Database = {
           use_db_template?: boolean
         }
         Update: {
+          admin_channel_override?: string
           event_key?: string
           id?: string
           is_enabled?: boolean
@@ -4315,6 +4318,7 @@ export type Database = {
           subscription_type:
             | Database["public"]["Enums"]["subscription_type"]
             | null
+          telegram_prompt_dismissed_at: string | null
           terminated_at: string | null
           terminated_by: string | null
           termination_reason: string | null
@@ -4346,6 +4350,7 @@ export type Database = {
           subscription_type?:
             | Database["public"]["Enums"]["subscription_type"]
             | null
+          telegram_prompt_dismissed_at?: string | null
           terminated_at?: string | null
           terminated_by?: string | null
           termination_reason?: string | null
@@ -4377,6 +4382,7 @@ export type Database = {
           subscription_type?:
             | Database["public"]["Enums"]["subscription_type"]
             | null
+          telegram_prompt_dismissed_at?: string | null
           terminated_at?: string | null
           terminated_by?: string | null
           termination_reason?: string | null
