@@ -12,16 +12,24 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Mail, Plus, Pencil, Trash2, Search, Link2, FileCode } from 'lucide-react';
+import { Mail, Plus, Pencil, Trash2, Search, Link2, FileCode, Download, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { TemplateEditorDialog, type EmailTemplateRow } from '@/components/email/TemplateEditorDialog';
 import { EventMappingsTab } from '@/components/email/EventMappingsTab';
+import { ChannelStatusIcon } from '@/components/email/ChannelStatusIcon';
+import { useTemplatePermissions } from '@/hooks/useTemplatePermissions';
+import { useAuth } from '@/contexts/AuthContext';
+import { buildExport, downloadJson, parseImport } from '@/lib/templateExport';
+import { computeChannelStatus, validateTemplate, type CatalogEvent } from '@/lib/templateValidation';
 
 export default function EmailTemplates() {
   const { isRTL } = useLanguage();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { permissions } = useTemplatePermissions();
   const [tab, setTab] = useState<'templates' | 'mappings'>('templates');
   const [templates, setTemplates] = useState<EmailTemplateRow[]>([]);
+  const [catalog, setCatalog] = useState<CatalogEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [audienceFilter, setAudienceFilter] = useState<string>('all');
@@ -44,18 +52,17 @@ export default function EmailTemplates() {
 
   const loadTemplates = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('email_templates')
-      .select('*')
-      .order('updated_at', { ascending: false });
-    if (error) {
-      toast({
-        title: isRTL ? 'فشل تحميل القوالب' : 'Failed to load templates',
-        description: error.message,
-        variant: 'destructive',
-      });
+    const [tplRes, catRes] = await Promise.all([
+      supabase.from('email_templates').select('*').order('updated_at', { ascending: false }),
+      supabase.from('email_event_catalog')
+        .select('event_key, display_name_en, display_name_ar, available_variables, preview_data, supported_audiences')
+        .eq('is_active', true),
+    ]);
+    if (tplRes.error) {
+      toast({ title: isRTL ? 'فشل تحميل القوالب' : 'Failed to load templates', description: tplRes.error.message, variant: 'destructive' });
     } else {
-      setTemplates((data ?? []) as EmailTemplateRow[]);
+      setTemplates((tplRes.data ?? []) as EmailTemplateRow[]);
+      setCatalog((catRes.data ?? []) as CatalogEvent[]);
     }
     setLoading(false);
   };
@@ -63,6 +70,44 @@ export default function EmailTemplates() {
   useEffect(() => {
     void loadTemplates();
   }, []);
+
+  const handleExport = () => {
+    const payload = buildExport(filtered, user?.id);
+    const ts = new Date().toISOString().split('T')[0];
+    downloadJson(`email-templates-${ts}.json`, payload);
+    toast({ title: isRTL ? 'تم التصدير' : 'Exported', description: `${filtered.length} templates` });
+  };
+
+  const handleImport = async () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = parseImport(text);
+        if (!confirm(isRTL
+          ? `سيتم استيراد ${parsed.templates.length} قالب (وضع: استبدال). متابعة؟`
+          : `Will import ${parsed.templates.length} templates (overwrite mode). Continue?`)) return;
+        const { data, error } = await supabase.rpc('import_email_templates_batch', {
+          p_payload: parsed as any,
+          p_mode: 'overwrite',
+        });
+        if (error) throw error;
+        const result = data as any;
+        toast({
+          title: isRTL ? 'تم الاستيراد' : 'Imported',
+          description: `${result.created ?? 0} new, ${result.updated ?? 0} updated, ${result.skipped ?? 0} skipped`,
+        });
+        await loadTemplates();
+      } catch (e: any) {
+        toast({ title: isRTL ? 'فشل الاستيراد' : 'Import failed', description: e.message, variant: 'destructive' });
+      }
+    };
+    input.click();
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -151,7 +196,7 @@ export default function EmailTemplates() {
                         : `${templates.length} templates total`}
                     </CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <div className="relative">
                       <Search className="absolute start-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -161,10 +206,24 @@ export default function EmailTemplates() {
                         className="ps-8 w-64"
                       />
                     </div>
-                    <Button onClick={openCreate}>
-                      <Plus className="h-4 w-4 me-2" />
-                      {isRTL ? 'قالب جديد' : 'New template'}
-                    </Button>
+                    {permissions.canExport && (
+                      <Button variant="outline" onClick={handleExport}>
+                        <Download className="h-4 w-4 me-2" />
+                        {isRTL ? 'تصدير' : 'Export'}
+                      </Button>
+                    )}
+                    {permissions.canImport && (
+                      <Button variant="outline" onClick={handleImport}>
+                        <Upload className="h-4 w-4 me-2" />
+                        {isRTL ? 'استيراد' : 'Import'}
+                      </Button>
+                    )}
+                    {permissions.canCreate && (
+                      <Button onClick={openCreate}>
+                        <Plus className="h-4 w-4 me-2" />
+                        {isRTL ? 'قالب جديد' : 'New template'}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -181,8 +240,8 @@ export default function EmailTemplates() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
+                          <TableHead>{isRTL ? 'القنوات' : 'Channels'}</TableHead>
                           <TableHead>{isRTL ? 'موضوع (EN)' : 'Subject (EN)'}</TableHead>
-                          <TableHead>{isRTL ? 'موضوع (AR)' : 'Subject (AR)'}</TableHead>
                           <TableHead>{isRTL ? 'مفعّل' : 'Active'}</TableHead>
                           <TableHead>{isRTL ? 'آخر تحديث' : 'Updated'}</TableHead>
                           <TableHead className="text-end">{isRTL ? 'إجراءات' : 'Actions'}</TableHead>
