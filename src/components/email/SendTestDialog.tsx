@@ -41,12 +41,18 @@ export function SendTestDialog({ open, onOpenChange, template }: Props) {
     try {
       const errors: string[] = [];
 
+      const testIdempotencyKey = `test-${template.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const testData = { recipientName: 'Test Recipient', studentName: 'Test Student' };
+
       if (channel === 'email' || channel === 'both') {
         const { error } = await supabase.functions.invoke('send-email', {
           body: {
             to: email,
             templateName: template.name,
-            data: { recipientName: 'Test Recipient', studentName: 'Test Student' },
+            templateData: testData,
+            idempotencyKey: testIdempotencyKey,
+            audience: template.audience,
+            skipTelegramFanout: true,
             isTest: true,
           },
         });
@@ -61,7 +67,9 @@ export function SendTestDialog({ open, onOpenChange, template }: Props) {
             body: {
               userId: user.id,
               templateName: template.name,
-              data: { recipientName: 'Test Recipient', studentName: 'Test Student' },
+              templateData: testData,
+              idempotencyKey: `${testIdempotencyKey}-tg`,
+              audience: template.audience,
               isTest: true,
             },
           });
