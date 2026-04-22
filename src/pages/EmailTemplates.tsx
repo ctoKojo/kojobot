@@ -23,8 +23,23 @@ export default function EmailTemplates() {
   const [templates, setTemplates] = useState<EmailTemplateRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [audienceFilter, setAudienceFilter] = useState<string>('all');
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<EmailTemplateRow | null>(null);
+
+  const AUDIENCE_OPTIONS = [
+    { value: 'all',        en: 'All',         ar: 'الكل' },
+    { value: 'student',    en: 'Students',    ar: 'الطلاب' },
+    { value: 'parent',     en: 'Parents',     ar: 'أولياء الأمور' },
+    { value: 'instructor', en: 'Instructors', ar: 'المدربين' },
+    { value: 'admin',      en: 'Admins',      ar: 'الإدارة' },
+    { value: 'reception',  en: 'Reception',   ar: 'الاستقبال' },
+  ];
+
+  const audienceLabel = (v: string | undefined) => {
+    const opt = AUDIENCE_OPTIONS.find((o) => o.value === (v ?? 'student'));
+    return opt ? (isRTL ? opt.ar : opt.en) : v ?? '-';
+  };
 
   const loadTemplates = async () => {
     setLoading(true);
@@ -50,15 +65,19 @@ export default function EmailTemplates() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return templates;
-    return templates.filter(
+    let list = templates;
+    if (audienceFilter !== 'all') {
+      list = list.filter((t) => ((t as any).audience ?? 'student') === audienceFilter);
+    }
+    if (!q) return list;
+    return list.filter(
       (t) =>
         t.name.toLowerCase().includes(q) ||
         (t.description || '').toLowerCase().includes(q) ||
         t.subject_en.toLowerCase().includes(q) ||
         t.subject_ar.toLowerCase().includes(q),
     );
-  }, [templates, search]);
+  }, [templates, search, audienceFilter]);
 
   const openCreate = () => {
     setEditing(null);
