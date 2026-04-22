@@ -15,16 +15,16 @@ function tgUrl(botToken: string, method: string) {
   return `https://api.telegram.org/bot${botToken}/${method}`
 }
 
+const AUDIENCES = ['student','parent','instructor','admin','reception','staff'] as const
+
 const RequestSchema = z.object({
-  // Either userId (preferred — auto-resolves chat_id + checks prefs) OR chatId directly
   userId: z.string().uuid().optional(),
   chatId: z.number().int().optional(),
   templateName: z.string().min(1).max(100),
   templateData: z.record(z.any()).optional(),
-  // Optional override for free-form messages (announcements)
+  audience: z.enum(AUDIENCES).optional(),
   customMessage: z.string().min(1).max(4000).optional(),
   idempotencyKey: z.string().min(1).max(255).optional(),
-  // Skip channel preference check (e.g. for the linking confirmation itself)
   bypassPreferences: z.boolean().optional(),
 }).refine((d) => d.userId || d.chatId, { message: 'userId or chatId is required' })
 
@@ -62,40 +62,55 @@ function htmlToTelegramHtml(html: string): string {
 async function buildMessage(
   supabase: ReturnType<typeof createClient>,
   templateName: string,
+  audience: string,
   data: Record<string, any>,
   customMessage?: string,
-): Promise<string | null> {
-  // 1. Free-form override (announcements, custom sends)
+): Promise<{ text: string; mapping: any | null } | null> {
   if (customMessage) {
-    return htmlToTelegramHtml(renderTemplate(customMessage, data))
+    return { text: htmlToTelegramHtml(renderTemplate(customMessage, data)), mapping: null }
   }
 
-  // 2. Reuse the email template body when available
-  const { data: mapping } = await supabase
+  let { data: mapping } = await supabase
     .from('email_event_mappings')
-    .select('use_db_template, template_id')
+    .select('use_db_template, template_id, admin_channel_override, is_enabled, audience')
     .eq('event_key', templateName)
+    .eq('audience', audience)
     .maybeSingle()
+
+  if (!mapping) {
+    const { data: fallback } = await supabase
+      .from('email_event_mappings')
+      .select('use_db_template, template_id, admin_channel_override, is_enabled, audience')
+      .eq('event_key', templateName)
+      .order('audience', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    mapping = fallback
+  }
+
+  if (mapping?.is_enabled === false) return null
 
   if (mapping?.template_id) {
     const { data: tpl } = await supabase
       .from('email_templates')
-      .select('subject_ar, body_html_ar, is_active')
+      .select('subject_ar, body_html_ar, subject_telegram_ar, body_telegram_md_ar, is_active')
       .eq('id', mapping.template_id)
       .maybeSingle()
+
     if (tpl?.is_active) {
-      const subject = renderTemplate(tpl.subject_ar, data)
-      const body = htmlToTelegramHtml(renderTemplate(tpl.body_html_ar, data))
-      return `<b>${subject}</b>\n\n${body}`
+      const subject = renderTemplate(tpl.subject_telegram_ar || tpl.subject_ar, data)
+      const bodyRaw = tpl.body_telegram_md_ar
+        ? renderTemplate(tpl.body_telegram_md_ar, data)
+        : htmlToTelegramHtml(renderTemplate(tpl.body_html_ar, data))
+      return { text: `<b>${subject}</b>\n\n${bodyRaw}`.slice(0, 4000), mapping }
     }
   }
 
-  // 3. Minimal generic fallback
   const fallback = renderTemplate(
     '<b>{{title}}</b>\n\n{{message}}',
     { title: data.title || templateName, message: data.message || '' },
   )
-  return fallback.includes('{{') ? null : fallback
+  return fallback.includes('{{') ? null : { text: fallback, mapping }
 }
 
 Deno.serve(async (req) => {
@@ -122,16 +137,32 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { userId, chatId, templateName, templateData = {}, customMessage, bypassPreferences } = parsed.data
+    const { userId, chatId, templateName, templateData = {}, customMessage, bypassPreferences, audience: audienceArg } = parsed.data
+    const audience = audienceArg ?? 'student'
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
-    // Resolve chat_id and check preferences
+    // Build message first to know mapping + admin_channel_override
+    const built = await buildMessage(supabase, templateName, audience, templateData, customMessage)
+    if (!built) {
+      return new Response(JSON.stringify({ skipped: true, reason: 'no_template_or_disabled' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    // Allowed admin_channel_override values: user_choice | email_only | telegram_only | both | none
+    const adminChannel: string = built.mapping?.admin_channel_override ?? 'user_choice'
+
+    if (adminChannel === 'none' || adminChannel === 'email_only') {
+      return new Response(JSON.stringify({ skipped: true, reason: `admin_channel_${adminChannel}` }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     let resolvedChatId = chatId
     let resolvedUserId = userId ?? null
 
     if (userId) {
-      // Check channel preference unless bypassed
-      if (!bypassPreferences) {
+      // Respect user prefs only when admin says user_choice. 'telegram_only'/'both' force-send.
+      if (!bypassPreferences && adminChannel === 'user_choice') {
         const { data: prefs } = await supabase.rpc('get_user_notification_channels', {
           p_user_id: userId,
           p_event_key: templateName,
@@ -144,7 +175,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Resolve chat_id from telegram_links
       const { data: link } = await supabase
         .from('telegram_links')
         .select('chat_id, is_active')
@@ -166,13 +196,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Build message
-    const messageText = await buildMessage(supabase, templateName, templateData, customMessage)
-    if (!messageText) {
-      return new Response(JSON.stringify({ error: 'No template found and no custom message' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    const messageText = built.text
 
     // Send directly to Telegram Bot API
     const tgResponse = await fetch(tgUrl(botToken, 'sendMessage'), {

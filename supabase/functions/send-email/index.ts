@@ -33,14 +33,18 @@ const CODE_TEMPLATES: Record<string, EmailTemplate> = {
 
 // Accept any event_key from the catalog (validated against DB at runtime).
 // We keep validation loose here to support custom events added via UI.
+const AUDIENCES = ['student','parent','instructor','admin','reception','staff'] as const
+
 const RequestSchema = z.object({
   to: z.string().email(),
   templateName: z.string().min(1).max(100),
   templateData: z.record(z.any()).optional(),
   idempotencyKey: z.string().min(1).max(255),
+  // Audience for resolving the right template + mapping. Defaults to 'student' for backwards-compat.
+  audience: z.enum(AUDIENCES).optional(),
+  // Force-skip the auto Telegram fan-out (used by notifyEvent dispatcher to avoid double-send)
+  skipTelegramFanout: z.boolean().optional(),
   // Optional overrides for bulk reminders / customized sends.
-  // When provided, they override the resolved template's subject/body.
-  // {{variables}} are still interpolated against templateData.
   customSubject: z.string().min(1).max(998).optional(),
   customBody: z.string().min(1).max(200000).optional(),
 })
@@ -58,21 +62,31 @@ function renderTemplate(tpl: string, data: Record<string, any>): string {
 async function resolveTemplate(
   supabase: ReturnType<typeof createClient>,
   templateName: string,
+  audience: string,
   data: Record<string, any>,
-): Promise<{ subject: string; html: string } | null> {
-  // 1. Check event mapping
-  const { data: mapping } = await supabase
+): Promise<{ subject: string; html: string; mapping: any } | null> {
+  // 1. Look up mapping by (event_key, audience). Fall back to any audience if not found.
+  let { data: mapping } = await supabase
     .from('email_event_mappings')
-    .select('use_db_template, is_enabled, template_id')
+    .select('use_db_template, is_enabled, template_id, admin_channel_override, audience')
     .eq('event_key', templateName)
+    .eq('audience', audience)
     .maybeSingle()
 
-  // If mapping exists and is disabled, refuse to send.
-  if (mapping && mapping.is_enabled === false) {
-    return null
+  if (!mapping) {
+    const { data: fallbackMapping } = await supabase
+      .from('email_event_mappings')
+      .select('use_db_template, is_enabled, template_id, admin_channel_override, audience')
+      .eq('event_key', templateName)
+      .order('audience', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    mapping = fallbackMapping
   }
 
-  // 2. DB override path
+  if (mapping && mapping.is_enabled === false) return null
+
+  // 2. DB override path — try audience-specific template, then fall back to mapping.template_id
   if (mapping?.use_db_template && mapping.template_id) {
     const { data: tpl } = await supabase
       .from('email_templates')
@@ -83,6 +97,7 @@ async function resolveTemplate(
       return {
         subject: renderTemplate(tpl.subject_en, data),
         html: renderTemplate(tpl.body_html_en, data),
+        mapping,
       }
     }
   }
@@ -90,7 +105,7 @@ async function resolveTemplate(
   // 3. Code template fallback
   const codeTpl = CODE_TEMPLATES[templateName]
   if (codeTpl) {
-    return { subject: codeTpl.subject(data), html: codeTpl.render(data) }
+    return { subject: codeTpl.subject(data), html: codeTpl.render(data), mapping }
   }
 
   return null
@@ -133,9 +148,42 @@ Deno.serve(async (req) => {
     )
   }
 
-  const { to, templateName, templateData, idempotencyKey, customSubject, customBody } = parsed.data
+  const { to, templateName, templateData, idempotencyKey, customSubject, customBody, audience: audienceArg, skipTelegramFanout } = parsed.data
+  const audience = audienceArg ?? 'student'
+
+  // Resolve mapping early so we can honor admin_channel_override for fan-out
+  const data = templateData ?? {}
+  let resolved: { subject: string; html: string; mapping?: any } | null = null
+
+  if (customSubject && customBody) {
+    resolved = {
+      subject: renderTemplate(customSubject, data),
+      html: renderTemplate(customBody, data),
+    }
+  } else {
+    const baseTpl = await resolveTemplate(supabase, templateName, audience, data)
+    if (baseTpl) {
+      resolved = {
+        subject: customSubject ? renderTemplate(customSubject, data) : baseTpl.subject,
+        html: customBody ? renderTemplate(customBody, data) : baseTpl.html,
+        mapping: baseTpl.mapping,
+      }
+    }
+  }
+
+  // Channel routing rules (admin-controlled). Allowed values from DB constraint:
+  //   'user_choice' | 'email_only' | 'telegram_only' | 'both' | 'none'
+  const adminChannel: string = resolved?.mapping?.admin_channel_override ?? 'user_choice'
+
+  if (adminChannel === 'none') {
+    return new Response(
+      JSON.stringify({ success: true, skipped: 'admin_channel_none' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
 
   // Honor per-user channel preferences (email_enabled). Look up user by email.
+  let resolvedUserId: string | null = null
   try {
     const { data: prof } = await supabase
       .from('profiles')
@@ -143,30 +191,46 @@ Deno.serve(async (req) => {
       .eq('email', to)
       .maybeSingle()
     if (prof?.user_id) {
-      const { data: prefs } = await supabase.rpc('get_user_notification_channels', {
-        p_user_id: prof.user_id,
-        p_event_key: templateName,
-      })
-      const emailEnabled = Array.isArray(prefs) ? prefs[0]?.email_enabled : (prefs as any)?.email_enabled
-      if (emailEnabled === false) {
-        return new Response(
-          JSON.stringify({ success: true, skipped: 'email_disabled_by_user' }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+      resolvedUserId = prof.user_id
+
+      if (adminChannel === 'user_choice') {
+        const { data: prefs } = await supabase.rpc('get_user_notification_channels', {
+          p_user_id: prof.user_id,
+          p_event_key: templateName,
+        })
+        const emailEnabled = Array.isArray(prefs) ? prefs[0]?.email_enabled : (prefs as any)?.email_enabled
+        if (emailEnabled === false) {
+          return new Response(
+            JSON.stringify({ success: true, skipped: 'email_disabled_by_user' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
       }
-      // Fan-out: also send to Telegram if user has it linked + enabled (fire-and-forget)
-      supabase.functions.invoke('send-telegram', {
-        body: {
-          userId: prof.user_id,
-          templateName,
-          templateData: templateData ?? {},
-          customMessage: customBody,
-          idempotencyKey: `${idempotencyKey}-tg`,
-        },
-      }).catch((e) => console.warn('[send-email] telegram fan-out failed:', e?.message))
     }
   } catch (e) {
     console.warn('[send-email] preference lookup failed:', e)
+  }
+
+  // Admin set telegram-only -> skip email entirely.
+  if (adminChannel === 'telegram_only') {
+    return new Response(
+      JSON.stringify({ success: true, skipped: 'admin_channel_telegram_only' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  // Telegram fan-out only when admin says so (or user_choice legacy behavior).
+  if (!skipTelegramFanout && resolvedUserId && (adminChannel === 'both' || adminChannel === 'user_choice')) {
+    supabase.functions.invoke('send-telegram', {
+      body: {
+        userId: resolvedUserId,
+        templateName,
+        templateData: data,
+        customMessage: customBody,
+        audience,
+        idempotencyKey: `${idempotencyKey}-tg`,
+      },
+    }).catch((e) => console.warn('[send-email] telegram fan-out failed:', e?.message))
   }
 
   // Idempotency: skip if already successfully sent
@@ -183,25 +247,6 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: true, skipped: 'already_sent' }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-  }
-
-  const data = templateData ?? {}
-  let resolved: { subject: string; html: string } | null = null
-
-  // If both custom subject and body are provided, use them directly (still interpolated).
-  if (customSubject && customBody) {
-    resolved = {
-      subject: renderTemplate(customSubject, data),
-      html: renderTemplate(customBody, data),
-    }
-  } else {
-    const baseTpl = await resolveTemplate(supabase, templateName, data)
-    if (baseTpl) {
-      resolved = {
-        subject: customSubject ? renderTemplate(customSubject, data) : baseTpl.subject,
-        html: customBody ? renderTemplate(customBody, data) : baseTpl.html,
-      }
-    }
   }
 
   if (!resolved) {
