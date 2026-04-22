@@ -20,6 +20,22 @@ import { resetStatusCache } from '@/components/ProtectedRoute';
 import { clearPendingStudentLogin, markPendingStudentLogin, markStudentSession } from '@/lib/studentSession';
 import kojobotLogo from '@/assets/kojobot-main-logo.png';
 
+const clearSupabaseStoredSession = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith('sb-') && key.includes('auth-token')) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+  } catch (error) {
+    console.error('Failed to clear stored auth session:', error);
+  }
+};
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
