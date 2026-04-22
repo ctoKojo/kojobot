@@ -85,15 +85,32 @@ export async function fetchEnrichedStudents(isRTL: boolean): Promise<StudentRow[
     });
   }
 
+  // 5b. Telegram link map for students + parents (for channel routing)
+  const allUserIds = Array.from(new Set([...ids, ...parentIds]));
+  const telegramLinked = new Set<string>();
+  if (allUserIds.length > 0) {
+    const { data: tgLinks } = await supabase
+      .from('telegram_links')
+      .select('user_id')
+      .in('user_id', allUserIds)
+      .eq('is_active', true);
+    (tgLinks ?? []).forEach((l: any) => telegramLinked.add(l.user_id));
+  }
+
   const parentsByStudent = new Map<
     string,
-    Array<{ parent_id: string; full_name: string; email: string | null }>
+    Array<{ parent_id: string; full_name: string; email: string | null; has_telegram: boolean }>
   >();
   (parentLinks ?? []).forEach((l) => {
     const info = parentInfo.get(l.parent_id);
     if (!info) return;
     const list = parentsByStudent.get(l.student_id) ?? [];
-    list.push({ parent_id: l.parent_id, full_name: info.full_name, email: info.email });
+    list.push({
+      parent_id: l.parent_id,
+      full_name: info.full_name,
+      email: info.email,
+      has_telegram: telegramLinked.has(l.parent_id),
+    });
     parentsByStudent.set(l.student_id, list);
   });
 
@@ -116,6 +133,7 @@ export async function fetchEnrichedStudents(isRTL: boolean): Promise<StudentRow[
       level_name: grp?.level_name ?? null,
       subscription_status: (sub?.status as any) ?? 'none',
       subscription_end_date: sub?.end_date ?? null,
+      has_telegram: telegramLinked.has(p.user_id),
       parents: parentsByStudent.get(p.user_id) ?? [],
     };
   });

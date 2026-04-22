@@ -1,9 +1,11 @@
 export type RecipientMode = 'parent' | 'student' | 'both' | 'smart';
+export type SendChannel = 'email' | 'telegram' | 'both';
 
 export interface ParentInfo {
   parent_id: string;
   full_name: string;
   email: string | null;
+  has_telegram?: boolean;
 }
 
 export interface StudentRow {
@@ -19,6 +21,7 @@ export interface StudentRow {
   level_name?: string | null;
   subscription_status?: 'active' | 'expired' | 'suspended' | 'completed' | 'none' | null;
   subscription_end_date?: string | null;
+  has_telegram?: boolean;
   parents: ParentInfo[];
 }
 
@@ -46,6 +49,7 @@ export interface SendResult {
   recipientType: 'parent' | 'student' | 'none';
   recipientName: string;
   email: string;
+  channel?: 'email' | 'telegram';
   status: 'success' | 'failed' | 'skipped';
   message?: string;
 }

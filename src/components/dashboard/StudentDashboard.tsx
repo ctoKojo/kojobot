@@ -18,6 +18,7 @@ import { SessionTimeDisplay } from '@/components/shared/SessionTimeDisplay';
 import { isSessionActiveCairo } from '@/lib/sessionTimeGuard';
 import { ClosureBanner } from '@/components/shared/ClosureBanner';
 import { StudentXpCard } from '@/components/dashboard/StudentXpCard';
+import { TelegramLinkPromptBanner } from '@/components/telegram/TelegramLinkPromptBanner';
 
 interface GroupInfo {
   id: string;
@@ -358,6 +359,9 @@ export function StudentDashboard() {
 
       {/* Academy Closure Banner */}
       {user && <ClosureBanner role="student" userId={user.id} isRTL={isRTL} language={language} />}
+
+      {/* Telegram link prompt — shows once until linked or dismissed */}
+      <TelegramLinkPromptBanner />
 
       {/* Level Passed - Track Selection Banner */}
       {lifecycle.status === 'graded' && lifecycle.outcome === 'passed' && lifecycle.groupId && lifecycle.currentLevel && (

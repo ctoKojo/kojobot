@@ -28,14 +28,14 @@ import {
 import { TableSkeleton } from '@/components/ui/table-skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
-import { Send, CheckCircle2, XCircle, Loader2, Users, Megaphone, Search } from 'lucide-react';
+import { Send, CheckCircle2, XCircle, Loader2, Users, Megaphone, Search, Mail, MessageCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { sendEmail } from '@/lib/emailService';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchEnrichedStudents } from '@/components/bulk-reminders/studentLoader';
 import { resolveRecipients, buildAutoTemplateData } from '@/components/bulk-reminders/recipientResolver';
-import type { StudentRow, SendResult } from '@/components/bulk-reminders/types';
+import type { StudentRow, SendResult, SendChannel } from '@/components/bulk-reminders/types';
 
 interface CatalogTemplate {
   event_key: string;
@@ -59,6 +59,8 @@ export default function BulkReminders() {
 
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const [channel, setChannel] = useState<SendChannel>('email');
 
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -173,6 +175,9 @@ export default function BulkReminders() {
     const out: SendResult[] = [];
     const stamp = new Date().toISOString().slice(0, 10);
 
+    const wantEmail = channel === 'email' || channel === 'both';
+    const wantTelegram = channel === 'telegram' || channel === 'both';
+
     for (let i = 0; i < jobs.length; i++) {
       const { student: s, recipient, skipReason } = jobs[i];
 
@@ -188,24 +193,79 @@ export default function BulkReminders() {
         });
       } else {
         const data = buildAutoTemplateData(recipient, s, {});
-        const idKey = `bulk-${templateName}-${recipient.recipientType}-${recipient.parentId ?? recipient.studentId}-${s.user_id}-${stamp}-${i}`;
-        const r = await sendEmail({
-          to: recipient.email,
-          templateName: isAnnouncement ? 'announcement' : templateName,
-          idempotencyKey: idKey,
-          templateData: data as any,
-          customSubject: isAnnouncement ? announcementSubject : undefined,
-          customBody: isAnnouncement ? announcementBody : undefined,
-        });
-        out.push({
-          studentId: s.user_id,
-          studentName: s.full_name,
-          recipientType: recipient.recipientType,
-          recipientName: recipient.recipientName,
-          email: recipient.email,
-          status: r.success ? (r.skipped ? 'skipped' : 'success') : 'failed',
-          message: r.skipped || r.error,
-        });
+        const recipientUserId = recipient.parentId ?? recipient.studentId;
+        const baseIdKey = `bulk-${templateName}-${recipient.recipientType}-${recipientUserId}-${s.user_id}-${stamp}-${i}`;
+
+        // EMAIL
+        if (wantEmail) {
+          const r = await sendEmail({
+            to: recipient.email,
+            templateName: isAnnouncement ? 'announcement' : templateName,
+            idempotencyKey: `${baseIdKey}-email`,
+            templateData: data as any,
+            customSubject: isAnnouncement ? announcementSubject : undefined,
+            customBody: isAnnouncement ? announcementBody : undefined,
+          });
+          out.push({
+            studentId: s.user_id,
+            studentName: s.full_name,
+            recipientType: recipient.recipientType,
+            recipientName: recipient.recipientName,
+            email: recipient.email,
+            channel: 'email',
+            status: r.success ? (r.skipped ? 'skipped' : 'success') : 'failed',
+            message: r.skipped || r.error,
+          });
+        }
+
+        // TELEGRAM
+        if (wantTelegram) {
+          try {
+            const { data: tgRes, error: tgErr } = await supabase.functions.invoke('send-telegram', {
+              body: {
+                userId: recipientUserId,
+                templateName: isAnnouncement ? 'announcement' : templateName,
+                templateData: data,
+                customMessage: isAnnouncement ? `<b>${announcementSubject}</b>\n\n${announcementBody}` : undefined,
+                idempotencyKey: `${baseIdKey}-tg`,
+                bypassPreferences: true, // admin-driven bulk overrides user prefs
+              },
+            });
+            if (tgErr) {
+              out.push({
+                studentId: s.user_id, studentName: s.full_name,
+                recipientType: recipient.recipientType, recipientName: recipient.recipientName,
+                email: recipient.email, channel: 'telegram',
+                status: 'failed', message: tgErr.message,
+              });
+            } else if (tgRes?.skipped) {
+              out.push({
+                studentId: s.user_id, studentName: s.full_name,
+                recipientType: recipient.recipientType, recipientName: recipient.recipientName,
+                email: recipient.email, channel: 'telegram',
+                status: 'skipped',
+                message: tgRes.reason === 'no_telegram_link'
+                  ? (isRTL ? 'غير مربوط بتيليجرام' : 'Telegram not linked')
+                  : tgRes.reason,
+              });
+            } else {
+              out.push({
+                studentId: s.user_id, studentName: s.full_name,
+                recipientType: recipient.recipientType, recipientName: recipient.recipientName,
+                email: recipient.email, channel: 'telegram',
+                status: tgRes?.success ? 'success' : 'failed',
+                message: tgRes?.error,
+              });
+            }
+          } catch (e: any) {
+            out.push({
+              studentId: s.user_id, studentName: s.full_name,
+              recipientType: recipient.recipientType, recipientName: recipient.recipientName,
+              email: recipient.email, channel: 'telegram',
+              status: 'failed', message: e.message,
+            });
+          }
+        }
       }
       setResults([...out]);
       setProgress({ done: i + 1, total: jobs.length });
@@ -350,7 +410,51 @@ export default function BulkReminders() {
           </CardContent>
         </Card>
 
-        {/* Step 2: Select students */}
+        {/* Step 1.5: Channel selector */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              <span className="text-primary me-2">2.</span>
+              {isRTL ? 'اختر قناة الإرسال' : 'Pick delivery channel'}
+            </CardTitle>
+            <CardDescription>
+              {isRTL
+                ? 'هتبعت ازاي؟ تيليجرام بيوصل أسرع لكن لازم المستلم يكون رابط حسابه.'
+                : 'How should this go out? Telegram is instant but only works for users who linked their account.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {([
+                { v: 'email', icon: Mail, en: 'Email only', ar: 'إيميل فقط' },
+                { v: 'telegram', icon: MessageCircle, en: 'Telegram only', ar: 'تيليجرام فقط' },
+                { v: 'both', icon: Send, en: 'Email + Telegram', ar: 'إيميل + تيليجرام' },
+              ] as const).map(({ v, icon: Icon, en, ar }) => {
+                const active = channel === v;
+                return (
+                  <button
+                    type="button"
+                    key={v}
+                    disabled={sending}
+                    onClick={() => setChannel(v)}
+                    className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all ${
+                      active
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-border hover:border-primary/40 hover:bg-muted/30'
+                    }`}
+                  >
+                    <Icon className={`h-6 w-6 ${active ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className={`text-sm font-medium ${active ? 'text-primary' : ''}`}>
+                      {isRTL ? ar : en}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Step 3: Select students */}
         <Card>
           <CardHeader className="space-y-3">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
