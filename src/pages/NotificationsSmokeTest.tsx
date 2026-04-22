@@ -278,8 +278,8 @@ export default function NotificationsSmokeTest() {
               </div>
 
               <div>
-                <Label className="flex items-center justify-between">
-                  <span>{isRTL ? 'المتغيرات (JSON)' : 'Variables (JSON)'}</span>
+                <div className="flex items-center justify-between mb-2">
+                  <Label>{isRTL ? 'المتغيرات' : 'Variables'}</Label>
                   <div className="flex items-center gap-2">
                     {selectedEvent && (
                       <Button
@@ -288,11 +288,11 @@ export default function NotificationsSmokeTest() {
                         size="sm"
                         className="h-6 text-xs"
                         onClick={() => {
-                          try {
-                            setVariablesJson(JSON.stringify(selectedEvent.preview_data ?? {}, null, 2));
-                          } catch {
-                            setVariablesJson('{}');
-                          }
+                          const merged = mergeDefaults(
+                            eventVariables,
+                            selectedEvent.preview_data as Record<string, unknown> | null | undefined,
+                          );
+                          setVariablesJson(JSON.stringify(merged, null, 2));
                         }}
                       >
                         {isRTL ? 'إعادة تعبئة' : 'Reset to defaults'}
@@ -304,27 +304,54 @@ export default function NotificationsSmokeTest() {
                       </Badge>
                     )}
                   </div>
-                </Label>
-                <Textarea
-                  value={variablesJson}
-                  onChange={(e) => setVariablesJson(e.target.value)}
-                  rows={10}
-                  className="font-mono text-xs"
-                  placeholder={
-                    selectedEvent
-                      ? JSON.stringify(selectedEvent.preview_data ?? { example: 'value' }, null, 2)
-                      : isRTL
-                        ? 'اختر حدث أولاً لتعبئة المتغيرات تلقائياً\n\nمثال:\n{\n  "student_name": "أحمد",\n  "session_title": "الدرس الأول"\n}'
-                        : 'Select an event first to auto-fill variables\n\nExample:\n{\n  "student_name": "Ahmed",\n  "session_title": "Lesson 1"\n}'
-                  }
-                />
-                <p className="text-xs text-muted-foreground mt-1">
+                </div>
+                <Tabs defaultValue="form">
+                  <TabsList className="grid grid-cols-2 w-full">
+                    <TabsTrigger value="form">
+                      <FormInput className="h-3.5 w-3.5 me-1.5" />
+                      {isRTL ? 'النموذج' : 'Form'}
+                    </TabsTrigger>
+                    <TabsTrigger value="json">
+                      <Code className="h-3.5 w-3.5 me-1.5" />
+                      JSON
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="form" className="mt-3">
+                    {selectedEvent ? (
+                      <EventVariablesForm
+                        variables={eventVariables}
+                        value={varsValid ? (parsedVars as Record<string, unknown>) : {}}
+                        onChange={(next) => setVariablesJson(JSON.stringify(next, null, 2))}
+                      />
+                    ) : (
+                      <div className="text-center text-muted-foreground text-sm py-8 border rounded-md">
+                        {isRTL ? 'اختر حدث لعرض الحقول' : 'Pick an event to see fields'}
+                      </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="json" className="mt-3">
+                    <Textarea
+                      value={variablesJson}
+                      onChange={(e) => setVariablesJson(e.target.value)}
+                      rows={12}
+                      className="font-mono text-xs"
+                      placeholder={
+                        selectedEvent
+                          ? JSON.stringify(selectedEvent.preview_data ?? { example: 'value' }, null, 2)
+                          : isRTL
+                            ? 'اختر حدث أولاً لتعبئة المتغيرات تلقائياً'
+                            : 'Select an event first to auto-fill variables'
+                      }
+                    />
+                  </TabsContent>
+                </Tabs>
+                <p className="text-xs text-muted-foreground mt-2">
                   {selectedEvent
                     ? (isRTL
-                      ? '✓ تمت التعبئة من preview_data — عدّل القيم حسب الحاجة'
-                      : '✓ Auto-filled from preview_data — edit values as needed')
+                      ? '✓ تمت التعبئة تلقائياً — النموذج وJSON متزامنان'
+                      : '✓ Auto-filled — Form and JSON stay in sync')
                     : (isRTL
-                      ? 'سيتم تعبئة الحقول تلقائياً عند اختيار الحدث'
+                      ? 'سيتم تعبئة الحقول عند اختيار الحدث'
                       : 'Fields will auto-fill when you pick an event')}
                 </p>
               </div>
