@@ -368,8 +368,38 @@ export function AppSidebar() {
     section.items.some((item) => isActive(item.url) || item.children?.some((c) => isActive(c.url)));
 
   // Track open/closed state per section. Default: ALL sections collapsed.
-  // Once the user toggles a section, that choice is remembered for the session.
-  const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
+  // Persisted to localStorage (per role) so the user's choices survive page reloads.
+  const storageKey = `kojo:sidebar:openSections:${role ?? 'guest'}`;
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      return raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // Re-hydrate when the role changes (different storage key).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      setOpenMap(raw ? (JSON.parse(raw) as Record<string, boolean>) : {});
+    } catch {
+      setOpenMap({});
+    }
+  }, [storageKey]);
+
+  // Persist on every change.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(openMap));
+    } catch {
+      /* quota / private mode — ignore */
+    }
+  }, [openMap, storageKey]);
 
   const isSectionOpen = (section: NavSection) => {
     if (section.label in openMap) return openMap[section.label];
