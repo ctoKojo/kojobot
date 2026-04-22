@@ -35,11 +35,11 @@ export function TelegramLinkCard() {
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState<string>('');
 
-  const loadLink = async () => {
-    setLoading(true);
+  const loadLink = async (silent = false) => {
+    if (!silent) setLoading(true);
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) {
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
     const { data } = await supabase
@@ -49,7 +49,7 @@ export function TelegramLinkCard() {
       .eq('is_active', true)
       .maybeSingle();
     setLink(data as TelegramLink | null);
-    setLoading(false);
+    if (!silent) setLoading(false);
   };
 
   const loadBotInfo = async () => {
