@@ -11,7 +11,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const GATEWAY_URL = 'https://connector-gateway.lovable.dev/telegram'
+function tgUrl(botToken: string, method: string) {
+  return `https://api.telegram.org/bot${botToken}/${method}`
+}
 
 const RequestSchema = z.object({
   // Either userId (preferred — auto-resolves chat_id + checks prefs) OR chatId directly
@@ -104,16 +106,10 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
-    const telegramApiKey = Deno.env.get('TELEGRAM_API_KEY')
+    const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN')
 
-    if (!lovableApiKey) {
-      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY is not configured' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-    if (!telegramApiKey) {
-      return new Response(JSON.stringify({ error: 'TELEGRAM_API_KEY is not configured' }), {
+    if (!botToken) {
+      return new Response(JSON.stringify({ error: 'TELEGRAM_BOT_TOKEN is not configured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -178,14 +174,10 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Send via gateway
-    const tgResponse = await fetch(`${GATEWAY_URL}/sendMessage`, {
+    // Send directly to Telegram Bot API
+    const tgResponse = await fetch(tgUrl(botToken, 'sendMessage'), {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'X-Connection-Api-Key': telegramApiKey,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: resolvedChatId,
         text: messageText,

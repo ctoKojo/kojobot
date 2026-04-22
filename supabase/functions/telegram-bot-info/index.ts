@@ -1,12 +1,11 @@
 // Returns the Telegram bot username for building deep-link URLs (t.me/<bot>?start=<code>)
+// Uses TELEGRAM_BOT_TOKEN directly (bypasses Connector Gateway).
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
-
-const GATEWAY_URL = 'https://connector-gateway.lovable.dev/telegram'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -31,29 +30,21 @@ Deno.serve(async (req) => {
       })
     }
 
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
-    const telegramApiKey = Deno.env.get('TELEGRAM_API_KEY')
-    if (!lovableApiKey || !telegramApiKey) {
-      return new Response(JSON.stringify({ error: 'Telegram not configured' }), {
+    const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN')
+    if (!botToken) {
+      return new Response(JSON.stringify({ error: 'TELEGRAM_BOT_TOKEN is not configured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const resp = await fetch(`${GATEWAY_URL}/getMe`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'X-Connection-Api-Key': telegramApiKey,
-        'Content-Type': 'application/json',
-      },
-    })
+    const resp = await fetch(`https://api.telegram.org/bot${botToken}/getMe`)
     const rawText = await resp.text()
     let data: any = {}
     try { data = JSON.parse(rawText) } catch { /* keep raw */ }
     if (!resp.ok || !data?.ok) {
       console.error('[telegram-bot-info] getMe failed', { status: resp.status, body: rawText })
       return new Response(JSON.stringify({
-        error: data?.description || data?.message || 'getMe failed',
+        error: data?.description || 'getMe failed',
         status: resp.status,
         details: rawText.slice(0, 500),
       }), {

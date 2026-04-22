@@ -1,4 +1,4 @@
-// Telegram bot long-poll worker
+// Telegram bot long-poll worker (uses TELEGRAM_BOT_TOKEN directly, bypasses Connector Gateway)
 // - Drains getUpdates with Telegram long polling
 // - Handles /start <CODE> for account linking
 // - Handles /unlink to disconnect
@@ -12,24 +12,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const GATEWAY_URL = 'https://connector-gateway.lovable.dev/telegram'
 const MAX_RUNTIME_MS = 55_000
 const MIN_REMAINING_MS = 5_000
 
-async function sendTelegramMessage(
-  lovableKey: string,
-  tgKey: string,
-  chatId: number,
-  text: string,
-) {
+function tgUrl(botToken: string, method: string) {
+  return `https://api.telegram.org/bot${botToken}/${method}`
+}
+
+async function sendTelegramMessage(botToken: string, chatId: number, text: string) {
   try {
-    await fetch(`${GATEWAY_URL}/sendMessage`, {
+    await fetch(tgUrl(botToken, 'sendMessage'), {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableKey}`,
-        'X-Connection-Api-Key': tgKey,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
     })
   } catch (e) {
@@ -39,8 +33,7 @@ async function sendTelegramMessage(
 
 async function handleCommand(
   supabase: ReturnType<typeof createClient>,
-  lovableKey: string,
-  tgKey: string,
+  botToken: string,
   update: any,
 ): Promise<void> {
   const message = update.message
@@ -62,17 +55,17 @@ async function handleCommand(
       .maybeSingle()
 
     if (!codeRow) {
-      await sendTelegramMessage(lovableKey, tgKey, chatId,
+      await sendTelegramMessage(botToken, chatId,
         '❌ <b>كود غير صحيح</b>\n\nمن فضلك ارجع للموقع واطلب كود جديد.')
       return
     }
     if (codeRow.used_at) {
-      await sendTelegramMessage(lovableKey, tgKey, chatId,
+      await sendTelegramMessage(botToken, chatId,
         '⚠️ <b>هذا الكود مستخدم بالفعل</b>\n\nاطلب كود جديد من حسابك.')
       return
     }
     if (new Date(codeRow.expires_at).getTime() < Date.now()) {
-      await sendTelegramMessage(lovableKey, tgKey, chatId,
+      await sendTelegramMessage(botToken, chatId,
         '⏰ <b>انتهت صلاحية الكود</b>\n\nاطلب كود جديد (صالح لمدة 15 دقيقة).')
       return
     }
@@ -92,8 +85,7 @@ async function handleCommand(
 
     if (upsertErr) {
       console.error('[telegram-bot-poll] link upsert failed:', upsertErr)
-      // Could be the chat_id is already linked to a different user
-      await sendTelegramMessage(lovableKey, tgKey, chatId,
+      await sendTelegramMessage(botToken, chatId,
         '❌ <b>فشل الربط</b>\n\nهذا الحساب مرتبط بمستخدم آخر. تواصل مع الدعم.')
       return
     }
@@ -103,14 +95,14 @@ async function handleCommand(
       .update({ used_at: new Date().toISOString(), used_chat_id: chatId })
       .eq('id', codeRow.id)
 
-    await sendTelegramMessage(lovableKey, tgKey, chatId,
+    await sendTelegramMessage(botToken, chatId,
       '✅ <b>تم الربط بنجاح!</b>\n\nهتوصلك من دلوقتي إشعارات Kojobot Academy على تيليجرام 🎓\n\nلإيقاف الربط ابعت /unlink')
     return
   }
 
   // /start without code
   if (/^\/start(@\w+)?\s*$/.test(text)) {
-    await sendTelegramMessage(lovableKey, tgKey, chatId,
+    await sendTelegramMessage(botToken, chatId,
       '👋 <b>أهلاً بك في Kojobot Academy</b>\n\nلربط حسابك:\n1. سجل دخول على الموقع\n2. روح للإعدادات → Telegram\n3. اطلب كود الربط\n4. ابعت هنا: <code>/start ABC123</code>')
     return
   }
@@ -125,21 +117,21 @@ async function handleCommand(
       .maybeSingle()
 
     if (!link) {
-      await sendTelegramMessage(lovableKey, tgKey, chatId,
+      await sendTelegramMessage(botToken, chatId,
         'ℹ️ مفيش حساب مربوط بالشات ده.')
       return
     }
     await supabase.from('telegram_links')
       .update({ is_active: false, unlinked_at: new Date().toISOString() })
       .eq('chat_id', chatId)
-    await sendTelegramMessage(lovableKey, tgKey, chatId,
+    await sendTelegramMessage(botToken, chatId,
       '✅ <b>تم فك الربط</b>\n\nمش هتوصلك إشعارات تانية. لإعادة الربط، ارجع للموقع.')
     return
   }
 
   // /help or anything else
   if (/^\/help/.test(text)) {
-    await sendTelegramMessage(lovableKey, tgKey, chatId,
+    await sendTelegramMessage(botToken, chatId,
       '<b>الأوامر المتاحة:</b>\n\n/start CODE - ربط الحساب\n/unlink - فك الربط\n/help - عرض المساعدة')
   }
 }
@@ -150,13 +142,12 @@ Deno.serve(async (req) => {
   }
 
   const startTime = Date.now()
-  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')
-  const telegramApiKey = Deno.env.get('TELEGRAM_API_KEY')
+  const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN')
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-  if (!lovableApiKey || !telegramApiKey) {
-    return new Response(JSON.stringify({ error: 'Connector keys not configured' }), {
+  if (!botToken) {
+    return new Response(JSON.stringify({ error: 'TELEGRAM_BOT_TOKEN is not configured' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
@@ -182,13 +173,9 @@ Deno.serve(async (req) => {
     const timeout = Math.min(50, Math.floor(remainingMs / 1000) - 5)
     if (timeout < 1) break
 
-    const resp = await fetch(`${GATEWAY_URL}/getUpdates`, {
+    const resp = await fetch(tgUrl(botToken, 'getUpdates'), {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'X-Connection-Api-Key': telegramApiKey,
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ offset: currentOffset, timeout, allowed_updates: ['message'] }),
     })
 
@@ -216,7 +203,7 @@ Deno.serve(async (req) => {
     // Process commands
     for (const update of updates) {
       try {
-        await handleCommand(supabase, lovableApiKey, telegramApiKey, update)
+        await handleCommand(supabase, botToken, update)
         await supabase.from('telegram_inbox')
           .update({ processed: true, processed_at: new Date().toISOString() })
           .eq('update_id', update.update_id)
