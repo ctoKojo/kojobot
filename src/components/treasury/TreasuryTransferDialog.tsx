@@ -102,8 +102,8 @@ export function TreasuryTransferDialog({ open, onOpenChange, balances }: Props) 
         notifyAdmins({
           eventKey: 'admin-treasury-transfer',
           templateData: {
-            fromAccount: fromOption?.label_ar || fromOption?.label || fromCode,
-            toAccount: toOption?.label_ar || toOption?.label || toCode,
+            fromAccount: fromOption?.nameAr || fromOption?.name || fromCode,
+            toAccount: toOption?.nameAr || toOption?.name || toCode,
             amount: numericAmount.toLocaleString(),
           },
           idempotencyKey: `treasury-${result.voucher_no}`,
