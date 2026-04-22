@@ -137,16 +137,32 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { userId, chatId, templateName, templateData = {}, customMessage, bypassPreferences } = parsed.data
+    const { userId, chatId, templateName, templateData = {}, customMessage, bypassPreferences, audience: audienceArg } = parsed.data
+    const audience = audienceArg ?? 'student'
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
-    // Resolve chat_id and check preferences
+    // Build message first to know mapping + admin_channel_override
+    const built = await buildMessage(supabase, templateName, audience, templateData, customMessage)
+    if (!built) {
+      return new Response(JSON.stringify({ skipped: true, reason: 'no_template_or_disabled' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    const adminChannel: string = built.mapping?.admin_channel_override ?? 'auto'
+
+    // Admin set email-only -> skip Telegram entirely.
+    if (adminChannel === 'email') {
+      return new Response(JSON.stringify({ skipped: true, reason: 'admin_channel_email_only' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     let resolvedChatId = chatId
     let resolvedUserId = userId ?? null
 
     if (userId) {
-      // Check channel preference unless bypassed
-      if (!bypassPreferences) {
+      // Respect user prefs only when admin says 'auto'. Admin 'telegram'/'both' force-send.
+      if (!bypassPreferences && adminChannel === 'auto') {
         const { data: prefs } = await supabase.rpc('get_user_notification_channels', {
           p_user_id: userId,
           p_event_key: templateName,
@@ -159,7 +175,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Resolve chat_id from telegram_links
       const { data: link } = await supabase
         .from('telegram_links')
         .select('chat_id, is_active')
@@ -181,13 +196,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Build message
-    const messageText = await buildMessage(supabase, templateName, templateData, customMessage)
-    if (!messageText) {
-      return new Response(JSON.stringify({ error: 'No template found and no custom message' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    const messageText = built.text
 
     // Send directly to Telegram Bot API
     const tgResponse = await fetch(tgUrl(botToken, 'sendMessage'), {
