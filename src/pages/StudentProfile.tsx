@@ -557,7 +557,7 @@ export default function StudentProfile() {
                 )}
               {/* Subscription Status - hidden from instructor */}
               {!isInstructor && (
-                <div className="w-full sm:w-auto sm:text-right mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0">
+                <div className="w-full sm:w-auto sm:text-end mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-t-0">
                   {data.subscription ? (
                     <div className="space-y-1">
                       <Badge className="bg-green-100 text-green-800">
@@ -795,7 +795,7 @@ export default function StudentProfile() {
                               {isRTL ? 'سُلم في: ' : 'Submitted: '}{formatDate(submission.submitted_at)}
                             </p>
                           </div>
-                          <div className="text-right">
+                          <div className="text-end">
                             <Badge className={
                               submission.status === 'graded' ? 'bg-green-100 text-green-800' :
                               'bg-yellow-100 text-yellow-800'

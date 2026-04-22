@@ -650,7 +650,7 @@ export function StudentDashboard() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="text-right">
+                    <div className="text-end">
                       <Badge variant="outline">{session.session_date}</Badge>
                       <p className="text-sm text-muted-foreground mt-1"><SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} /></p>
                     </div>
