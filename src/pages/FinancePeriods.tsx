@@ -325,7 +325,7 @@ export default function FinancePeriods({ embedded = false }: { embedded?: boolea
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </Wrapper>
   );
 }
 
