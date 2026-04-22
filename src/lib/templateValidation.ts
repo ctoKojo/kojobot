@@ -10,7 +10,7 @@ export interface EventVariable {
   label_en: string;
   label_ar: string;
   required?: boolean;
-  type?: 'string' | 'number' | 'date' | 'url';
+  type?: 'text' | 'number' | 'date' | 'url';
   sample?: string;
 }
 
