@@ -47,9 +47,16 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
     })
-    const data = await resp.json()
-    if (!resp.ok || !data.ok) {
-      return new Response(JSON.stringify({ error: data?.description || 'getMe failed' }), {
+    const rawText = await resp.text()
+    let data: any = {}
+    try { data = JSON.parse(rawText) } catch { /* keep raw */ }
+    if (!resp.ok || !data?.ok) {
+      console.error('[telegram-bot-info] getMe failed', { status: resp.status, body: rawText })
+      return new Response(JSON.stringify({
+        error: data?.description || data?.message || 'getMe failed',
+        status: resp.status,
+        details: rawText.slice(0, 500),
+      }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
