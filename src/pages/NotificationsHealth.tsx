@@ -216,8 +216,8 @@ export default function NotificationsHealth() {
     const variants: Record<string, { color: string; icon: any }> = {
       sent: { color: 'bg-success/10 text-success', icon: CheckCircle2 },
       failed: { color: 'bg-destructive/10 text-destructive', icon: XCircle },
-      pending: { color: 'bg-warning/10 text-warning', icon: Clock },
-      retrying: { color: 'bg-info/10 text-info', icon: RefreshCw },
+      pending: { color: 'bg-warning/10 text-warning-foreground', icon: Clock },
+      retrying: { color: 'bg-primary/10 text-primary', icon: RefreshCw },
       skipped: { color: 'bg-muted text-muted-foreground', icon: Activity },
     };
     const v = variants[status] ?? variants.skipped;
