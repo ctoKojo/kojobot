@@ -251,18 +251,53 @@ export default function NotificationsSmokeTest() {
               <div>
                 <Label className="flex items-center justify-between">
                   <span>{isRTL ? 'المتغيرات (JSON)' : 'Variables (JSON)'}</span>
-                  {!varsValid && (
-                    <Badge variant="destructive" className="text-xs">
-                      {isRTL ? 'JSON غير صالح' : 'Invalid JSON'}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {selectedEvent && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-xs"
+                        onClick={() => {
+                          try {
+                            setVariablesJson(JSON.stringify(selectedEvent.preview_data ?? {}, null, 2));
+                          } catch {
+                            setVariablesJson('{}');
+                          }
+                        }}
+                      >
+                        {isRTL ? 'إعادة تعبئة' : 'Reset to defaults'}
+                      </Button>
+                    )}
+                    {!varsValid && (
+                      <Badge variant="destructive" className="text-xs">
+                        {isRTL ? 'JSON غير صالح' : 'Invalid JSON'}
+                      </Badge>
+                    )}
+                  </div>
                 </Label>
                 <Textarea
                   value={variablesJson}
                   onChange={(e) => setVariablesJson(e.target.value)}
-                  rows={8}
+                  rows={10}
                   className="font-mono text-xs"
+                  placeholder={
+                    selectedEvent
+                      ? JSON.stringify(selectedEvent.preview_data ?? { example: 'value' }, null, 2)
+                      : isRTL
+                        ? 'اختر حدث أولاً لتعبئة المتغيرات تلقائياً\n\nمثال:\n{\n  "student_name": "أحمد",\n  "session_title": "الدرس الأول"\n}'
+                        : 'Select an event first to auto-fill variables\n\nExample:\n{\n  "student_name": "Ahmed",\n  "session_title": "Lesson 1"\n}'
+                  }
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedEvent
+                    ? (isRTL
+                      ? '✓ تمت التعبئة من preview_data — عدّل القيم حسب الحاجة'
+                      : '✓ Auto-filled from preview_data — edit values as needed')
+                    : (isRTL
+                      ? 'سيتم تعبئة الحقول تلقائياً عند اختيار الحدث'
+                      : 'Fields will auto-fill when you pick an event')}
+                </p>
               </div>
 
               <div className="flex items-center justify-between rounded-lg border p-3">
