@@ -332,7 +332,11 @@ export function AppSidebar() {
           {
             label: 'Finance', labelAr: 'المالية', icon: DollarSign, color: 'success',
             items: [
-              { title: isRTL ? 'الإدارة والخزنة' : 'Finance & Treasury', url: '/finance', icon: DollarSign },
+              { title: isRTL ? 'لوحة المالية' : 'Finance Overview', url: '/finance', icon: DollarSign },
+              { title: isRTL ? 'الخزنة' : 'Treasury', url: '/finance/treasury', icon: Lock },
+              { title: isRTL ? 'طلبات الاشتراك' : 'Subscription Requests', url: '/subscription-requests', icon: ClipboardList },
+              { title: isRTL ? 'باقات الأسعار' : 'Pricing Plans', url: '/pricing-plans', icon: DollarSign },
+              { title: isRTL ? 'التقارير المالية' : 'Financial Reports', url: '/finance/reports', icon: BarChart3 },
               { title: isRTL ? 'الإعدادات المالية' : 'Finance Settings', url: '/finance/settings', icon: Settings },
             ],
           },
