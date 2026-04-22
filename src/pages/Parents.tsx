@@ -166,6 +166,7 @@ export default function Parents() {
       userId: parentId,
       templateData: {
         parentName,
+        academyName: 'Kojobot Academy',
         loginUrl: `${window.location.origin}/auth`,
       },
       idempotencyKey: `parent-approved-${parentId}`,
