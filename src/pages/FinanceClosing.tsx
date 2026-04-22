@@ -2,7 +2,6 @@ import { lazy, Suspense } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
 import { Lock, Unlock, AlertTriangle, History, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSearchParams } from 'react-router-dom';
@@ -18,18 +17,6 @@ const PageLoader = () => (
     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
   </div>
 );
-
-/**
- * Wrapper that strips the inner DashboardLayout/PageHeader from a lazy-loaded
- * page so we can embed it as a tab without doubling the chrome.
- */
-function EmbeddedPage({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="[&_main]:p-0 [&_.container]:p-0 [&_.container]:max-w-none">
-      <Suspense fallback={<PageLoader />}>{children}</Suspense>
-    </div>
-  );
-}
 
 export default function FinanceClosing() {
   const { isRTL } = useLanguage();
