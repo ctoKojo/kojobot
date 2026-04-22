@@ -163,11 +163,11 @@ const App = () => (
                   <Route path="/finance/settings" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><FinanceSettings /></ProtectedRoute>} />
                   {/* Legacy direct routes — kept for backwards compatibility, all reachable via /finance/closing or /finance/settings tabs */}
                   <Route path="/finance/periods" element={<ProtectedRoute allowedRoles={['admin']}><FinancePeriods /></ProtectedRoute>} />
-                  <Route path="/finance/reports" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><FinanceReports /></ProtectedRoute>} />
+                  <Route path="/finance/reports" element={<ProtectedRoute allowedRoles={['admin']}><FinanceReports /></ProtectedRoute>} />
                   <Route path="/finance/audit" element={<ProtectedRoute allowedRoles={['admin']}><FinanceAuditExplorer /></ProtectedRoute>} />
                   <Route path="/finance/data-quality" element={<ProtectedRoute allowedRoles={['admin']}><FinanceDataQuality /></ProtectedRoute>} />
                   <Route path="/finance/reopen-requests" element={<ProtectedRoute allowedRoles={['admin']}><FinanceReopenRequests /></ProtectedRoute>} />
-                  <Route path="/finance/treasury" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Treasury /></ProtectedRoute>} />
+                  <Route path="/finance/treasury" element={<ProtectedRoute allowedRoles={['admin']}><Treasury /></ProtectedRoute>} />
                   <Route path="/deduction-rules" element={<ProtectedRoute allowedRoles={['admin']}><DeductionRules /></ProtectedRoute>} />
                   <Route path="/messages" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception', 'parent']}><Messages /></ProtectedRoute>} />
                   <Route path="/parents" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Parents /></ProtectedRoute>} />
