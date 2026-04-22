@@ -90,11 +90,38 @@ async function buildMessage(
 
   if (mapping?.is_enabled === false) return null
 
-  if (mapping?.template_id) {
+  // Resolve template_id either from mapping OR via convention `default-{eventKey}`
+  let templateId: string | null = mapping?.template_id ?? null
+
+  if (!templateId && !templateName.startsWith('default-')) {
+    const { data: conventionTpl } = await supabase
+      .from('email_templates')
+      .select('id')
+      .eq('name', `default-${templateName}`)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (conventionTpl?.id) {
+      templateId = conventionTpl.id as string
+      console.log(`[send-telegram] Using convention fallback: default-${templateName}`)
+    }
+  }
+
+  // Also support direct lookup by exact templateName (test sends from UI)
+  if (!templateId) {
+    const { data: directTpl } = await supabase
+      .from('email_templates')
+      .select('id')
+      .eq('name', templateName)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (directTpl?.id) templateId = directTpl.id as string
+  }
+
+  if (templateId) {
     const { data: tpl } = await supabase
       .from('email_templates')
       .select('subject_ar, body_html_ar, subject_telegram_ar, body_telegram_md_ar, is_active')
-      .eq('id', mapping.template_id)
+      .eq('id', templateId)
       .maybeSingle()
 
     if (tpl?.is_active) {
