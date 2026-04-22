@@ -149,7 +149,7 @@ interface TransferWarning {
 export default function GroupsPage() {
   const { t, isRTL, language } = useLanguage();
   const { toast } = useToast();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const navigate = useNavigate();
   const isAdmin = role === 'admin';
   const isReception = role === 'reception';
