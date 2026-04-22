@@ -191,14 +191,14 @@ export function EventMappingsTab({ templates }: Props) {
               const useDb = m?.use_db_template ?? false;
               const enabled = m?.is_enabled ?? true;
               const templateId = m?.template_id ?? '';
-              const sendTo = m?.send_to ?? 'student';
+              const channelOverride = m?.admin_channel_override ?? 'user_choice';
 
               return (
                 <div
                   key={ev.event_key}
                   className="border rounded-md p-3 grid grid-cols-1 md:grid-cols-12 gap-3 items-center"
                 >
-                  <div className="md:col-span-4">
+                  <div className="md:col-span-3">
                     <div className="font-medium text-sm">
                       {isRTL ? ev.display_name_ar : ev.display_name_en}
                     </div>
@@ -222,7 +222,32 @@ export function EventMappingsTab({ templates }: Props) {
                     </Label>
                   </div>
 
+                  {/* Admin channel override (highest priority) */}
                   <div className="md:col-span-3">
+                    <Label className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1 block">
+                      {isRTL ? 'القناة (الأدمن)' : 'Channel (admin)'}
+                    </Label>
+                    <Select
+                      value={channelOverride}
+                      onValueChange={(v) =>
+                        upsertMapping(ev.event_key, { admin_channel_override: v as Mapping['admin_channel_override'] })
+                      }
+                      disabled={!enabled}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(CHANNEL_LABELS).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>
+                            {isRTL ? v.ar : v.en}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="md:col-span-2">
                     <div className="flex items-center gap-2">
                       <Switch
                         checked={useDb}
@@ -231,15 +256,15 @@ export function EventMappingsTab({ templates }: Props) {
                       />
                       <Label className="text-xs flex items-center gap-1">
                         {useDb ? (
-                          <><Database className="h-3 w-3" /> {isRTL ? 'قالب DB' : 'DB template'}</>
+                          <><Database className="h-3 w-3" /> DB</>
                         ) : (
-                          <><Code2 className="h-3 w-3" /> {isRTL ? 'كود مدمج' : 'Code template'}</>
+                          <><Code2 className="h-3 w-3" /> {isRTL ? 'كود' : 'Code'}</>
                         )}
                       </Label>
                     </div>
                   </div>
 
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-2">
                     {useDb && (
                       <Select
                         value={templateId}
@@ -247,7 +272,7 @@ export function EventMappingsTab({ templates }: Props) {
                         disabled={!enabled}
                       >
                         <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder={isRTL ? 'اختر قالب' : 'Pick template'} />
+                          <SelectValue placeholder={isRTL ? 'قالب' : 'Template'} />
                         </SelectTrigger>
                         <SelectContent>
                           {templates
