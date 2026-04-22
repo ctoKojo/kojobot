@@ -135,6 +135,40 @@ Deno.serve(async (req) => {
 
   const { to, templateName, templateData, idempotencyKey, customSubject, customBody } = parsed.data
 
+  // Honor per-user channel preferences (email_enabled). Look up user by email.
+  try {
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('user_id')
+      .eq('email', to)
+      .maybeSingle()
+    if (prof?.user_id) {
+      const { data: prefs } = await supabase.rpc('get_user_notification_channels', {
+        p_user_id: prof.user_id,
+        p_event_key: templateName,
+      })
+      const emailEnabled = Array.isArray(prefs) ? prefs[0]?.email_enabled : (prefs as any)?.email_enabled
+      if (emailEnabled === false) {
+        return new Response(
+          JSON.stringify({ success: true, skipped: 'email_disabled_by_user' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      // Fan-out: also send to Telegram if user has it linked + enabled (fire-and-forget)
+      supabase.functions.invoke('send-telegram', {
+        body: {
+          userId: prof.user_id,
+          templateName,
+          templateData: templateData ?? {},
+          customMessage: customBody,
+          idempotencyKey: `${idempotencyKey}-tg`,
+        },
+      }).catch((e) => console.warn('[send-email] telegram fan-out failed:', e?.message))
+    }
+  } catch (e) {
+    console.warn('[send-email] preference lookup failed:', e)
+  }
+
   // Idempotency: skip if already successfully sent
   const { data: existing } = await supabase
     .from('email_send_log')
