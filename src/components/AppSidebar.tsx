@@ -225,6 +225,7 @@ export function AppSidebar() {
               { title: isRTL ? 'سجلات الإيميل' : 'Email Logs', url: '/email-logs', icon: Mail },
               { title: isRTL ? 'إعدادات الإشعارات' : 'Notification Settings', url: '/notification-settings', icon: Bell },
               { title: isRTL ? 'صحة الإشعارات' : 'Notifications Health', url: '/notifications-health', icon: Activity },
+              { title: isRTL ? 'اختبار الإشعارات' : 'Smoke Test', url: '/notifications-smoke-test', icon: Activity },
             ],
           },
           {

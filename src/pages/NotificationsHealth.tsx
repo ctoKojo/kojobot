@@ -374,7 +374,7 @@ export default function NotificationsHealth() {
           title={isRTL ? 'صحة الإشعارات' : 'Notifications Health'}
           subtitle={isRTL ? 'مراقبة موحدة لقنوات الإيميل والتيليجرام' : 'Unified monitoring for Email & Telegram channels'}
           icon={Activity}
-          action={
+          actions={
             <Button asChild variant="outline" size="sm">
               <Link to="/notifications-smoke-test">
                 <Beaker className="h-4 w-4 me-2" />
