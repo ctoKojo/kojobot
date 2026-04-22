@@ -41,19 +41,17 @@ export async function notifyEvent(params: NotifyEventParams): Promise<void> {
   try {
     const email = await getUserEmail(userId);
 
-    // Fire both in parallel; each function self-skips per admin_channel_override
     await Promise.allSettled([
       email
         ? sendEmail({
             to: email,
             templateName: eventKey,
-            templateData: templateData as Record<string, unknown> | undefined,
+            templateData,
             idempotencyKey,
-            // The dispatcher controls fan-out — disable the implicit one in send-email
-            // (extension fields ignored by older clients)
-            ...({ audience, skipTelegramFanout: true } as Record<string, unknown>),
-          } as Parameters<typeof sendEmail>[0])
-        : Promise.resolve({ success: false, skipped: 'no_email' as const }),
+            audience,
+            skipTelegramFanout: true,
+          })
+        : Promise.resolve({ success: false }),
       supabase.functions.invoke('send-telegram', {
         body: {
           userId,
