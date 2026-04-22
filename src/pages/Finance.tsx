@@ -57,6 +57,7 @@ export default function Finance() {
   const [payPageSize, setPayPageSize] = useState(10);
   const [detailDialog, setDetailDialog] = useState<'outstanding' | 'overdue' | 'revenue' | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthKey());
+  const [activeTab, setActiveTab] = useState<string>('overview');
   const monthRange = useMemo(() => getMonthRange(selectedMonth), [selectedMonth]);
   const viewingCurrentMonth = isCurrentMonth(selectedMonth);
 
