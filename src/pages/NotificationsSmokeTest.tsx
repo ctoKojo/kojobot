@@ -72,7 +72,7 @@ export default function NotificationsSmokeTest() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('email_event_catalog')
-        .select('event_key, display_name_en, display_name_ar, category, supported_audiences, preview_data')
+        .select('event_key, display_name_en, display_name_ar, category, supported_audiences, preview_data, available_variables')
         .eq('is_active', true)
         .order('category')
         .order('event_key');
@@ -86,6 +86,11 @@ export default function NotificationsSmokeTest() {
     [events, eventKey],
   );
 
+  const eventVariables = useMemo<EventVariable[]>(
+    () => ((selectedEvent?.available_variables as unknown as EventVariable[]) ?? []),
+    [selectedEvent],
+  );
+
   // When user picks an event, auto-populate preview vars + audience
   useEffect(() => {
     if (selectedEvent) {
@@ -93,11 +98,11 @@ export default function NotificationsSmokeTest() {
       if (supported.length > 0 && !supported.includes(audience)) {
         setAudience(supported[0] as Audience);
       }
-      try {
-        setVariablesJson(JSON.stringify(selectedEvent.preview_data ?? {}, null, 2));
-      } catch {
-        setVariablesJson('{}');
-      }
+      const merged = mergeDefaults(
+        eventVariables,
+        selectedEvent.preview_data as Record<string, unknown> | null | undefined,
+      );
+      setVariablesJson(JSON.stringify(merged, null, 2));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEvent]);
