@@ -66,11 +66,11 @@ export function TelegramLinkCard() {
     void loadBotInfo();
   }, []);
 
-  // Auto-refresh link status when a code is active (poll every 4s)
+  // Auto-refresh link status when a code is active (poll every 4s, silent)
   useEffect(() => {
     if (!code || link) return;
     const interval = setInterval(() => {
-      void loadLink();
+      void loadLink(true);
     }, 4000);
     return () => clearInterval(interval);
   }, [code, link]);
