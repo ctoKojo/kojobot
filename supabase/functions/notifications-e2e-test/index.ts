@@ -160,20 +160,18 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Invoke send-email in dry-run mode
+      // Invoke send-email in dry-run mode (with retry on transient errors)
       try {
         const idempotencyKey = `${runId}-${ev.event_key}-${audience}`
-        const { data: invokeRes, error: invokeErr } = await supabase.functions.invoke('send-email', {
-          body: {
-            to: recipientEmail,
-            templateName: ev.event_key,
-            templateData: previewData,
-            audience,
-            idempotencyKey,
-            dryRun: true,
-            smokeTest: true,
-            skipTelegramFanout: true,
-          },
+        const { data: invokeRes, error: invokeErr } = await invokeWithRetry({
+          to: recipientEmail,
+          templateName: ev.event_key,
+          templateData: previewData,
+          audience,
+          idempotencyKey,
+          dryRun: true,
+          smokeTest: true,
+          skipTelegramFanout: true,
         })
 
         if (invokeErr) {
@@ -206,6 +204,9 @@ Deno.serve(async (req) => {
           message: e instanceof Error ? e.message : String(e),
         })
       }
+
+      // Throttle: 150ms between invocations to avoid rate limiting
+      await sleep(150)
     }
 
     const summary = {
