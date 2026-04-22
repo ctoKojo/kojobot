@@ -1,0 +1,2 @@
+-- Bulk import 40 email templates from JSON export (loaded from /tmp/migration.sql)
+-- See /tmp/migration.sql for the full payload
