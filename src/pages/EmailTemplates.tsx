@@ -62,7 +62,7 @@ export default function EmailTemplates() {
       toast({ title: isRTL ? 'فشل تحميل القوالب' : 'Failed to load templates', description: tplRes.error.message, variant: 'destructive' });
     } else {
       setTemplates((tplRes.data ?? []) as EmailTemplateRow[]);
-      setCatalog((catRes.data ?? []) as CatalogEvent[]);
+      setCatalog((catRes.data ?? []) as unknown as CatalogEvent[]);
     }
     setLoading(false);
   };
