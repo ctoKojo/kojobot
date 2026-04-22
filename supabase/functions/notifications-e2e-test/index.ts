@@ -76,6 +76,9 @@ Deno.serve(async (req) => {
 
     const reports: EventReport[] = []
     const runId = `e2e-${Date.now()}`
+    const PER_EVENT_DELAY_MS = 200
+    const BATCH_SIZE = 10
+    const BATCH_DELAY_MS = 1000
 
     // Helper: sleep for ms
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -110,7 +113,7 @@ Deno.serve(async (req) => {
       return { data: null, error: lastErr }
     }
 
-    for (const ev of events ?? []) {
+    for (const [index, ev] of (events ?? []).entries()) {
       const audiences: string[] = Array.isArray(ev.supported_audiences) && ev.supported_audiences.length > 0
         ? ev.supported_audiences
         : ['student']
@@ -205,8 +208,14 @@ Deno.serve(async (req) => {
         })
       }
 
-      // Throttle: 150ms between invocations to avoid rate limiting
-      await sleep(150)
+      // Throttle invoke cadence to avoid Edge Function rate limiting
+      await sleep(PER_EVENT_DELAY_MS)
+
+      // Add a longer pause after each batch to prevent request bursts
+      const processedCount = index + 1
+      if (processedCount % BATCH_SIZE === 0 && processedCount < (events?.length ?? 0)) {
+        await sleep(BATCH_DELAY_MS)
+      }
     }
 
     const summary = {
