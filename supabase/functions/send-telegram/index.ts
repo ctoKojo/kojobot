@@ -26,7 +26,10 @@ const RequestSchema = z.object({
   customMessage: z.string().min(1).max(4000).optional(),
   idempotencyKey: z.string().min(1).max(255).optional(),
   bypassPreferences: z.boolean().optional(),
-}).refine((d) => d.userId || d.chatId, { message: 'userId or chatId is required' })
+  // Smoke-test mode: render template but do NOT call Telegram. Logs status='dry_run'.
+  dryRun: z.boolean().optional(),
+  smokeTest: z.boolean().optional(),
+}).refine((d) => d.userId || d.chatId || d.dryRun, { message: 'userId or chatId is required (unless dryRun)' })
 
 // Simple {{variable}} interpolation
 function renderTemplate(tpl: string, data: Record<string, any>): string {
@@ -164,7 +167,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { userId, chatId, templateName, templateData = {}, customMessage, bypassPreferences, audience: audienceArg } = parsed.data
+    const { userId, chatId, templateName, templateData = {}, customMessage, bypassPreferences, audience: audienceArg, dryRun, smokeTest } = parsed.data
     const audience = audienceArg ?? 'student'
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
@@ -172,6 +175,25 @@ Deno.serve(async (req) => {
     const built = await buildMessage(supabase, templateName, audience, templateData, customMessage)
     if (!built) {
       return new Response(JSON.stringify({ skipped: true, reason: 'no_template_or_disabled' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // ============ DRY-RUN PATH ============
+    if (dryRun) {
+      await supabase.from('telegram_send_log').insert({
+        user_id: userId ?? null,
+        chat_id: chatId ?? null,
+        template_name: templateName,
+        status: 'dry_run',
+        metadata: {
+          smoke_test: true,
+          dry_run: true,
+          audience,
+          rendered_text: built.text.slice(0, 2000),
+        },
+      })
+      return new Response(JSON.stringify({ success: true, dryRun: true, text: built.text }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -272,6 +294,7 @@ Deno.serve(async (req) => {
       template_name: templateName,
       status: 'sent',
       message_id: tgData.result?.message_id ?? null,
+      metadata: smokeTest ? { smoke_test: true } : null,
     })
 
     return new Response(JSON.stringify({
