@@ -56,3 +56,9 @@ verify_jwt = false
 
 [functions.process-scheduled-reminders]
 verify_jwt = false
+
+[functions.telegram-bot-poll]
+verify_jwt = false
+
+[functions.send-telegram]
+verify_jwt = false
