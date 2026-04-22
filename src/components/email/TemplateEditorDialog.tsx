@@ -128,7 +128,7 @@ export function TemplateEditorDialog({ open, onOpenChange, template, onSaved }: 
       .select('event_key, display_name_en, display_name_ar, available_variables, preview_data, supported_audiences')
       .eq('is_active', true)
       .order('event_key');
-    const list = (data ?? []) as CatalogEvent[];
+    const list = (data ?? []) as unknown as CatalogEvent[];
     setCatalog(list);
     if (!previewEvent && list.length) setPreviewEvent(list[0].event_key);
   };
