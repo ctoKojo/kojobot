@@ -168,6 +168,7 @@ const App = () => (
                   <Route path="/finance/audit" element={<ProtectedRoute allowedRoles={['admin']}><FinanceAuditExplorer /></ProtectedRoute>} />
                   <Route path="/finance/data-quality" element={<ProtectedRoute allowedRoles={['admin']}><FinanceDataQuality /></ProtectedRoute>} />
                   <Route path="/finance/reopen-requests" element={<ProtectedRoute allowedRoles={['admin']}><FinanceReopenRequests /></ProtectedRoute>} />
+                  <Route path="/finance/payment-reconciliation" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><FinancePaymentReconciliation /></ProtectedRoute>} />
                   <Route path="/finance/treasury" element={<ProtectedRoute allowedRoles={['admin']}><Treasury /></ProtectedRoute>} />
                   <Route path="/deduction-rules" element={<ProtectedRoute allowedRoles={['admin']}><DeductionRules /></ProtectedRoute>} />
                   <Route path="/messages" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception', 'parent']}><Messages /></ProtectedRoute>} />
