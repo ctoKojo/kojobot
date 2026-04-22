@@ -51,12 +51,30 @@ export default function FinanceClosing() {
           title={isRTL ? 'الإقفال والتدقيق' : 'Closing & Audit'}
           subtitle={
             isRTL
-              ? 'إقفال الفترات الشهرية، طلبات إعادة الفتح، جودة البيانات وسجل المراجعة'
-              : 'Monthly period closing, reopen requests, data quality and audit log'
+              ? 'مركز موحد لإدارة إقفال الشهور المالية ومراجعة سلامة البيانات قبل الإقفال'
+              : 'Unified hub for closing monthly periods and reviewing data integrity before lock-in'
           }
           icon={Lock}
           gradient="from-amber-500 to-rose-500"
         />
+
+        <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground leading-relaxed">
+          {isRTL ? (
+            <ul className="space-y-1.5 list-disc pr-5">
+              <li><strong className="text-foreground">الفترات:</strong> اقفل الشهر المالي بعد المراجعة لمنع أي تعديل لاحق على قيوده.</li>
+              <li><strong className="text-foreground">طلبات الفتح:</strong> راجع طلبات الموظفين لإعادة فتح شهر مُقفل لتعديل بيانات استثنائية.</li>
+              <li><strong className="text-foreground">جودة البيانات:</strong> تنبيهات للقيود غير المتوازنة أو الأرصدة الشاذة قبل ما تُقفل الشهر.</li>
+              <li><strong className="text-foreground">سجل التدقيق:</strong> سجل غير قابل للتعديل لكل عملية مالية تمت في النظام.</li>
+            </ul>
+          ) : (
+            <ul className="space-y-1.5 list-disc pl-5">
+              <li><strong className="text-foreground">Periods:</strong> Lock a month after review so its entries can no longer be edited.</li>
+              <li><strong className="text-foreground">Reopen Requests:</strong> Review staff requests to reopen a locked month for exceptional fixes.</li>
+              <li><strong className="text-foreground">Data Quality:</strong> Alerts for unbalanced entries or suspicious balances before you close.</li>
+              <li><strong className="text-foreground">Audit Log:</strong> Tamper-proof history of every financial operation in the system.</li>
+            </ul>
+          )}
+        </div>
 
         <Tabs value={activeTab} onValueChange={setTab} className="space-y-4">
           <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-2 md:grid-cols-4">
