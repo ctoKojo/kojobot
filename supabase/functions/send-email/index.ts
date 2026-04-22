@@ -86,23 +86,45 @@ async function resolveTemplate(
 
   if (mapping && mapping.is_enabled === false) return null
 
-  // 2. DB override path — try audience-specific template, then fall back to mapping.template_id
+  // Helper: pick EN body, fall back to AR if EN is empty.
+  const pickSubject = (tpl: any) =>
+    (tpl?.subject_en && tpl.subject_en.trim()) ? tpl.subject_en : (tpl?.subject_ar ?? '')
+  const pickHtml = (tpl: any) =>
+    (tpl?.body_html_en && tpl.body_html_en.trim()) ? tpl.body_html_en : (tpl?.body_html_ar ?? '')
+
+  // 2. DB override path — use the mapping's template_id
   if (mapping?.use_db_template && mapping.template_id) {
     const { data: tpl } = await supabase
       .from('email_templates')
-      .select('subject_en, body_html_en, is_active')
+      .select('subject_en, subject_ar, body_html_en, body_html_ar, is_active')
       .eq('id', mapping.template_id)
       .maybeSingle()
     if (tpl?.is_active) {
       return {
-        subject: renderTemplate(tpl.subject_en, data),
-        html: renderTemplate(tpl.body_html_en, data),
+        subject: renderTemplate(pickSubject(tpl), data),
+        html: renderTemplate(pickHtml(tpl), data),
         mapping,
       }
     }
   }
 
-  // 3. Code template fallback
+  // 3. Direct template lookup by name (used for "Send Test" from the templates UI,
+  //    where templateName is the template's `name` rather than an event_key).
+  const { data: directTpl } = await supabase
+    .from('email_templates')
+    .select('subject_en, subject_ar, body_html_en, body_html_ar, is_active')
+    .eq('name', templateName)
+    .eq('is_active', true)
+    .maybeSingle()
+  if (directTpl) {
+    return {
+      subject: renderTemplate(pickSubject(directTpl), data),
+      html: renderTemplate(pickHtml(directTpl), data),
+      mapping,
+    }
+  }
+
+  // 4. Code template fallback
   const codeTpl = CODE_TEMPLATES[templateName]
   if (codeTpl) {
     return { subject: codeTpl.subject(data), html: codeTpl.render(data), mapping }
