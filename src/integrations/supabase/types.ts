@@ -7832,6 +7832,16 @@ export type Database = {
         }
         Returns: Json
       }
+      transfer_treasury_funds: {
+        Args: {
+          p_amount: number
+          p_from_code: string
+          p_notes?: string
+          p_to_code: string
+          p_transfer_date?: string
+        }
+        Returns: Json
+      }
       unassign_curriculum_quiz: {
         Args: { p_expected_quiz_id: string; p_session_id: string }
         Returns: Json

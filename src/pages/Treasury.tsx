@@ -12,10 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wallet, Banknote, Smartphone, CreditCard, RefreshCw, Database, ArrowDownCircle, ArrowUpCircle, CheckCircle2, AlertCircle, Scale, Heart, AlertTriangle } from 'lucide-react';
+import { Wallet, Banknote, Smartphone, CreditCard, RefreshCw, Database, ArrowDownCircle, ArrowUpCircle, CheckCircle2, AlertCircle, Scale, Heart, AlertTriangle, ArrowRightLeft } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { TreasuryTransferDialog } from '@/components/treasury/TreasuryTransferDialog';
 
 interface TreasuryBalance {
   account_code: string;
@@ -51,6 +53,7 @@ const formatEGP = (n: number) =>
 
 export default function Treasury() {
   const { isRTL } = useLanguage();
+  const { role } = useAuth();
   const queryClient = useQueryClient();
   const [filterAccount, setFilterAccount] = useState<string>('all');
   const [filterSource, setFilterSource] = useState<string>('all');
@@ -62,6 +65,7 @@ export default function Treasury() {
   const [reconAccount, setReconAccount] = useState<string>('1110');
   const [reconActual, setReconActual] = useState<string>('');
   const [reconNotes, setReconNotes] = useState<string>('');
+  const [transferOpen, setTransferOpen] = useState(false);
 
   const balancesQuery = useQuery({
     queryKey: ['treasury-balances'],
@@ -287,15 +291,28 @@ export default function Treasury() {
           icon={Wallet}
           gradient="from-emerald-500 to-blue-500"
           actions={
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refreshMvMutation.mutate()}
-              disabled={refreshMvMutation.isPending}
-            >
-              <RefreshCw className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'} ${refreshMvMutation.isPending ? 'animate-spin' : ''}`} />
-              {isRTL ? 'تحديث الأرصدة' : 'Refresh Balances'}
-            </Button>
+            <div className="flex items-center gap-2">
+              {role === 'admin' && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setTransferOpen(true)}
+                  disabled={balancesQuery.isLoading}
+                >
+                  <ArrowRightLeft className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                  {isRTL ? 'تحويل بين الحسابات' : 'Transfer Funds'}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refreshMvMutation.mutate()}
+                disabled={refreshMvMutation.isPending}
+              >
+                <RefreshCw className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'} ${refreshMvMutation.isPending ? 'animate-spin' : ''}`} />
+                {isRTL ? 'تحديث الأرصدة' : 'Refresh Balances'}
+              </Button>
+            </div>
           }
         />
 
@@ -724,6 +741,12 @@ export default function Treasury() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <TreasuryTransferDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        balances={balancesQuery.data ?? []}
+      />
     </DashboardLayout>
   );
 }
