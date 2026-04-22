@@ -7203,10 +7203,6 @@ export type Database = {
       }
     }
     Functions: {
-      _tmp_bulk_upsert_email_templates: {
-        Args: { p_payload: Json }
-        Returns: number
-      }
       acknowledge_balance_alert: {
         Args: { p_alert_id: string; p_notes?: string }
         Returns: undefined

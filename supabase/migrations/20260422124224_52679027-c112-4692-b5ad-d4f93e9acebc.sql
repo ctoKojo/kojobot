@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public._tmp_bulk_upsert_email_templates(jsonb);
