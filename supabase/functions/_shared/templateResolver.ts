@@ -110,37 +110,40 @@ export async function resolveTemplate(
 
   // 2. DB override path
   if (mapping?.use_db_template && mapping.template_id) {
-    const { data: tpl } = await supabase
+    const { data: tplRaw } = await supabase
       .from('email_templates')
       .select(selectFields)
       .eq('id', mapping.template_id)
       .maybeSingle()
-    if (tpl && (tpl as TemplateRow).is_active) {
-      return { template: tpl as TemplateRow, mapping, source: 'mapping', disabled: false }
+    const tpl = tplRaw as unknown as TemplateRow | null
+    if (tpl && tpl.is_active) {
+      return { template: tpl, mapping, source: 'mapping', disabled: false }
     }
   }
 
   // 3. Direct name lookup (used by "Send Test" from the templates UI)
-  const { data: directTpl } = await supabase
+  const { data: directRaw } = await supabase
     .from('email_templates')
     .select(selectFields)
     .eq('name', eventKey)
     .eq('is_active', true)
     .maybeSingle()
+  const directTpl = directRaw as unknown as TemplateRow | null
   if (directTpl) {
-    return { template: directTpl as TemplateRow, mapping, source: 'direct', disabled: false }
+    return { template: directTpl, mapping, source: 'direct', disabled: false }
   }
 
   // 4. Convention fallback: default-{eventKey}
   if (!eventKey.startsWith('default-')) {
-    const { data: conventionTpl } = await supabase
+    const { data: convRaw } = await supabase
       .from('email_templates')
       .select(selectFields)
       .eq('name', `default-${eventKey}`)
       .eq('is_active', true)
       .maybeSingle()
+    const conventionTpl = convRaw as unknown as TemplateRow | null
     if (conventionTpl) {
-      return { template: conventionTpl as TemplateRow, mapping, source: 'convention', disabled: false }
+      return { template: conventionTpl, mapping, source: 'convention', disabled: false }
     }
   }
 
