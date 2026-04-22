@@ -77,6 +77,39 @@ Deno.serve(async (req) => {
     const reports: EventReport[] = []
     const runId = `e2e-${Date.now()}`
 
+    // Helper: sleep for ms
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+    // Helper: invoke send-email with one retry on transient failure
+    async function invokeWithRetry(payload: Record<string, unknown>, maxRetries = 1) {
+      let lastErr: any = null
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          const { data, error } = await supabase.functions.invoke('send-email', { body: payload })
+          if (error) {
+            lastErr = error
+            // Retry only on transient errors (network / rate limit)
+            const msg = (error.message ?? '').toLowerCase()
+            const isTransient = msg.includes('failed to send') || msg.includes('rate') || msg.includes('429') || msg.includes('timeout')
+            if (attempt < maxRetries && isTransient) {
+              await sleep(1000)
+              continue
+            }
+            return { data: null, error }
+          }
+          return { data, error: null }
+        } catch (e) {
+          lastErr = e
+          if (attempt < maxRetries) {
+            await sleep(1000)
+            continue
+          }
+          return { data: null, error: e }
+        }
+      }
+      return { data: null, error: lastErr }
+    }
+
     for (const ev of events ?? []) {
       const audiences: string[] = Array.isArray(ev.supported_audiences) && ev.supported_audiences.length > 0
         ? ev.supported_audiences
@@ -127,20 +160,18 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Invoke send-email in dry-run mode
+      // Invoke send-email in dry-run mode (with retry on transient errors)
       try {
         const idempotencyKey = `${runId}-${ev.event_key}-${audience}`
-        const { data: invokeRes, error: invokeErr } = await supabase.functions.invoke('send-email', {
-          body: {
-            to: recipientEmail,
-            templateName: ev.event_key,
-            templateData: previewData,
-            audience,
-            idempotencyKey,
-            dryRun: true,
-            smokeTest: true,
-            skipTelegramFanout: true,
-          },
+        const { data: invokeRes, error: invokeErr } = await invokeWithRetry({
+          to: recipientEmail,
+          templateName: ev.event_key,
+          templateData: previewData,
+          audience,
+          idempotencyKey,
+          dryRun: true,
+          smokeTest: true,
+          skipTelegramFanout: true,
         })
 
         if (invokeErr) {
@@ -173,6 +204,9 @@ Deno.serve(async (req) => {
           message: e instanceof Error ? e.message : String(e),
         })
       }
+
+      // Throttle: 150ms between invocations to avoid rate limiting
+      await sleep(150)
     }
 
     const summary = {
