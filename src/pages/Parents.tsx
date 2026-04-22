@@ -183,6 +183,29 @@ export default function Parents() {
     setAllParents(prev => prev.filter(p => p.parent_id !== parentId));
   };
 
+  const handleDelete = async (parentId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-parent', {
+        body: { parent_id: parentId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      toast({
+        title: isRTL ? 'تم الحذف' : 'Deleted',
+        description: isRTL ? 'تم حذف حساب ولي الأمر بالكامل' : 'Parent account fully deleted',
+      });
+      setAllParents(prev => prev.filter(p => p.parent_id !== parentId));
+    } catch (err: any) {
+      console.error('delete-parent failed:', err);
+      toast({
+        title: isRTL ? 'فشل الحذف' : 'Delete failed',
+        description: err?.message || (isRTL ? 'حدث خطأ غير متوقع' : 'Unexpected error'),
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getRelLabel = (rel: string) => {
     if (isRTL) {
       switch (rel) { case 'father': return 'أب'; case 'mother': return 'أم'; case 'guardian': return 'وصي'; default: return 'ولي أمر'; }
