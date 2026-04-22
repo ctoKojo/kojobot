@@ -129,3 +129,4 @@ Updated: now
 - [Frontend Performance Caching](mem://tech-stack/frontend-performance-caching) — 60s module cache for auth state
 - [Transactional Email System](mem://tech-stack/transactional-email-system) — Dedicated kojobot subdomain
 - [Subscription History Index](mem://tech-stack/subscription-history-index) — Partial unique index for active subs
+- [Notification System Architecture](mem://features/notification-system-architecture) — Convention-based template resolver (default-{event_key}), idempotent UPDATE pattern in send-email, NotificationsHealth dashboard at /notifications-health, 15-min stale-cleanup cron
