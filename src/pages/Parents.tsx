@@ -345,8 +345,6 @@ export default function Parents() {
                     </AlertDialog>
                   </div>
                 </TableCell>
-                <TableCell className="hidden">{/* spacer removed */}</TableCell>$DELETE_AFTER$
-                </TableCell>
               </TableRow>
             ))}
           </TableBody>
