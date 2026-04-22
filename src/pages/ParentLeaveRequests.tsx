@@ -168,6 +168,19 @@ export default function ParentLeaveRequests() {
         }
       }
 
+      // Notify admins on Telegram
+      const { notifyAdmins } = await import('@/lib/notifyAdmins');
+      notifyAdmins({
+        eventKey: 'admin-leave-requested',
+        templateData: {
+          studentName: studentName || '—',
+          fromDate: form.request_date,
+          toDate: form.end_date || form.request_date,
+          reason: form.reason || '—',
+        },
+        idempotencyKey: `leave-${form.student_id}-${form.request_date}`,
+      }).catch(() => {});
+
       toast({ title: isRTL ? 'تم إرسال الطلب' : 'Request Submitted' });
       setDialogOpen(false);
       setForm({ student_id: '', request_type: 'leave', request_date: '', end_date: '', reason: '', session_id: '' });

@@ -118,6 +118,14 @@ export function LinkParentDialog({ studentId, studentName, onLinked }: Props) {
             academyName,
           },
         });
+
+        // Notify admins on Telegram
+        const { notifyAdmins } = await import('@/lib/notifyAdmins');
+        notifyAdmins({
+          eventKey: 'admin-parent-linked',
+          templateData: { parentName: parentDisplayName, studentName },
+          idempotencyKey: `admin-parent-linked-${linkId}`,
+        }).catch(() => {});
       } catch (e) {
         console.error('[LinkParentDialog] notify error', e);
       }

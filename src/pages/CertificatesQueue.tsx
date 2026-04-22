@@ -92,6 +92,20 @@ export default function CertificatesQueue() {
       );
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
+
+      // Notify admins on Telegram
+      try {
+        const { notifyAdmins } = await import('@/lib/notifyAdmins');
+        notifyAdmins({
+          eventKey: 'admin-certificate-issued',
+          templateData: {
+            studentName: cert.student_name_snapshot || '—',
+            levelName: cert.level_name_snapshot || '—',
+          },
+          idempotencyKey: `cert-${cert.id}`,
+        }).catch(() => {});
+      } catch {}
+
       toast.success(isRTL ? 'تم توليد الشهادة' : 'Certificate generated');
       fetchRows();
     } catch (err: any) {

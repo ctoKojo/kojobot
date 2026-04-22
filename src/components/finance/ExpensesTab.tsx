@@ -102,6 +102,19 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
         if (attachErr) throw attachErr;
       }
 
+      // Notify admins on Telegram
+      const { notifyAdmins } = await import('@/lib/notifyAdmins');
+      notifyAdmins({
+        eventKey: 'admin-expense-recorded',
+        templateData: {
+          category: form.category,
+          amount: Number(form.amount).toLocaleString(),
+          description: form.description,
+          recordedBy: user?.email || '—',
+        },
+        idempotencyKey: `expense-${inserted?.id || Date.now()}`,
+      }).catch(() => {});
+
       toast({ title: isRTL ? 'تم إضافة المصروف' : 'Expense added' });
       setDialogOpen(false);
       setForm({ category: 'other', description: '', description_ar: '', amount: '', expense_date: new Date().toISOString().split('T')[0], is_recurring: false, notes: '' });
