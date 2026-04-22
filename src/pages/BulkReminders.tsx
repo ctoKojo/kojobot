@@ -28,14 +28,21 @@ import {
 import { TableSkeleton } from '@/components/ui/table-skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
-import { Send, CheckCircle2, XCircle, Loader2, Users, Megaphone, Search, Mail, MessageCircle } from 'lucide-react';
+import {
+  Send, CheckCircle2, XCircle, Loader2, Users, Megaphone, Search, Mail, MessageCircle,
+  GraduationCap, UserCog, Heart,
+} from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { sendEmail } from '@/lib/emailService';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { fetchEnrichedStudents } from '@/components/bulk-reminders/studentLoader';
 import { resolveRecipients, buildAutoTemplateData } from '@/components/bulk-reminders/recipientResolver';
-import type { StudentRow, SendResult, SendChannel } from '@/components/bulk-reminders/types';
+import {
+  loadRecipients,
+  type AudienceType,
+  type RecipientRow,
+} from '@/components/bulk-reminders/recipientLoader';
+import type { SendResult, SendChannel } from '@/components/bulk-reminders/types';
 
 interface CatalogTemplate {
   event_key: string;
@@ -49,7 +56,8 @@ const ANNOUNCEMENT_KEY = 'announcement';
 export default function BulkReminders() {
   const { isRTL } = useLanguage();
 
-  const [students, setStudents] = useState<StudentRow[]>([]);
+  const [audience, setAudience] = useState<AudienceType>('students');
+  const [recipients, setRecipients] = useState<RecipientRow[]>([]);
   const [templates, setTemplates] = useState<CatalogTemplate[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -66,27 +74,44 @@ export default function BulkReminders() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [results, setResults] = useState<SendResult[]>([]);
 
+  // Initial templates load
   useEffect(() => {
-    void load();
+    void loadTemplates();
   }, []);
 
-  const load = async () => {
-    setLoading(true);
+  // Reload recipients whenever audience changes
+  useEffect(() => {
+    void loadAudience(audience);
+    setSelectedIds(new Set());
+    setSearch('');
+  }, [audience, isRTL]);
+
+  const loadTemplates = async () => {
     try {
-      const [rows, tmplRes] = await Promise.all([
-        fetchEnrichedStudents(isRTL),
-        supabase
-          .from('email_event_catalog')
-          .select('event_key, display_name_en, display_name_ar, category')
-          .eq('is_active', true)
-          .order('category')
-          .order('event_key'),
-      ]);
-      setStudents(rows);
-      setTemplates((tmplRes.data as CatalogTemplate[]) ?? []);
+      const { data } = await supabase
+        .from('email_event_catalog')
+        .select('event_key, display_name_en, display_name_ar, category')
+        .eq('is_active', true)
+        .order('category')
+        .order('event_key');
+      setTemplates((data as CatalogTemplate[]) ?? []);
     } catch (e: any) {
       toast({
-        title: isRTL ? 'فشل التحميل' : 'Failed to load',
+        title: isRTL ? 'فشل تحميل القوالب' : 'Failed to load templates',
+        description: e.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const loadAudience = async (a: AudienceType) => {
+    setLoading(true);
+    try {
+      const rows = await loadRecipients(a, isRTL);
+      setRecipients(rows);
+    } catch (e: any) {
+      toast({
+        title: isRTL ? 'فشل تحميل المستلمين' : 'Failed to load recipients',
         description: e.message,
         variant: 'destructive',
       });
@@ -97,26 +122,27 @@ export default function BulkReminders() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter((s) => {
+    if (!q) return recipients;
+    return recipients.filter((r) => {
       const hay = [
-        s.full_name,
-        s.email ?? '',
-        s.phone ?? '',
-        s.group_name ?? '',
-        ...s.parents.flatMap((p) => [p.full_name, p.email ?? '']),
+        r.full_name,
+        r.email ?? '',
+        r.phone ?? '',
+        r.group_name ?? '',
+        r.meta ?? '',
+        ...(r.studentRow?.parents.flatMap((p) => [p.full_name, p.email ?? '']) ?? []),
       ].join(' ').toLowerCase();
       return hay.includes(q);
     });
-  }, [students, search]);
+  }, [recipients, search]);
 
-  const allFilteredSelected = filtered.length > 0 && filtered.every((s) => selectedIds.has(s.user_id));
+  const allFilteredSelected = filtered.length > 0 && filtered.every((s) => selectedIds.has(s.id));
 
   const toggleAllFiltered = (checked: boolean) => {
     const next = new Set(selectedIds);
     filtered.forEach((s) => {
-      if (checked) next.add(s.user_id);
-      else next.delete(s.user_id);
+      if (checked) next.add(s.id);
+      else next.delete(s.id);
     });
     setSelectedIds(next);
   };
@@ -138,7 +164,7 @@ export default function BulkReminders() {
 
   const handleSend = async () => {
     if (selectedIds.size === 0) {
-      toast({ title: isRTL ? 'اختر طالب على الأقل' : 'Select at least one student', variant: 'destructive' });
+      toast({ title: isRTL ? 'اختر مستلم على الأقل' : 'Select at least one recipient', variant: 'destructive' });
       return;
     }
     if (isAnnouncement) {
@@ -152,20 +178,66 @@ export default function BulkReminders() {
       }
     }
 
-    const targets = students.filter((s) => selectedIds.has(s.user_id));
+    const targets = recipients.filter((r) => selectedIds.has(r.id));
+
     type Job = {
-      student: StudentRow;
-      recipient: ReturnType<typeof resolveRecipients>['recipients'][number] | null;
+      // For status reporting
+      ownerName: string;          // e.g. student name (or recipient name for parent/instructor audience)
+      recipientUserId: string;    // user id for telegram routing
+      recipientType: 'parent' | 'student' | 'instructor';
+      recipientName: string;
+      email: string | null;
+      // Template variables
+      data: Record<string, unknown>;
       skipReason?: string;
     };
     const jobs: Job[] = [];
-    for (const s of targets) {
-      // Smart recipient mode: parent if available, otherwise student
-      const r = resolveRecipients(s, 'smart', isRTL);
-      if (r.recipients.length === 0) {
-        jobs.push({ student: s, recipient: null, skipReason: r.skipped[0]?.reason });
+
+    for (const r of targets) {
+      if (audience === 'students' && r.studentRow) {
+        // Smart routing: parent if any, else student
+        const res = resolveRecipients(r.studentRow, 'smart', isRTL);
+        if (res.recipients.length === 0) {
+          jobs.push({
+            ownerName: r.full_name,
+            recipientUserId: r.id,
+            recipientType: 'student',
+            recipientName: '—',
+            email: null,
+            data: {},
+            skipReason: res.skipped[0]?.reason,
+          });
+        } else {
+          for (const rec of res.recipients) {
+            jobs.push({
+              ownerName: r.full_name,
+              recipientUserId: rec.parentId ?? rec.studentId,
+              recipientType: rec.recipientType,
+              recipientName: rec.recipientName,
+              email: rec.email,
+              data: buildAutoTemplateData(rec, r.studentRow, {}),
+            });
+          }
+        }
       } else {
-        for (const rec of r.recipients) jobs.push({ student: s, recipient: rec });
+        // Parents or Instructors: send directly to the user
+        const recipientType: 'parent' | 'instructor' =
+          audience === 'parents' ? 'parent' : 'instructor';
+        jobs.push({
+          ownerName: r.full_name,
+          recipientUserId: r.id,
+          recipientType,
+          recipientName: r.full_name,
+          email: r.email,
+          data: {
+            recipientName: r.full_name,
+            studentName: '',
+            parentName: recipientType === 'parent' ? r.full_name : '',
+            groupName: '',
+            levelName: '',
+            recipientType,
+          },
+        });
       }
     }
 
@@ -179,94 +251,109 @@ export default function BulkReminders() {
     const wantTelegram = channel === 'telegram' || channel === 'both';
 
     for (let i = 0; i < jobs.length; i++) {
-      const { student: s, recipient, skipReason } = jobs[i];
+      const j = jobs[i];
 
-      if (!recipient) {
+      if (j.skipReason) {
         out.push({
-          studentId: s.user_id,
-          studentName: s.full_name,
+          studentId: j.recipientUserId,
+          studentName: j.ownerName,
           recipientType: 'none',
           recipientName: '—',
           email: '—',
           status: 'skipped',
-          message: skipReason ?? (isRTL ? 'لا يوجد مستلم' : 'No recipient'),
+          message: j.skipReason,
         });
-      } else {
-        const data = buildAutoTemplateData(recipient, s, {});
-        const recipientUserId = recipient.parentId ?? recipient.studentId;
-        const baseIdKey = `bulk-${templateName}-${recipient.recipientType}-${recipientUserId}-${s.user_id}-${stamp}-${i}`;
+        setResults([...out]);
+        setProgress({ done: i + 1, total: jobs.length });
+        continue;
+      }
 
-        // EMAIL
-        if (wantEmail) {
+      const baseIdKey = `bulk-${templateName}-${j.recipientType}-${j.recipientUserId}-${stamp}-${i}`;
+
+      // EMAIL
+      if (wantEmail) {
+        if (!j.email) {
+          out.push({
+            studentId: j.recipientUserId,
+            studentName: j.ownerName,
+            recipientType: j.recipientType as any,
+            recipientName: j.recipientName,
+            email: '—',
+            channel: 'email',
+            status: 'skipped',
+            message: isRTL ? 'لا يوجد إيميل' : 'No email',
+          });
+        } else {
           const r = await sendEmail({
-            to: recipient.email,
+            to: j.email,
             templateName: isAnnouncement ? 'announcement' : templateName,
             idempotencyKey: `${baseIdKey}-email`,
-            templateData: data as any,
+            templateData: j.data as any,
             customSubject: isAnnouncement ? announcementSubject : undefined,
             customBody: isAnnouncement ? announcementBody : undefined,
           });
           out.push({
-            studentId: s.user_id,
-            studentName: s.full_name,
-            recipientType: recipient.recipientType,
-            recipientName: recipient.recipientName,
-            email: recipient.email,
+            studentId: j.recipientUserId,
+            studentName: j.ownerName,
+            recipientType: j.recipientType as any,
+            recipientName: j.recipientName,
+            email: j.email,
             channel: 'email',
             status: r.success ? (r.skipped ? 'skipped' : 'success') : 'failed',
             message: r.skipped || r.error,
           });
         }
+      }
 
-        // TELEGRAM
-        if (wantTelegram) {
-          try {
-            const { data: tgRes, error: tgErr } = await supabase.functions.invoke('send-telegram', {
-              body: {
-                userId: recipientUserId,
-                templateName: isAnnouncement ? 'announcement' : templateName,
-                templateData: data,
-                customMessage: isAnnouncement ? `<b>${announcementSubject}</b>\n\n${announcementBody}` : undefined,
-                idempotencyKey: `${baseIdKey}-tg`,
-                bypassPreferences: true, // admin-driven bulk overrides user prefs
-              },
-            });
-            if (tgErr) {
-              out.push({
-                studentId: s.user_id, studentName: s.full_name,
-                recipientType: recipient.recipientType, recipientName: recipient.recipientName,
-                email: recipient.email, channel: 'telegram',
-                status: 'failed', message: tgErr.message,
-              });
-            } else if (tgRes?.skipped) {
-              out.push({
-                studentId: s.user_id, studentName: s.full_name,
-                recipientType: recipient.recipientType, recipientName: recipient.recipientName,
-                email: recipient.email, channel: 'telegram',
-                status: 'skipped',
-                message: tgRes.reason === 'no_telegram_link'
-                  ? (isRTL ? 'غير مربوط بتيليجرام' : 'Telegram not linked')
-                  : tgRes.reason,
-              });
-            } else {
-              out.push({
-                studentId: s.user_id, studentName: s.full_name,
-                recipientType: recipient.recipientType, recipientName: recipient.recipientName,
-                email: recipient.email, channel: 'telegram',
-                status: tgRes?.success ? 'success' : 'failed',
-                message: tgRes?.error,
-              });
-            }
-          } catch (e: any) {
+      // TELEGRAM
+      if (wantTelegram) {
+        try {
+          const { data: tgRes, error: tgErr } = await supabase.functions.invoke('send-telegram', {
+            body: {
+              userId: j.recipientUserId,
+              templateName: isAnnouncement ? 'announcement' : templateName,
+              templateData: j.data,
+              customMessage: isAnnouncement ? `<b>${announcementSubject}</b>\n\n${announcementBody}` : undefined,
+              idempotencyKey: `${baseIdKey}-tg`,
+              bypassPreferences: true,
+            },
+          });
+          if (tgErr) {
             out.push({
-              studentId: s.user_id, studentName: s.full_name,
-              recipientType: recipient.recipientType, recipientName: recipient.recipientName,
-              email: recipient.email, channel: 'telegram',
-              status: 'failed', message: e.message,
+              studentId: j.recipientUserId, studentName: j.ownerName,
+              recipientType: j.recipientType as any, recipientName: j.recipientName,
+              email: j.email ?? '—', channel: 'telegram',
+              status: 'failed', message: tgErr.message,
+            });
+          } else if (tgRes?.skipped) {
+            out.push({
+              studentId: j.recipientUserId, studentName: j.ownerName,
+              recipientType: j.recipientType as any, recipientName: j.recipientName,
+              email: j.email ?? '—', channel: 'telegram',
+              status: 'skipped',
+              message: tgRes.reason === 'no_telegram_link'
+                ? (isRTL ? 'غير مربوط بتيليجرام' : 'Telegram not linked')
+                : tgRes.reason,
+            });
+          } else {
+            out.push({
+              studentId: j.recipientUserId, studentName: j.ownerName,
+              recipientType: j.recipientType as any, recipientName: j.recipientName,
+              email: j.email ?? '—', channel: 'telegram',
+              status: tgRes?.success ? 'success' : 'failed',
+              message: tgRes?.error,
             });
           }
+        } catch (e: any) {
+          out.push({
+            studentId: j.recipientUserId, studentName: j.ownerName,
+            recipientType: j.recipientType as any, recipientName: j.recipientName,
+            email: j.email ?? '—', channel: 'telegram',
+            status: 'failed', message: e.message,
+          });
         }
       }
+
       setResults([...out]);
       setProgress({ done: i + 1, total: jobs.length });
     }
@@ -285,6 +372,40 @@ export default function BulkReminders() {
 
   const selectedTemplate = templates.find((t) => t.event_key === templateName);
 
+  // Audience-specific labels
+  const audienceLabel = audience === 'students'
+    ? (isRTL ? 'الطالب' : 'Student')
+    : audience === 'parents'
+      ? (isRTL ? 'ولي الأمر' : 'Parent')
+      : (isRTL ? 'المدرب' : 'Instructor');
+
+  const audienceOptions: Array<{ v: AudienceType; icon: any; en: string; ar: string; desc_en: string; desc_ar: string }> = [
+    {
+      v: 'students',
+      icon: GraduationCap,
+      en: 'Students',
+      ar: 'الطلاب',
+      desc_en: 'Smart routing: parent if linked, else student',
+      desc_ar: 'ذكي: لولي الأمر لو موجود، يتحول للطالب لو مفيش',
+    },
+    {
+      v: 'parents',
+      icon: Heart,
+      en: 'Parents',
+      ar: 'أولياء الأمور',
+      desc_en: 'Send directly to parent accounts',
+      desc_ar: 'إرسال مباشر لحسابات أولياء الأمور',
+    },
+    {
+      v: 'instructors',
+      icon: UserCog,
+      en: 'Instructors',
+      ar: 'المدربين',
+      desc_en: 'Send directly to instructors',
+      desc_ar: 'إرسال مباشر للمدربين',
+    },
+  ];
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -292,17 +413,62 @@ export default function BulkReminders() {
           title={isRTL ? 'تذكيرات جماعية' : 'Bulk Reminders'}
           subtitle={
             isRTL
-              ? 'ابعت قالب جاهز أو إعلان حر لمجموعة طلاب أو أولياء أمور'
-              : 'Send a ready template or a custom announcement to multiple students/parents'
+              ? 'ابعت قالب جاهز أو إعلان حر للطلاب أو أولياء الأمور أو المدربين'
+              : 'Send a ready template or a custom announcement to students, parents, or instructors'
           }
           icon={Send}
         />
 
-        {/* Step 1: Pick template or announcement */}
+        {/* Step 1: Audience */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
               <span className="text-primary me-2">1.</span>
+              {isRTL ? 'لمين تبعت؟' : 'Who is the audience?'}
+            </CardTitle>
+            <CardDescription>
+              {isRTL
+                ? 'حدد فئة المستلمين الأساسية. القائمة بتحت هتتغير حسب اختيارك.'
+                : 'Pick the primary audience. The list below updates accordingly.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {audienceOptions.map(({ v, icon: Icon, en, ar, desc_en, desc_ar }) => {
+                const active = audience === v;
+                return (
+                  <button
+                    type="button"
+                    key={v}
+                    disabled={sending}
+                    onClick={() => setAudience(v)}
+                    className={`flex flex-col items-start gap-2 rounded-lg border-2 p-4 text-start transition-all ${
+                      active
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-border hover:border-primary/40 hover:bg-muted/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon className={`h-5 w-5 ${active ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <span className={`text-sm font-semibold ${active ? 'text-primary' : ''}`}>
+                        {isRTL ? ar : en}
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {isRTL ? desc_ar : desc_en}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Step 2: Pick template or announcement */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              <span className="text-primary me-2">2.</span>
               {isRTL ? 'اختر القالب' : 'Pick template'}
             </CardTitle>
             <CardDescription>
@@ -319,7 +485,6 @@ export default function BulkReminders() {
                   <SelectValue placeholder={isRTL ? 'اختر قالب...' : 'Select a template...'} />
                 </SelectTrigger>
                 <SelectContent className="max-h-80">
-                  {/* Announcement first - highlighted */}
                   <SelectGroup>
                     <SelectLabel>{isRTL ? '✍️ كتابة حرة' : '✍️ Custom'}</SelectLabel>
                     <SelectItem value={ANNOUNCEMENT_KEY}>
@@ -350,7 +515,6 @@ export default function BulkReminders() {
               </Select>
             </div>
 
-            {/* Announcement form */}
             {isAnnouncement && (
               <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-primary">
@@ -375,16 +539,16 @@ export default function BulkReminders() {
                     onChange={(e) => setAnnouncementBody(e.target.value)}
                     placeholder={
                       isRTL
-                        ? 'اكتب نص الإعلان هنا... يمكنك استخدام {{recipientName}} أو {{studentName}}'
-                        : 'Type the announcement here... you can use {{recipientName}} or {{studentName}}'
+                        ? 'اكتب نص الإعلان هنا... يمكنك استخدام {{recipientName}}'
+                        : 'Type the announcement here... you can use {{recipientName}}'
                     }
                     rows={8}
                     disabled={sending}
                   />
                   <p className="text-xs text-muted-foreground">
                     {isRTL
-                      ? 'متغيرات اختيارية: {{recipientName}} (المستلم), {{studentName}} (اسم الطالب)'
-                      : 'Optional variables: {{recipientName}}, {{studentName}}'}
+                      ? 'متغيرات اختيارية: {{recipientName}} (المستلم), {{studentName}} (للطلاب فقط)'
+                      : 'Optional variables: {{recipientName}}, {{studentName}} (students only)'}
                   </p>
                 </div>
               </div>
@@ -402,25 +566,25 @@ export default function BulkReminders() {
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
                   {isRTL
-                    ? 'هيتم استخدام نص القالب الجاهز كما هو. لو محتاج رسالة مخصصة، اختر "إعلان عام" بدل ده.'
-                    : 'The ready template content will be used as-is. For custom content, pick "General Announcement" instead.'}
+                    ? 'هيتم استخدام نص القالب الجاهز كما هو.'
+                    : 'The ready template content will be used as-is.'}
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Step 1.5: Channel selector */}
+        {/* Step 3: Channel */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              <span className="text-primary me-2">2.</span>
+              <span className="text-primary me-2">3.</span>
               {isRTL ? 'اختر قناة الإرسال' : 'Pick delivery channel'}
             </CardTitle>
             <CardDescription>
               {isRTL
-                ? 'هتبعت ازاي؟ تيليجرام بيوصل أسرع لكن لازم المستلم يكون رابط حسابه.'
-                : 'How should this go out? Telegram is instant but only works for users who linked their account.'}
+                ? 'تيليجرام بيوصل أسرع لكن لازم المستلم يكون رابط حسابه.'
+                : 'Telegram is instant but only works for users who linked their account.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -454,20 +618,20 @@ export default function BulkReminders() {
           </CardContent>
         </Card>
 
-        {/* Step 3: Select students */}
+        {/* Step 4: Select recipients */}
         <Card>
           <CardHeader className="space-y-3">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <span className="text-primary me-1">2.</span>
+                  <span className="text-primary me-1">4.</span>
                   <Users className="h-5 w-5" />
                   {isRTL ? 'اختيار المستلمين' : 'Select recipients'}
                 </CardTitle>
                 <CardDescription>
                   {isRTL
-                    ? `${selectedIds.size} مختار من ${filtered.length} (${students.length} كلي) — هيُرسل لولي الأمر لو موجود، يتحول للطالب لو مفيش`
-                    : `${selectedIds.size} selected of ${filtered.length} (${students.length} total) — sends to parent if available, falls back to student`}
+                    ? `${selectedIds.size} مختار من ${filtered.length} (${recipients.length} كلي)`
+                    : `${selectedIds.size} selected of ${filtered.length} (${recipients.length} total)`}
                 </CardDescription>
               </div>
               <Button
@@ -501,8 +665,8 @@ export default function BulkReminders() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={
                   isRTL
-                    ? 'ابحث بالاسم، الإيميل، التليفون، أو اسم المجموعة...'
-                    : 'Search by name, email, phone, or group...'
+                    ? 'ابحث بالاسم، الإيميل، التليفون...'
+                    : 'Search by name, email, phone...'
                 }
                 className="pl-9"
                 disabled={sending}
@@ -524,44 +688,88 @@ export default function BulkReminders() {
                           disabled={sending || filtered.length === 0}
                         />
                       </TableHead>
-                      <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                      <TableHead>{isRTL ? 'المجموعة' : 'Group'}</TableHead>
-                      <TableHead>{isRTL ? 'ولي الأمر / الإيميل' : 'Parent / Email'}</TableHead>
+                      <TableHead>{audienceLabel}</TableHead>
+                      {audience === 'students' ? (
+                        <>
+                          <TableHead>{isRTL ? 'المجموعة' : 'Group'}</TableHead>
+                          <TableHead>{isRTL ? 'ولي الأمر / الإيميل' : 'Parent / Email'}</TableHead>
+                        </>
+                      ) : (
+                        <>
+                          <TableHead>{isRTL ? 'الإيميل' : 'Email'}</TableHead>
+                          <TableHead>{isRTL ? 'تفاصيل' : 'Details'}</TableHead>
+                        </>
+                      )}
+                      <TableHead className="w-20 text-center">{isRTL ? 'تيليجرام' : 'Telegram'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-12 text-sm">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-12 text-sm">
                           {isRTL ? 'لا توجد نتائج' : 'No results'}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filtered.map((s) => {
-                        const parent = s.parents[0];
-                        const willSendTo = parent?.email || s.email || '—';
-                        const recipientLabel = parent?.email ? parent.full_name : (s.email ? s.full_name : '—');
+                      filtered.map((r) => {
+                        const studentParent = r.studentRow?.parents[0];
+                        const willSendTo =
+                          audience === 'students'
+                            ? (studentParent?.email || r.email || '—')
+                            : (r.email || '—');
+                        const recipientLabel =
+                          audience === 'students'
+                            ? (studentParent?.email ? studentParent.full_name : (r.email ? r.full_name : '—'))
+                            : r.full_name;
                         return (
-                          <TableRow key={s.user_id}>
+                          <TableRow key={r.id}>
                             <TableCell>
                               <Checkbox
-                                checked={selectedIds.has(s.user_id)}
-                                onCheckedChange={() => toggleOne(s.user_id)}
+                                checked={selectedIds.has(r.id)}
+                                onCheckedChange={() => toggleOne(r.id)}
                                 disabled={sending}
                               />
                             </TableCell>
                             <TableCell>
-                              <div className="font-medium text-sm">{s.full_name}</div>
-                              {s.phone && (
-                                <div className="text-xs text-muted-foreground">{s.phone}</div>
+                              <div className="font-medium text-sm">{r.full_name}</div>
+                              {r.phone && (
+                                <div className="text-xs text-muted-foreground">{r.phone}</div>
                               )}
                             </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {s.group_name ?? '—'}
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">{recipientLabel}</div>
-                              <div className="text-xs text-muted-foreground">{willSendTo}</div>
+                            {audience === 'students' ? (
+                              <>
+                                <TableCell className="text-sm text-muted-foreground">
+                                  {r.group_name ?? '—'}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">{recipientLabel}</div>
+                                  <div className="text-xs text-muted-foreground">{willSendTo}</div>
+                                </TableCell>
+                              </>
+                            ) : (
+                              <>
+                                <TableCell className="text-sm text-muted-foreground">
+                                  {r.email ?? (
+                                    <span className="text-destructive">{isRTL ? 'لا يوجد' : 'None'}</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {r.meta ?? '—'}
+                                </TableCell>
+                              </>
+                            )}
+                            <TableCell className="text-center">
+                              {r.has_telegram ? (
+                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 border gap-1">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  {isRTL ? 'مربوط' : 'Linked'}
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="gap-1">
+                                  <XCircle className="h-3 w-3" />
+                                  {isRTL ? 'لا' : 'No'}
+                                </Badge>
+                              )}
                             </TableCell>
                           </TableRow>
                         );
@@ -601,8 +809,9 @@ export default function BulkReminders() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                        <TableHead>{audienceLabel}</TableHead>
                         <TableHead>{isRTL ? 'إلى' : 'To'}</TableHead>
+                        <TableHead>{isRTL ? 'القناة' : 'Channel'}</TableHead>
                         <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -612,6 +821,9 @@ export default function BulkReminders() {
                           <TableCell className="text-sm">{r.studentName}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {r.recipientName} • {r.email}
+                          </TableCell>
+                          <TableCell className="text-xs capitalize">
+                            {r.channel ?? '—'}
                           </TableCell>
                           <TableCell>
                             {r.status === 'success' && (
