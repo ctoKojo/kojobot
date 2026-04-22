@@ -401,7 +401,7 @@ export default function MyInstructorQuizzes() {
                     </div>
                     
                     <div className="flex items-center gap-4">
-                      <div className="text-right hidden sm:block">
+                      <div className="text-end hidden sm:block">
                         <div className="flex items-center gap-2 text-sm">
                           <span className="text-green-600 font-medium">{quiz.passed_count}</span>
                           <span className="text-muted-foreground">/</span>

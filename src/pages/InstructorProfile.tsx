@@ -696,7 +696,7 @@ export default function InstructorProfile() {
                                 )}
                               </div>
                             </div>
-                            <div className="text-right">
+                            <div className="text-end">
                               <p className="text-lg font-bold">{payment.net_amount} {isRTL ? 'ج.م' : 'EGP'}</p>
                               <Badge className={payment.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}>
                                 {payment.status === 'paid' ? (isRTL ? 'مصروف' : 'Paid') : (isRTL ? 'معلق' : 'Pending')}
@@ -752,7 +752,7 @@ export default function InstructorProfile() {
                               )}
                             </div>
                           </div>
-                          <div className="text-right">
+                          <div className="text-end">
                             <Badge variant="outline">
                               {group.schedule_day} - <SessionTimeDisplay sessionDate={getCairoToday()} sessionTime={group.schedule_time} isRTL={isRTL} />
                             </Badge>
@@ -803,7 +803,7 @@ export default function InstructorProfile() {
                                 {language === 'ar' ? session.groups?.name_ar : session.groups?.name}
                               </p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-end">
                               <p className="font-medium">{formatDate(session.session_date)}</p>
                               <p className="text-sm text-muted-foreground"><SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} /></p>
                             </div>
@@ -848,7 +848,7 @@ export default function InstructorProfile() {
                                 {language === 'ar' ? session.groups?.name_ar : session.groups?.name}
                               </p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-end">
                               <p className="font-medium">{formatDate(session.session_date)}</p>
                               <p className="text-sm text-muted-foreground"><SessionTimeDisplay sessionDate={session.session_date} sessionTime={session.session_time} isRTL={isRTL} /></p>
                             </div>

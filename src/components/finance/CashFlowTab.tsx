@@ -592,7 +592,7 @@ function AcademicMonthSection({ monthLabel, details, totals, isRTL }: {
                 <TableHead className="text-center">{isRTL ? 'سيشنات متبقية' : 'Remaining'}</TableHead>
                 <TableHead className="text-center">{isRTL ? 'تاريخ الانتهاء المتوقع' : 'Est. Completion'}</TableHead>
                 <TableHead className="text-center">{isRTL ? 'حالة التجديد' : 'Renewal Status'}</TableHead>
-                <TableHead className={isRTL ? 'text-left' : 'text-right'}>{isRTL ? 'تفاصيل المبلغ' : 'Amount Details'}</TableHead>
+                <TableHead className="text-end">{isRTL ? 'تفاصيل المبلغ' : 'Amount Details'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -628,7 +628,7 @@ function AcademicMonthSection({ monthLabel, details, totals, isRTL }: {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className={`font-semibold ${isRTL ? 'text-left' : 'text-right'}`}>
+                    <TableCell className="font-semibold text-end">
                       {isRenewed ? (
                         <div className="flex flex-col items-end gap-0.5">
                           <span className="text-emerald-600 text-sm">

@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { cn } from '@/lib/utils';
 
 interface DataTablePaginationProps {
   currentPage: number;
@@ -37,12 +38,21 @@ export function DataTablePagination({
   const startItem = (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalCount);
 
+  // Logical chevrons: in RTL, "previous" visually points right and "next" points left.
+  const PrevIcon = isRTL ? ChevronRight : ChevronLeft;
+  const NextIcon = isRTL ? ChevronLeft : ChevronRight;
+  const FirstIcon = isRTL ? ChevronsRight : ChevronsLeft;
+  const LastIcon = isRTL ? ChevronsLeft : ChevronsRight;
+
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-4">
+    <div
+      dir={isRTL ? 'rtl' : 'ltr'}
+      className={cn('flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-4')}
+    >
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span>
-          {isRTL 
-            ? `عرض ${startItem} - ${endItem} من ${totalCount}` 
+          {isRTL
+            ? `عرض ${startItem} - ${endItem} من ${totalCount}`
             : `Showing ${startItem} - ${endItem} of ${totalCount}`}
         </span>
       </div>
@@ -73,8 +83,8 @@ export function DataTablePagination({
 
         <div className="flex items-center gap-1">
           <span className="text-sm text-muted-foreground whitespace-nowrap">
-            {isRTL 
-              ? `صفحة ${currentPage} من ${totalPages}` 
+            {isRTL
+              ? `صفحة ${currentPage} من ${totalPages}`
               : `Page ${currentPage} of ${totalPages}`}
           </span>
         </div>
@@ -86,8 +96,9 @@ export function DataTablePagination({
             className="h-8 w-8"
             onClick={() => onPageChange(1)}
             disabled={!hasPreviousPage}
+            aria-label={isRTL ? 'الصفحة الأولى' : 'First page'}
           >
-            {isRTL ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+            <FirstIcon className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
@@ -95,8 +106,9 @@ export function DataTablePagination({
             className="h-8 w-8"
             onClick={() => onPageChange(currentPage - 1)}
             disabled={!hasPreviousPage}
+            aria-label={isRTL ? 'السابق' : 'Previous'}
           >
-            {isRTL ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            <PrevIcon className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
@@ -104,8 +116,9 @@ export function DataTablePagination({
             className="h-8 w-8"
             onClick={() => onPageChange(currentPage + 1)}
             disabled={!hasNextPage}
+            aria-label={isRTL ? 'التالي' : 'Next'}
           >
-            {isRTL ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            <NextIcon className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
@@ -113,8 +126,9 @@ export function DataTablePagination({
             className="h-8 w-8"
             onClick={() => onPageChange(totalPages)}
             disabled={!hasNextPage}
+            aria-label={isRTL ? 'الصفحة الأخيرة' : 'Last page'}
           >
-            {isRTL ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
+            <LastIcon className="h-4 w-4" />
           </Button>
         </div>
       </div>
