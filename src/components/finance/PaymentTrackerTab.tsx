@@ -243,7 +243,7 @@ export function PaymentTrackerTab({ selectedMonth }: PaymentTrackerTabProps = {}
             {paginated.map(sub => (
               <TableRow key={sub.id} className={sub.paymentStatus === 'overdue' ? 'bg-destructive/5' : sub.paymentStatus === 'paid' ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}>
                 <TableCell>
-                  <button className="text-left hover:underline" onClick={() => navigate(`/student/${sub.student_id}`)}>
+                  <button className="text-start hover:underline" onClick={() => navigate(`/student/${sub.student_id}`)}>
                     {language === 'ar' ? sub.profile?.full_name_ar || sub.profile?.full_name : sub.profile?.full_name}
                   </button>
                 </TableCell>

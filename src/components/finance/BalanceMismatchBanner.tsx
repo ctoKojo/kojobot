@@ -74,7 +74,7 @@ export function BalanceMismatchBanner({
           disabled={rebuilding}
           className="w-fit"
         >
-          <RefreshCw className={`h-3 w-3 ${isRTL ? 'ml-1' : 'mr-1'} ${rebuilding ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-3 w-3 me-1 ${rebuilding ? 'animate-spin' : ''}`} />
           {isRTL ? 'إعادة البناء' : 'Rebuild'}
         </Button>
       </AlertDescription>
