@@ -330,7 +330,7 @@ export default function Finance() {
             </div>
           </div>
           {/* Month Selector — controls expenses, salaries, payments, net profit views */}
-          <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-col items-start md:items-end gap-1">
             <span className="text-xs text-muted-foreground">{isRTL ? 'الشهر المالي' : 'Financial month'}</span>
             <MonthSelector value={selectedMonth} onChange={setSelectedMonth} monthsBack={24} monthsForward={0} />
             {!viewingCurrentMonth && (
