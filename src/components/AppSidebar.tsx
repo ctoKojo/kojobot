@@ -454,39 +454,69 @@ export function AppSidebar() {
         <KojobotLogo size="md" showText />
       </SidebarHeader>
 
-      <SidebarContent className="px-2 py-3">
+      <SidebarContent className="px-2 py-3 gap-1.5">
         {sections.map((section) => {
           const open = isSectionOpen(section);
           const SectionIcon = section.icon;
+          const colorKey = section.color ?? 'primary';
+          const colors = SECTION_COLOR_STYLES[colorKey];
           return (
             <Collapsible
               key={section.label}
               open={open}
               onOpenChange={(v) => toggleSection(section.label, v)}
-              className="group/collapsible"
+              className="group/section"
             >
               <SidebarGroup className="py-0">
                 <SidebarGroupLabel asChild>
                   <CollapsibleTrigger
                     className={cn(
-                      'flex w-full items-center justify-between rounded-md px-2 py-2 text-xs font-semibold uppercase tracking-wide',
-                      'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 transition-colors'
+                      'group/trigger flex w-full items-center justify-between rounded-lg px-2 py-2 text-xs font-semibold tracking-wide transition-all',
+                      'border border-transparent bg-sidebar-accent/30 hover:bg-sidebar-accent/60',
+                      'data-[state=open]:bg-sidebar-accent/70 data-[state=open]:border-sidebar-border data-[state=open]:shadow-sm',
+                      'text-sidebar-foreground/90'
                     )}
                   >
-                    <span className="flex items-center gap-2 min-w-0">
-                      {SectionIcon && <SectionIcon className="h-3.5 w-3.5 shrink-0" />}
-                      <span className="truncate">{isRTL ? section.labelAr : section.label}</span>
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className={cn(
+                          'flex h-7 w-7 items-center justify-center rounded-md transition-colors',
+                          colors.iconBg
+                        )}
+                      >
+                        {SectionIcon && (
+                          <SectionIcon className={cn('h-4 w-4 shrink-0', colors.icon)} />
+                        )}
+                      </span>
+                      <span className="truncate text-[0.78rem]">
+                        {isRTL ? section.labelAr : section.label}
+                      </span>
                     </span>
                     <ChevronDown
                       className={cn(
-                        'h-3.5 w-3.5 shrink-0 transition-transform duration-200',
+                        'h-4 w-4 shrink-0 transition-transform duration-200 text-sidebar-foreground/50',
                         open ? 'rotate-0' : isRTL ? 'rotate-90' : '-rotate-90'
                       )}
                     />
                   </CollapsibleTrigger>
                 </SidebarGroupLabel>
                 <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
-                  <SidebarGroupContent>
+                  <SidebarGroupContent
+                    className={cn(
+                      'mt-1 ms-3 ps-2 border-s-2 transition-colors',
+                      'border-s-' + (colorKey === 'accent' ? 'sidebar-border' : ''),
+                    )}
+                    style={{
+                      borderInlineStartColor:
+                        colorKey === 'primary' ? 'hsl(var(--primary) / 0.35)' :
+                        colorKey === 'success' ? 'hsl(var(--success) / 0.35)' :
+                        colorKey === 'warning' ? 'hsl(var(--warning) / 0.35)' :
+                        colorKey === 'destructive' ? 'hsl(var(--destructive) / 0.35)' :
+                        colorKey === 'kojo-blue' ? 'hsl(var(--kojo-blue) / 0.35)' :
+                        colorKey === 'kojo-purple' ? 'hsl(var(--kojo-purple) / 0.35)' :
+                        'hsl(var(--sidebar-border))',
+                    }}
+                  >
                     <SidebarMenu>
                       {section.items.map((item) => {
                         const active = isActive(item.url);
