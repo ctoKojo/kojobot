@@ -1321,6 +1321,7 @@ export type Database = {
           display_name_en: string
           event_key: string
           is_active: boolean
+          preview_data: Json
           supported_audiences: string[]
         }
         Insert: {
@@ -1332,6 +1333,7 @@ export type Database = {
           display_name_en: string
           event_key: string
           is_active?: boolean
+          preview_data?: Json
           supported_audiences?: string[]
         }
         Update: {
@@ -1343,6 +1345,7 @@ export type Database = {
           display_name_en?: string
           event_key?: string
           is_active?: boolean
+          preview_data?: Json
           supported_audiences?: string[]
         }
         Relationships: []
@@ -1479,6 +1482,107 @@ export type Database = {
         }
         Relationships: []
       }
+      email_template_audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          changes: Json
+          created_at: string
+          id: string
+          template_id: string | null
+          template_name: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          changes?: Json
+          created_at?: string
+          id?: string
+          template_id?: string | null
+          template_name?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          changes?: Json
+          created_at?: string
+          id?: string
+          template_id?: string | null
+          template_name?: string | null
+        }
+        Relationships: []
+      }
+      email_template_versions: {
+        Row: {
+          audience: string
+          body_html_ar: string
+          body_html_en: string
+          body_telegram_md_ar: string | null
+          body_telegram_md_en: string | null
+          change_note: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          subject_ar: string
+          subject_en: string
+          subject_telegram_ar: string | null
+          subject_telegram_en: string | null
+          template_id: string
+          version_number: number
+        }
+        Insert: {
+          audience: string
+          body_html_ar: string
+          body_html_en: string
+          body_telegram_md_ar?: string | null
+          body_telegram_md_en?: string | null
+          change_note?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          subject_ar: string
+          subject_en: string
+          subject_telegram_ar?: string | null
+          subject_telegram_en?: string | null
+          template_id: string
+          version_number: number
+        }
+        Update: {
+          audience?: string
+          body_html_ar?: string
+          body_html_en?: string
+          body_telegram_md_ar?: string | null
+          body_telegram_md_en?: string | null
+          change_note?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          subject_ar?: string
+          subject_en?: string
+          subject_telegram_ar?: string | null
+          subject_telegram_en?: string | null
+          template_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_templates: {
         Row: {
           audience: string
@@ -1491,12 +1595,15 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean
+          last_test_at: string | null
+          last_test_status: string | null
           name: string
           subject_ar: string
           subject_en: string
           subject_telegram_ar: string | null
           subject_telegram_en: string | null
           updated_at: string
+          validation_status: Json
         }
         Insert: {
           audience?: string
@@ -1509,12 +1616,15 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          last_test_at?: string | null
+          last_test_status?: string | null
           name: string
           subject_ar: string
           subject_en: string
           subject_telegram_ar?: string | null
           subject_telegram_en?: string | null
           updated_at?: string
+          validation_status?: Json
         }
         Update: {
           audience?: string
@@ -1527,12 +1637,15 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          last_test_at?: string | null
+          last_test_status?: string | null
           name?: string
           subject_ar?: string
           subject_en?: string
           subject_telegram_ar?: string | null
           subject_telegram_en?: string | null
           updated_at?: string
+          validation_status?: Json
         }
         Relationships: []
       }
@@ -7711,6 +7824,10 @@ export type Database = {
           healed_user_id: string
         }[]
       }
+      import_email_templates_batch: {
+        Args: { p_batch_id?: string; p_mode?: string; p_payload: Json }
+        Returns: Json
+      }
       init_salary_month: { Args: { p_month?: string }; Returns: Json }
       insert_warning_deduped: {
         Args: {
@@ -7991,6 +8108,10 @@ export type Database = {
           p_unresolved_id: string
         }
         Returns: undefined
+      }
+      restore_email_template_version: {
+        Args: { p_version_id: string }
+        Returns: string
       }
       reverse_journal_entry: {
         Args: { p_entry_id: string; p_reason: string }
