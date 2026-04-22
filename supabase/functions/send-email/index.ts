@@ -226,6 +226,22 @@ Deno.serve(async (req) => {
     }).catch((e) => console.warn('[send-email] telegram fan-out failed:', e?.message))
   }
 
+  // Idempotency: skip if already successfully sent
+  const { data: existing } = await supabase
+    .from('email_send_log')
+    .select('id, status')
+    .eq('message_id', idempotencyKey)
+    .eq('status', 'sent')
+    .maybeSingle()
+
+  if (existing) {
+    console.log('Email already sent (idempotent skip)', { idempotencyKey })
+    return new Response(
+      JSON.stringify({ success: true, skipped: 'already_sent' }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
   if (!resolved) {
     // Either event is disabled by admin, or template not found in DB nor code.
     await supabase.from('email_send_log').insert({
