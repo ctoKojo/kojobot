@@ -152,6 +152,7 @@ export function AppSidebar() {
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
               { title: t.nav.notifications, url: '/notifications', icon: Bell },
+              { title: isRTL ? 'إشعاراتي (Telegram)' : 'My Notifications (Telegram)', url: '/my-notifications', icon: Send },
             ],
           },
           {
