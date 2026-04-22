@@ -369,7 +369,7 @@ export default function EmailLogs() {
                     <TableHead>{isArabic ? 'الحالة' : 'Status'}</TableHead>
                     <TableHead>{isArabic ? 'الوقت' : 'Time'}</TableHead>
                     <TableHead>{isArabic ? 'الخطأ' : 'Error'}</TableHead>
-                    <TableHead className="text-right">{isArabic ? 'تفاصيل' : 'Details'}</TableHead>
+                    <TableHead className="text-end">{isArabic ? 'تفاصيل' : 'Details'}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -397,7 +397,7 @@ export default function EmailLogs() {
                         <TableCell className="text-sm text-destructive max-w-xs truncate" title={row.error_message || ''}>
                           {row.error_message || '—'}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-end">
                           <Button variant="ghost" size="sm" onClick={() => openDetail(row)}>
                             {isArabic ? 'عرض' : 'View'}
                           </Button>
