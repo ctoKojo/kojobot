@@ -410,7 +410,51 @@ export default function BulkReminders() {
           </CardContent>
         </Card>
 
-        {/* Step 2: Select students */}
+        {/* Step 1.5: Channel selector */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              <span className="text-primary me-2">2.</span>
+              {isRTL ? 'اختر قناة الإرسال' : 'Pick delivery channel'}
+            </CardTitle>
+            <CardDescription>
+              {isRTL
+                ? 'هتبعت ازاي؟ تيليجرام بيوصل أسرع لكن لازم المستلم يكون رابط حسابه.'
+                : 'How should this go out? Telegram is instant but only works for users who linked their account.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {([
+                { v: 'email', icon: Mail, en: 'Email only', ar: 'إيميل فقط' },
+                { v: 'telegram', icon: MessageCircle, en: 'Telegram only', ar: 'تيليجرام فقط' },
+                { v: 'both', icon: Send, en: 'Email + Telegram', ar: 'إيميل + تيليجرام' },
+              ] as const).map(({ v, icon: Icon, en, ar }) => {
+                const active = channel === v;
+                return (
+                  <button
+                    type="button"
+                    key={v}
+                    disabled={sending}
+                    onClick={() => setChannel(v)}
+                    className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all ${
+                      active
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-border hover:border-primary/40 hover:bg-muted/30'
+                    }`}
+                  >
+                    <Icon className={`h-6 w-6 ${active ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className={`text-sm font-medium ${active ? 'text-primary' : ''}`}>
+                      {isRTL ? ar : en}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Step 3: Select students */}
         <Card>
           <CardHeader className="space-y-3">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
