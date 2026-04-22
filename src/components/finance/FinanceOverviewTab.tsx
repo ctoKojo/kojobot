@@ -52,7 +52,7 @@ export function FinanceOverviewTab({
   const isAdmin = role === 'admin';
   const navigate = useNavigate();
 
-  // Treasury balances
+  // Treasury balances — admin only
   const treasuryQuery = useQuery({
     queryKey: ['finance-overview-treasury'],
     queryFn: async () => {
@@ -61,9 +61,10 @@ export function FinanceOverviewTab({
       return (data ?? []) as TreasuryBalance[];
     },
     staleTime: 60_000,
+    enabled: isAdmin,
   });
 
-  // 6-month revenue / profit trend
+  // 6-month revenue / profit trend — admin only
   const trendQuery = useQuery({
     queryKey: ['finance-overview-trend'],
     queryFn: async () => {
@@ -75,6 +76,7 @@ export function FinanceOverviewTab({
       return { payments: pay.data || [], expenses: exp.data || [], salaries: sal.data || [] };
     },
     staleTime: 60_000,
+    enabled: isAdmin,
   });
 
   const treasury = useMemo(() => {
