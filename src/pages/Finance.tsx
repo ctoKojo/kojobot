@@ -394,6 +394,7 @@ export default function Finance() {
               selectedMonth={selectedMonth}
               isCurrentMonth={viewingCurrentMonth}
               onTabChange={setActiveTab}
+              role={role}
             />
           </TabsContent>
 
