@@ -692,7 +692,22 @@ export default function GroupsPage() {
             formData.schedule_time
           );
         }
-        
+
+        // Notify admins on Telegram
+        try {
+          const { notifyAdmins } = await import('@/lib/notifyAdmins');
+          notifyAdmins({
+            eventKey: 'admin-group-created',
+            templateData: {
+              groupName: formData.name_ar || formData.name,
+              scheduleDay: formData.schedule_day,
+              scheduleTime: formData.schedule_time,
+              createdBy: user?.email || '—',
+            },
+            idempotencyKey: `group-created-${formData.name}-${Date.now()}`,
+          });
+        } catch (e) { console.warn('notifyAdmins failed', e); }
+
         toast({
           title: t.common.success,
           description: isRTL ? 'تم إضافة المجموعة' : 'Group added successfully',

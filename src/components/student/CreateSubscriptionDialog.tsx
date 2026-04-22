@@ -178,6 +178,27 @@ export function CreateSubscriptionDialog({ open, onOpenChange, studentId, studen
       // Invalidate ProtectedRoute cache
       (window as any).__protectedRouteCacheReset?.();
 
+      // Notify admins on Telegram (renewal only — new subscriptions are admin-driven and visible)
+      if (isRenewal) {
+        try {
+          const { notifyAdmins } = await import('@/lib/notifyAdmins');
+          const planObj = plans.find(p => p.id === selectedPlanId);
+          const planName = planObj ? (language === 'ar' ? planObj.name_ar : planObj.name) : '—';
+          notifyAdmins({
+            eventKey: 'admin-subscription-renewed',
+            templateData: {
+              studentName,
+              plan: planName,
+              totalAmount,
+              paidAmount,
+              paymentType,
+              renewedBy: user?.email || '—',
+            },
+            idempotencyKey: `sub-renewed-${sub?.id || studentId}-${Date.now()}`,
+          });
+        } catch (e) { console.warn('notifyAdmins failed', e); }
+      }
+
       toast({ title: isRTL ? 'تم إنشاء الاشتراك بنجاح' : 'Subscription created successfully' });
       onOpenChange(false);
       onSuccess();
