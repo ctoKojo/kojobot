@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Send, Link2, Unlink, Copy, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Send, Link2, Unlink, Copy, CheckCircle2, ExternalLink, QrCode } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface TelegramLink {
   id: string;
@@ -210,9 +211,26 @@ export function TelegramLinkCard() {
           </div>
         ) : code ? (
           <div className="space-y-4">
-            <div className="rounded-md border-2 border-dashed border-[#2AABEE]/40 bg-[#2AABEE]/5 p-4 space-y-3">
+            <div className="rounded-md border-2 border-dashed border-[#2AABEE]/40 bg-[#2AABEE]/5 p-4 space-y-4">
+              {/* QR Code (mobile-friendly) */}
+              {botUsername && (
+                <div className="flex flex-col items-center gap-2 pb-3 border-b border-[#2AABEE]/20">
+                  <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <QrCode className="h-3 w-3" />
+                    {isRTL ? 'امسح الـ QR من موبايلك' : 'Scan with your phone'}
+                  </div>
+                  <div className="bg-white p-3 rounded-md">
+                    <QRCodeSVG
+                      value={`https://t.me/${botUsername}?start=${code.code}`}
+                      size={140}
+                      level="M"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="text-sm font-medium">
-                {isRTL ? 'خطوات الربط:' : 'Linking steps:'}
+                {isRTL ? 'أو يدوياً:' : 'Or manually:'}
               </div>
               <ol className="text-sm space-y-2 list-decimal list-inside">
                 <li>
