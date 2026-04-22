@@ -122,9 +122,8 @@ export default function Subscribe() {
         // Notify admins on Telegram
         try {
           const { notifyAdmins } = await import('@/lib/notifyAdmins');
-          const planName = plans.find((p: any) => p.id === selectedPlanId)?.name_ar
-            || plans.find((p: any) => p.id === selectedPlanId)?.name
-            || '—';
+          const planObj = plans.find((p: any) => p.id === selectedPlanId);
+          const planName = planObj?.name_ar || planObj?.name_en || '—';
           notifyAdmins({
             eventKey: 'admin-subscription-request',
             templateData: { name: name.trim(), phone: phone.trim(), plan: planName },

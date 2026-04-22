@@ -99,8 +99,8 @@ export default function CertificatesQueue() {
         notifyAdmins({
           eventKey: 'admin-certificate-issued',
           templateData: {
-            studentName: cert.student_name || cert.student_name_ar || '—',
-            levelName: cert.level_name || cert.level_name_ar || '—',
+            studentName: cert.student_name_snapshot || '—',
+            levelName: cert.level_name_snapshot || '—',
           },
           idempotencyKey: `cert-${cert.id}`,
         }).catch(() => {});
