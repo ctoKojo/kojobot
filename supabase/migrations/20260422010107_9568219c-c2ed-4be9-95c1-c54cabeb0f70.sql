@@ -1,0 +1,1 @@
+REFRESH MATERIALIZED VIEW public.mv_account_balances_monthly;
