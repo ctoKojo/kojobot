@@ -21,9 +21,33 @@ import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Beaker, Send, AlertTriangle, CheckCircle2, Mail, MessageCircle } from 'lucide-react';
+import { Beaker, Send, AlertTriangle, CheckCircle2, Mail, MessageCircle, FormInput, Code } from 'lucide-react';
+import { EventVariablesForm } from '@/components/notifications/EventVariablesForm';
+import type { EventVariable } from '@/lib/templateValidation';
 
 type Audience = 'student' | 'parent' | 'instructor' | 'admin' | 'reception' | 'staff';
+
+/**
+ * Merge defaults: preview_data takes priority, then sample values for any
+ * keys that aren't covered by preview_data.
+ */
+function mergeDefaults(
+  variables: EventVariable[],
+  previewData: Record<string, unknown> | null | undefined,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  (variables ?? []).forEach((v) => {
+    if (v.sample !== undefined && v.sample !== null && v.sample !== '') {
+      out[v.key] = v.sample;
+    }
+  });
+  if (previewData && typeof previewData === 'object') {
+    Object.entries(previewData).forEach(([k, val]) => {
+      if (val !== undefined && val !== null && val !== '') out[k] = val;
+    });
+  }
+  return out;
+}
 
 export default function NotificationsSmokeTest() {
   const { language } = useLanguage();
