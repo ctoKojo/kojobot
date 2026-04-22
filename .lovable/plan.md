@@ -1,91 +1,67 @@
 
 
-# الخطة: تفعيل الخزنة المالية + ربط النظام المحاسبي بالحركات الحقيقية
+## تطبيق RTL شامل على الجداول والتابات في الموقع كله
 
-## الهدف
-تشغيل طبقة الـ double-entry accounting الموجودة بالفعل في DB، وربط كل دفعة/مصروف/راتب بقيد يومية تلقائي يحدّث رصيد الخزنة النقدية لحظياً، مع UI خزنة كامل.
+المشكلة: الجداول (`Table`) والتابات (`Tabs`) مش بتطبق اتجاه RTL بشكل صحيح لما اللغة عربي، رغم إن `document.documentElement.dir` بيتظبط على `rtl` في `LanguageContext`.
 
----
+### السبب الجذري
 
-## المخرجات (5 أجزاء)
+1. **`src/components/ui/table.tsx`**: مفيش أي معالجة لـ RTL. الأعمدة بتفضل LTR حتى لو الصفحة `dir="rtl"`، لأن Tailwind classes زي `pr-0` و `pl-2.5` ثابتة ومش logical (مش `pe/ps`).
+2. **`src/components/ui/tabs.tsx`**: نفس المشكلة - `TabsList` مبني على flex بدون اعتبار للاتجاه، والأيقونات في `TabsTrigger` بتظهر في الترتيب الغلط.
+3. **`src/components/ui/data-table-pagination.tsx`**: بيستخدم `isRTL` لتبديل أيقونات الـ chevron يدوياً، لكن الـ `flex` direction مش متظبط.
+4. **استخدامات متفرقة**: ملفات كتير بتستخدم `text-left`, `ml-`, `mr-`, `pl-`, `pr-`, `space-x-` بدل البدائل الـ logical (`text-start`, `ms-`, `me-`, `ps-`, `pe-`, `gap-`).
 
-### 1. ربط الحركات بدفتر اليومية تلقائياً (Migration)
-- **Trigger `auto_post_payment_to_journal`** على `payments` بعد INSERT:
-  - يولّد `journal_entry` بـ `source='payment'` و `voucher_no` تلقائي.
-  - **سطرين**: Debit Cash/Bank/InstaPay/E-Wallet (حسب `payment_method` + `transfer_type` من `payment_accounts`) | Credit Subscription Revenue (4100).
-  - يربط الـ line بـ `customer_account_id` للطالب.
-  - يُنفّذ `status='posted'` فوراً (يستفيد من `b_validate_journal_balance_trg`).
-- **Trigger `auto_post_expense_to_journal`** على `expenses`:
-  - Debit حساب المصروف المناسب (5310/5320…) | Credit Cash أو Bank (حسب طريقة الدفع).
-- **Trigger `auto_post_salary_to_journal`** على `salary_payments`:
-  - Debit Salaries Expense (5100) | Credit Cash/Bank.
-  - يربط الـ line بـ `employee_account_id`.
+### خطة التنفيذ
 
-### 2. ضمان وجود subledger لكل طالب/موظف
-- **Trigger على `profiles`** بعد إنشاء طالب → INSERT `customer_accounts` (control = 1210).
-- **Trigger على `user_roles`** بعد منح دور instructor/reception → INSERT `employee_accounts` (control = 2110).
-- **Backfill RPC `bootstrap_subledgers`** يملأ الـ accounts للطلاب/الموظفين الموجودين حالياً.
+**1. إصلاح `src/components/ui/table.tsx` (جذر المشكلة)**
+- إضافة `dir` attribute تلقائي على `<table>` من `useLanguage()` أو الاعتماد على CSS inheritance من `<html dir>`.
+- تغيير `TableHead`: `text-left` → `text-start`، و `pr-0` → `pe-0` للـ checkbox.
+- تغيير `TableCell`: `pr-0` → `pe-0`.
+- إضافة `[dir="rtl"]` selectors للـ wrapper عشان `overflow-auto` يشتغل صح مع scroll RTL.
 
-### 3. Backfill للحركات التاريخية (RPC)
-- **`backfill_historical_journal_entries(p_dry_run boolean)`**:
-  - يمر على كل `payments` و `expenses` (والـ salary_payments لو فيه) من الأقدم للأحدث.
-  - يولّد journal entry لكل واحدة بـ `entry_date = payment_date/expense_date`.
-  - Idempotent: يتخطى أي source_id موجود في `journal_entries` بالفعل.
-  - يرجّع تقرير: `{ created_je, skipped, errors }`.
-- يُستدعى مرة واحدة من زرار في صفحة الخزنة الجديدة (admin only).
+**2. إصلاح `src/components/ui/tabs.tsx`**
+- `TabsList`: استخدام `gap-` بدل `space-x-` لضمان السلوك في RTL.
+- `TabsTrigger`: استبدال `ml-/mr-` بـ `ms-/me-`.
+- إضافة `dir="rtl"` على `TabsList` لما اللغة عربي عشان `data-state` indicator يتحرك صح.
 
-### 4. صفحة الخزنة `/finance/treasury` — `src/pages/Treasury.tsx`
-**4 كروت أرصدة لحظية** (تحسبهم real-time من `journal_entry_lines` لحسابات 1110, 1120, 1130, 1140):
-- 💵 الخزنة النقدية (Cash on Hand)
-- 🏦 الحساب البنكي (Bank)
-- 📱 إنستاباي
-- 💳 المحفظة الإلكترونية
-- **إجمالي السيولة** (مجموع الأربعة)
+**3. تحسين `src/components/ui/data-table-pagination.tsx`**
+- استبدال أيقونات `ChevronLeft/Right` بمنطق logical موحد بدل التبديل اليدوي.
+- استخدام `flex-row-reverse` تلقائياً في RTL لو محتاج.
 
-**Tabs:**
-- **Transactions**: كل الحركات الـ posted (payments in / expenses out / salary out) من `journal_entry_lines` joined مع `journal_entries` و `chart_of_accounts`. فلتر per-account, per-date-range, per-source.
-- **Cash Reconciliation**: مقارنة الرصيد المحسوب (من الـ journal) vs العدّ الفعلي (admin يدخل رقم) → فرق + زرار "تسجيل عجز/زيادة" يخلق قيد adjustment.
-- **Health Check**: حالة `balance_alerts` pending + زرار "Refresh `mv_account_balances_monthly`".
+**4. مراجعة الاستخدامات في كل الموقع**
+- بحث شامل عن `text-left`, `text-right`, `pl-`, `pr-`, `ml-`, `mr-`, `space-x-` في كل ملفات `src/`.
+- استبدال بالبدائل الـ logical (`text-start/end`, `ps-/pe-`, `ms-/me-`, `gap-`).
+- التركيز على الصفحات المتأثرة: `Finance.tsx`, `Students.tsx`, `Sessions.tsx`, `Groups.tsx`, `ActivityLog.tsx`, `SubscriptionRequests.tsx`, وكل ملفات `src/components/finance/*`, `src/components/student/*`, `src/components/curriculum/*`.
 
-**زرار "Backfill Historical"** (admin فقط) يستدعي `backfill_historical_journal_entries`.
+**5. إصلاح Tabs محددة في صفحات معروفة**
+- `Finance.tsx`: التأكد إن `TabsList` بتعرض التابات بترتيب صحيح في RTL.
+- `StudentProfile.tsx`: التابات الأفقية القابلة للتمرير لازم تبدأ من اليمين في RTL.
+- `Settings.tsx`, `GroupDetails.tsx`: نفس المعالجة.
 
-### 5. ربط الـ UI الموجود
-- إضافة `/finance/treasury` في `src/App.tsx` (admin + reception).
-- إضافة لينك في `AppSidebar.tsx` تحت قسم "Finance" بأيقونة 💰.
-- إضافة Treasury card في `Dashboard` للـ admin/reception (الرصيد النقدي الحالي).
+**6. اختبار وتحقق**
+- استخدام Browser tools للتنقل بين `/finance`, `/students`, `/groups`, `/curriculum` مع اللغة العربية والتأكد من:
+  - الجداول: العناوين على اليمين، أعمدة الإجراءات على الشمال.
+  - التابات: أول تاب على اليمين، الـ active indicator بيتحرك صح.
+  - الـ Pagination: أيقونات السهم في اتجاه صحيح.
+  - الأيقونات داخل الأزرار والبادجات: المسافات صحيحة.
 
----
+### الملفات المتوقع تعديلها
 
-## ترتيب التنفيذ
-1. Migration — auto-post triggers + subledger triggers + backfill RPC.
-2. صفحة `/finance/treasury` كاملة + Sidebar link + Route.
-3. تشغيل backfill يدوياً من زرار الصفحة (بعد الموافقة).
-4. التحقق: `cash_on_hand` المحسوب من journal = 87,505 - 1,822 = **85,683 ج.م**.
+**أساسية (UI primitives)**:
+- `src/components/ui/table.tsx`
+- `src/components/ui/tabs.tsx`
+- `src/components/ui/data-table-pagination.tsx`
 
----
+**صفحات وكومبوننتس**:
+- `src/pages/Finance.tsx`, `Students.tsx`, `Sessions.tsx`, `Groups.tsx`, `GroupDetails.tsx`, `StudentProfile.tsx`, `ActivityLog.tsx`, `SubscriptionRequests.tsx`, `CertificatesQueue.tsx`, `Settings.tsx`, وغيرها حسب نتيجة البحث.
+- `src/components/finance/*` (كل التابات والجداول).
+- `src/components/shared/SortableTableHead.tsx`, `TableToolbar.tsx`, `StatsGrid.tsx`.
+- `src/features/students/components/StudentsTable.tsx`.
 
-## نقاط التحكم (لمنع المشاكل)
-- كل الـ triggers `SECURITY DEFINER` + اسم alphabetical (`a_`/`b_`) لضمان الترتيب.
-- Backfill idempotent بـ `WHERE NOT EXISTS (... source='payment' AND source_id=p.id)`.
-- كل قيد يحترم `b_validate_journal_balance_trg` (Debit = Credit).
-- `enforce_via_rpc` triggers الموجودة على `journal_entries` تتطلب الـ posting يحصل من داخل function — التريجر الجديد هيستخدم security definer function.
+### ملاحظات تقنية
 
----
-
-## الملفات المتأثرة
-| ملف | النوع |
-|-----|------|
-| `supabase/migrations/<ts>_treasury_activation.sql` | جديد |
-| `src/pages/Treasury.tsx` | جديد |
-| `src/App.tsx` | تعديل (route) |
-| `src/components/AppSidebar.tsx` | تعديل (link) |
-| `src/components/dashboard/AdminDashboard.tsx` | تعديل (treasury card) |
-
----
-
-## النتيجة بعد التنفيذ
-- رصيد الخزنة يبان لحظياً ومش هيختلف عن الواقع أبداً.
-- كل حركة جديدة (دفعة/مصروف/راتب) بتنزل auto في الـ journal.
-- 52 payment + 9 expense القدام يتحولوا لقيود محاسبية صحيحة.
-- النظام يبقى production-grade accounting بمعايير double-entry حقيقية.
+- مش هنغير `LanguageContext` لأنه بالفعل بيظبط `dir="rtl"` على الـ `<html>`.
+- الاعتماد على Tailwind logical properties (`ms-`, `me-`, `ps-`, `pe-`, `text-start`, `text-end`) اللي بتستجيب تلقائياً لـ `dir`.
+- لو فيه أماكن محتاجة direction explicit (زي CodeBlocks)، هنحافظ على `dir="ltr"` المحدد فيها (طبقاً لـ Mixed Language Rendering rule).
+- مفيش تغييرات على قاعدة البيانات أو الـ backend.
 
