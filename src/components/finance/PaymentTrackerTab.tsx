@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDate } from '@/lib/timeUtils';
 import { notificationService } from '@/lib/notificationService';
+import { notifyAdmins } from '@/lib/notifyAdmins';
 
 interface EnrichedSub {
   id: string;
@@ -203,6 +204,19 @@ export function PaymentTrackerTab({ selectedMonth }: PaymentTrackerTabProps = {}
       if (res?.error) throw new Error(res.error);
 
       await notificationService.notifyPaymentRecorded(selectedSub.student_id, paymentAmount, Math.max(0, res.new_remaining));
+
+      // Notify admins on Telegram
+      const studentName = selectedSub.profile?.full_name_ar || selectedSub.profile?.full_name || 'طالب';
+      notifyAdmins({
+        eventKey: 'admin-payment-recorded',
+        templateData: {
+          studentName,
+          amount: paymentAmount.toLocaleString(),
+          method: paymentMethod === 'cash' ? (isRTL ? 'كاش' : 'Cash') : (isRTL ? 'تحويل' : 'Transfer'),
+          recordedBy: user?.email || '—',
+        },
+        idempotencyKey: `payment-${selectedSub.id}-${Date.now()}`,
+      }).catch(() => {});
 
       toast({ title: isRTL ? 'تم تسجيل الدفعة بنجاح' : 'Payment recorded successfully' });
       setPaymentDialog(false);

@@ -244,6 +244,21 @@ export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
         .update({ status: 'paid' } as any)
         .eq('employee_id', payForm.employee_id).eq('month', currentMonth);
 
+      // Notify admins on Telegram
+      const employees = (await supabase.from('profiles').select('full_name, full_name_ar').eq('user_id', payForm.employee_id).maybeSingle()).data;
+      const employeeName = employees?.full_name_ar || employees?.full_name || 'موظف';
+      const totalPaid = (snapshot.base_amount || 0) + (snapshot.total_bonuses || 0) - (snapshot.total_deductions || 0);
+      const { notifyAdmins } = await import('@/lib/notifyAdmins');
+      notifyAdmins({
+        eventKey: 'admin-salary-paid',
+        templateData: {
+          employeeName,
+          amount: totalPaid.toLocaleString(),
+          month: payForm.month,
+        },
+        idempotencyKey: `salary-${payForm.employee_id}-${payForm.month}`,
+      }).catch(() => {});
+
       toast({ title: isRTL ? 'تم صرف الراتب' : 'Salary paid' });
       setPayDialog(false);
       setPayMethodValue(initialPaymentMethodValue);

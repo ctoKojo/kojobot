@@ -97,6 +97,19 @@ export function TreasuryTransferDialog({ open, onOpenChange, balances }: Props) 
       return data;
     },
     onSuccess: (result: any) => {
+      // Notify admins on Telegram
+      import('@/lib/notifyAdmins').then(({ notifyAdmins }) => {
+        notifyAdmins({
+          eventKey: 'admin-treasury-transfer',
+          templateData: {
+            fromAccount: fromOption?.label_ar || fromOption?.label || fromCode,
+            toAccount: toOption?.label_ar || toOption?.label || toCode,
+            amount: numericAmount.toLocaleString(),
+          },
+          idempotencyKey: `treasury-${result.voucher_no}`,
+        }).catch(() => {});
+      });
+
       toast.success(
         isRTL
           ? `تم التحويل بنجاح • سند: ${result.voucher_no}`
