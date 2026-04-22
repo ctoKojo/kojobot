@@ -300,20 +300,52 @@ export default function Parents() {
                   )}
                 </TableCell>
                 <TableCell className="text-center">
-                  {showActions ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Button size="sm" onClick={() => handleApprove(parent.parent_id)} className="gap-1">
-                        <CheckCircle className="h-3.5 w-3.5" />
-                        {isRTL ? 'موافقة' : 'Approve'}
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleReject(parent.parent_id)} className="gap-1">
-                        <XCircle className="h-3.5 w-3.5" />
-                        {isRTL ? 'رفض' : 'Reject'}
-                      </Button>
-                    </div>
-                  ) : (
-                    <Badge variant="outline">{parent.children.length}</Badge>
-                  )}
+                  <div className="flex items-center justify-center gap-2">
+                    {showActions ? (
+                      <>
+                        <Button size="sm" onClick={() => handleApprove(parent.parent_id)} className="gap-1">
+                          <CheckCircle className="h-3.5 w-3.5" />
+                          {isRTL ? 'موافقة' : 'Approve'}
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleReject(parent.parent_id)} className="gap-1">
+                          <XCircle className="h-3.5 w-3.5" />
+                          {isRTL ? 'رفض' : 'Reject'}
+                        </Button>
+                      </>
+                    ) : (
+                      <Badge variant="outline">{parent.children.length}</Badge>
+                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10" title={isRTL ? 'حذف نهائي' : 'Delete permanently'}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent dir={isRTL ? 'rtl' : 'ltr'}>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            {isRTL ? 'حذف حساب ولي الأمر؟' : 'Delete parent account?'}
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {isRTL
+                              ? `سيتم حذف حساب "${parent.full_name_ar || parent.full_name || parent.email}" بالكامل من النظام، بما في ذلك الربط بالأبناء والإشعارات وبيانات تسجيل الدخول. هذا الإجراء لا يمكن التراجع عنه.`
+                              : `Account "${parent.full_name || parent.email}" will be permanently deleted, including child links, notifications, and login credentials. This action cannot be undone.`}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>{isRTL ? 'إلغاء' : 'Cancel'}</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(parent.parent_id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {isRTL ? 'حذف نهائي' : 'Delete permanently'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </TableCell>
+                <TableCell className="hidden">{/* spacer removed */}</TableCell>$DELETE_AFTER$
                 </TableCell>
               </TableRow>
             ))}
