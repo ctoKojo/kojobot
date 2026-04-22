@@ -1321,6 +1321,7 @@ export type Database = {
           display_name_en: string
           event_key: string
           is_active: boolean
+          supported_audiences: string[]
         }
         Insert: {
           available_variables?: Json
@@ -1331,6 +1332,7 @@ export type Database = {
           display_name_en: string
           event_key: string
           is_active?: boolean
+          supported_audiences?: string[]
         }
         Update: {
           available_variables?: Json
@@ -1341,12 +1343,14 @@ export type Database = {
           display_name_en?: string
           event_key?: string
           is_active?: boolean
+          supported_audiences?: string[]
         }
         Relationships: []
       }
       email_event_mappings: {
         Row: {
           admin_channel_override: string
+          audience: string
           event_key: string
           id: string
           is_enabled: boolean
@@ -1359,6 +1363,7 @@ export type Database = {
         }
         Insert: {
           admin_channel_override?: string
+          audience?: string
           event_key: string
           id?: string
           is_enabled?: boolean
@@ -1371,6 +1376,7 @@ export type Database = {
         }
         Update: {
           admin_channel_override?: string
+          audience?: string
           event_key?: string
           id?: string
           is_enabled?: boolean
@@ -1385,7 +1391,7 @@ export type Database = {
           {
             foreignKeyName: "email_event_mappings_event_key_fkey"
             columns: ["event_key"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "email_event_catalog"
             referencedColumns: ["event_key"]
           },
@@ -1475,8 +1481,11 @@ export type Database = {
       }
       email_templates: {
         Row: {
+          audience: string
           body_html_ar: string
           body_html_en: string
+          body_telegram_md_ar: string | null
+          body_telegram_md_en: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -1485,11 +1494,16 @@ export type Database = {
           name: string
           subject_ar: string
           subject_en: string
+          subject_telegram_ar: string | null
+          subject_telegram_en: string | null
           updated_at: string
         }
         Insert: {
+          audience?: string
           body_html_ar: string
           body_html_en: string
+          body_telegram_md_ar?: string | null
+          body_telegram_md_en?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1498,11 +1512,16 @@ export type Database = {
           name: string
           subject_ar: string
           subject_en: string
+          subject_telegram_ar?: string | null
+          subject_telegram_en?: string | null
           updated_at?: string
         }
         Update: {
+          audience?: string
           body_html_ar?: string
           body_html_en?: string
+          body_telegram_md_ar?: string | null
+          body_telegram_md_en?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1511,6 +1530,8 @@ export type Database = {
           name?: string
           subject_ar?: string
           subject_en?: string
+          subject_telegram_ar?: string | null
+          subject_telegram_en?: string | null
           updated_at?: string
         }
         Relationships: []
