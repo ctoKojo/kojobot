@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { notifyEvent } from '@/lib/notifyEvent';
 
 interface ParentResult {
   id: string;
@@ -82,6 +83,45 @@ export function LinkParentDialog({ studentId, studentName, onLinked }: Props) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: error.message });
     } else {
       toast({ title: isRTL ? 'تم ربط ولي الأمر بنجاح' : 'Parent linked successfully' });
+
+      // Fire-and-forget notifications (parent + student)
+      try {
+        const parent = results.find((p) => p.id === parentId);
+        const parentDisplayName = parent
+          ? (isRTL ? parent.full_name_ar || parent.full_name : parent.full_name)
+          : '';
+        const academyName = 'Kojobot';
+        const loginUrl = `${window.location.origin}/auth`;
+        const linkId = `${parentId}-${studentId}`;
+
+        notifyEvent({
+          eventKey: 'parent-student-linked',
+          audience: 'parent',
+          userId: parentId,
+          idempotencyKey: `parent-linked-${linkId}`,
+          templateData: {
+            parentName: parentDisplayName,
+            studentName,
+            academyName,
+            loginUrl,
+          },
+        });
+
+        notifyEvent({
+          eventKey: 'student-linked-to-parent',
+          audience: 'student',
+          userId: studentId,
+          idempotencyKey: `student-linked-${linkId}`,
+          templateData: {
+            studentName,
+            parentName: parentDisplayName,
+            academyName,
+          },
+        });
+      } catch (e) {
+        console.error('[LinkParentDialog] notify error', e);
+      }
+
       setOpen(false);
       onLinked?.();
     }
