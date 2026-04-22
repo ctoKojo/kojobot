@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Users, BookOpen, Eye, Plus, Loader2, CheckCircle, AlertCircle, X, UserPlus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { TelegramLinkPromptBanner } from '@/components/telegram/TelegramLinkPromptBanner';
 
 interface LinkedStudent {
   student_id: string;
@@ -191,6 +192,7 @@ export default function ParentDashboard() {
   return (
     <DashboardLayout title={isRTL ? 'بوابة ولي الأمر' : 'Parent Portal'}>
       <div className="space-y-6">
+        <TelegramLinkPromptBanner />
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">
