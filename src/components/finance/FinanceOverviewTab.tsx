@@ -227,7 +227,8 @@ export function FinanceOverviewTab({
         </div>
       </section>
 
-      {/* === Reports / KPIs Section === */}
+      {/* === Reports / KPIs Section (admin only) === */}
+      {isAdmin && (
       <section>
         <SectionHeader
           icon={LineChartIcon}
