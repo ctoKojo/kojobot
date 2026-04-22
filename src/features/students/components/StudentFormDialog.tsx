@@ -369,6 +369,19 @@ export function StudentFormDialog({
         const lvName = levels.find((l) => l.id === formData.level_id)?.name;
         const ag = ageGroups.find((a) => a.id === formData.age_group_id);
 
+        // Notify admins on Telegram
+        const { notifyAdmins } = await import('@/lib/notifyAdmins');
+        const { data: { user: actor } } = await supabase.auth.getUser();
+        notifyAdmins({
+          eventKey: 'admin-student-created',
+          templateData: {
+            studentName: formData.full_name_ar || formData.full_name,
+            phone: formData.phone || '—',
+            createdBy: actor?.email || '—',
+          },
+          idempotencyKey: `student-created-${data?.user_id || formData.email}`,
+        }).catch(() => {});
+
         setCredentialsDialog({
           open: true, email: formData.email, password: formData.password, name: formData.full_name,
           avatarUrl: createdAvatarUrl, levelName: lvName,

@@ -36,11 +36,22 @@ export function DeleteStudentDialog({ target, onClose, onDeleted }: DeleteStuden
     if (!target) return;
     setDeleting(true);
     try {
+      const studentName = target.full_name_ar || target.full_name;
       const { data, error } = await supabase.functions.invoke('delete-users', {
         body: { user_id: target.user_id },
       });
       if (error) throw error;
       if (data?.error) throw { error: data.error, error_ar: data.error_ar };
+
+      // Notify admins on Telegram
+      const { notifyAdmins } = await import('@/lib/notifyAdmins');
+      const { data: { user } } = await supabase.auth.getUser();
+      notifyAdmins({
+        eventKey: 'admin-student-deleted',
+        templateData: { studentName, deletedBy: user?.email || '—' },
+        idempotencyKey: `student-deleted-${target.user_id}`,
+      }).catch(() => {});
+
       toast({
         title: t.common.success,
         description: isRTL ? 'تم حذف الطالب بنجاح' : 'Student deleted successfully',

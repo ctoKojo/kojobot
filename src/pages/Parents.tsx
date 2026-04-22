@@ -172,6 +172,14 @@ export default function Parents() {
       idempotencyKey: `parent-approved-${parentId}`,
     }).catch(err => console.error('parent-account-approved dispatch failed:', err));
 
+    // Notify admins on Telegram
+    const { notifyAdmins } = await import('@/lib/notifyAdmins');
+    notifyAdmins({
+      eventKey: 'admin-parent-approved',
+      templateData: { parentName, approvedBy: user?.email || '—' },
+      idempotencyKey: `parent-approved-admin-${parentId}`,
+    }).catch(() => {});
+
     toast({ title: isRTL ? 'تمت الموافقة' : 'Approved', description: isRTL ? 'تم تفعيل حساب ولي الأمر' : 'Parent account has been activated' });
     setAllParents(prev => prev.map(p => p.parent_id === parentId ? { ...p, is_approved: true } : p));
   };
