@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Send, Link2, Unlink, Copy, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Send, Link2, Unlink, Copy, CheckCircle2, ExternalLink, QrCode } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface TelegramLink {
   id: string;
