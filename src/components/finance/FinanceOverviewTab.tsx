@@ -32,6 +32,7 @@ interface FinanceOverviewTabProps {
   selectedMonth: string;
   isCurrentMonth: boolean;
   onTabChange: (value: string) => void;
+  role?: string | null;
 }
 
 interface TreasuryBalance {
