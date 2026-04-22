@@ -71,8 +71,54 @@ interface NavSection {
   labelAr: string;
   icon?: React.ComponentType<{ className?: string }>;
   items: NavItem[];
-  defaultOpen?: boolean;
+  /** Tailwind color token name used for icon tint + accent bar. */
+  color?: 'primary' | 'success' | 'warning' | 'destructive' | 'kojo-blue' | 'kojo-purple' | 'accent';
 }
+
+const SECTION_COLOR_STYLES: Record<string, { icon: string; bar: string; iconBg: string; ring: string }> = {
+  primary: {
+    icon: 'text-primary',
+    bar: 'bg-primary',
+    iconBg: 'bg-primary/10 group-hover/section:bg-primary/15',
+    ring: 'group-data-[state=open]/section:ring-primary/30',
+  },
+  success: {
+    icon: 'text-success',
+    bar: 'bg-success',
+    iconBg: 'bg-success/10 group-hover/section:bg-success/15',
+    ring: 'group-data-[state=open]/section:ring-success/30',
+  },
+  warning: {
+    icon: 'text-warning',
+    bar: 'bg-warning',
+    iconBg: 'bg-warning/10 group-hover/section:bg-warning/15',
+    ring: 'group-data-[state=open]/section:ring-warning/30',
+  },
+  destructive: {
+    icon: 'text-destructive',
+    bar: 'bg-destructive',
+    iconBg: 'bg-destructive/10 group-hover/section:bg-destructive/15',
+    ring: 'group-data-[state=open]/section:ring-destructive/30',
+  },
+  'kojo-blue': {
+    icon: 'text-kojo-blue',
+    bar: 'bg-kojo-blue',
+    iconBg: 'bg-kojo-blue/10 group-hover/section:bg-kojo-blue/15',
+    ring: 'group-data-[state=open]/section:ring-kojo-blue/30',
+  },
+  'kojo-purple': {
+    icon: 'text-kojo-purple',
+    bar: 'bg-kojo-purple',
+    iconBg: 'bg-kojo-purple/10 group-hover/section:bg-kojo-purple/15',
+    ring: 'group-data-[state=open]/section:ring-kojo-purple/30',
+  },
+  accent: {
+    icon: 'text-accent-foreground',
+    bar: 'bg-accent-foreground/60',
+    iconBg: 'bg-accent group-hover/section:bg-accent/80',
+    ring: 'group-data-[state=open]/section:ring-accent-foreground/20',
+  },
+};
 
 export function AppSidebar() {
   const { t, isRTL } = useLanguage();
@@ -88,7 +134,7 @@ export function AppSidebar() {
       case 'admin':
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, defaultOpen: true,
+            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, color: 'primary',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
@@ -96,7 +142,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Students & People', labelAr: 'الطلاب والأشخاص', icon: GraduationCap, defaultOpen: true,
+            label: 'Students & People', labelAr: 'الطلاب والأشخاص', icon: GraduationCap, color: 'kojo-blue',
             items: [
               { title: t.nav.students, url: '/students', icon: GraduationCap },
               { title: isRTL ? 'أولياء الأمور' : 'Parents', url: '/parents', icon: Users },
@@ -104,7 +150,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Sessions & Academic', labelAr: 'الحصص والأكاديمي', icon: Calendar, defaultOpen: true,
+            label: 'Sessions & Academic', labelAr: 'الحصص والأكاديمي', icon: Calendar, color: 'kojo-purple',
             items: [
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen },
               { title: t.nav.groups, url: '/groups', icon: Calendar },
@@ -115,7 +161,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Finance', labelAr: 'المالية', icon: DollarSign, defaultOpen: true,
+            label: 'Finance', labelAr: 'المالية', icon: DollarSign, color: 'success',
             items: [
               { title: isRTL ? 'الإدارة والخزنة' : 'Finance & Treasury', url: '/finance', icon: DollarSign },
               { title: isRTL ? 'الإقفال والتدقيق' : 'Closing & Audit', url: '/finance/closing', icon: Lock },
@@ -123,7 +169,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Content & Curriculum', labelAr: 'المحتوى والمنهج', icon: Library,
+            label: 'Content & Curriculum', labelAr: 'المحتوى والمنهج', icon: Library, color: 'kojo-purple',
             items: [
               { title: isRTL ? 'المنهج' : 'Curriculum', url: '/curriculum', icon: Library },
               { title: isRTL ? 'المواد التعليمية' : 'Materials', url: '/materials', icon: BookMarked },
@@ -134,7 +180,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Operations & Compliance', labelAr: 'العمليات والالتزام', icon: ShieldCheck,
+            label: 'Operations & Compliance', labelAr: 'العمليات والالتزام', icon: ShieldCheck, color: 'warning',
             items: [
               { title: isRTL ? 'طلبات الإجازة والأعذار' : 'Leave & Absence', url: '/leave-requests', icon: CalendarDays },
               { title: isRTL ? 'مراجعة تحديد المستوى' : 'Placement Review', url: '/placement-test-review', icon: ClipboardCheck },
@@ -145,7 +191,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Reports & Insights', labelAr: 'التقارير والتحليلات', icon: BarChart3,
+            label: 'Reports & Insights', labelAr: 'التقارير والتحليلات', icon: BarChart3, color: 'kojo-blue',
             items: [
               { title: isRTL ? 'لوحة الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3 },
               { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3 },
@@ -153,7 +199,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Communications', labelAr: 'التواصل', icon: Mail,
+            label: 'Communications', labelAr: 'التواصل', icon: Mail, color: 'primary',
             items: [
               { title: isRTL ? 'تذكيرات جماعية' : 'Bulk Reminders', url: '/bulk-reminders', icon: Send },
               { title: isRTL ? 'قوالب الإيميل' : 'Email Templates', url: '/email-templates', icon: FileText },
@@ -162,7 +208,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'System Settings', labelAr: 'إعدادات النظام', icon: Settings,
+            label: 'System Settings', labelAr: 'إعدادات النظام', icon: Settings, color: 'accent',
             items: [
               { title: t.nav.settings, url: '/settings', icon: Settings },
               { title: t.nav.ageGroups, url: '/age-groups', icon: Layers },
@@ -175,7 +221,7 @@ export function AppSidebar() {
       case 'instructor':
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, defaultOpen: true,
+            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, color: 'primary',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'جدول العمل' : 'My Schedule', url: '/instructor-schedule', icon: CalendarDays },
@@ -184,7 +230,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Teaching', labelAr: 'التدريس', icon: BookOpen, defaultOpen: true,
+            label: 'Teaching', labelAr: 'التدريس', icon: BookOpen, color: 'kojo-purple',
             items: [
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen },
               { title: t.nav.groups, url: '/groups', icon: Calendar },
@@ -194,7 +240,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Personal', labelAr: 'الشخصي', icon: BarChart3,
+            label: 'Personal', labelAr: 'الشخصي', icon: BarChart3, color: 'kojo-blue',
             items: [
               { title: isRTL ? 'لوحة الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3 },
               { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-instructor-warnings', icon: AlertTriangle },
@@ -205,7 +251,7 @@ export function AppSidebar() {
       case 'student':
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, defaultOpen: true,
+            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, color: 'primary',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
@@ -213,7 +259,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Learning', labelAr: 'التعلم', icon: BookOpen, defaultOpen: true,
+            label: 'Learning', labelAr: 'التعلم', icon: BookOpen, color: 'kojo-purple',
             items: [
               { title: isRTL ? 'سيشناتي' : 'My Sessions', url: '/my-sessions', icon: BookOpen },
               { title: isRTL ? 'سيشناتي التعويضية' : 'Makeup Sessions', url: '/my-makeup-sessions', icon: RefreshCw },
@@ -223,7 +269,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Progress', labelAr: 'تقدمي', icon: TrendingUp, defaultOpen: true,
+            label: 'Progress', labelAr: 'تقدمي', icon: TrendingUp, color: 'success',
             items: [
               { title: isRTL ? 'الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3 },
               { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: TrendingUp },
@@ -236,7 +282,7 @@ export function AppSidebar() {
       case 'reception':
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, defaultOpen: true,
+            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, color: 'primary',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
@@ -244,14 +290,14 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Students & People', labelAr: 'الطلاب والأشخاص', icon: GraduationCap, defaultOpen: true,
+            label: 'Students & People', labelAr: 'الطلاب والأشخاص', icon: GraduationCap, color: 'kojo-blue',
             items: [
               { title: t.nav.students, url: '/students', icon: GraduationCap },
               { title: isRTL ? 'أولياء الأمور' : 'Parents', url: '/parents', icon: Users },
             ],
           },
           {
-            label: 'Sessions & Academic', labelAr: 'الحصص والأكاديمي', icon: Calendar, defaultOpen: true,
+            label: 'Sessions & Academic', labelAr: 'الحصص والأكاديمي', icon: Calendar, color: 'kojo-purple',
             items: [
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen },
               { title: t.nav.groups, url: '/groups', icon: Calendar },
@@ -262,14 +308,14 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Finance', labelAr: 'المالية', icon: DollarSign, defaultOpen: true,
+            label: 'Finance', labelAr: 'المالية', icon: DollarSign, color: 'success',
             items: [
               { title: isRTL ? 'الإدارة والخزنة' : 'Finance & Treasury', url: '/finance', icon: DollarSign },
               { title: isRTL ? 'الإعدادات المالية' : 'Finance Settings', url: '/finance/settings', icon: Settings },
             ],
           },
           {
-            label: 'Operations', labelAr: 'العمليات', icon: ShieldCheck,
+            label: 'Operations', labelAr: 'العمليات', icon: ShieldCheck, color: 'warning',
             items: [
               { title: isRTL ? 'طلبات الإجازة والأعذار' : 'Leave & Absence', url: '/leave-requests', icon: CalendarDays },
               { title: isRTL ? 'مراجعة تحديد المستوى' : 'Placement Review', url: '/placement-test-review', icon: ClipboardCheck },
@@ -278,7 +324,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Reports & Comms', labelAr: 'التقارير والتواصل', icon: BarChart3,
+            label: 'Reports & Comms', labelAr: 'التقارير والتواصل', icon: BarChart3, color: 'kojo-blue',
             items: [
               { title: isRTL ? 'لوحة الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3 },
               { title: isRTL ? 'تذكيرات جماعية' : 'Bulk Reminders', url: '/bulk-reminders', icon: Send },
@@ -289,7 +335,7 @@ export function AppSidebar() {
       case 'parent':
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, defaultOpen: true,
+            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, color: 'primary',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
@@ -297,7 +343,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'My Children', labelAr: 'أبنائي', icon: GraduationCap, defaultOpen: true,
+            label: 'My Children', labelAr: 'أبنائي', icon: GraduationCap, color: 'kojo-blue',
             items: [
               { title: isRTL ? 'الإجازات والأعذار' : 'Leave & Absence', url: '/parent-leave-requests', icon: CalendarDays },
               { title: isRTL ? 'الحساب المالي' : 'Finances', url: '/my-finances', icon: DollarSign },
@@ -308,7 +354,7 @@ export function AppSidebar() {
       default:
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, defaultOpen: true,
+            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, color: 'primary',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
             ],
@@ -321,12 +367,13 @@ export function AppSidebar() {
   const sectionHasActive = (section: NavSection) =>
     section.items.some((item) => isActive(item.url) || item.children?.some((c) => isActive(c.url)));
 
-  // Track open/closed state per section. Default: defaultOpen prop OR section contains active route
+  // Track open/closed state per section. Default: ALL sections collapsed.
+  // Once the user toggles a section, that choice is remembered for the session.
   const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
 
   const isSectionOpen = (section: NavSection) => {
     if (section.label in openMap) return openMap[section.label];
-    return section.defaultOpen || sectionHasActive(section);
+    return false; // default closed for all sections
   };
 
   const toggleSection = (label: string, value: boolean) => {
@@ -407,39 +454,69 @@ export function AppSidebar() {
         <KojobotLogo size="md" showText />
       </SidebarHeader>
 
-      <SidebarContent className="px-2 py-3">
+      <SidebarContent className="px-2 py-3 gap-1.5">
         {sections.map((section) => {
           const open = isSectionOpen(section);
           const SectionIcon = section.icon;
+          const colorKey = section.color ?? 'primary';
+          const colors = SECTION_COLOR_STYLES[colorKey];
           return (
             <Collapsible
               key={section.label}
               open={open}
               onOpenChange={(v) => toggleSection(section.label, v)}
-              className="group/collapsible"
+              className="group/section"
             >
               <SidebarGroup className="py-0">
                 <SidebarGroupLabel asChild>
                   <CollapsibleTrigger
                     className={cn(
-                      'flex w-full items-center justify-between rounded-md px-2 py-2 text-xs font-semibold uppercase tracking-wide',
-                      'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 transition-colors'
+                      'group/trigger flex w-full items-center justify-between rounded-lg px-2 py-2 text-xs font-semibold tracking-wide transition-all',
+                      'border border-transparent bg-sidebar-accent/30 hover:bg-sidebar-accent/60',
+                      'data-[state=open]:bg-sidebar-accent/70 data-[state=open]:border-sidebar-border data-[state=open]:shadow-sm',
+                      'text-sidebar-foreground/90'
                     )}
                   >
-                    <span className="flex items-center gap-2 min-w-0">
-                      {SectionIcon && <SectionIcon className="h-3.5 w-3.5 shrink-0" />}
-                      <span className="truncate">{isRTL ? section.labelAr : section.label}</span>
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <span
+                        className={cn(
+                          'flex h-7 w-7 items-center justify-center rounded-md transition-colors',
+                          colors.iconBg
+                        )}
+                      >
+                        {SectionIcon && (
+                          <SectionIcon className={cn('h-4 w-4 shrink-0', colors.icon)} />
+                        )}
+                      </span>
+                      <span className="truncate text-[0.78rem]">
+                        {isRTL ? section.labelAr : section.label}
+                      </span>
                     </span>
                     <ChevronDown
                       className={cn(
-                        'h-3.5 w-3.5 shrink-0 transition-transform duration-200',
+                        'h-4 w-4 shrink-0 transition-transform duration-200 text-sidebar-foreground/50',
                         open ? 'rotate-0' : isRTL ? 'rotate-90' : '-rotate-90'
                       )}
                     />
                   </CollapsibleTrigger>
                 </SidebarGroupLabel>
                 <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
-                  <SidebarGroupContent>
+                  <SidebarGroupContent
+                    className={cn(
+                      'mt-1 ms-3 ps-2 border-s-2 transition-colors',
+                      'border-s-' + (colorKey === 'accent' ? 'sidebar-border' : ''),
+                    )}
+                    style={{
+                      borderInlineStartColor:
+                        colorKey === 'primary' ? 'hsl(var(--primary) / 0.35)' :
+                        colorKey === 'success' ? 'hsl(var(--success) / 0.35)' :
+                        colorKey === 'warning' ? 'hsl(var(--warning) / 0.35)' :
+                        colorKey === 'destructive' ? 'hsl(var(--destructive) / 0.35)' :
+                        colorKey === 'kojo-blue' ? 'hsl(var(--kojo-blue) / 0.35)' :
+                        colorKey === 'kojo-purple' ? 'hsl(var(--kojo-purple) / 0.35)' :
+                        'hsl(var(--sidebar-border))',
+                    }}
+                  >
                     <SidebarMenu>
                       {section.items.map((item) => {
                         const active = isActive(item.url);
