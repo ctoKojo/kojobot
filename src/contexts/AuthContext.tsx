@@ -71,6 +71,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let isMounted = true;
 
+    const clearBrokenSession = async () => {
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        // Ignore and fall back to local cleanup below.
+      }
+
+      clearSupabaseStoredSession();
+      resetStatusCache();
+      clearPendingStudentLogin();
+      clearStudentSessionState();
+
+      if (!isMounted) return;
+      setSession(null);
+      setUser(null);
+      setRole(null);
+      setRoleLoading(false);
+      setLoading(false);
+    };
+
     const applyAuthState = async (currentSession: Session | null) => {
       if (!isMounted) return;
 
@@ -88,10 +108,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
 
+      const { data: verifiedUserResult, error: verifiedUserError } = await supabase.auth.getUser();
+      if (verifiedUserError || !verifiedUserResult.user) {
+        await clearBrokenSession();
+        return;
+      }
+
       setRoleLoading(true);
       const fetchedRole = await fetchUserRole(nextUser.id);
 
       if (!isMounted || authRequestRef.current !== requestId) return;
+
+      if (!fetchedRole) {
+        const provider = nextUser.app_metadata?.provider;
+        const isGoogleParentCandidate = provider === 'google';
+
+        if (!isGoogleParentCandidate) {
+          await clearBrokenSession();
+          return;
+        }
+      }
 
       if (fetchedRole === 'student') {
         const hasStudentTabSession = hasActiveStudentSession(nextUser.id);
@@ -123,6 +159,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setRoleLoading(false);
       setLoading(false);
     };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      void applyAuthState(session);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, currentSession) => {
