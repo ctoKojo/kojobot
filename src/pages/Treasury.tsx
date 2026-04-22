@@ -291,15 +291,28 @@ export default function Treasury() {
           icon={Wallet}
           gradient="from-emerald-500 to-blue-500"
           actions={
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refreshMvMutation.mutate()}
-              disabled={refreshMvMutation.isPending}
-            >
-              <RefreshCw className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'} ${refreshMvMutation.isPending ? 'animate-spin' : ''}`} />
-              {isRTL ? 'تحديث الأرصدة' : 'Refresh Balances'}
-            </Button>
+            <div className="flex items-center gap-2">
+              {role === 'admin' && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setTransferOpen(true)}
+                  disabled={balancesQuery.isLoading}
+                >
+                  <ArrowRightLeft className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                  {isRTL ? 'تحويل بين الحسابات' : 'Transfer Funds'}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refreshMvMutation.mutate()}
+                disabled={refreshMvMutation.isPending}
+              >
+                <RefreshCw className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'} ${refreshMvMutation.isPending ? 'animate-spin' : ''}`} />
+                {isRTL ? 'تحديث الأرصدة' : 'Refresh Balances'}
+              </Button>
+            </div>
           }
         />
 
