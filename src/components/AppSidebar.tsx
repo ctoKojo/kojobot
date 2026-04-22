@@ -545,19 +545,9 @@ export function AppSidebar() {
                 </SidebarGroupLabel>
                 <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden">
                   <SidebarGroupContent
-                    className={cn(
-                      'mt-1 ms-3 ps-2 border-s-2 transition-colors',
-                      'border-s-' + (colorKey === 'accent' ? 'sidebar-border' : ''),
-                    )}
+                    className="mt-1 ms-3 ps-2 border-s-2 transition-colors"
                     style={{
-                      borderInlineStartColor:
-                        colorKey === 'primary' ? 'hsl(var(--primary) / 0.35)' :
-                        colorKey === 'success' ? 'hsl(var(--success) / 0.35)' :
-                        colorKey === 'warning' ? 'hsl(var(--warning) / 0.35)' :
-                        colorKey === 'destructive' ? 'hsl(var(--destructive) / 0.35)' :
-                        colorKey === 'kojo-blue' ? 'hsl(var(--kojo-blue) / 0.35)' :
-                        colorKey === 'kojo-purple' ? 'hsl(var(--kojo-purple) / 0.35)' :
-                        'hsl(var(--sidebar-border))',
+                      borderInlineStartColor: `hsl(var(${colors.borderVar}) / 0.4)`,
                     }}
                   >
                     <SidebarMenu>
