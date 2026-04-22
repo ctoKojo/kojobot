@@ -75,48 +75,61 @@ interface NavSection {
   color?: 'primary' | 'success' | 'warning' | 'destructive' | 'kojo-blue' | 'kojo-purple' | 'accent';
 }
 
-const SECTION_COLOR_STYLES: Record<string, { icon: string; bar: string; iconBg: string; ring: string }> = {
+/**
+ * Per-section color styling.
+ * - `icon`: icon color (uses semantic tokens; brightened in dark mode for legibility).
+ * - `iconBg`: rounded square behind the icon — strong enough to read on both light
+ *   and dark sidebar backgrounds, with a subtle hover lift.
+ * - `borderVar`: CSS variable name for the left/right accent bar inside the open section.
+ */
+const SECTION_COLOR_STYLES: Record<
+  string,
+  { icon: string; iconBg: string; borderVar: string }
+> = {
   primary: {
-    icon: 'text-primary',
-    bar: 'bg-primary',
-    iconBg: 'bg-primary/10 group-hover/section:bg-primary/15',
-    ring: 'group-data-[state=open]/section:ring-primary/30',
+    icon: 'text-primary dark:text-primary',
+    iconBg:
+      'bg-primary/15 ring-1 ring-inset ring-primary/20 group-hover/section:bg-primary/25 dark:bg-primary/20 dark:ring-primary/30',
+    borderVar: '--primary',
   },
   success: {
-    icon: 'text-success',
-    bar: 'bg-success',
-    iconBg: 'bg-success/10 group-hover/section:bg-success/15',
-    ring: 'group-data-[state=open]/section:ring-success/30',
+    // success token is a deep green (36% L) — bump brightness in dark mode for contrast.
+    icon: 'text-success dark:text-emerald-400',
+    iconBg:
+      'bg-success/15 ring-1 ring-inset ring-success/25 group-hover/section:bg-success/25 dark:bg-emerald-400/15 dark:ring-emerald-400/30',
+    borderVar: '--success',
   },
   warning: {
-    icon: 'text-warning',
-    bar: 'bg-warning',
-    iconBg: 'bg-warning/10 group-hover/section:bg-warning/15',
-    ring: 'group-data-[state=open]/section:ring-warning/30',
+    // warning is amber/orange — keep saturated tone but soften background tint.
+    icon: 'text-warning dark:text-amber-400',
+    iconBg:
+      'bg-warning/15 ring-1 ring-inset ring-warning/25 group-hover/section:bg-warning/25 dark:bg-amber-400/15 dark:ring-amber-400/30',
+    borderVar: '--warning',
   },
   destructive: {
-    icon: 'text-destructive',
-    bar: 'bg-destructive',
-    iconBg: 'bg-destructive/10 group-hover/section:bg-destructive/15',
-    ring: 'group-data-[state=open]/section:ring-destructive/30',
+    icon: 'text-destructive dark:text-red-400',
+    iconBg:
+      'bg-destructive/15 ring-1 ring-inset ring-destructive/25 group-hover/section:bg-destructive/25 dark:bg-red-400/15 dark:ring-red-400/30',
+    borderVar: '--destructive',
   },
   'kojo-blue': {
     icon: 'text-kojo-blue',
-    bar: 'bg-kojo-blue',
-    iconBg: 'bg-kojo-blue/10 group-hover/section:bg-kojo-blue/15',
-    ring: 'group-data-[state=open]/section:ring-kojo-blue/30',
+    iconBg:
+      'bg-kojo-blue/15 ring-1 ring-inset ring-kojo-blue/25 group-hover/section:bg-kojo-blue/25 dark:bg-kojo-blue/20 dark:ring-kojo-blue/30',
+    borderVar: '--kojo-blue',
   },
   'kojo-purple': {
     icon: 'text-kojo-purple',
-    bar: 'bg-kojo-purple',
-    iconBg: 'bg-kojo-purple/10 group-hover/section:bg-kojo-purple/15',
-    ring: 'group-data-[state=open]/section:ring-kojo-purple/30',
+    iconBg:
+      'bg-kojo-purple/15 ring-1 ring-inset ring-kojo-purple/25 group-hover/section:bg-kojo-purple/25 dark:bg-kojo-purple/20 dark:ring-kojo-purple/30',
+    borderVar: '--kojo-purple',
   },
   accent: {
-    icon: 'text-accent-foreground',
-    bar: 'bg-accent-foreground/60',
-    iconBg: 'bg-accent group-hover/section:bg-accent/80',
-    ring: 'group-data-[state=open]/section:ring-accent-foreground/20',
+    // Neutral fallback — uses sidebar tokens so it always blends with the surface.
+    icon: 'text-sidebar-foreground/80',
+    iconBg:
+      'bg-sidebar-accent ring-1 ring-inset ring-sidebar-border group-hover/section:bg-sidebar-accent/80',
+    borderVar: '--sidebar-border',
   },
 };
 
