@@ -91,6 +91,7 @@ const BulkReminders = React.lazy(() => import("./pages/BulkReminders"));
 const EmailTemplates = React.lazy(() => import("./pages/EmailTemplates"));
 const NotificationSettings = React.lazy(() => import("./pages/NotificationSettings"));
 const NotificationsHealth = React.lazy(() => import("./pages/NotificationsHealth"));
+const NotificationsSmokeTest = React.lazy(() => import("./pages/NotificationsSmokeTest"));
 const MyNotifications = React.lazy(() => import("./pages/MyNotifications"));
 
 
@@ -186,6 +187,7 @@ const App = () => (
                   <Route path="/email-templates" element={<ProtectedRoute allowedRoles={['admin']}><EmailTemplates /></ProtectedRoute>} />
                   <Route path="/notification-settings" element={<ProtectedRoute allowedRoles={['admin']}><NotificationSettings /></ProtectedRoute>} />
                   <Route path="/notifications-health" element={<ProtectedRoute allowedRoles={['admin']}><NotificationsHealth /></ProtectedRoute>} />
+                  <Route path="/notifications-smoke-test" element={<ProtectedRoute allowedRoles={['admin']}><NotificationsSmokeTest /></ProtectedRoute>} />
                   <Route path="/my-notifications" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception', 'parent']}><MyNotifications /></ProtectedRoute>} />
                   <Route path="/leaderboard" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'student', 'reception']}><Leaderboard /></ProtectedRoute>} />
                   <Route path="/my-finances" element={<ProtectedRoute allowedRoles={['parent']}><MyFinances /></ProtectedRoute>} />

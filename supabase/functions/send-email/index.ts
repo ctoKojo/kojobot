@@ -47,6 +47,10 @@ const RequestSchema = z.object({
   // Optional overrides for bulk reminders / customized sends.
   customSubject: z.string().min(1).max(998).optional(),
   customBody: z.string().min(1).max(200000).optional(),
+  // Smoke-test mode: validate template + render but do NOT call Resend. Logged as status='dry_run'.
+  dryRun: z.boolean().optional(),
+  // Tag the row in metadata for filtering on Health page.
+  smokeTest: z.boolean().optional(),
 })
 
 // Simple {{variable}} interpolation. Missing keys render as empty string.
@@ -190,8 +194,9 @@ Deno.serve(async (req) => {
     )
   }
 
-  const { to, templateName, templateData, idempotencyKey, customSubject, customBody, audience: audienceArg, skipTelegramFanout } = parsed.data
+  const { to, templateName, templateData, idempotencyKey, customSubject, customBody, audience: audienceArg, skipTelegramFanout, dryRun, smokeTest } = parsed.data
   const audience = audienceArg ?? 'student'
+  const isSmokeTest = smokeTest === true || dryRun === true
 
   // Resolve mapping early so we can honor admin_channel_override for fan-out
   const data = templateData ?? {}
@@ -262,7 +267,8 @@ Deno.serve(async (req) => {
   }
 
   // Telegram fan-out only when admin says so (or user_choice legacy behavior).
-  if (!skipTelegramFanout && resolvedUserId && (adminChannel === 'both' || adminChannel === 'user_choice')) {
+  // Never fan out during dry-run/smoke-test.
+  if (!isSmokeTest && !skipTelegramFanout && resolvedUserId && (adminChannel === 'both' || adminChannel === 'user_choice')) {
     supabase.functions.invoke('send-telegram', {
       body: {
         userId: resolvedUserId,
@@ -309,6 +315,29 @@ Deno.serve(async (req) => {
 
   const { subject, html } = resolved
 
+  // ============ DRY-RUN PATH (smoke test) ============
+  // Log a dry_run row with rendered preview, never call Resend.
+  if (dryRun) {
+    await supabase.from('email_send_log').insert({
+      message_id: idempotencyKey,
+      template_name: templateName,
+      recipient_email: to,
+      status: 'dry_run',
+      metadata: {
+        smoke_test: true,
+        dry_run: true,
+        audience,
+        rendered_subject: subject.slice(0, 500),
+        rendered_html_preview: html.slice(0, 2000),
+        admin_channel: adminChannel,
+      },
+    })
+    return new Response(
+      JSON.stringify({ success: true, dryRun: true, subject, htmlPreview: html.slice(0, 2000) }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
   // Retry configuration
   const MAX_ATTEMPTS = 3
   const BASE_DELAY_MS = 500
@@ -318,12 +347,14 @@ Deno.serve(async (req) => {
   // ---- LOG: insert single pending row (idempotent via unique partial index) ----
   // If 2 concurrent requests race, the unique index makes the 2nd INSERT fail.
   // We catch that and treat it as "already in progress" → skip.
+  const baseMetadata: Record<string, any> = { max_attempts: MAX_ATTEMPTS }
+  if (smokeTest) baseMetadata.smoke_test = true
   const { error: insertErr } = await supabase.from('email_send_log').insert({
     message_id: idempotencyKey,
     template_name: templateName,
     recipient_email: to,
     status: 'pending',
-    metadata: { max_attempts: MAX_ATTEMPTS },
+    metadata: baseMetadata,
   })
 
   if (insertErr) {
