@@ -593,6 +593,51 @@ export type Database = {
         }
         Relationships: []
       }
+      bulk_reminder_presets: {
+        Row: {
+          created_at: string
+          created_by: string
+          custom_message: string | null
+          custom_subject: string | null
+          description: string | null
+          filters: Json
+          id: string
+          name: string
+          recipient_mode: string
+          template_data: Json | null
+          template_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          custom_message?: string | null
+          custom_subject?: string | null
+          description?: string | null
+          filters?: Json
+          id?: string
+          name: string
+          recipient_mode?: string
+          template_data?: Json | null
+          template_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          custom_message?: string | null
+          custom_subject?: string | null
+          description?: string | null
+          filters?: Json
+          id?: string
+          name?: string
+          recipient_mode?: string
+          template_data?: Json | null
+          template_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chart_of_accounts: {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
@@ -5180,6 +5225,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      scheduled_bulk_reminders: {
+        Row: {
+          created_at: string
+          created_by: string
+          custom_message: string | null
+          custom_subject: string | null
+          id: string
+          processed_at: string | null
+          recipient_mode: string
+          result_summary: Json | null
+          scheduled_at: string
+          status: string
+          student_ids: string[]
+          template_data: Json
+          template_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          custom_message?: string | null
+          custom_subject?: string | null
+          id?: string
+          processed_at?: string | null
+          recipient_mode?: string
+          result_summary?: Json | null
+          scheduled_at: string
+          status?: string
+          student_ids?: string[]
+          template_data?: Json
+          template_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          custom_message?: string | null
+          custom_subject?: string | null
+          id?: string
+          processed_at?: string | null
+          recipient_mode?: string
+          result_summary?: Json | null
+          scheduled_at?: string
+          status?: string
+          student_ids?: string[]
+          template_data?: Json
+          template_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       seasonal_themes: {
         Row: {

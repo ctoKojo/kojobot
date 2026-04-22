@@ -1,22 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -27,163 +17,115 @@ import {
 } from '@/components/ui/table';
 import { TableSkeleton } from '@/components/ui/table-skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, CalendarIcon, DollarSign, Clock, CheckCircle2, XCircle, Loader2, Search, Users } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Send, CheckCircle2, XCircle, Loader2, Users, Eye, Download } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
 import { sendEmail } from '@/lib/emailService';
 import { toast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
+import { TemplatePicker } from '@/components/bulk-reminders/TemplatePicker';
+import { StudentFiltersPanel } from '@/components/bulk-reminders/StudentFilters';
+import { QuickSelects } from '@/components/bulk-reminders/QuickSelects';
+import { EmailPreviewDialog } from '@/components/bulk-reminders/EmailPreviewDialog';
+import { PresetsManager } from '@/components/bulk-reminders/PresetsManager';
+import { fetchEnrichedStudents } from '@/components/bulk-reminders/studentLoader';
+import {
+  resolveRecipients,
+  buildAutoTemplateData,
+  resultsToCsv,
+} from '@/components/bulk-reminders/recipientResolver';
+import type {
+  RecipientMode,
+  StudentFilters,
+  StudentRow,
+  SendResult,
+} from '@/components/bulk-reminders/types';
+import { DEFAULT_FILTERS } from '@/components/bulk-reminders/types';
 
-type ReminderType = 'payment-due' | 'session-reminder';
-
-interface ParentInfo {
-  parent_id: string;
-  full_name: string;
-  email: string | null;
-}
-
-interface StudentRow {
-  user_id: string;
-  full_name: string;
-  email: string | null;
-  phone: string | null;
-  group_name?: string | null;
-  parents: ParentInfo[];
-}
-
-interface SendResult {
-  studentId: string;
-  studentName: string;
-  recipientType: 'parent' | 'student' | 'none';
-  recipientName: string;
-  email: string;
-  status: 'success' | 'failed' | 'skipped';
-  message?: string;
+function interpolate(tpl: string, data: Record<string, unknown>): string {
+  return tpl.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, k) => {
+    const v = data[k];
+    return v === undefined || v === null ? '' : String(v);
+  });
 }
 
 export default function BulkReminders() {
   const { isRTL } = useLanguage();
-  const [reminderType, setReminderType] = useState<ReminderType>('payment-due');
+
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+
+  const [templateName, setTemplateName] = useState<string>('payment-due');
+  const [templateData, setTemplateData] = useState<Record<string, string>>({});
+  const [customSubject, setCustomSubject] = useState('');
+  const [customMessage, setCustomMessage] = useState('');
+  const [recipientMode, setRecipientMode] = useState<RecipientMode>('smart');
+
+  const [filters, setFilters] = useState<StudentFilters>(DEFAULT_FILTERS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [dueDate, setDueDate] = useState<Date | undefined>(new Date());
 
-  // Payment-specific
-  const [amount, setAmount] = useState<string>('');
-  const [currency, setCurrency] = useState<string>('ج.م');
-
-  // Session-specific
-  const [sessionTitle, setSessionTitle] = useState<string>('');
-  const [sessionTime, setSessionTime] = useState<string>('');
-  const [groupName, setGroupName] = useState<string>('');
-
-  // Sending state
   const [sending, setSending] = useState(false);
+  const [cancelRequested, setCancelRequested] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [results, setResults] = useState<SendResult[]>([]);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
-    void loadStudents();
+    void load();
   }, []);
 
-  const loadStudents = async () => {
+  const load = async () => {
     setLoading(true);
     try {
-      // Get all students with profile + active group
-      const { data: roleRows, error: roleErr } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'student');
-      if (roleErr) throw roleErr;
-
-      const ids = (roleRows ?? []).map((r) => r.user_id);
-      if (ids.length === 0) {
-        setStudents([]);
-        return;
-      }
-
-      const { data: profiles, error: profErr } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, email, phone')
-        .in('user_id', ids);
-      if (profErr) throw profErr;
-
-      // Pull active group names
-      const { data: groupLinks } = await supabase
-        .from('group_students')
-        .select('student_id, groups(name, name_ar)')
-        .in('student_id', ids)
-        .eq('is_active', true);
-
-      const groupMap = new Map<string, string>();
-      (groupLinks ?? []).forEach((l: any) => {
-        const g = l.groups;
-        if (g) groupMap.set(l.student_id, isRTL ? (g.name_ar || g.name) : (g.name || g.name_ar));
-      });
-
-      // Pull linked parents for each student
-      const { data: parentLinks } = await supabase
-        .from('parent_students')
-        .select('student_id, parent_id')
-        .in('student_id', ids);
-
-      const parentIds = Array.from(new Set((parentLinks ?? []).map((l) => l.parent_id)));
-      const parentProfilesMap = new Map<string, { full_name: string; email: string | null }>();
-      if (parentIds.length > 0) {
-        const { data: parentProfiles } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, email')
-          .in('user_id', parentIds);
-        (parentProfiles ?? []).forEach((p) => {
-          parentProfilesMap.set(p.user_id, { full_name: p.full_name || '—', email: p.email });
-        });
-      }
-
-      const parentsByStudent = new Map<string, ParentInfo[]>();
-      (parentLinks ?? []).forEach((l) => {
-        const info = parentProfilesMap.get(l.parent_id);
-        if (!info) return;
-        const list = parentsByStudent.get(l.student_id) ?? [];
-        list.push({ parent_id: l.parent_id, full_name: info.full_name, email: info.email });
-        parentsByStudent.set(l.student_id, list);
-      });
-
-      const rows: StudentRow[] = (profiles ?? []).map((p) => ({
-        user_id: p.user_id,
-        full_name: p.full_name || '—',
-        email: p.email,
-        phone: p.phone,
-        group_name: groupMap.get(p.user_id) ?? null,
-        parents: parentsByStudent.get(p.user_id) ?? [],
-      }));
-
-      // Sort by name
-      rows.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+      const rows = await fetchEnrichedStudents(isRTL);
       setStudents(rows);
     } catch (e: any) {
-      toast({ title: isRTL ? 'فشل تحميل الطلاب' : 'Failed to load students', description: e.message, variant: 'destructive' });
+      toast({
+        title: isRTL ? 'فشل تحميل الطلاب' : 'Failed to load students',
+        description: e.message,
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return students;
-    return students.filter(
-      (s) =>
-        s.full_name.toLowerCase().includes(q) ||
-        (s.email || '').toLowerCase().includes(q) ||
-        (s.phone || '').toLowerCase().includes(q) ||
-        (s.group_name || '').toLowerCase().includes(q) ||
-        s.parents.some(
-          (p) => p.full_name.toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q),
-        ),
-    );
-  }, [students, search]);
+    const q = filters.search.trim().toLowerCase();
+    return students.filter((s) => {
+      if (q) {
+        const hay = [
+          s.full_name,
+          s.email ?? '',
+          s.phone ?? '',
+          s.group_name ?? '',
+          ...s.parents.flatMap((p) => [p.full_name, p.email ?? '']),
+        ].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (filters.groupIds.length > 0 && (!s.group_id || !filters.groupIds.includes(s.group_id))) return false;
+      if (filters.levelIds.length > 0 && (!s.level_id || !filters.levelIds.includes(s.level_id))) return false;
+      if (filters.ageGroupIds.length > 0 && (!s.age_group_id || !filters.ageGroupIds.includes(s.age_group_id))) return false;
+      if (filters.subscriptionStatuses.length > 0) {
+        const matches = filters.subscriptionStatuses.some((st) => {
+          if (st === 'needs_renewal') {
+            if (!s.subscription_end_date) return false;
+            const end = new Date(s.subscription_end_date);
+            const days = (end.getTime() - Date.now()) / 86400000;
+            return s.subscription_status === 'active' && days <= 7 && days >= 0;
+          }
+          if (st === 'none') return s.subscription_status === 'none' || s.subscription_status == null;
+          return s.subscription_status === st;
+        });
+        if (!matches) return false;
+      }
+      if (filters.noParent && s.parents.length > 0) return false;
+      if (filters.hideNoEmail) {
+        const hasAny = Boolean(s.email) || s.parents.some((p) => p.email);
+        if (!hasAny) return false;
+      }
+      return true;
+    });
+  }, [students, filters]);
 
   const allFilteredSelected = filtered.length > 0 && filtered.every((s) => selectedIds.has(s.user_id));
   const someFilteredSelected = filtered.some((s) => selectedIds.has(s.user_id));
@@ -204,50 +146,53 @@ export default function BulkReminders() {
     setSelectedIds(next);
   };
 
-  const validate = (): string | null => {
-    if (selectedIds.size === 0) return isRTL ? 'اختر طالب واحد على الأقل' : 'Select at least one student';
-    if (!dueDate) return isRTL ? 'اختر تاريخ الاستحقاق' : 'Pick a date';
-    if (reminderType === 'payment-due') {
-      if (!amount || Number(amount) <= 0) return isRTL ? 'أدخل قيمة القسط' : 'Enter a valid amount';
-    } else {
-      if (!sessionTitle.trim()) return isRTL ? 'أدخل عنوان الحصة' : 'Enter session title';
-      if (!sessionTime.trim()) return isRTL ? 'أدخل موعد الحصة' : 'Enter session time';
+  // Compute recipient totals for the summary
+  const recipientPlan = useMemo(() => {
+    const targets = students.filter((s) => selectedIds.has(s.user_id));
+    let total = 0;
+    let skipped = 0;
+    for (const s of targets) {
+      const r = resolveRecipients(s, recipientMode, isRTL);
+      total += r.recipients.length;
+      skipped += r.skipped.length;
     }
-    return null;
-  };
+    return { totalStudents: targets.length, totalRecipients: total, skippedStudents: skipped };
+  }, [students, selectedIds, recipientMode, isRTL]);
 
   const handleSend = async () => {
-    const err = validate();
-    if (err) {
-      toast({ title: isRTL ? 'بيانات ناقصة' : 'Missing data', description: err, variant: 'destructive' });
+    if (selectedIds.size === 0) {
+      toast({ title: isRTL ? 'اختر طالب على الأقل' : 'Select at least one student', variant: 'destructive' });
+      return;
+    }
+    if (!templateName) {
+      toast({ title: isRTL ? 'اختر قالب' : 'Select a template', variant: 'destructive' });
       return;
     }
 
     const targets = students.filter((s) => selectedIds.has(s.user_id));
-
-    // Build recipient list: every linked parent of every selected student
-    type Recipient = { student: StudentRow; parent: ParentInfo | null };
-    const recipients: Recipient[] = [];
+    type Job = { student: StudentRow; recipient: ReturnType<typeof resolveRecipients>['recipients'][number] | null; skipReason?: string };
+    const jobs: Job[] = [];
     for (const s of targets) {
-      if (s.parents.length === 0) {
-        recipients.push({ student: s, parent: null });
+      const r = resolveRecipients(s, recipientMode, isRTL);
+      if (r.recipients.length === 0) {
+        jobs.push({ student: s, recipient: null, skipReason: r.skipped[0]?.reason });
       } else {
-        for (const p of s.parents) recipients.push({ student: s, parent: p });
+        for (const rec of r.recipients) jobs.push({ student: s, recipient: rec });
       }
     }
 
     setSending(true);
+    setCancelRequested(false);
     setResults([]);
-    setProgress({ done: 0, total: recipients.length });
-
-    const dueDateStr = format(dueDate!, 'yyyy-MM-dd');
-    const dueDateLabel = format(dueDate!, 'PPP', { locale: isRTL ? ar : undefined });
+    setProgress({ done: 0, total: jobs.length });
     const out: SendResult[] = [];
+    const stamp = new Date().toISOString().slice(0, 10);
 
-    for (let i = 0; i < recipients.length; i++) {
-      const { student: s, parent } = recipients[i];
+    for (let i = 0; i < jobs.length; i++) {
+      if (cancelRequested) break;
+      const { student: s, recipient, skipReason } = jobs[i];
 
-      if (!parent) {
+      if (!recipient) {
         out.push({
           studentId: s.user_id,
           studentName: s.full_name,
@@ -255,85 +200,91 @@ export default function BulkReminders() {
           recipientName: '—',
           email: '—',
           status: 'skipped',
-          message: isRTL ? 'لا يوجد ولي أمر مرتبط بالطالب' : 'No linked parent for this student',
+          message: skipReason ?? (isRTL ? 'لا يوجد مستلم' : 'No recipient'),
         });
-        setResults([...out]);
-        setProgress({ done: i + 1, total: recipients.length });
-        continue;
-      }
-
-      if (!parent.email) {
+      } else {
+        const data = buildAutoTemplateData(recipient, s, templateData);
+        const idKey = `bulk-${templateName}-${recipient.recipientType}-${recipient.parentId ?? recipient.studentId}-${s.user_id}-${stamp}-${i}`;
+        const r = await sendEmail({
+          to: recipient.email,
+          templateName,
+          idempotencyKey: idKey,
+          templateData: data as any,
+          customSubject: customSubject || undefined,
+          customBody: customMessage || undefined,
+        });
         out.push({
           studentId: s.user_id,
           studentName: s.full_name,
-          recipientType: 'parent',
-          recipientName: parent.full_name,
-          email: '—',
-          status: 'skipped',
-          message: isRTL
-            ? `بريد ولي الأمر "${parent.full_name}" غير مسجّل`
-            : `Parent "${parent.full_name}" has no email on file`,
+          recipientType: recipient.recipientType,
+          recipientName: recipient.recipientName,
+          email: recipient.email,
+          status: r.success ? (r.skipped ? 'skipped' : 'success') : 'failed',
+          message: r.skipped || r.error,
         });
-        setResults([...out]);
-        setProgress({ done: i + 1, total: recipients.length });
-        continue;
       }
-
-      const baseKey = reminderType === 'payment-due'
-        ? `bulk-payment-due-parent-${parent.parent_id}-${s.user_id}-${dueDateStr}`
-        : `bulk-session-reminder-parent-${parent.parent_id}-${s.user_id}-${dueDateStr}-${sessionTime}`;
-
-      const templateData: Record<string, any> =
-        reminderType === 'payment-due'
-          ? {
-              recipientName: parent.full_name,
-              studentName: s.full_name,
-              amount: Number(amount),
-              currency,
-              dueDate: dueDateLabel,
-              recipientType: 'parent',
-            }
-          : {
-              recipientName: parent.full_name,
-              studentName: s.full_name,
-              sessionTitle,
-              sessionDate: dueDateLabel,
-              sessionTime,
-              groupName: groupName || s.group_name || '',
-              recipientType: 'parent',
-            };
-
-      const r = await sendEmail({
-        to: parent.email,
-        templateName: reminderType,
-        idempotencyKey: baseKey,
-        templateData,
-      });
-
-      out.push({
-        studentId: s.user_id,
-        studentName: s.full_name,
-        recipientType: 'parent',
-        recipientName: parent.full_name,
-        email: parent.email,
-        status: r.success ? (r.skipped ? 'skipped' : 'success') : 'failed',
-        message: r.skipped || r.error,
-      });
       setResults([...out]);
-      setProgress({ done: i + 1, total: recipients.length });
+      setProgress({ done: i + 1, total: jobs.length });
     }
 
     setSending(false);
-    const succeeded = out.filter((r) => r.status === 'success').length;
-    const failed = out.filter((r) => r.status === 'failed').length;
-    const skipped = out.filter((r) => r.status === 'skipped').length;
+    const ok = out.filter((r) => r.status === 'success').length;
+    const fail = out.filter((r) => r.status === 'failed').length;
+    const skip = out.filter((r) => r.status === 'skipped').length;
     toast({
-      title: isRTL ? 'اكتمل الإرسال' : 'Sending complete',
+      title: cancelRequested
+        ? (isRTL ? 'تم الإيقاف' : 'Cancelled')
+        : (isRTL ? 'اكتمل الإرسال' : 'Sending complete'),
       description: isRTL
-        ? `نجح: ${succeeded} | فشل: ${failed} | تم تخطي: ${skipped}`
-        : `Sent: ${succeeded} | Failed: ${failed} | Skipped: ${skipped}`,
+        ? `نجح: ${ok} | فشل: ${fail} | تم تخطي: ${skip}`
+        : `Sent: ${ok} | Failed: ${fail} | Skipped: ${skip}`,
     });
   };
+
+  const downloadCsv = () => {
+    const csv = resultsToCsv(results.map((r) => ({
+      studentName: r.studentName,
+      recipientType: r.recipientType,
+      recipientName: r.recipientName,
+      email: r.email,
+      status: r.status,
+      message: r.message,
+    })));
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bulk-reminders-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Build a sample preview using a real selected student, or a fake one.
+  const previewData = useMemo(() => {
+    const sample = students.find((s) => selectedIds.has(s.user_id)) ?? students[0];
+    const fakeRec = sample
+      ? { studentId: sample.user_id, studentName: sample.full_name, recipientType: 'parent' as const, recipientName: sample.parents[0]?.full_name ?? sample.full_name, email: sample.parents[0]?.email ?? sample.email ?? 'preview@example.com', parentId: sample.parents[0]?.parent_id }
+      : null;
+    const data = sample && fakeRec ? buildAutoTemplateData(fakeRec, sample, templateData) : { recipientName: 'Sample', studentName: 'Sample Student' };
+    const subject = customSubject ? interpolate(customSubject, data) : (isRTL ? '— سيتم استخدام موضوع القالب الافتراضي —' : '— Default template subject will be used —');
+    const body = customMessage
+      ? interpolate(customMessage, data)
+      : (isRTL
+        ? '<p style="color:#666">سيتم استخدام جسم القالب الافتراضي. أضف <code>customMessage</code> هنا للمعاينة.</p>'
+        : '<p style="color:#666">The default template body will be used. Add a custom message to preview it here.</p>');
+    return {
+      subject,
+      body,
+      label: sample ? `${fakeRec?.recipientName} → ${sample.full_name}` : 'Sample',
+    };
+  }, [students, selectedIds, templateData, customSubject, customMessage, isRTL]);
+
+  const recipientModeOptions: Array<{ value: RecipientMode; label: string; label_ar: string; desc: string; desc_ar: string }> = [
+    { value: 'smart', label: 'Smart', label_ar: 'ذكي', desc: 'Parent if available, else student', desc_ar: 'ولي الأمر لو موجود، يفول-باك للطالب' },
+    { value: 'parent', label: 'Parent only', label_ar: 'ولي الأمر فقط', desc: 'Skip if no parent has email', desc_ar: 'تخطي لو ولي الأمر مش موجود' },
+    { value: 'student', label: 'Student only', label_ar: 'الطالب فقط', desc: 'Use student email', desc_ar: 'إيميل الطالب من بروفايله' },
+    { value: 'both', label: 'Both', label_ar: 'الاتنين', desc: 'Send to both — parent & student', desc_ar: 'يبعت لولي الأمر وللطالب' },
+  ];
 
   return (
     <DashboardLayout>
@@ -341,117 +292,150 @@ export default function BulkReminders() {
         <PageHeader
           title={isRTL ? 'تذكيرات جماعية' : 'Bulk Reminders'}
           subtitle={isRTL
-            ? 'إرسال تذكيرات الدفع أو الحصص لأولياء أمور الطلاب المختارين دفعة واحدة'
-            : 'Send payment or session reminders to the parents of selected students'}
+            ? 'أرسل أي قالب إيميل لمجموعة طلاب أو أولياء أمور بشكل مرن مع فلاتر متقدمة وتخصيص'
+            : 'Send any email template to a flexible audience with advanced filters and customization'}
           icon={Send}
         />
 
-        {/* Configuration */}
+        {/* Step 1: Template */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              {reminderType === 'payment-due' ? <DollarSign className="h-5 w-5" /> : <Clock className="h-5 w-5" />}
-              {isRTL ? 'إعدادات التذكير' : 'Reminder settings'}
-            </CardTitle>
-            <CardDescription>{isRTL ? 'حدد نوع التذكير والبيانات المشتركة لكل المستلمين' : 'Choose reminder type and shared data for all recipients'}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>{isRTL ? 'نوع التذكير' : 'Reminder type'}</Label>
-                <Select value={reminderType} onValueChange={(v) => setReminderType(v as ReminderType)} disabled={sending}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="payment-due">{isRTL ? 'تذكير بقسط مستحق' : 'Payment due'}</SelectItem>
-                    <SelectItem value="session-reminder">{isRTL ? 'تذكير بحصة' : 'Session reminder'}</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <CardTitle className="text-lg">
+                  <span className="text-primary me-2">1.</span>
+                  {isRTL ? 'القالب والمحتوى' : 'Template & content'}
+                </CardTitle>
+                <CardDescription>
+                  {isRTL ? 'اختر قالب من القائمة وعدّل المحتوى لو محتاج' : 'Pick a template and customize content if needed'}
+                </CardDescription>
               </div>
-
-              <div className="space-y-2">
-                <Label>{reminderType === 'payment-due' ? (isRTL ? 'تاريخ الاستحقاق' : 'Due date') : (isRTL ? 'تاريخ الحصة' : 'Session date')}</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn('w-full justify-start text-left font-normal', !dueDate && 'text-muted-foreground')} disabled={sending}>
-                      <CalendarIcon className="me-2 h-4 w-4" />
-                      {dueDate ? format(dueDate, 'PPP', { locale: isRTL ? ar : undefined }) : (isRTL ? 'اختر تاريخ' : 'Pick a date')}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={dueDate} onSelect={setDueDate} initialFocus className={cn('p-3 pointer-events-auto')} />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <PresetsManager
+                current={{ templateName, filters, customSubject, customMessage, recipientMode, templateData }}
+                onLoad={(p) => {
+                  setTemplateName(p.template_name);
+                  setFilters({ ...DEFAULT_FILTERS, ...(p.filters as any) });
+                  setCustomSubject(p.custom_subject ?? '');
+                  setCustomMessage(p.custom_message ?? '');
+                  setRecipientMode(p.recipient_mode);
+                  setTemplateData((p.template_data as any) ?? {});
+                  toast({ title: isRTL ? 'تم تحميل القالب' : 'Preset loaded', description: p.name });
+                }}
+                disabled={sending}
+              />
             </div>
-
-            {reminderType === 'payment-due' ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>{isRTL ? 'قيمة القسط' : 'Amount'}</Label>
-                  <Input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} disabled={sending} placeholder="500" />
-                </div>
-                <div className="space-y-2">
-                  <Label>{isRTL ? 'العملة' : 'Currency'}</Label>
-                  <Input value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={sending} />
-                </div>
-              </div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label>{isRTL ? 'عنوان الحصة' : 'Session title'}</Label>
-                  <Input value={sessionTitle} onChange={(e) => setSessionTitle(e.target.value)} disabled={sending} placeholder={isRTL ? 'مثال: Python أساسيات' : 'e.g. Python basics'} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{isRTL ? 'موعد الحصة' : 'Session time'}</Label>
-                  <Input value={sessionTime} onChange={(e) => setSessionTime(e.target.value)} disabled={sending} placeholder={isRTL ? 'مثال: 6:00 مساءً' : 'e.g. 6:00 PM'} />
-                </div>
-                <div className="space-y-2">
-                  <Label>{isRTL ? 'اسم المجموعة (اختياري)' : 'Group name (optional)'}</Label>
-                  <Input value={groupName} onChange={(e) => setGroupName(e.target.value)} disabled={sending} placeholder={isRTL ? 'افتراضي: مجموعة الطالب' : 'Default: student group'} />
-                </div>
-              </div>
-            )}
+          </CardHeader>
+          <CardContent>
+            <TemplatePicker
+              templateName={templateName}
+              onTemplateChange={setTemplateName}
+              templateData={templateData}
+              onTemplateDataChange={setTemplateData}
+              customSubject={customSubject}
+              onCustomSubjectChange={setCustomSubject}
+              customMessage={customMessage}
+              onCustomMessageChange={setCustomMessage}
+              disabled={sending}
+            />
+            <div className="mt-4 flex justify-end">
+              <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)} disabled={!templateName}>
+                <Eye className="h-4 w-4 me-2" />
+                {isRTL ? 'معاينة' : 'Preview'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Students */}
+        {/* Step 2: Recipient mode */}
         <Card>
           <CardHeader>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <CardTitle className="text-lg">
+              <span className="text-primary me-2">2.</span>
+              {isRTL ? 'وضع المستلم' : 'Recipient mode'}
+            </CardTitle>
+            <CardDescription>
+              {isRTL ? 'حدد لمن يذهب الإيميل لكل طالب مختار' : 'Choose who receives the email per selected student'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup
+              value={recipientMode}
+              onValueChange={(v) => setRecipientMode(v as RecipientMode)}
+              disabled={sending}
+              className="grid gap-3 md:grid-cols-2 lg:grid-cols-4"
+            >
+              {recipientModeOptions.map((opt) => (
+                <Label
+                  key={opt.value}
+                  htmlFor={`rm-${opt.value}`}
+                  className={`flex cursor-pointer flex-col gap-1 rounded-lg border p-3 transition-colors ${
+                    recipientMode === opt.value ? 'border-primary bg-primary/5' : 'hover:bg-accent'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioGroupItem value={opt.value} id={`rm-${opt.value}`} />
+                    <span className="font-medium">{isRTL ? opt.label_ar : opt.label}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground ms-6">
+                    {isRTL ? opt.desc_ar : opt.desc}
+                  </span>
+                </Label>
+              ))}
+            </RadioGroup>
+          </CardContent>
+        </Card>
+
+        {/* Step 3: Students */}
+        <Card>
+          <CardHeader className="space-y-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2 text-lg">
+                  <span className="text-primary me-1">3.</span>
                   <Users className="h-5 w-5" />
                   {isRTL ? 'اختيار الطلاب' : 'Select students'}
                 </CardTitle>
                 <CardDescription>
-                  {isRTL ? `تم اختيار ${selectedIds.size} من ${students.length}` : `${selectedIds.size} of ${students.length} selected`}
+                  {isRTL
+                    ? `${selectedIds.size} مختار من ${filtered.length} معروض (${students.length} كلي)`
+                    : `${selectedIds.size} selected of ${filtered.length} shown (${students.length} total)`}
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute top-2.5 h-4 w-4 text-muted-foreground start-2.5" />
-                  <Input
-                    placeholder={isRTL ? 'بحث بالاسم أو البريد...' : 'Search by name or email...'}
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="ps-8 w-64"
-                  />
-                </div>
+              <div className="flex flex-col items-end gap-2">
                 <Button
                   size="lg"
                   onClick={handleSend}
-                  disabled={sending || selectedIds.size === 0}
+                  disabled={sending || selectedIds.size === 0 || !templateName}
                   className="gap-2"
                 >
                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   {sending
                     ? (isRTL ? `جارٍ الإرسال ${progress.done}/${progress.total}` : `Sending ${progress.done}/${progress.total}`)
-                    : (isRTL ? `إرسال (${selectedIds.size})` : `Send (${selectedIds.size})`)}
+                    : (isRTL
+                        ? `إرسال (${recipientPlan.totalRecipients} مستلم)`
+                        : `Send (${recipientPlan.totalRecipients} recipients)`)}
                 </Button>
+                {sending && (
+                  <Button variant="outline" size="sm" onClick={() => setCancelRequested(true)} disabled={cancelRequested}>
+                    {isRTL ? 'إلغاء الإرسال' : 'Cancel sending'}
+                  </Button>
+                )}
+                {!sending && recipientPlan.skippedStudents > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {isRTL
+                      ? `سيتم تخطي ${recipientPlan.skippedStudents} طالب (لا يوجد مستلم)`
+                      : `${recipientPlan.skippedStudents} students will be skipped (no recipient)`}
+                  </p>
+                )}
               </div>
             </div>
+
+            <StudentFiltersPanel filters={filters} onFiltersChange={setFilters} disabled={sending} />
+            <QuickSelects students={filtered} onSelect={setSelectedIds} disabled={sending} />
+
+            {sending && (
+              <Progress value={progress.total > 0 ? (progress.done / progress.total) * 100 : 0} className="h-2" />
+            )}
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -468,26 +452,24 @@ export default function BulkReminders() {
                           disabled={sending || filtered.length === 0}
                         />
                       </TableHead>
-                      <TableHead>{isRTL ? 'اسم الطالب' : 'Student'}</TableHead>
-                      <TableHead>{isRTL ? 'أولياء الأمور' : 'Parents'}</TableHead>
-                      <TableHead>{isRTL ? 'المجموعة' : 'Group'}</TableHead>
-                      <TableHead>{isRTL ? 'الهاتف' : 'Phone'}</TableHead>
+                      <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
+                      <TableHead>{isRTL ? 'المجموعة / المستوى' : 'Group / Level'}</TableHead>
+                      <TableHead>{isRTL ? 'الاشتراك' : 'Subscription'}</TableHead>
+                      <TableHead>{isRTL ? 'الإيميلات' : 'Emails'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filtered.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                          {isRTL ? 'لا يوجد طلاب' : 'No students'}
+                          {isRTL ? 'لا يوجد طلاب مطابقين للفلاتر' : 'No students match filters'}
                         </TableCell>
                       </TableRow>
                     ) : (
                       filtered.map((s) => {
-                        const parentsWithEmail = s.parents.filter((p) => p.email);
-                        const noParents = s.parents.length === 0;
-                        const noEmails = !noParents && parentsWithEmail.length === 0;
+                        const noEmails = !s.email && s.parents.every((p) => !p.email);
                         return (
-                          <TableRow key={s.user_id} className={noParents || noEmails ? 'opacity-60' : ''}>
+                          <TableRow key={s.user_id} className={noEmails ? 'opacity-60' : ''}>
                             <TableCell>
                               <Checkbox
                                 checked={selectedIds.has(s.user_id)}
@@ -495,31 +477,49 @@ export default function BulkReminders() {
                                 disabled={sending}
                               />
                             </TableCell>
-                            <TableCell className="font-medium">{s.full_name}</TableCell>
                             <TableCell>
-                              {noParents ? (
-                                <span className="text-destructive text-xs">
-                                  {isRTL ? 'لا يوجد ولي أمر مرتبط' : 'No linked parent'}
-                                </span>
-                              ) : (
-                                <div className="flex flex-col gap-1">
-                                  {s.parents.map((p) => (
-                                    <div key={p.parent_id} className="text-xs">
-                                      <span className="font-medium">{p.full_name}</span>
-                                      {p.email ? (
-                                        <span className="text-muted-foreground ms-1">— {p.email}</span>
-                                      ) : (
-                                        <span className="text-destructive ms-1">
-                                          ({isRTL ? 'بدون بريد' : 'no email'})
-                                        </span>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
+                              <div className="font-medium">{s.full_name}</div>
+                              {s.phone && <div className="text-xs text-muted-foreground">{s.phone}</div>}
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">{s.group_name || '—'}</div>
+                              <div className="text-xs text-muted-foreground">{s.level_name || '—'}</div>
+                            </TableCell>
+                            <TableCell>
+                              {s.subscription_status === 'active' && (
+                                <Badge variant="default" className="text-xs">{isRTL ? 'نشط' : 'Active'}</Badge>
+                              )}
+                              {s.subscription_status === 'expired' && (
+                                <Badge variant="destructive" className="text-xs">{isRTL ? 'منتهي' : 'Expired'}</Badge>
+                              )}
+                              {s.subscription_status === 'suspended' && (
+                                <Badge variant="secondary" className="text-xs">{isRTL ? 'موقف' : 'Suspended'}</Badge>
+                              )}
+                              {(!s.subscription_status || s.subscription_status === 'none') && (
+                                <Badge variant="outline" className="text-xs">—</Badge>
                               )}
                             </TableCell>
-                            <TableCell>{s.group_name || '—'}</TableCell>
-                            <TableCell>{s.phone || '—'}</TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1 text-xs">
+                                {s.email && (
+                                  <span><Badge variant="outline" className="text-[10px] me-1">{isRTL ? 'طالب' : 'Student'}</Badge>{s.email}</span>
+                                )}
+                                {s.parents.map((p) => (
+                                  <span key={p.parent_id}>
+                                    <Badge variant="outline" className="text-[10px] me-1 border-primary/40 text-primary">
+                                      {isRTL ? 'ولي أمر' : 'Parent'}
+                                    </Badge>
+                                    {p.full_name}
+                                    {p.email
+                                      ? <span className="text-muted-foreground"> — {p.email}</span>
+                                      : <span className="text-destructive"> ({isRTL ? 'بدون بريد' : 'no email'})</span>}
+                                  </span>
+                                ))}
+                                {!s.email && s.parents.length === 0 && (
+                                  <span className="text-destructive">{isRTL ? 'لا توجد إيميلات' : 'No emails'}</span>
+                                )}
+                              </div>
+                            </TableCell>
                           </TableRow>
                         );
                       })
@@ -535,21 +535,29 @@ export default function BulkReminders() {
         {results.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">{isRTL ? 'نتائج الإرسال' : 'Send results'}</CardTitle>
-              <CardDescription>
-                {(() => {
-                  const ok = results.filter((r) => r.status === 'success').length;
-                  const fail = results.filter((r) => r.status === 'failed').length;
-                  const skip = results.filter((r) => r.status === 'skipped').length;
-                  return (
-                    <span className="flex gap-3">
-                      <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" /> {ok}</Badge>
-                      <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> {fail}</Badge>
-                      <Badge variant="secondary" className="gap-1">{isRTL ? 'تم تخطيه' : 'Skipped'}: {skip}</Badge>
-                    </span>
-                  );
-                })()}
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">{isRTL ? 'نتائج الإرسال' : 'Send results'}</CardTitle>
+                  <CardDescription>
+                    {(() => {
+                      const ok = results.filter((r) => r.status === 'success').length;
+                      const fail = results.filter((r) => r.status === 'failed').length;
+                      const skip = results.filter((r) => r.status === 'skipped').length;
+                      return (
+                        <span className="flex gap-3 mt-2">
+                          <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" /> {ok}</Badge>
+                          <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> {fail}</Badge>
+                          <Badge variant="secondary" className="gap-1">{isRTL ? 'تم تخطيه' : 'Skipped'}: {skip}</Badge>
+                        </span>
+                      );
+                    })()}
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={downloadCsv}>
+                  <Download className="h-4 w-4 me-2" />
+                  {isRTL ? 'تصدير CSV' : 'Export CSV'}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[300px] rounded-md border">
@@ -557,11 +565,11 @@ export default function BulkReminders() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{isRTL ? 'الطالب' : 'Student'}</TableHead>
-                      <TableHead>{isRTL ? 'نوع المستلم' : 'Recipient type'}</TableHead>
-                      <TableHead>{isRTL ? 'اسم المستلم' : 'Recipient name'}</TableHead>
-                      <TableHead>{isRTL ? 'البريد المرسل عليه' : 'Email used'}</TableHead>
+                      <TableHead>{isRTL ? 'نوع المستلم' : 'Recipient'}</TableHead>
+                      <TableHead>{isRTL ? 'الاسم' : 'Name'}</TableHead>
+                      <TableHead>{isRTL ? 'البريد' : 'Email'}</TableHead>
                       <TableHead>{isRTL ? 'الحالة' : 'Status'}</TableHead>
-                      <TableHead>{isRTL ? 'ملاحظة / سبب التخطي' : 'Note / skip reason'}</TableHead>
+                      <TableHead>{isRTL ? 'ملاحظة' : 'Note'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -570,31 +578,19 @@ export default function BulkReminders() {
                         <TableCell className="font-medium">{r.studentName}</TableCell>
                         <TableCell>
                           {r.recipientType === 'parent' && (
-                            <Badge variant="outline" className="border-primary/40 text-primary">
-                              {isRTL ? 'ولي أمر' : 'Parent'}
-                            </Badge>
+                            <Badge variant="outline" className="border-primary/40 text-primary">{isRTL ? 'ولي أمر' : 'Parent'}</Badge>
                           )}
                           {r.recipientType === 'student' && (
-                            <Badge variant="outline" className="border-accent/40">
-                              {isRTL ? 'الطالب' : 'Student'}
-                            </Badge>
+                            <Badge variant="outline">{isRTL ? 'الطالب' : 'Student'}</Badge>
                           )}
-                          {r.recipientType === 'none' && (
-                            <Badge variant="secondary">—</Badge>
-                          )}
+                          {r.recipientType === 'none' && <Badge variant="secondary">—</Badge>}
                         </TableCell>
                         <TableCell>{r.recipientName}</TableCell>
                         <TableCell className="text-xs font-mono">{r.email}</TableCell>
                         <TableCell>
-                          {r.status === 'success' && (
-                            <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" /> {isRTL ? 'تم الإرسال' : 'Sent'}</Badge>
-                          )}
-                          {r.status === 'failed' && (
-                            <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> {isRTL ? 'فشل' : 'Failed'}</Badge>
-                          )}
-                          {r.status === 'skipped' && (
-                            <Badge variant="secondary">{isRTL ? 'تم التخطي' : 'Skipped'}</Badge>
-                          )}
+                          {r.status === 'success' && <Badge variant="default" className="gap-1"><CheckCircle2 className="h-3 w-3" /> {isRTL ? 'تم' : 'Sent'}</Badge>}
+                          {r.status === 'failed' && <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> {isRTL ? 'فشل' : 'Failed'}</Badge>}
+                          {r.status === 'skipped' && <Badge variant="secondary">{isRTL ? 'تخطي' : 'Skipped'}</Badge>}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground max-w-md">{r.message || '—'}</TableCell>
                       </TableRow>
@@ -605,6 +601,14 @@ export default function BulkReminders() {
             </CardContent>
           </Card>
         )}
+
+        <EmailPreviewDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          subject={previewData.subject}
+          bodyHtml={previewData.body}
+          recipientLabel={previewData.label}
+        />
       </div>
     </DashboardLayout>
   );

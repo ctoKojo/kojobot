@@ -38,6 +38,11 @@ const RequestSchema = z.object({
   templateName: z.string().min(1).max(100),
   templateData: z.record(z.any()).optional(),
   idempotencyKey: z.string().min(1).max(255),
+  // Optional overrides for bulk reminders / customized sends.
+  // When provided, they override the resolved template's subject/body.
+  // {{variables}} are still interpolated against templateData.
+  customSubject: z.string().min(1).max(998).optional(),
+  customBody: z.string().min(1).max(200000).optional(),
 })
 
 // Simple {{variable}} interpolation. Missing keys render as empty string.
@@ -128,7 +133,7 @@ Deno.serve(async (req) => {
     )
   }
 
-  const { to, templateName, templateData, idempotencyKey } = parsed.data
+  const { to, templateName, templateData, idempotencyKey, customSubject, customBody } = parsed.data
 
   // Idempotency: skip if already successfully sent
   const { data: existing } = await supabase
@@ -147,7 +152,23 @@ Deno.serve(async (req) => {
   }
 
   const data = templateData ?? {}
-  const resolved = await resolveTemplate(supabase, templateName, data)
+  let resolved: { subject: string; html: string } | null = null
+
+  // If both custom subject and body are provided, use them directly (still interpolated).
+  if (customSubject && customBody) {
+    resolved = {
+      subject: renderTemplate(customSubject, data),
+      html: renderTemplate(customBody, data),
+    }
+  } else {
+    const baseTpl = await resolveTemplate(supabase, templateName, data)
+    if (baseTpl) {
+      resolved = {
+        subject: customSubject ? renderTemplate(customSubject, data) : baseTpl.subject,
+        html: customBody ? renderTemplate(customBody, data) : baseTpl.html,
+      }
+    }
+  }
 
   if (!resolved) {
     // Either event is disabled by admin, or template not found in DB nor code.
