@@ -83,30 +83,26 @@ export default function FinanceClosing() {
             </TabsTrigger>
           </TabsList>
 
-          <Card>
-            <CardContent className="p-0">
-              <TabsContent value="periods" className="m-0">
-                <EmbeddedPage>
-                  <FinancePeriods />
-                </EmbeddedPage>
-              </TabsContent>
-              <TabsContent value="reopen" className="m-0">
-                <EmbeddedPage>
-                  <FinanceReopenRequests />
-                </EmbeddedPage>
-              </TabsContent>
-              <TabsContent value="quality" className="m-0">
-                <EmbeddedPage>
-                  <FinanceDataQuality />
-                </EmbeddedPage>
-              </TabsContent>
-              <TabsContent value="audit" className="m-0">
-                <EmbeddedPage>
-                  <FinanceAuditExplorer />
-                </EmbeddedPage>
-              </TabsContent>
-            </CardContent>
-          </Card>
+          <TabsContent value="periods" className="m-0">
+            <Suspense fallback={<PageLoader />}>
+              <FinancePeriods embedded />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="reopen" className="m-0">
+            <Suspense fallback={<PageLoader />}>
+              <FinanceReopenRequests embedded />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="quality" className="m-0">
+            <Suspense fallback={<PageLoader />}>
+              <FinanceDataQuality embedded />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="audit" className="m-0">
+            <Suspense fallback={<PageLoader />}>
+              <FinanceAuditExplorer embedded />
+            </Suspense>
+          </TabsContent>
         </Tabs>
       </div>
     </DashboardLayout>
