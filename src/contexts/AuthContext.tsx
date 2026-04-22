@@ -5,6 +5,23 @@ import { logLogin, logLogout } from '@/lib/activityLogger';
 import { resetStatusCache } from '@/components/ProtectedRoute';
 import { clearPendingStudentLogin, clearStudentSessionState, hasActiveStudentSession, hasPendingStudentLogin, markStudentSession } from '@/lib/studentSession';
 
+const clearSupabaseStoredSession = () => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith('sb-') && key.includes('auth-token')) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+  } catch (error) {
+    console.error('Failed to clear stored auth session:', error);
+  }
+};
+
 type AppRole = 'admin' | 'instructor' | 'student' | 'reception' | 'parent';
 
 interface AuthContextType {
@@ -54,6 +71,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     let isMounted = true;
 
+    const clearBrokenSession = async () => {
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        // Ignore and fall back to local cleanup below.
+      }
+
+      clearSupabaseStoredSession();
+      resetStatusCache();
+      clearPendingStudentLogin();
+      clearStudentSessionState();
+
+      if (!isMounted) return;
+      setSession(null);
+      setUser(null);
+      setRole(null);
+      setRoleLoading(false);
+      setLoading(false);
+    };
+
     const applyAuthState = async (currentSession: Session | null) => {
       if (!isMounted) return;
 
@@ -71,10 +108,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
 
+      const { data: verifiedUserResult, error: verifiedUserError } = await supabase.auth.getUser();
+      if (verifiedUserError || !verifiedUserResult.user) {
+        await clearBrokenSession();
+        return;
+      }
+
       setRoleLoading(true);
       const fetchedRole = await fetchUserRole(nextUser.id);
 
       if (!isMounted || authRequestRef.current !== requestId) return;
+
+      if (!fetchedRole) {
+        const provider = nextUser.app_metadata?.provider;
+        const isGoogleParentCandidate = provider === 'google';
+
+        if (!isGoogleParentCandidate) {
+          await clearBrokenSession();
+          return;
+        }
+      }
 
       if (fetchedRole === 'student') {
         const hasStudentTabSession = hasActiveStudentSession(nextUser.id);
@@ -106,6 +159,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setRoleLoading(false);
       setLoading(false);
     };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      void applyAuthState(session);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, currentSession) => {

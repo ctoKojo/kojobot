@@ -20,6 +20,22 @@ import { resetStatusCache } from '@/components/ProtectedRoute';
 import { clearPendingStudentLogin, markPendingStudentLogin, markStudentSession } from '@/lib/studentSession';
 import kojobotLogo from '@/assets/kojobot-main-logo.png';
 
+const clearSupabaseStoredSession = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (key && key.startsWith('sb-') && key.includes('auth-token')) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+  } catch (error) {
+    console.error('Failed to clear stored auth session:', error);
+  }
+};
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
@@ -89,8 +105,30 @@ export default function Auth() {
   useEffect(() => {
     if (!user || role !== 'parent') { setParentApproved(null); return; }
     supabase.from('profiles').select('is_approved').eq('user_id', user.id).maybeSingle()
-      .then(({ data }) => setParentApproved(data?.is_approved ?? false));
-  }, [user, role]);
+      .then(async ({ data, error }) => {
+        if (error) {
+          console.error('Parent approval lookup failed:', error);
+          return;
+        }
+
+        // If the session user no longer has a profile/role, clear the stale local session.
+        if (!data) {
+          try {
+            await supabase.auth.signOut({ scope: 'local' });
+          } catch {
+            // Ignore and fall back to manual cleanup.
+          }
+          clearSupabaseStoredSession();
+          resetStatusCache();
+          clearPendingStudentLogin();
+          setParentApproved(null);
+          navigate('/auth', { replace: true });
+          return;
+        }
+
+        setParentApproved(data.is_approved ?? false);
+      });
+  }, [user, role, navigate]);
 
   // Handle auth state changes
   useEffect(() => {
@@ -101,25 +139,17 @@ export default function Auth() {
       navigate(parentApproved ? '/dashboard' : '/parent-pending', { replace: true });
     } else if (user && role && role !== 'parent') {
       navigate('/dashboard', { replace: true });
-    } else if (user && !role && userType === 'parent') {
-      // Google user without role → show registration form
-      const meta = user.user_metadata;
-      if (meta?.full_name || meta?.name) {
-        setFullName(meta.full_name || meta.name || '');
-      }
-      if (user.phone) setPhone(user.phone);
-      setStep('parent-register');
     } else if (user && !role && user.app_metadata?.provider === 'google') {
-      // Returning Google user without role (e.g. refreshing page)
-      setUserType('parent');
+      // Google user without role → show registration form only if account still exists in auth and is genuinely new.
       const meta = user.user_metadata;
+      setUserType('parent');
       if (meta?.full_name || meta?.name) {
         setFullName(meta.full_name || meta.name || '');
       }
       if (user.phone) setPhone(user.phone);
       setStep('parent-register');
     }
-  }, [user, role, loading, roleLoading, navigate, userType, parentApproved]);
+  }, [user, role, loading, roleLoading, navigate, parentApproved]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
