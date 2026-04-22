@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Lock, Unlock, AlertTriangle, History, Loader2 } from 'lucide-react';
+import { Lock, Unlock, AlertTriangle, History, GitCompareArrows, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSearchParams } from 'react-router-dom';
 
@@ -11,6 +11,7 @@ const FinancePeriods = lazy(() => import('./FinancePeriods'));
 const FinanceReopenRequests = lazy(() => import('./FinanceReopenRequests'));
 const FinanceDataQuality = lazy(() => import('./FinanceDataQuality'));
 const FinanceAuditExplorer = lazy(() => import('./FinanceAuditExplorer'));
+const FinancePaymentReconciliation = lazy(() => import('./FinancePaymentReconciliation'));
 
 const PageLoader = () => (
   <div className="flex justify-center p-12">
@@ -64,7 +65,7 @@ export default function FinanceClosing() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setTab} className="space-y-4">
-          <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-2 md:grid-cols-4">
+          <TabsList className="grid w-full md:w-auto md:inline-grid grid-cols-2 md:grid-cols-5">
             <TabsTrigger value="periods" className="gap-2">
               <Lock className="h-4 w-4" />
               {isRTL ? 'الفترات' : 'Periods'}
@@ -72,6 +73,10 @@ export default function FinanceClosing() {
             <TabsTrigger value="reopen" className="gap-2">
               <Unlock className="h-4 w-4" />
               {isRTL ? 'طلبات الفتح' : 'Reopen Requests'}
+            </TabsTrigger>
+            <TabsTrigger value="reconciliation" className="gap-2">
+              <GitCompareArrows className="h-4 w-4" />
+              {isRTL ? 'مطابقة القيود' : 'Reconciliation'}
             </TabsTrigger>
             <TabsTrigger value="quality" className="gap-2">
               <AlertTriangle className="h-4 w-4" />
@@ -91,6 +96,11 @@ export default function FinanceClosing() {
           <TabsContent value="reopen" className="m-0">
             <Suspense fallback={<PageLoader />}>
               <FinanceReopenRequests embedded />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="reconciliation" className="m-0">
+            <Suspense fallback={<PageLoader />}>
+              <FinancePaymentReconciliation embedded />
             </Suspense>
           </TabsContent>
           <TabsContent value="quality" className="m-0">

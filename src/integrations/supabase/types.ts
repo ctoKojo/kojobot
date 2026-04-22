@@ -7350,6 +7350,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_payment_journal_reconciliation: {
+        Args: { p_period_month: string }
+        Returns: Json
+      }
       get_pending_balance_alerts: {
         Args: never
         Returns: {
