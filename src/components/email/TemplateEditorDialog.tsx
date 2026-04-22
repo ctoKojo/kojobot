@@ -11,7 +11,15 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Eye, Code, Plus, Mail, Send } from 'lucide-react';
+import { Mail, Send, History as HistoryIcon, Activity, Link2, FlaskConical, Loader2 } from 'lucide-react';
+import { TemplatePreviewPanel } from './TemplatePreviewPanel';
+import { TemplateValidationBanner } from './TemplateValidationBanner';
+import { TemplateVersionsTab } from './TemplateVersionsTab';
+import { TemplateHistoryTab } from './TemplateHistoryTab';
+import { TemplateLinkedEventsTab } from './TemplateLinkedEventsTab';
+import { SendTestDialog } from './SendTestDialog';
+import { useTemplatePermissions } from '@/hooks/useTemplatePermissions';
+import { validateTemplate, type CatalogEvent } from '@/lib/templateValidation';
 
 export interface EmailTemplateRow {
   id: string;
@@ -27,16 +35,11 @@ export interface EmailTemplateRow {
   subject_telegram_ar?: string | null;
   body_telegram_md_en?: string | null;
   body_telegram_md_ar?: string | null;
+  validation_status?: any;
+  last_test_at?: string | null;
+  last_test_status?: string | null;
   created_at: string;
   updated_at: string;
-}
-
-interface CatalogEvent {
-  event_key: string;
-  display_name_en: string;
-  display_name_ar: string;
-  available_variables: { key: string; label_en: string; label_ar: string }[];
-  supported_audiences?: string[];
 }
 
 interface Props {
@@ -46,7 +49,7 @@ interface Props {
   onSaved: () => void;
 }
 
-const AUDIENCE_OPTIONS: { value: string; en: string; ar: string }[] = [
+const AUDIENCE_OPTIONS = [
   { value: 'student',    en: 'Students',    ar: 'الطلاب' },
   { value: 'parent',     en: 'Parents',     ar: 'أولياء الأمور' },
   { value: 'instructor', en: 'Instructors', ar: 'المدربين' },
@@ -55,46 +58,28 @@ const AUDIENCE_OPTIONS: { value: string; en: string; ar: string }[] = [
 ];
 
 const DEFAULT_HTML_EN = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-  <h2 style="color: #1a1a1a;">Hello {{recipientName}},</h2>
-  <p style="color: #444; line-height: 1.6;">
-    Your message here...
-  </p>
-  <p style="color: #888; font-size: 12px; margin-top: 32px;">
-    Kojobot Academy
-  </p>
+  <h2>Hello {{recipientName}},</h2>
+  <p>Your message here...</p>
 </div>`;
-
 const DEFAULT_HTML_AR = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;" dir="rtl">
-  <h2 style="color: #1a1a1a;">مرحباً {{recipientName}}،</h2>
-  <p style="color: #444; line-height: 1.6;">
-    اكتب رسالتك هنا...
-  </p>
-  <p style="color: #888; font-size: 12px; margin-top: 32px;">
-    أكاديمية كوجوبوت
-  </p>
+  <h2>مرحباً {{recipientName}}،</h2>
+  <p>اكتب رسالتك هنا...</p>
 </div>`;
-
-const DEFAULT_TELEGRAM_EN = `Hello {{recipientName}},
-
-Your short message here.
-
-— Kojobot Academy`;
-
-const DEFAULT_TELEGRAM_AR = `مرحباً {{recipientName}}،
-
-اكتب رسالتك المختصرة هنا.
-
-— أكاديمية كوجوبوت`;
+const DEFAULT_TG_EN = `Hello {{recipientName}},\n\nYour short message here.`;
+const DEFAULT_TG_AR = `مرحباً {{recipientName}}،\n\nاكتب رسالتك المختصرة هنا.`;
 
 export function TemplateEditorDialog({ open, onOpenChange, template, onSaved }: Props) {
   const { isRTL } = useLanguage();
   const { toast } = useToast();
+  const { permissions } = useTemplatePermissions();
+
   const [saving, setSaving] = useState(false);
+  const [topTab, setTopTab] = useState<'editor' | 'linked' | 'history' | 'versions'>('editor');
   const [activeChannel, setActiveChannel] = useState<'email' | 'telegram'>('email');
   const [activeLang, setActiveLang] = useState<'en' | 'ar'>('en');
-  const [previewMode, setPreviewMode] = useState(false);
   const [catalog, setCatalog] = useState<CatalogEvent[]>([]);
   const [previewEvent, setPreviewEvent] = useState<string>('');
+  const [testOpen, setTestOpen] = useState(false);
 
   // form state
   const [name, setName] = useState('');
@@ -106,8 +91,10 @@ export function TemplateEditorDialog({ open, onOpenChange, template, onSaved }: 
   const [bodyAr, setBodyAr] = useState(DEFAULT_HTML_AR);
   const [subjectTgEn, setSubjectTgEn] = useState('');
   const [subjectTgAr, setSubjectTgAr] = useState('');
-  const [bodyTgEn, setBodyTgEn] = useState(DEFAULT_TELEGRAM_EN);
-  const [bodyTgAr, setBodyTgAr] = useState(DEFAULT_TELEGRAM_AR);
+  const [bodyTgEn, setBodyTgEn] = useState(DEFAULT_TG_EN);
+  const [bodyTgAr, setBodyTgAr] = useState(DEFAULT_TG_AR);
+
+  const readOnly = !permissions.canEdit;
 
   useEffect(() => {
     if (open) {
@@ -122,89 +109,79 @@ export function TemplateEditorDialog({ open, onOpenChange, template, onSaved }: 
         setBodyAr(template.body_html_ar);
         setSubjectTgEn(template.subject_telegram_en ?? '');
         setSubjectTgAr(template.subject_telegram_ar ?? '');
-        setBodyTgEn(template.body_telegram_md_en ?? DEFAULT_TELEGRAM_EN);
-        setBodyTgAr(template.body_telegram_md_ar ?? DEFAULT_TELEGRAM_AR);
+        setBodyTgEn(template.body_telegram_md_en ?? DEFAULT_TG_EN);
+        setBodyTgAr(template.body_telegram_md_ar ?? DEFAULT_TG_AR);
       } else {
-        setName('');
-        setDescription('');
-        setAudience('student');
-        setSubjectEn('');
-        setSubjectAr('');
-        setBodyEn(DEFAULT_HTML_EN);
-        setBodyAr(DEFAULT_HTML_AR);
-        setSubjectTgEn('');
-        setSubjectTgAr('');
-        setBodyTgEn(DEFAULT_TELEGRAM_EN);
-        setBodyTgAr(DEFAULT_TELEGRAM_AR);
+        setName(''); setDescription(''); setAudience('student');
+        setSubjectEn(''); setSubjectAr('');
+        setBodyEn(DEFAULT_HTML_EN); setBodyAr(DEFAULT_HTML_AR);
+        setSubjectTgEn(''); setSubjectTgAr('');
+        setBodyTgEn(DEFAULT_TG_EN); setBodyTgAr(DEFAULT_TG_AR);
       }
-      setActiveLang('en');
-      setActiveChannel('email');
-      setPreviewMode(false);
+      setActiveLang('en'); setActiveChannel('email'); setTopTab('editor');
     }
   }, [open, template]);
 
   const loadCatalog = async () => {
     const { data } = await supabase
       .from('email_event_catalog')
-      .select('event_key, display_name_en, display_name_ar, available_variables, supported_audiences')
+      .select('event_key, display_name_en, display_name_ar, available_variables, preview_data, supported_audiences')
       .eq('is_active', true)
       .order('event_key');
-    setCatalog((data ?? []) as CatalogEvent[]);
-    if (!previewEvent && data && data.length) setPreviewEvent(data[0].event_key);
+    const list = (data ?? []) as CatalogEvent[];
+    setCatalog(list);
+    if (!previewEvent && list.length) setPreviewEvent(list[0].event_key);
   };
 
-  // Filter catalog by selected audience for variable hints
-  const audienceCatalog = useMemo(
-    () => catalog.filter((c) => !c.supported_audiences || c.supported_audiences.includes(audience)),
-    [catalog, audience],
+  // events relevant to this template (linked OR same audience)
+  const relevantEvents = useMemo(() => {
+    return catalog.filter((c) => !c.supported_audiences || c.supported_audiences.includes(audience));
+  }, [catalog, audience]);
+
+  const validation = useMemo(
+    () => validateTemplate(
+      {
+        subject_en: subjectEn, subject_ar: subjectAr,
+        body_html_en: bodyEn, body_html_ar: bodyAr,
+        subject_telegram_en: subjectTgEn, subject_telegram_ar: subjectTgAr,
+        body_telegram_md_en: bodyTgEn, body_telegram_md_ar: bodyTgAr,
+      },
+      relevantEvents,
+    ),
+    [subjectEn, subjectAr, bodyEn, bodyAr, subjectTgEn, subjectTgAr, bodyTgEn, bodyTgAr, relevantEvents],
   );
 
+  const insertVariable = (key: string) => {
+    const ph = `{{${key}}}`;
+    if (activeChannel === 'email') {
+      if (activeLang === 'en') setBodyEn((v) => v + ph);
+      else setBodyAr((v) => v + ph);
+    } else {
+      if (activeLang === 'en') setBodyTgEn((v) => v + ph);
+      else setBodyTgAr((v) => v + ph);
+    }
+  };
+
+  const currentPreviewSubject =
+    activeChannel === 'email'
+      ? activeLang === 'en' ? subjectEn : subjectAr
+      : activeLang === 'en' ? subjectTgEn : subjectTgAr;
+  const currentPreviewBody =
+    activeChannel === 'email'
+      ? activeLang === 'en' ? bodyEn : bodyAr
+      : activeLang === 'en' ? bodyTgEn : bodyTgAr;
   const currentVariables = useMemo(() => {
-    if (!previewEvent) return [];
     const ev = catalog.find((c) => c.event_key === previewEvent);
     return ev?.available_variables ?? [];
   }, [catalog, previewEvent]);
 
-  const sampleData = useMemo(() => {
-    const data: Record<string, string> = {};
-    currentVariables.forEach((v) => {
-      data[v.key] = isRTL ? `[${v.label_ar}]` : `[${v.label_en}]`;
-    });
-    return data;
-  }, [currentVariables, isRTL]);
-
-  const renderPreview = (tpl: string): string =>
-    tpl.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key) => sampleData[key] ?? `{{${key}}}`);
-
-  const insertVariable = (key: string) => {
-    const placeholder = `{{${key}}}`;
-    if (activeChannel === 'email') {
-      if (activeLang === 'en') setBodyEn((v) => v + placeholder);
-      else setBodyAr((v) => v + placeholder);
-    } else {
-      if (activeLang === 'en') setBodyTgEn((v) => v + placeholder);
-      else setBodyTgAr((v) => v + placeholder);
-    }
-  };
-
-  const insertIntoSubject = (key: string) => {
-    const placeholder = `{{${key}}}`;
-    if (activeChannel === 'email') {
-      if (activeLang === 'en') setSubjectEn((v) => v + placeholder);
-      else setSubjectAr((v) => v + placeholder);
-    } else {
-      if (activeLang === 'en') setSubjectTgEn((v) => v + placeholder);
-      else setSubjectTgAr((v) => v + placeholder);
-    }
-  };
-
   const handleSave = async () => {
-    if (!name.trim() || !subjectEn.trim() || !subjectAr.trim() || !bodyEn.trim() || !bodyAr.trim()) {
-      toast({
-        title: isRTL ? 'بيانات ناقصة' : 'Missing fields',
-        description: isRTL ? 'الاسم والموضوع والمحتوى بلغتين مطلوبة' : 'Name, subject, and body in both languages are required',
-        variant: 'destructive',
-      });
+    if (!validation.isValid) {
+      toast({ title: isRTL ? 'فيه أخطاء' : 'Validation errors', description: isRTL ? 'صلح الأخطاء قبل الحفظ' : 'Fix errors before saving', variant: 'destructive' });
+      return;
+    }
+    if (!name.trim()) {
+      toast({ title: isRTL ? 'الاسم مطلوب' : 'Name is required', variant: 'destructive' });
       return;
     }
     setSaving(true);
@@ -220,6 +197,13 @@ export function TemplateEditorDialog({ open, onOpenChange, template, onSaved }: 
       subject_telegram_ar: subjectTgAr.trim() || null,
       body_telegram_md_en: bodyTgEn.trim() || null,
       body_telegram_md_ar: bodyTgAr.trim() || null,
+      validation_status: {
+        errors: validation.errors.length,
+        warnings: validation.warnings.length,
+        used_variables: validation.usedVariables,
+        unknown_variables: validation.unknownVariables,
+        validated_at: new Date().toISOString(),
+      },
     };
     const { error } = template
       ? await supabase.from('email_templates').update(payload).eq('id', template.id)
@@ -234,278 +218,194 @@ export function TemplateEditorDialog({ open, onOpenChange, template, onSaved }: 
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {template
-              ? isRTL ? 'تعديل قالب' : 'Edit template'
-              : isRTL ? 'قالب جديد' : 'New template'}
-          </DialogTitle>
-          <DialogDescription>
-            {isRTL
-              ? 'استخدم {{variableName}} لإدراج بيانات ديناميكية. اختر فئة المستلم وحدّث المحتوى للإيميل والتيليجرام.'
-              : 'Use {{variableName}} to insert dynamic data. Pick the audience and edit content for email and Telegram.'}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Left: form */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>{isRTL ? 'اسم القالب' : 'Template name'}</Label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={isRTL ? 'مثال: تذكير قسط' : 'e.g. Payment reminder'}
-                />
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <DialogTitle>
+                  {template ? (isRTL ? 'تعديل قالب' : 'Edit template') : (isRTL ? 'قالب جديد' : 'New template')}
+                </DialogTitle>
+                <DialogDescription className="mt-1">
+                  {isRTL ? 'استخدم {{variableName}} لإدراج بيانات ديناميكية. كل save يعمل نسخة جديدة.' : 'Use {{variableName}} for dynamic data. Each save creates a new version.'}
+                </DialogDescription>
               </div>
-              <div className="space-y-2">
-                <Label>{isRTL ? 'فئة المستلم' : 'Audience'}</Label>
-                <Select value={audience} onValueChange={setAudience}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {AUDIENCE_OPTIONS.map((a) => (
-                      <SelectItem key={a.value} value={a.value}>
-                        {isRTL ? a.ar : a.en}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center gap-2">
+                {readOnly && <Badge variant="outline">{isRTL ? 'قراءة فقط' : 'Read only'}</Badge>}
+                {template && permissions.canSendTest && (
+                  <Button variant="outline" size="sm" onClick={() => setTestOpen(true)}>
+                    <FlaskConical className="h-4 w-4 me-1" />
+                    {isRTL ? 'اختبار' : 'Test'}
+                  </Button>
+                )}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>{isRTL ? 'الوصف (اختياري)' : 'Description (optional)'}</Label>
-              <Input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={isRTL ? 'شرح مختصر' : 'Brief description'}
-              />
-            </div>
+          </DialogHeader>
 
-            <Tabs value={activeChannel} onValueChange={(v) => setActiveChannel(v as 'email' | 'telegram')}>
-              <TabsList className="w-full grid grid-cols-2">
-                <TabsTrigger value="email"><Mail className="h-3.5 w-3.5 me-1" /> {isRTL ? 'إيميل' : 'Email'}</TabsTrigger>
-                <TabsTrigger value="telegram"><Send className="h-3.5 w-3.5 me-1" /> Telegram</TabsTrigger>
-              </TabsList>
+          <Tabs value={topTab} onValueChange={(v) => setTopTab(v as any)}>
+            <TabsList>
+              <TabsTrigger value="editor"><Mail className="h-3.5 w-3.5 me-1" />{isRTL ? 'المحرر' : 'Editor'}</TabsTrigger>
+              {template && (
+                <>
+                  <TabsTrigger value="linked"><Link2 className="h-3.5 w-3.5 me-1" />{isRTL ? 'الأحداث' : 'Linked'}</TabsTrigger>
+                  <TabsTrigger value="versions"><HistoryIcon className="h-3.5 w-3.5 me-1" />{isRTL ? 'النسخ' : 'Versions'}</TabsTrigger>
+                  <TabsTrigger value="history"><Activity className="h-3.5 w-3.5 me-1" />{isRTL ? 'السجل' : 'History'}</TabsTrigger>
+                </>
+              )}
+            </TabsList>
 
-              <TabsContent value="email" className="space-y-3 mt-3">
-                <Tabs value={activeLang} onValueChange={(v) => setActiveLang(v as 'en' | 'ar')}>
-                  <div className="flex items-center justify-between gap-2">
+            <TabsContent value="editor" className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>{isRTL ? 'اسم القالب' : 'Template name'}</Label>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} disabled={readOnly} />
+                </div>
+                <div className="space-y-2">
+                  <Label>{isRTL ? 'فئة المستلم' : 'Audience'}</Label>
+                  <Select value={audience} onValueChange={setAudience} disabled={readOnly}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {AUDIENCE_OPTIONS.map((a) => (
+                        <SelectItem key={a.value} value={a.value}>{isRTL ? a.ar : a.en}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>{isRTL ? 'الوصف (اختياري)' : 'Description (optional)'}</Label>
+                <Input value={description} onChange={(e) => setDescription(e.target.value)} disabled={readOnly} />
+              </div>
+
+              <TemplateValidationBanner validation={validation} isRTL={isRTL} />
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Editor */}
+                <div className="space-y-3">
+                  <Tabs value={activeChannel} onValueChange={(v) => setActiveChannel(v as any)}>
+                    <TabsList className="grid grid-cols-2 w-full">
+                      <TabsTrigger value="email"><Mail className="h-3.5 w-3.5 me-1" /> {isRTL ? 'إيميل' : 'Email'}</TabsTrigger>
+                      <TabsTrigger value="telegram"><Send className="h-3.5 w-3.5 me-1" /> Telegram</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+
+                  <Tabs value={activeLang} onValueChange={(v) => setActiveLang(v as any)}>
                     <TabsList>
-                      <TabsTrigger value="en">English</TabsTrigger>
+                      <TabsTrigger value="en">EN</TabsTrigger>
                       <TabsTrigger value="ar">عربي</TabsTrigger>
                     </TabsList>
-                    <Button variant="outline" size="sm" onClick={() => setPreviewMode((p) => !p)}>
-                      {previewMode ? (
-                        <><Code className="h-4 w-4 me-1" /> {isRTL ? 'كود' : 'Source'}</>
-                      ) : (
-                        <><Eye className="h-4 w-4 me-1" /> {isRTL ? 'معاينة' : 'Preview'}</>
-                      )}
-                    </Button>
-                  </div>
+                  </Tabs>
 
-                  <TabsContent value="en" className="space-y-3 mt-3">
-                    <div className="space-y-2">
-                      <Label>Subject (English)</Label>
-                      <Input value={subjectEn} onChange={(e) => setSubjectEn(e.target.value)} dir="ltr" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Body HTML (English)</Label>
-                      {previewMode ? (
-                        <Card className="p-4 min-h-[300px] bg-background">
-                          <div dangerouslySetInnerHTML={{ __html: renderPreview(bodyEn) }} />
-                        </Card>
-                      ) : (
-                        <Textarea
-                          value={bodyEn}
-                          onChange={(e) => setBodyEn(e.target.value)}
-                          className="font-mono text-xs min-h-[300px]"
-                          dir="ltr"
+                  {activeChannel === 'email' ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label>{isRTL ? 'الموضوع' : 'Subject'}</Label>
+                        <Input
+                          value={activeLang === 'en' ? subjectEn : subjectAr}
+                          onChange={(e) => activeLang === 'en' ? setSubjectEn(e.target.value) : setSubjectAr(e.target.value)}
+                          dir={activeLang === 'ar' ? 'rtl' : 'ltr'}
+                          disabled={readOnly}
                         />
-                      )}
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="ar" className="space-y-3 mt-3">
-                    <div className="space-y-2">
-                      <Label>الموضوع (عربي)</Label>
-                      <Input value={subjectAr} onChange={(e) => setSubjectAr(e.target.value)} dir="rtl" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>محتوى HTML (عربي)</Label>
-                      {previewMode ? (
-                        <Card className="p-4 min-h-[300px] bg-background">
-                          <div dangerouslySetInnerHTML={{ __html: renderPreview(bodyAr) }} />
-                        </Card>
-                      ) : (
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{isRTL ? 'محتوى HTML' : 'Body HTML'}</Label>
                         <Textarea
-                          value={bodyAr}
-                          onChange={(e) => setBodyAr(e.target.value)}
-                          className="font-mono text-xs min-h-[300px]"
+                          value={activeLang === 'en' ? bodyEn : bodyAr}
+                          onChange={(e) => activeLang === 'en' ? setBodyEn(e.target.value) : setBodyAr(e.target.value)}
+                          className="font-mono text-xs min-h-[320px]"
                           dir="ltr"
+                          disabled={readOnly}
                         />
-                      )}
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </TabsContent>
-
-              <TabsContent value="telegram" className="space-y-3 mt-3">
-                <div className="text-xs text-muted-foreground">
-                  {isRTL
-                    ? 'النص ده يبعت على تيليجرام. لو فاضي يستخدم نسخة مبسطة من نص الإيميل.'
-                    : 'This goes to Telegram. If empty, a stripped-down version of the email body is used.'}
-                </div>
-                <Tabs value={activeLang} onValueChange={(v) => setActiveLang(v as 'en' | 'ar')}>
-                  <TabsList>
-                    <TabsTrigger value="en">English</TabsTrigger>
-                    <TabsTrigger value="ar">عربي</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="en" className="space-y-3 mt-3">
-                    <div className="space-y-2">
-                      <Label>{isRTL ? 'العنوان (Telegram, اختياري)' : 'Title (Telegram, optional)'}</Label>
-                      <Input
-                        value={subjectTgEn}
-                        onChange={(e) => setSubjectTgEn(e.target.value)}
-                        dir="ltr"
-                        placeholder={isRTL ? 'يبقى أول سطر بـ bold' : 'Becomes the bold first line'}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Body (English, plain text / markdown)</Label>
-                      <Textarea
-                        value={bodyTgEn}
-                        onChange={(e) => setBodyTgEn(e.target.value)}
-                        className="font-mono text-xs min-h-[200px]"
-                        dir="ltr"
-                      />
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="ar" className="space-y-3 mt-3">
-                    <div className="space-y-2">
-                      <Label>{isRTL ? 'العنوان (تيليجرام، اختياري)' : 'Title (Telegram, optional)'}</Label>
-                      <Input
-                        value={subjectTgAr}
-                        onChange={(e) => setSubjectTgAr(e.target.value)}
-                        dir="rtl"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{isRTL ? 'النص (عربي)' : 'Body (Arabic)'}</Label>
-                      <Textarea
-                        value={bodyTgAr}
-                        onChange={(e) => setBodyTgAr(e.target.value)}
-                        className="font-mono text-xs min-h-[200px]"
-                        dir="rtl"
-                      />
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Right: variables panel */}
-          <div className="space-y-3">
-            <Card className="p-3 space-y-3">
-              <div>
-                <Label className="text-xs">{isRTL ? 'معاينة لحدث' : 'Preview for event'}</Label>
-                <Select value={previewEvent} onValueChange={setPreviewEvent}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder={isRTL ? 'اختر حدث' : 'Pick event'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {audienceCatalog.map((c) => (
-                      <SelectItem key={c.event_key} value={c.event_key}>
-                        {isRTL ? c.display_name_ar : c.display_name_en}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-2">
-                  {isRTL ? 'اضغط لإدراج في المحتوى' : 'Click to insert into body'}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {currentVariables.length === 0 ? (
-                    <span className="text-xs text-muted-foreground">
-                      {isRTL ? 'لا توجد متغيرات' : 'No variables'}
-                    </span>
+                      </div>
+                    </>
                   ) : (
-                    currentVariables.map((v) => (
-                      <Badge
-                        key={v.key}
-                        variant="secondary"
-                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
-                        onClick={() => insertVariable(v.key)}
-                      >
-                        <Plus className="h-3 w-3 me-1" />
-                        {`{{${v.key}}}`}
-                      </Badge>
-                    ))
+                    <>
+                      <div className="space-y-2">
+                        <Label>{isRTL ? 'العنوان (اختياري)' : 'Title (optional)'}</Label>
+                        <Input
+                          value={activeLang === 'en' ? subjectTgEn : subjectTgAr}
+                          onChange={(e) => activeLang === 'en' ? setSubjectTgEn(e.target.value) : setSubjectTgAr(e.target.value)}
+                          dir={activeLang === 'ar' ? 'rtl' : 'ltr'}
+                          disabled={readOnly}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{isRTL ? 'النص (Markdown)' : 'Body (Markdown)'}</Label>
+                        <Textarea
+                          value={activeLang === 'en' ? bodyTgEn : bodyTgAr}
+                          onChange={(e) => activeLang === 'en' ? setBodyTgEn(e.target.value) : setBodyTgAr(e.target.value)}
+                          className="font-mono text-xs min-h-[260px]"
+                          dir={activeLang === 'ar' ? 'rtl' : 'ltr'}
+                          disabled={readOnly}
+                        />
+                      </div>
+                    </>
                   )}
-                </div>
-              </div>
-              {currentVariables.length > 0 && (
-                <div>
-                  <div className="text-xs text-muted-foreground mb-2">
-                    {isRTL ? 'إدراج في الموضوع:' : 'Insert into subject:'}
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {currentVariables.slice(0, 4).map((v) => (
-                      <Badge
-                        key={v.key}
-                        variant="outline"
-                        className="cursor-pointer text-xs"
-                        onClick={() => insertIntoSubject(v.key)}
-                      >
-                        {v.key}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </Card>
 
-            <Card className="p-3 text-xs text-muted-foreground space-y-1">
-              <div className="font-medium text-foreground">
-                {isRTL ? '💡 نصائح' : '💡 Tips'}
-              </div>
-              <div>
-                {isRTL
-                  ? '• المتغيرات بصيغة {{variableName}} يستبدلها النظام عند الإرسال'
-                  : '• Variables like {{variableName}} are replaced when sending'}
-              </div>
-              <div>
-                {isRTL
-                  ? '• خلي نص التيليجرام مختصر — الإيميل يقدر يكون مفصل'
-                  : '• Keep Telegram body short — email can be detailed'}
-              </div>
-              <div>
-                {isRTL
-                  ? '• فئة المستلم بتفلتر القوالب في صفحة ربط الأحداث'
-                  : '• Audience filters templates in the Event Mappings tab'}
-              </div>
-            </Card>
-          </div>
-        </div>
+                  <Card className="p-3">
+                    <Label className="text-xs">{isRTL ? 'متغيرات متاحة' : 'Available variables'}</Label>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {currentVariables.length === 0 && (
+                        <span className="text-xs text-muted-foreground">{isRTL ? 'اختر حدث للمعاينة' : 'Pick a preview event'}</span>
+                      )}
+                      {currentVariables.map((v) => (
+                        <Button
+                          key={v.key}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => insertVariable(v.key)}
+                          disabled={readOnly}
+                          type="button"
+                        >
+                          {`{{${v.key}}}`}
+                        </Button>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            {isRTL ? 'إلغاء' : 'Cancel'}
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving
-              ? isRTL ? 'جارٍ الحفظ...' : 'Saving...'
-              : isRTL ? 'حفظ' : 'Save'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+                {/* Preview */}
+                <TemplatePreviewPanel
+                  isRTL={isRTL}
+                  channel={activeChannel}
+                  lang={activeLang}
+                  subject={currentPreviewSubject}
+                  body={currentPreviewBody}
+                  events={catalog}
+                  selectedEventKey={previewEvent}
+                  onEventChange={setPreviewEvent}
+                />
+              </div>
+            </TabsContent>
+
+            {template && (
+              <>
+                <TabsContent value="linked"><TemplateLinkedEventsTab templateId={template.id} /></TabsContent>
+                <TabsContent value="versions"><TemplateVersionsTab templateId={template.id} onRestored={onSaved} /></TabsContent>
+                <TabsContent value="history"><TemplateHistoryTab templateId={template.id} /></TabsContent>
+              </>
+            )}
+          </Tabs>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              {isRTL ? 'إلغاء' : 'Cancel'}
+            </Button>
+            {!readOnly && topTab === 'editor' && (
+              <Button onClick={handleSave} disabled={saving || !validation.isValid}>
+                {saving && <Loader2 className="h-4 w-4 me-1 animate-spin" />}
+                {isRTL ? 'حفظ' : 'Save'}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {template && (
+        <SendTestDialog open={testOpen} onOpenChange={setTestOpen} template={template} />
+      )}
+    </>
   );
 }
