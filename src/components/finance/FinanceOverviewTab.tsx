@@ -46,9 +46,10 @@ const fmt = (n: number) =>
   new Intl.NumberFormat('en-EG', { maximumFractionDigits: 0 }).format(Math.round(n || 0));
 
 export function FinanceOverviewTab({
-  stats, loading, selectedMonth, isCurrentMonth, onTabChange,
+  stats, loading, selectedMonth, isCurrentMonth, onTabChange, role,
 }: FinanceOverviewTabProps) {
   const { isRTL, language } = useLanguage();
+  const isAdmin = role === 'admin';
   const navigate = useNavigate();
 
   // Treasury balances
