@@ -148,11 +148,11 @@ Deno.serve(async (req) => {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-    const adminChannel: string = built.mapping?.admin_channel_override ?? 'auto'
+    // Allowed admin_channel_override values: user_choice | email_only | telegram_only | both | none
+    const adminChannel: string = built.mapping?.admin_channel_override ?? 'user_choice'
 
-    // Admin set email-only -> skip Telegram entirely.
-    if (adminChannel === 'email') {
-      return new Response(JSON.stringify({ skipped: true, reason: 'admin_channel_email_only' }), {
+    if (adminChannel === 'none' || adminChannel === 'email_only') {
+      return new Response(JSON.stringify({ skipped: true, reason: `admin_channel_${adminChannel}` }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -161,8 +161,8 @@ Deno.serve(async (req) => {
     let resolvedUserId = userId ?? null
 
     if (userId) {
-      // Respect user prefs only when admin says 'auto'. Admin 'telegram'/'both' force-send.
-      if (!bypassPreferences && adminChannel === 'auto') {
+      // Respect user prefs only when admin says user_choice. 'telegram_only'/'both' force-send.
+      if (!bypassPreferences && adminChannel === 'user_choice') {
         const { data: prefs } = await supabase.rpc('get_user_notification_channels', {
           p_user_id: userId,
           p_event_key: templateName,
