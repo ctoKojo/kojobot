@@ -165,6 +165,49 @@ serve(async (req) => {
       await adminClient.from('notifications').insert(notifications)
     }
 
+    // In-app notification + email/telegram for the parent themselves
+    await adminClient.from('notifications').insert({
+      user_id: user.id,
+      title: 'Registration received — awaiting approval',
+      title_ar: 'تم استلام طلب التسجيل — في انتظار الموافقة',
+      message: 'Thanks for signing up. Your account is being reviewed by the academy staff and will be activated shortly.',
+      message_ar: 'شكراً لتسجيلك. طلبك قيد المراجعة من قبل إدارة الأكاديمية وسيتم تفعيل حسابك قريباً.',
+      type: 'system',
+    })
+
+    // Fire-and-forget transactional dispatch (email + telegram if linked).
+    // We invoke the unified channels directly here (server-side) so the
+    // parent gets confirmation immediately after signup.
+    if (user.email) {
+      try {
+        await adminClient.functions.invoke('send-email', {
+          body: {
+            to: user.email,
+            templateName: 'parent-registration-pending',
+            templateData: { parentName: profileName, academyName: 'Kojobot Academy' },
+            idempotencyKey: `parent-pending-${user.id}`,
+            audience: 'parent',
+            skipTelegramFanout: true,
+          },
+        })
+      } catch (e) {
+        console.error('parent-registration-pending email dispatch failed:', e)
+      }
+    }
+    try {
+      await adminClient.functions.invoke('send-telegram', {
+        body: {
+          userId: user.id,
+          templateName: 'parent-registration-pending',
+          templateData: { parentName: profileName, academyName: 'Kojobot Academy' },
+          audience: 'parent',
+          idempotencyKey: `parent-pending-${user.id}-tg`,
+        },
+      })
+    } catch (e) {
+      console.error('parent-registration-pending telegram dispatch failed:', e)
+    }
+
     // Link each valid code
     for (const entry of validEntries) {
       // Check if already linked
