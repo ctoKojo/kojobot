@@ -2,7 +2,7 @@ import { lazy, Suspense } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Lock, Unlock, AlertTriangle, History, Loader2 } from 'lucide-react';
+import { Lock, Unlock, AlertTriangle, History, GitCompareArrows, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSearchParams } from 'react-router-dom';
 
@@ -11,6 +11,7 @@ const FinancePeriods = lazy(() => import('./FinancePeriods'));
 const FinanceReopenRequests = lazy(() => import('./FinanceReopenRequests'));
 const FinanceDataQuality = lazy(() => import('./FinanceDataQuality'));
 const FinanceAuditExplorer = lazy(() => import('./FinanceAuditExplorer'));
+const FinancePaymentReconciliation = lazy(() => import('./FinancePaymentReconciliation'));
 
 const PageLoader = () => (
   <div className="flex justify-center p-12">
