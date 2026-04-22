@@ -131,48 +131,50 @@ export function FinanceOverviewTab({
 
   return (
     <div className="space-y-6">
-      {/* === Treasury Section === */}
-      <section>
-        <SectionHeader
-          icon={Wallet}
-          title={isRTL ? 'الخزنة' : 'Treasury'}
-          subtitle={isRTL ? 'الأرصدة الحالية' : 'Current balances'}
-          gradient="from-emerald-500 to-teal-600"
-          action={
-            <Button variant="ghost" size="sm" onClick={() => navigate('/finance/treasury')} className="text-xs gap-1">
-              {isRTL ? 'فتح الخزنة' : 'Open Treasury'} <ArrowRight className={cn('h-3 w-3', isRTL && 'rotate-180')} />
-            </Button>
-          }
-        />
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-          {[
-            { label: isRTL ? 'إجمالي الخزنة' : 'Total Balance', value: treasury.total, icon: PiggyBank, gradient: 'from-emerald-500 to-emerald-600', glow: 'shadow-emerald-500/20' },
-            { label: isRTL ? 'كاش' : 'Cash', value: treasury.cashTotal, icon: Banknote, gradient: 'from-amber-500 to-orange-500', glow: 'shadow-amber-500/20' },
-            { label: isRTL ? 'بنك + إنستاباي' : 'Bank + InstaPay', value: treasury.bankTotal, icon: Smartphone, gradient: 'from-blue-500 to-indigo-600', glow: 'shadow-blue-500/20' },
-          ].map(item => (
-            <Card key={item.label} className={cn('relative overflow-hidden border-0 shadow-md hover:shadow-xl transition-all', item.glow)}>
-              <div className={cn('absolute inset-0 bg-gradient-to-br opacity-[0.06]', item.gradient)} />
-              <CardContent className="p-5 relative">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-xs text-muted-foreground font-medium mb-2">{item.label}</p>
-                    {treasuryQuery.isLoading ? (
-                      <Skeleton className="h-8 w-32" />
-                    ) : (
-                      <p className="text-2xl font-bold tabular-nums">
-                        {fmt(item.value)} <span className="text-sm text-muted-foreground font-normal">{isRTL ? 'ج.م' : 'EGP'}</span>
-                      </p>
-                    )}
+      {/* === Treasury Section (admin only) === */}
+      {isAdmin && (
+        <section>
+          <SectionHeader
+            icon={Wallet}
+            title={isRTL ? 'الخزنة' : 'Treasury'}
+            subtitle={isRTL ? 'الأرصدة الحالية' : 'Current balances'}
+            gradient="from-emerald-500 to-teal-600"
+            action={
+              <Button variant="ghost" size="sm" onClick={() => navigate('/finance/treasury')} className="text-xs gap-1">
+                {isRTL ? 'فتح الخزنة' : 'Open Treasury'} <ArrowRight className={cn('h-3 w-3', isRTL && 'rotate-180')} />
+              </Button>
+            }
+          />
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+            {[
+              { label: isRTL ? 'إجمالي الخزنة' : 'Total Balance', value: treasury.total, icon: PiggyBank, gradient: 'from-emerald-500 to-emerald-600', glow: 'shadow-emerald-500/20' },
+              { label: isRTL ? 'كاش' : 'Cash', value: treasury.cashTotal, icon: Banknote, gradient: 'from-amber-500 to-orange-500', glow: 'shadow-amber-500/20' },
+              { label: isRTL ? 'بنك + إنستاباي' : 'Bank + InstaPay', value: treasury.bankTotal, icon: Smartphone, gradient: 'from-blue-500 to-indigo-600', glow: 'shadow-blue-500/20' },
+            ].map(item => (
+              <Card key={item.label} className={cn('relative overflow-hidden border-0 shadow-md hover:shadow-xl transition-all', item.glow)}>
+                <div className={cn('absolute inset-0 bg-gradient-to-br opacity-[0.06]', item.gradient)} />
+                <CardContent className="p-5 relative">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground font-medium mb-2">{item.label}</p>
+                      {treasuryQuery.isLoading ? (
+                        <Skeleton className="h-8 w-32" />
+                      ) : (
+                        <p className="text-2xl font-bold tabular-nums">
+                          {fmt(item.value)} <span className="text-sm text-muted-foreground font-normal">{isRTL ? 'ج.م' : 'EGP'}</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-md flex-shrink-0', item.gradient)}>
+                      <item.icon className="h-5 w-5 text-white" />
+                    </div>
                   </div>
-                  <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-md', item.gradient)}>
-                    <item.icon className="h-5 w-5 text-white" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* === Subscriptions Section === */}
       <section>
