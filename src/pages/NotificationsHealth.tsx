@@ -214,10 +214,10 @@ export default function NotificationsHealth() {
 
   const statusBadge = (status: string) => {
     const variants: Record<string, { color: string; icon: any }> = {
-      sent: { color: 'bg-green-500/10 text-green-700 dark:text-green-400', icon: CheckCircle2 },
-      failed: { color: 'bg-red-500/10 text-red-700 dark:text-red-400', icon: XCircle },
-      pending: { color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', icon: Clock },
-      retrying: { color: 'bg-blue-500/10 text-blue-700 dark:text-blue-400', icon: RefreshCw },
+      sent: { color: 'bg-success/10 text-success', icon: CheckCircle2 },
+      failed: { color: 'bg-destructive/10 text-destructive', icon: XCircle },
+      pending: { color: 'bg-warning/10 text-warning', icon: Clock },
+      retrying: { color: 'bg-info/10 text-info', icon: RefreshCw },
       skipped: { color: 'bg-muted text-muted-foreground', icon: Activity },
     };
     const v = variants[status] ?? variants.skipped;
