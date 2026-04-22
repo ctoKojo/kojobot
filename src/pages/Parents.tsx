@@ -133,7 +133,7 @@ export default function Parents() {
       await supabase.from('profiles').update({ is_approved: true }).eq('user_id', parentId);
     }
 
-    // Send notification
+    // In-app notification (instant feedback inside the app)
     if (user) {
       await supabase.from('notifications').insert({
         user_id: parentId,
@@ -144,6 +144,20 @@ export default function Parents() {
         type: 'system',
       });
     }
+
+    // Email + Telegram via unified dispatcher
+    const parent = allParents.find(p => p.parent_id === parentId);
+    const parentName = parent?.full_name || parent?.full_name_ar || 'Parent';
+    notifyEvent({
+      eventKey: 'parent-account-approved',
+      audience: 'parent',
+      userId: parentId,
+      templateData: {
+        parentName,
+        loginUrl: `${window.location.origin}/auth`,
+      },
+      idempotencyKey: `parent-approved-${parentId}`,
+    }).catch(err => console.error('parent-account-approved dispatch failed:', err));
 
     toast({ title: isRTL ? 'تمت الموافقة' : 'Approved', description: isRTL ? 'تم تفعيل حساب ولي الأمر' : 'Parent account has been activated' });
     setAllParents(prev => prev.map(p => p.parent_id === parentId ? { ...p, is_approved: true } : p));
