@@ -28,14 +28,14 @@ import {
 import { TableSkeleton } from '@/components/ui/table-skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
-import { Send, CheckCircle2, XCircle, Loader2, Users, Megaphone, Search } from 'lucide-react';
+import { Send, CheckCircle2, XCircle, Loader2, Users, Megaphone, Search, Mail, MessageCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { sendEmail } from '@/lib/emailService';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchEnrichedStudents } from '@/components/bulk-reminders/studentLoader';
 import { resolveRecipients, buildAutoTemplateData } from '@/components/bulk-reminders/recipientResolver';
-import type { StudentRow, SendResult } from '@/components/bulk-reminders/types';
+import type { StudentRow, SendResult, SendChannel } from '@/components/bulk-reminders/types';
 
 interface CatalogTemplate {
   event_key: string;
@@ -59,6 +59,8 @@ export default function BulkReminders() {
 
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const [channel, setChannel] = useState<SendChannel>('email');
 
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
