@@ -71,6 +71,21 @@ export function IssueWarningDialog({
         action_url: '/my-warnings',
       });
 
+      // Notify admins on Telegram
+      try {
+        const { notifyAdmins } = await import('@/lib/notifyAdmins');
+        notifyAdmins({
+          eventKey: 'admin-student-warning',
+          templateData: {
+            studentName,
+            warningType,
+            reason: reason.trim(),
+            issuedBy: user?.email || '—',
+          },
+          idempotencyKey: `student-warning-${studentId}-${Date.now()}`,
+        });
+      } catch (e) { console.warn('notifyAdmins failed', e); }
+
       toast.success(isRTL ? 'تم إصدار الإنذار بنجاح' : 'Warning issued successfully');
       onOpenChange(false);
       setWarningType('');

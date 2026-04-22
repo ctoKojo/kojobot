@@ -349,6 +349,21 @@ export default function MakeupSessionsPage() {
         });
       }
 
+      // Notify admins on Telegram
+      try {
+        const { notifyAdmins } = await import('@/lib/notifyAdmins');
+        notifyAdmins({
+          eventKey: 'admin-makeup-created',
+          templateData: {
+            studentName: selectedSession.student_name,
+            groupName: selectedSession.group_name,
+            scheduledDate: scheduleForm.date,
+            scheduledTime: scheduleForm.time,
+          },
+          idempotencyKey: `makeup-${selectedSession.id}-${scheduleForm.date}-${scheduleForm.time}`,
+        });
+      } catch (e) { console.warn('notifyAdmins failed', e); }
+
       toast({ title: isRTL ? 'تم الجدولة' : 'Scheduled', description: isRTL ? 'تم جدولة السيشن التعويضية - في انتظار تأكيد الطالب' : 'Makeup session scheduled - awaiting student confirmation' });
       setScheduleDialogOpen(false);
       fetchMakeupSessions();
