@@ -7724,6 +7724,10 @@ export type Database = {
         Args: { p_error?: string; p_lock_id: string; p_status: string }
         Returns: undefined
       }
+      render_default_email_html: {
+        Args: { p_intro: string; p_rtl: boolean; p_vars: Json }
+        Returns: string
+      }
       reopen_period: {
         Args: { p_period_month: string; p_reason: string }
         Returns: Json
