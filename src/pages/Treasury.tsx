@@ -53,6 +53,7 @@ const formatEGP = (n: number) =>
 
 export default function Treasury() {
   const { isRTL } = useLanguage();
+  const { role } = useAuth();
   const queryClient = useQueryClient();
   const [filterAccount, setFilterAccount] = useState<string>('all');
   const [filterSource, setFilterSource] = useState<string>('all');
@@ -64,6 +65,7 @@ export default function Treasury() {
   const [reconAccount, setReconAccount] = useState<string>('1110');
   const [reconActual, setReconActual] = useState<string>('');
   const [reconNotes, setReconNotes] = useState<string>('');
+  const [transferOpen, setTransferOpen] = useState(false);
 
   const balancesQuery = useQuery({
     queryKey: ['treasury-balances'],
