@@ -80,6 +80,7 @@ const ParentStudentView = React.lazy(() => import("./pages/ParentStudentView"));
 const FinancePeriods = React.lazy(() => import("./pages/FinancePeriods"));
 const FinanceReports = React.lazy(() => import("./pages/FinanceReports"));
 const FinanceAuditExplorer = React.lazy(() => import("./pages/FinanceAuditExplorer"));
+const FinancePaymentReconciliation = React.lazy(() => import("./pages/FinancePaymentReconciliation"));
 const FinanceDataQuality = React.lazy(() => import("./pages/FinanceDataQuality"));
 const FinanceReopenRequests = React.lazy(() => import("./pages/FinanceReopenRequests"));
 const FinanceClosing = React.lazy(() => import("./pages/FinanceClosing"));
