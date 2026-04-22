@@ -118,6 +118,19 @@ export default function Subscribe() {
       const data = res.data;
       if (data?.success) {
         setSuccess(data.request_id?.substring(0, 8).toUpperCase() || "OK");
+
+        // Notify admins on Telegram
+        try {
+          const { notifyAdmins } = await import('@/lib/notifyAdmins');
+          const planName = plans.find((p: any) => p.id === selectedPlanId)?.name_ar
+            || plans.find((p: any) => p.id === selectedPlanId)?.name
+            || '—';
+          notifyAdmins({
+            eventKey: 'admin-subscription-request',
+            templateData: { name: name.trim(), phone: phone.trim(), plan: planName },
+            idempotencyKey: `sub-inquiry-${data.request_id || Date.now()}`,
+          }).catch(() => {});
+        } catch {}
       } else if (data?.error) {
         setErrors({ form: data.details?.join(", ") || data.error });
       }
