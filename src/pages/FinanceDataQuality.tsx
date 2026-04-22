@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatDate } from '@/lib/timeUtils';
 import { useState } from 'react';
 
-export default function FinanceDataQuality() {
+export default function FinanceDataQuality({ embedded = false }: { embedded?: boolean } = {}) {
   const { isRTL } = useLanguage();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -63,13 +63,16 @@ export default function FinanceDataQuality() {
     }
   };
 
+  const Wrapper: any = embedded ? 'div' : DashboardLayout;
   return (
-    <DashboardLayout>
-      <PageHeader
-        title={isRTL ? 'جودة البيانات المالية' : 'Financial Data Quality'}
-        subtitle={isRTL ? 'مراقبة المشاكل وإصلاحها قبل الإقفال' : 'Monitor & fix issues before period close'}
-        icon={AlertTriangle}
-      />
+    <Wrapper className={embedded ? 'p-4 md:p-6' : undefined}>
+      {!embedded && (
+        <PageHeader
+          title={isRTL ? 'جودة البيانات المالية' : 'Financial Data Quality'}
+          subtitle={isRTL ? 'مراقبة المشاكل وإصلاحها قبل الإقفال' : 'Monitor & fix issues before period close'}
+          icon={AlertTriangle}
+        />
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 mb-4">
         <Card>
@@ -179,6 +182,6 @@ export default function FinanceDataQuality() {
           </Table>
         </CardContent>
       </Card>
-    </DashboardLayout>
+    </Wrapper>
   );
 }
