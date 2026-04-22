@@ -235,17 +235,17 @@ export default function NotificationsHealth() {
       <div className="container mx-auto p-4 md:p-6 space-y-6">
         <PageHeader
           title={isRTL ? 'صحة الإشعارات' : 'Notifications Health'}
-          description={isRTL ? 'مراقبة موحدة لقنوات الإيميل والتيليجرام' : 'Unified monitoring for Email & Telegram channels'}
+          subtitle={isRTL ? 'مراقبة موحدة لقنوات الإيميل والتيليجرام' : 'Unified monitoring for Email & Telegram channels'}
           icon={Activity}
         />
 
         {/* Critical alert banner */}
         {stats.lastHourFailures > 5 && (
-          <Card className="border-red-500/50 bg-red-500/5">
+          <Card className="border-destructive/50 bg-destructive/5">
             <CardContent className="flex items-center gap-3 py-4">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <AlertTriangle className="h-5 w-5 text-destructive" />
               <div>
-                <p className="font-semibold text-red-700 dark:text-red-400">
+                <p className="font-semibold text-destructive">
                   {isRTL ? `${stats.lastHourFailures} فشل في آخر ساعة` : `${stats.lastHourFailures} failures in the last hour`}
                 </p>
                 <p className="text-sm text-muted-foreground">
