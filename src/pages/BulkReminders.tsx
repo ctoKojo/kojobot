@@ -532,6 +532,18 @@ export default function BulkReminders() {
           </CardContent>
         </Card>
 
+        {/* Step 4: Schedule (optional) */}
+        <ScheduleSender
+          selectedStudentIds={Array.from(selectedIds)}
+          templateName={templateName}
+          templateData={templateData}
+          customSubject={customSubject}
+          customMessage={customMessage}
+          recipientMode={recipientMode}
+          filters={filters}
+          disabled={sending}
+        />
+
         {/* Results */}
         {results.length > 0 && (
           <Card>
