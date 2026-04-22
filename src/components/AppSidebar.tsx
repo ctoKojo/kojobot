@@ -134,7 +134,7 @@ export function AppSidebar() {
       case 'admin':
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard,
+            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, color: 'primary',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
@@ -142,7 +142,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Students & People', labelAr: 'الطلاب والأشخاص', icon: GraduationCap,
+            label: 'Students & People', labelAr: 'الطلاب والأشخاص', icon: GraduationCap, color: 'kojo-blue',
             items: [
               { title: t.nav.students, url: '/students', icon: GraduationCap },
               { title: isRTL ? 'أولياء الأمور' : 'Parents', url: '/parents', icon: Users },
@@ -150,7 +150,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Sessions & Academic', labelAr: 'الحصص والأكاديمي', icon: Calendar,
+            label: 'Sessions & Academic', labelAr: 'الحصص والأكاديمي', icon: Calendar, color: 'kojo-purple',
             items: [
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen },
               { title: t.nav.groups, url: '/groups', icon: Calendar },
@@ -161,7 +161,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Finance', labelAr: 'المالية', icon: DollarSign,
+            label: 'Finance', labelAr: 'المالية', icon: DollarSign, color: 'success',
             items: [
               { title: isRTL ? 'الإدارة والخزنة' : 'Finance & Treasury', url: '/finance', icon: DollarSign },
               { title: isRTL ? 'الإقفال والتدقيق' : 'Closing & Audit', url: '/finance/closing', icon: Lock },
@@ -169,7 +169,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Content & Curriculum', labelAr: 'المحتوى والمنهج', icon: Library,
+            label: 'Content & Curriculum', labelAr: 'المحتوى والمنهج', icon: Library, color: 'kojo-purple',
             items: [
               { title: isRTL ? 'المنهج' : 'Curriculum', url: '/curriculum', icon: Library },
               { title: isRTL ? 'المواد التعليمية' : 'Materials', url: '/materials', icon: BookMarked },
@@ -180,7 +180,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Operations & Compliance', labelAr: 'العمليات والالتزام', icon: ShieldCheck,
+            label: 'Operations & Compliance', labelAr: 'العمليات والالتزام', icon: ShieldCheck, color: 'warning',
             items: [
               { title: isRTL ? 'طلبات الإجازة والأعذار' : 'Leave & Absence', url: '/leave-requests', icon: CalendarDays },
               { title: isRTL ? 'مراجعة تحديد المستوى' : 'Placement Review', url: '/placement-test-review', icon: ClipboardCheck },
@@ -191,7 +191,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Reports & Insights', labelAr: 'التقارير والتحليلات', icon: BarChart3,
+            label: 'Reports & Insights', labelAr: 'التقارير والتحليلات', icon: BarChart3, color: 'kojo-blue',
             items: [
               { title: isRTL ? 'لوحة الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3 },
               { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: BarChart3 },
@@ -199,7 +199,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Communications', labelAr: 'التواصل', icon: Mail,
+            label: 'Communications', labelAr: 'التواصل', icon: Mail, color: 'primary',
             items: [
               { title: isRTL ? 'تذكيرات جماعية' : 'Bulk Reminders', url: '/bulk-reminders', icon: Send },
               { title: isRTL ? 'قوالب الإيميل' : 'Email Templates', url: '/email-templates', icon: FileText },
@@ -208,7 +208,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'System Settings', labelAr: 'إعدادات النظام', icon: Settings,
+            label: 'System Settings', labelAr: 'إعدادات النظام', icon: Settings, color: 'accent',
             items: [
               { title: t.nav.settings, url: '/settings', icon: Settings },
               { title: t.nav.ageGroups, url: '/age-groups', icon: Layers },
@@ -221,7 +221,7 @@ export function AppSidebar() {
       case 'instructor':
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard,
+            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, color: 'primary',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'جدول العمل' : 'My Schedule', url: '/instructor-schedule', icon: CalendarDays },
@@ -230,7 +230,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Teaching', labelAr: 'التدريس', icon: BookOpen,
+            label: 'Teaching', labelAr: 'التدريس', icon: BookOpen, color: 'kojo-purple',
             items: [
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen },
               { title: t.nav.groups, url: '/groups', icon: Calendar },
@@ -240,7 +240,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Personal', labelAr: 'الشخصي', icon: BarChart3,
+            label: 'Personal', labelAr: 'الشخصي', icon: BarChart3, color: 'kojo-blue',
             items: [
               { title: isRTL ? 'لوحة الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3 },
               { title: isRTL ? 'إنذاراتي' : 'My Warnings', url: '/my-instructor-warnings', icon: AlertTriangle },
@@ -251,7 +251,7 @@ export function AppSidebar() {
       case 'student':
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard,
+            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, color: 'primary',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
@@ -259,7 +259,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Learning', labelAr: 'التعلم', icon: BookOpen,
+            label: 'Learning', labelAr: 'التعلم', icon: BookOpen, color: 'kojo-purple',
             items: [
               { title: isRTL ? 'سيشناتي' : 'My Sessions', url: '/my-sessions', icon: BookOpen },
               { title: isRTL ? 'سيشناتي التعويضية' : 'Makeup Sessions', url: '/my-makeup-sessions', icon: RefreshCw },
@@ -269,7 +269,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Progress', labelAr: 'تقدمي', icon: TrendingUp,
+            label: 'Progress', labelAr: 'تقدمي', icon: TrendingUp, color: 'success',
             items: [
               { title: isRTL ? 'الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3 },
               { title: isRTL ? 'التقارير الشهرية' : 'Monthly Reports', url: '/monthly-reports', icon: TrendingUp },
@@ -282,7 +282,7 @@ export function AppSidebar() {
       case 'reception':
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard,
+            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, color: 'primary',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
@@ -290,14 +290,14 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Students & People', labelAr: 'الطلاب والأشخاص', icon: GraduationCap,
+            label: 'Students & People', labelAr: 'الطلاب والأشخاص', icon: GraduationCap, color: 'kojo-blue',
             items: [
               { title: t.nav.students, url: '/students', icon: GraduationCap },
               { title: isRTL ? 'أولياء الأمور' : 'Parents', url: '/parents', icon: Users },
             ],
           },
           {
-            label: 'Sessions & Academic', labelAr: 'الحصص والأكاديمي', icon: Calendar,
+            label: 'Sessions & Academic', labelAr: 'الحصص والأكاديمي', icon: Calendar, color: 'kojo-purple',
             items: [
               { title: t.groups.sessions, url: '/sessions', icon: BookOpen },
               { title: t.nav.groups, url: '/groups', icon: Calendar },
@@ -308,14 +308,14 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Finance', labelAr: 'المالية', icon: DollarSign,
+            label: 'Finance', labelAr: 'المالية', icon: DollarSign, color: 'success',
             items: [
               { title: isRTL ? 'الإدارة والخزنة' : 'Finance & Treasury', url: '/finance', icon: DollarSign },
               { title: isRTL ? 'الإعدادات المالية' : 'Finance Settings', url: '/finance/settings', icon: Settings },
             ],
           },
           {
-            label: 'Operations', labelAr: 'العمليات', icon: ShieldCheck,
+            label: 'Operations', labelAr: 'العمليات', icon: ShieldCheck, color: 'warning',
             items: [
               { title: isRTL ? 'طلبات الإجازة والأعذار' : 'Leave & Absence', url: '/leave-requests', icon: CalendarDays },
               { title: isRTL ? 'مراجعة تحديد المستوى' : 'Placement Review', url: '/placement-test-review', icon: ClipboardCheck },
@@ -324,7 +324,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'Reports & Comms', labelAr: 'التقارير والتواصل', icon: BarChart3,
+            label: 'Reports & Comms', labelAr: 'التقارير والتواصل', icon: BarChart3, color: 'kojo-blue',
             items: [
               { title: isRTL ? 'لوحة الترتيب' : 'Leaderboard', url: '/leaderboard', icon: BarChart3 },
               { title: isRTL ? 'تذكيرات جماعية' : 'Bulk Reminders', url: '/bulk-reminders', icon: Send },
@@ -335,7 +335,7 @@ export function AppSidebar() {
       case 'parent':
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard,
+            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, color: 'primary',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
               { title: isRTL ? 'الرسائل' : 'Messages', url: '/messages', icon: MessageSquare },
@@ -343,7 +343,7 @@ export function AppSidebar() {
             ],
           },
           {
-            label: 'My Children', labelAr: 'أبنائي', icon: GraduationCap,
+            label: 'My Children', labelAr: 'أبنائي', icon: GraduationCap, color: 'kojo-blue',
             items: [
               { title: isRTL ? 'الإجازات والأعذار' : 'Leave & Absence', url: '/parent-leave-requests', icon: CalendarDays },
               { title: isRTL ? 'الحساب المالي' : 'Finances', url: '/my-finances', icon: DollarSign },
@@ -354,7 +354,7 @@ export function AppSidebar() {
       default:
         return [
           {
-            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard,
+            label: 'Main', labelAr: 'الرئيسية', icon: LayoutDashboard, color: 'primary',
             items: [
               { title: t.nav.dashboard, url: '/dashboard', icon: LayoutDashboard },
             ],
