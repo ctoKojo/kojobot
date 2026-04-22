@@ -147,7 +147,7 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
           <div className="flex gap-2 flex-1">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder={isRTL ? 'بحث...' : 'Search...'} value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+              <Input placeholder={isRTL ? 'بحث...' : 'Search...'} value={search} onChange={e => setSearch(e.target.value)} className="ps-9" />
             </div>
             <Select value={filterCategory} onValueChange={v => { setFilterCategory(v); setPage(1); }}>
               <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
@@ -162,7 +162,7 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
               {isRTL ? 'الإجمالي: ' : 'Total: '}<span className="text-destructive">{totalAmount} {isRTL ? 'ج.م' : 'EGP'}</span>
             </div>
             <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" />{isRTL ? 'إضافة مصروف' : 'Add Expense'}
+              <Plus className="h-4 w-4 me-1" />{isRTL ? 'إضافة مصروف' : 'Add Expense'}
             </Button>
           </div>
         </div>

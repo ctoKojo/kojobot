@@ -302,9 +302,9 @@ export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
   const getStatusBadge = (snapshot: Snapshot | undefined) => {
     if (!snapshot) return <Badge variant="outline" className="text-muted-foreground">{isRTL ? 'بدون حركات' : 'No events'}</Badge>;
     switch (snapshot.status) {
-      case 'paid': return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"><Check className="h-3 w-3 mr-1" />{isRTL ? 'مصروف' : 'Paid'}</Badge>;
-      case 'locked': return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"><Lock className="h-3 w-3 mr-1" />{isRTL ? 'مقفول' : 'Locked'}</Badge>;
-      default: return <Badge variant="outline" className="border-blue-500 text-blue-600"><Unlock className="h-3 w-3 mr-1" />{isRTL ? 'مفتوح' : 'Open'}</Badge>;
+      case 'paid': return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"><Check className="h-3 w-3 me-1" />{isRTL ? 'مصروف' : 'Paid'}</Badge>;
+      case 'locked': return <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"><Lock className="h-3 w-3 me-1" />{isRTL ? 'مقفول' : 'Locked'}</Badge>;
+      default: return <Badge variant="outline" className="border-blue-500 text-blue-600"><Unlock className="h-3 w-3 me-1" />{isRTL ? 'مفتوح' : 'Open'}</Badge>;
     }
   };
 
@@ -354,7 +354,7 @@ export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
 
       <Tabs defaultValue="employees">
         <TabsList className="h-auto gap-1 bg-muted/60 p-1.5 rounded-xl">
-          <TabsTrigger value="employees" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm"><Wallet className="h-4 w-4 mr-1.5" />{isRTL ? 'المحافظ' : 'Wallets'}</TabsTrigger>
+          <TabsTrigger value="employees" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm"><Wallet className="h-4 w-4 me-1.5" />{isRTL ? 'المحافظ' : 'Wallets'}</TabsTrigger>
           <TabsTrigger value="ledger" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'سجل الحركات' : 'Event Ledger'}</TabsTrigger>
           <TabsTrigger value="history" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 text-sm">{isRTL ? 'سجل الصرف' : 'Payment History'}</TabsTrigger>
         </TabsList>
@@ -425,25 +425,25 @@ export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
                           {(!snapshot || snapshot.status === 'open') && (
                             <>
                               <Button size="sm" variant="outline" className="text-green-600 border-green-500/50" onClick={() => openAdjustDialog(emp, 'bonus')}>
-                                <Gift className="h-3 w-3 mr-1" />{isRTL ? 'بونص' : 'Bonus'}
+                                <Gift className="h-3 w-3 me-1" />{isRTL ? 'بونص' : 'Bonus'}
                               </Button>
                               <Button size="sm" variant="outline" className="text-destructive border-destructive/50" onClick={() => openAdjustDialog(emp, 'deduction')}>
-                                <Minus className="h-3 w-3 mr-1" />{isRTL ? 'خصم' : 'Deduct'}
+                                <Minus className="h-3 w-3 me-1" />{isRTL ? 'خصم' : 'Deduct'}
                               </Button>
                             </>
                           )}
                           {snapshot && snapshot.status === 'open' && (
                             <Button size="sm" variant="outline" onClick={() => handleLockMonth(emp.user_id)} disabled={saving}>
-                              <Lock className="h-3 w-3 mr-1" />{isRTL ? 'قفل' : 'Lock'}
+                              <Lock className="h-3 w-3 me-1" />{isRTL ? 'قفل' : 'Lock'}
                             </Button>
                           )}
                           {snapshot && snapshot.status === 'locked' && (
                             <>
                               <Button size="sm" variant="outline" onClick={() => handleUnlockMonth(emp.user_id)} disabled={saving}>
-                                <Unlock className="h-3 w-3 mr-1" />{isRTL ? 'فتح' : 'Unlock'}
+                                <Unlock className="h-3 w-3 me-1" />{isRTL ? 'فتح' : 'Unlock'}
                               </Button>
                               <Button size="sm" onClick={() => openPayDialog(emp)} disabled={saving}>
-                                <DollarSign className="h-3 w-3 mr-1" />{isRTL ? 'صرف' : 'Pay'}
+                                <DollarSign className="h-3 w-3 me-1" />{isRTL ? 'صرف' : 'Pay'}
                               </Button>
                             </>
                           )}
@@ -510,7 +510,7 @@ export function SalariesTab({ selectedMonth }: SalariesTabProps = {}) {
                       <TableCell>
                         {!event.is_reversal && !isReversed && snapshot?.status !== 'paid' && (
                           <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={() => handleReverseEvent(event)} disabled={saving}>
-                            <RotateCcw className="h-3 w-3 mr-1" />{isRTL ? 'عكس' : 'Reverse'}
+                            <RotateCcw className="h-3 w-3 me-1" />{isRTL ? 'عكس' : 'Reverse'}
                           </Button>
                         )}
                         {isReversed && <span className="text-xs text-muted-foreground">{isRTL ? 'تم عكسه' : 'Reversed'}</span>}

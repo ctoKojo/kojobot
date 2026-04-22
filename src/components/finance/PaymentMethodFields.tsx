@@ -193,9 +193,9 @@ export const PaymentMethodFields = forwardRef<PaymentMethodFieldsHandle, Props>(
                   disabled={disabled || uploading}
                 >
                   {uploading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-4 w-4 me-2 animate-spin" />
                   ) : (
-                    <Upload className="h-4 w-4 mr-2" />
+                    <Upload className="h-4 w-4 me-2" />
                   )}
                   {isRTL ? 'رفع إيصال (JPG/PNG/PDF — حد أقصى 5MB)' : 'Upload receipt (JPG/PNG/PDF — max 5MB)'}
                 </Button>
