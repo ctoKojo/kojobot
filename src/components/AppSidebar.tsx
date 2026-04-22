@@ -515,9 +515,9 @@ export function AppSidebar() {
                   <CollapsibleTrigger
                     className={cn(
                       'group/trigger flex w-full items-center justify-between rounded-lg px-2 py-2 text-xs font-semibold tracking-wide transition-all',
-                      'border border-transparent bg-sidebar-accent/30 hover:bg-sidebar-accent/60',
-                      'data-[state=open]:bg-sidebar-accent/70 data-[state=open]:border-sidebar-border data-[state=open]:shadow-sm',
-                      'text-sidebar-foreground/90'
+                      'border border-transparent text-sidebar-foreground/85',
+                      'hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground',
+                      'data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground data-[state=open]:border-sidebar-border data-[state=open]:shadow-sm',
                     )}
                   >
                     <span className="flex items-center gap-2.5 min-w-0">
