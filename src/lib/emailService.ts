@@ -6,16 +6,16 @@ interface SendEmailParams {
   to: string;
   templateName: EmailTemplate;
   templateData?: Record<string, any>;
-  /**
-   * A unique key for this logical send event.
-   * Same key = no duplicate send. Format: `<type>-<entity-id>-<context>`
-   * Example: `payment-due-${subscriptionId}-${dueDate}`
-   */
+  /** Idempotency key for the send event. */
   idempotencyKey: string;
   /** Optional override for the email subject. {{variables}} are interpolated. */
   customSubject?: string;
   /** Optional override for the email body HTML. {{variables}} are interpolated. */
   customBody?: string;
+  /** Audience for resolving the right template/mapping. Defaults to 'student'. */
+  audience?: 'student' | 'parent' | 'instructor' | 'admin' | 'reception' | 'staff';
+  /** Skip the implicit Telegram fan-out (used by notifyEvent dispatcher). */
+  skipTelegramFanout?: boolean;
 }
 
 interface SendEmailResult {
