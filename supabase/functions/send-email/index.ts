@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
     )
   }
 
-  const { to, templateName, templateData, idempotencyKey } = parsed.data
+  const { to, templateName, templateData, idempotencyKey, customSubject, customBody } = parsed.data
 
   // Idempotency: skip if already successfully sent
   const { data: existing } = await supabase
@@ -152,7 +152,23 @@ Deno.serve(async (req) => {
   }
 
   const data = templateData ?? {}
-  const resolved = await resolveTemplate(supabase, templateName, data)
+  let resolved: { subject: string; html: string } | null = null
+
+  // If both custom subject and body are provided, use them directly (still interpolated).
+  if (customSubject && customBody) {
+    resolved = {
+      subject: renderTemplate(customSubject, data),
+      html: renderTemplate(customBody, data),
+    }
+  } else {
+    const baseTpl = await resolveTemplate(supabase, templateName, data)
+    if (baseTpl) {
+      resolved = {
+        subject: customSubject ? renderTemplate(customSubject, data) : baseTpl.subject,
+        html: customBody ? renderTemplate(customBody, data) : baseTpl.html,
+      }
+    }
+  }
 
   if (!resolved) {
     // Either event is disabled by admin, or template not found in DB nor code.
