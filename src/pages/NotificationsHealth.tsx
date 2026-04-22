@@ -374,7 +374,7 @@ export default function NotificationsHealth() {
                           <TableCell>
                             {statusBadge(row.status)}
                             {row.error_message && (
-                              <p className="text-xs text-red-600 dark:text-red-400 mt-1 max-w-[260px] truncate" title={row.error_message}>
+                              <p className="text-xs text-destructive mt-1 max-w-[260px] truncate" title={row.error_message}>
                                 {row.error_message}
                               </p>
                             )}
@@ -419,8 +419,8 @@ function StatsCard({
   tone: 'success' | 'danger' | 'muted';
 }) {
   const tones: Record<string, string> = {
-    success: 'text-green-600 dark:text-green-400',
-    danger: 'text-red-600 dark:text-red-400',
+    success: 'text-success',
+    danger: 'text-destructive',
     muted: 'text-muted-foreground',
   };
   return (
