@@ -1,9 +1,19 @@
-// E2E Notifications Tester
-// Iterates over email_event_catalog and runs a dry_run send for each event.
-// Reports per-event status: ok / missing_template / render_error / skipped
+// E2E Notifications Tester (in-process, zero edge function invokes)
+// Iterates over email_event_catalog and runs in-process resolution + render
+// for each event. Reports per-event status: ok / missing_template / render_error / disabled
 // Admin-only — verifies user role server-side.
+//
+// Refactored: previously invoked send-email per event (~54 invokes, hit rate
+// limits). Now uses _shared/templateResolver directly — pure DB queries.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import {
+  resolveTemplate,
+  renderTemplate,
+  extractMissingVariables,
+  pickSubjectEnFirst,
+  pickHtmlEnFirst,
+} from '../_shared/templateResolver.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,11 +23,13 @@ const corsHeaders = {
 interface EventReport {
   event_key: string
   audience: string
-  status: 'ok' | 'missing_template' | 'render_error' | 'disabled' | 'no_recipient' | 'error'
+  status: 'ok' | 'missing_template' | 'render_error' | 'disabled' | 'missing_vars' | 'error'
   message?: string
   has_mapping: boolean
   has_template: boolean
-  resolved_via?: 'mapping' | 'convention' | 'direct' | 'code' | 'none'
+  resolved_via?: 'mapping' | 'convention' | 'direct' | 'none'
+  missing_vars?: string[]
+  rendered_subject?: string
 }
 
 Deno.serve(async (req) => {
@@ -56,11 +68,6 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Parse body — support an optional recipient override for the dry-run logs
-    let body: any = {}
-    try { body = await req.json() } catch { /* empty body OK */ }
-    const recipientEmail: string = body.recipientEmail || userRes.user.email || 'e2e-test@kojobot.com'
-
     // Load all active events from catalog
     const { data: events, error: catErr } = await supabase
       .from('email_event_catalog')
@@ -76,156 +83,102 @@ Deno.serve(async (req) => {
 
     const reports: EventReport[] = []
     const runId = `e2e-${Date.now()}`
-    const PER_EVENT_DELAY_MS = 200
-    const BATCH_SIZE = 10
-    const BATCH_DELAY_MS = 1000
+    const startedAt = Date.now()
 
-    // Helper: sleep for ms
-    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-    // Helper: invoke send-email with one retry on transient failure
-    async function invokeWithRetry(payload: Record<string, unknown>, maxRetries = 1) {
-      let lastErr: any = null
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        try {
-          const { data, error } = await supabase.functions.invoke('send-email', { body: payload })
-          if (error) {
-            lastErr = error
-            // Retry only on transient errors (network / rate limit)
-            const msg = (error.message ?? '').toLowerCase()
-            const isTransient = msg.includes('failed to send') || msg.includes('rate') || msg.includes('429') || msg.includes('timeout')
-            if (attempt < maxRetries && isTransient) {
-              await sleep(1000)
-              continue
-            }
-            return { data: null, error }
-          }
-          return { data, error: null }
-        } catch (e) {
-          lastErr = e
-          if (attempt < maxRetries) {
-            await sleep(1000)
-            continue
-          }
-          return { data: null, error: e }
-        }
-      }
-      return { data: null, error: lastErr }
-    }
-
-    for (const [index, ev] of (events ?? []).entries()) {
+    for (const ev of (events ?? [])) {
       const audiences: string[] = Array.isArray(ev.supported_audiences) && ev.supported_audiences.length > 0
         ? ev.supported_audiences
         : ['student']
       const audience = audiences[0]
       const previewData = (ev.preview_data ?? {}) as Record<string, unknown>
 
-      // Pre-check: mapping + template existence
-      const { data: mapping } = await supabase
-        .from('email_event_mappings')
-        .select('template_id, is_enabled')
-        .eq('event_key', ev.event_key)
-        .eq('audience', audience)
-        .maybeSingle()
-
-      const { data: conventionTpl } = await supabase
-        .from('email_templates')
-        .select('id')
-        .eq('name', `default-${ev.event_key}`)
-        .eq('is_active', true)
-        .maybeSingle()
-
-      const hasMapping = !!mapping
-      const hasTemplate = !!mapping?.template_id || !!conventionTpl?.id
-
-      if (mapping && mapping.is_enabled === false) {
-        reports.push({
-          event_key: ev.event_key,
-          audience,
-          status: 'disabled',
-          has_mapping: true,
-          has_template: hasTemplate,
-          resolved_via: 'mapping',
-        })
-        continue
-      }
-
-      if (!hasTemplate) {
-        reports.push({
-          event_key: ev.event_key,
-          audience,
-          status: 'missing_template',
-          has_mapping: hasMapping,
-          has_template: false,
-          resolved_via: 'none',
-          message: 'No mapped template and no default-{event_key} fallback',
-        })
-        continue
-      }
-
-      // Invoke send-email in dry-run mode (with retry on transient errors)
       try {
-        const idempotencyKey = `${runId}-${ev.event_key}-${audience}`
-        const { data: invokeRes, error: invokeErr } = await invokeWithRetry({
-          to: recipientEmail,
-          templateName: ev.event_key,
-          templateData: previewData,
-          audience,
-          idempotencyKey,
-          dryRun: true,
-          smokeTest: true,
-          skipTelegramFanout: true,
-        })
+        // In-process resolution — no edge function invokes
+        const resolved = await resolveTemplate(supabase, ev.event_key, audience)
+        const hasMapping = !!resolved.mapping
+        const hasTemplate = !!resolved.template
 
-        if (invokeErr) {
+        if (resolved.disabled) {
           reports.push({
             event_key: ev.event_key,
             audience,
-            status: 'error',
-            has_mapping: hasMapping,
+            status: 'disabled',
+            has_mapping: true,
             has_template: hasTemplate,
-            message: invokeErr.message ?? 'invoke error',
+            resolved_via: resolved.source,
           })
-        } else {
-          reports.push({
-            event_key: ev.event_key,
-            audience,
-            status: 'ok',
-            has_mapping: hasMapping,
-            has_template: hasTemplate,
-            resolved_via: mapping?.template_id ? 'mapping' : 'convention',
-            message: (invokeRes as any)?.subject?.slice(0, 100),
-          })
+          continue
         }
+
+        if (!resolved.template) {
+          reports.push({
+            event_key: ev.event_key,
+            audience,
+            status: 'missing_template',
+            has_mapping: hasMapping,
+            has_template: false,
+            resolved_via: 'none',
+            message: 'No mapped template and no default-{event_key} fallback',
+          })
+          continue
+        }
+
+        // Render subject + body and detect leftover {{vars}}
+        const subjectRendered = renderTemplate(pickSubjectEnFirst(resolved.template), previewData)
+        const htmlRendered = renderTemplate(pickHtmlEnFirst(resolved.template), previewData)
+        const missing = Array.from(new Set([
+          ...extractMissingVariables(subjectRendered),
+          ...extractMissingVariables(htmlRendered),
+        ]))
+
+        if (missing.length > 0) {
+          reports.push({
+            event_key: ev.event_key,
+            audience,
+            status: 'missing_vars',
+            has_mapping: hasMapping,
+            has_template: true,
+            resolved_via: resolved.source,
+            missing_vars: missing,
+            rendered_subject: subjectRendered.slice(0, 100),
+            message: `Missing variables in preview_data: ${missing.join(', ')}`,
+          })
+          continue
+        }
+
+        reports.push({
+          event_key: ev.event_key,
+          audience,
+          status: 'ok',
+          has_mapping: hasMapping,
+          has_template: true,
+          resolved_via: resolved.source,
+          rendered_subject: subjectRendered.slice(0, 100),
+        })
       } catch (e) {
         reports.push({
           event_key: ev.event_key,
           audience,
           status: 'render_error',
-          has_mapping: hasMapping,
-          has_template: hasTemplate,
+          has_mapping: false,
+          has_template: false,
           message: e instanceof Error ? e.message : String(e),
         })
       }
-
-      // Throttle invoke cadence to avoid Edge Function rate limiting
-      await sleep(PER_EVENT_DELAY_MS)
-
-      // Add a longer pause after each batch to prevent request bursts
-      const processedCount = index + 1
-      if (processedCount % BATCH_SIZE === 0 && processedCount < (events?.length ?? 0)) {
-        await sleep(BATCH_DELAY_MS)
-      }
     }
 
+    const elapsedMs = Date.now() - startedAt
     const summary = {
       total: reports.length,
       ok: reports.filter(r => r.status === 'ok').length,
       missing_template: reports.filter(r => r.status === 'missing_template').length,
+      missing_vars: reports.filter(r => r.status === 'missing_vars').length,
       disabled: reports.filter(r => r.status === 'disabled').length,
       errors: reports.filter(r => r.status === 'error' || r.status === 'render_error').length,
       run_id: runId,
       ran_at: new Date().toISOString(),
+      elapsed_ms: elapsedMs,
+      mode: 'in_process',
     }
 
     return new Response(JSON.stringify({ summary, reports }), {
