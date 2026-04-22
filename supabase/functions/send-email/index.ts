@@ -124,7 +124,27 @@ async function resolveTemplate(
     }
   }
 
-  // 4. Code template fallback
+  // 4. Convention-based fallback: try `default-{eventKey}` template
+  // This prevents orphan events when an admin forgets to create a mapping.
+  if (!templateName.startsWith('default-')) {
+    const conventionName = `default-${templateName}`
+    const { data: conventionTpl } = await supabase
+      .from('email_templates')
+      .select('subject_en, subject_ar, body_html_en, body_html_ar, is_active')
+      .eq('name', conventionName)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (conventionTpl) {
+      console.log(`[send-email] Using convention fallback: ${conventionName}`)
+      return {
+        subject: renderTemplate(pickSubject(conventionTpl), data),
+        html: renderTemplate(pickHtml(conventionTpl), data),
+        mapping,
+      }
+    }
+  }
+
+  // 5. Code template fallback
   const codeTpl = CODE_TEMPLATES[templateName]
   if (codeTpl) {
     return { subject: codeTpl.subject(data), html: codeTpl.render(data), mapping }
