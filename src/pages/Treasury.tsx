@@ -12,10 +12,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Wallet, Banknote, Smartphone, CreditCard, RefreshCw, Database, ArrowDownCircle, ArrowUpCircle, CheckCircle2, AlertCircle, Scale, Heart, AlertTriangle } from 'lucide-react';
+import { Wallet, Banknote, Smartphone, CreditCard, RefreshCw, Database, ArrowDownCircle, ArrowUpCircle, CheckCircle2, AlertCircle, Scale, Heart, AlertTriangle, ArrowRightLeft } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { TreasuryTransferDialog } from '@/components/treasury/TreasuryTransferDialog';
 
 interface TreasuryBalance {
   account_code: string;
