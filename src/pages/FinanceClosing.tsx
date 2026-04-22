@@ -2,7 +2,6 @@ import { lazy, Suspense } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
 import { Lock, Unlock, AlertTriangle, History, Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSearchParams } from 'react-router-dom';
@@ -18,18 +17,6 @@ const PageLoader = () => (
     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
   </div>
 );
-
-/**
- * Wrapper that strips the inner DashboardLayout/PageHeader from a lazy-loaded
- * page so we can embed it as a tab without doubling the chrome.
- */
-function EmbeddedPage({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="[&_main]:p-0 [&_.container]:p-0 [&_.container]:max-w-none">
-      <Suspense fallback={<PageLoader />}>{children}</Suspense>
-    </div>
-  );
-}
 
 export default function FinanceClosing() {
   const { isRTL } = useLanguage();
@@ -96,30 +83,26 @@ export default function FinanceClosing() {
             </TabsTrigger>
           </TabsList>
 
-          <Card>
-            <CardContent className="p-0">
-              <TabsContent value="periods" className="m-0">
-                <EmbeddedPage>
-                  <FinancePeriods />
-                </EmbeddedPage>
-              </TabsContent>
-              <TabsContent value="reopen" className="m-0">
-                <EmbeddedPage>
-                  <FinanceReopenRequests />
-                </EmbeddedPage>
-              </TabsContent>
-              <TabsContent value="quality" className="m-0">
-                <EmbeddedPage>
-                  <FinanceDataQuality />
-                </EmbeddedPage>
-              </TabsContent>
-              <TabsContent value="audit" className="m-0">
-                <EmbeddedPage>
-                  <FinanceAuditExplorer />
-                </EmbeddedPage>
-              </TabsContent>
-            </CardContent>
-          </Card>
+          <TabsContent value="periods" className="m-0">
+            <Suspense fallback={<PageLoader />}>
+              <FinancePeriods embedded />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="reopen" className="m-0">
+            <Suspense fallback={<PageLoader />}>
+              <FinanceReopenRequests embedded />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="quality" className="m-0">
+            <Suspense fallback={<PageLoader />}>
+              <FinanceDataQuality embedded />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="audit" className="m-0">
+            <Suspense fallback={<PageLoader />}>
+              <FinanceAuditExplorer embedded />
+            </Suspense>
+          </TabsContent>
         </Tabs>
       </div>
     </DashboardLayout>

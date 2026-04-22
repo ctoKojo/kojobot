@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDate } from '@/lib/timeUtils';
 
-export default function FinanceAuditExplorer() {
+export default function FinanceAuditExplorer({ embedded = false }: { embedded?: boolean } = {}) {
   const { isRTL } = useLanguage();
   const { toast } = useToast();
   const [periodMonth, setPeriodMonth] = useState(() => new Date().toISOString().slice(0, 7) + '-01');
@@ -49,13 +49,16 @@ export default function FinanceAuditExplorer() {
     }
   };
 
+  const Wrapper: any = embedded ? 'div' : DashboardLayout;
   return (
-    <DashboardLayout>
-      <PageHeader
-        title={isRTL ? 'مستكشف التدقيق' : 'Audit Explorer'}
-        subtitle={isRTL ? 'سجل التدقيق غير القابل للتعديل + تحقق سلسلة الـ hash' : 'Tamper-evident audit log & hash chain verification'}
-        icon={ShieldCheck}
-      />
+    <Wrapper className={embedded ? 'p-4 md:p-6' : undefined}>
+      {!embedded && (
+        <PageHeader
+          title={isRTL ? 'مستكشف التدقيق' : 'Audit Explorer'}
+          subtitle={isRTL ? 'سجل التدقيق غير القابل للتعديل + تحقق سلسلة الـ hash' : 'Tamper-evident audit log & hash chain verification'}
+          icon={ShieldCheck}
+        />
+      )}
 
       <Card>
         <CardHeader>
@@ -132,6 +135,6 @@ export default function FinanceAuditExplorer() {
           )}
         </CardContent>
       </Card>
-    </DashboardLayout>
+    </Wrapper>
   );
 }

@@ -32,7 +32,7 @@ const statusVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'o
   reopened: 'destructive',
 };
 
-export default function FinancePeriods() {
+export default function FinancePeriods({ embedded = false }: { embedded?: boolean } = {}) {
   const { isRTL } = useLanguage();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -166,13 +166,16 @@ export default function FinancePeriods() {
     }
   };
 
+  const Wrapper: any = embedded ? 'div' : DashboardLayout;
   return (
-    <DashboardLayout>
-      <PageHeader
-        title={isRTL ? 'الفترات المالية' : 'Financial Periods'}
-        subtitle={isRTL ? 'إدارة إقفال الفترات الشهرية وفتحها' : 'Manage monthly closing & reopening'}
-        icon={Lock}
-      />
+    <Wrapper className={embedded ? 'p-4 md:p-6' : undefined}>
+      {!embedded && (
+        <PageHeader
+          title={isRTL ? 'الفترات المالية' : 'Financial Periods'}
+          subtitle={isRTL ? 'إدارة إقفال الفترات الشهرية وفتحها' : 'Manage monthly closing & reopening'}
+          icon={Lock}
+        />
+      )}
 
       <Card>
         <CardHeader>
@@ -322,7 +325,7 @@ export default function FinancePeriods() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </Wrapper>
   );
 }
 

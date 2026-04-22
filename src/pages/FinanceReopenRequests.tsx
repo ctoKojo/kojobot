@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatDate } from '@/lib/timeUtils';
 import { useState } from 'react';
 
-export default function FinanceReopenRequests() {
+export default function FinanceReopenRequests({ embedded = false }: { embedded?: boolean } = {}) {
   const { isRTL } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -53,13 +53,16 @@ export default function FinanceReopenRequests() {
     }
   };
 
+  const Wrapper: any = embedded ? 'div' : DashboardLayout;
   return (
-    <DashboardLayout>
-      <PageHeader
-        title={isRTL ? 'طلبات إعادة فتح الفترات' : 'Period Reopen Requests'}
-        subtitle={isRTL ? 'موافقة مزدوجة — الموافق ≠ الطالب' : 'Dual approval — approver ≠ requester'}
-        icon={CheckCircle2}
-      />
+    <Wrapper className={embedded ? 'p-4 md:p-6' : undefined}>
+      {!embedded && (
+        <PageHeader
+          title={isRTL ? 'طلبات إعادة فتح الفترات' : 'Period Reopen Requests'}
+          subtitle={isRTL ? 'موافقة مزدوجة — الموافق ≠ الطالب' : 'Dual approval — approver ≠ requester'}
+          icon={CheckCircle2}
+        />
+      )}
 
       <Card>
         <CardHeader>
@@ -128,6 +131,6 @@ export default function FinanceReopenRequests() {
           )}
         </CardContent>
       </Card>
-    </DashboardLayout>
+    </Wrapper>
   );
 }
