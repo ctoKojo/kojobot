@@ -450,7 +450,7 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
               <div className="flex items-start gap-1.5 mt-1.5">
                 {form.slug && slugCheck.valid ? (
                   <>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
                     <p className="text-[11px] text-muted-foreground" dir="ltr">
                       kojobot.com/careers/<span className="font-mono text-foreground">{form.slug}</span>
                     </p>
