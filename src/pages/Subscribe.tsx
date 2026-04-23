@@ -169,7 +169,6 @@ export default function Subscribe() {
         <Link to="/" className="inline-block mb-4">
           <KojobotLogo size="md" showText />
         </Link>
-        </Link>
         <h1 className="text-2xl md:text-3xl font-bold" style={{ color: "rgba(240,240,255,.95)" }}>
           {l("Subscribe Now", "اشترك الآن")}
         </h1>
