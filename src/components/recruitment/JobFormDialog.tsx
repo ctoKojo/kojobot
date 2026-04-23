@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card } from "@/components/ui/card";
-import { Loader2, Globe, Languages } from "lucide-react";
+import { Loader2, Globe, Languages, Link2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { QuestionBuilder } from "./QuestionBuilder";
 import { RESERVED_FIELDS, JobFormField } from "./QuestionLibrary";
 
