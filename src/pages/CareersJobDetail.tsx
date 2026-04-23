@@ -23,6 +23,8 @@ interface Job {
   title_en: string;
   title_ar: string;
   type: string;
+  training_season: string | null;
+  is_paid: boolean;
   location_en: string | null;
   location_ar: string | null;
   salary_range: string | null;
@@ -36,6 +38,21 @@ interface Job {
   deadline_at: string | null;
   posted_at: string | null;
 }
+
+const TYPE_LABEL: Record<string, { en: string; ar: string; color: string }> = {
+  full_time: { en: "Full Time", ar: "دوام كامل", color: "#6455F0" },
+  part_time: { en: "Part Time", ar: "دوام جزئي", color: "#61BAE2" },
+  internship: { en: "Internship", ar: "تدريب", color: "#f59e0b" },
+  volunteer: { en: "Volunteer", ar: "تطوع", color: "#10b981" },
+  freelance: { en: "Freelance", ar: "عمل حر", color: "#8b5cf6" },
+};
+
+const SEASON_LABEL: Record<string, { en: string; ar: string }> = {
+  summer: { en: "Summer", ar: "الصيفي" },
+  fall: { en: "Fall", ar: "الخريفي" },
+  winter: { en: "Winter", ar: "الشتوي" },
+  spring: { en: "Spring", ar: "الربيعي" },
+};
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
