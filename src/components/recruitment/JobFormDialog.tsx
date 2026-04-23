@@ -144,9 +144,28 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     return firstValidSlug || `job-${Date.now()}`;
   };
 
+  // Slug validation: 3-80 chars, lowercase letters/numbers/Arabic, hyphen-separated, no leading/trailing hyphens
+  const SLUG_PATTERN = /^[\p{Letter}\p{Number}]+(-[\p{Letter}\p{Number}]+)*$/u;
+  const validateSlug = (value: string): { valid: boolean; error: string } => {
+    if (!value) return { valid: false, error: isRTL ? "السلاج مطلوب" : "Slug is required" };
+    if (value.length < 3) return { valid: false, error: isRTL ? "3 أحرف على الأقل" : "Minimum 3 characters" };
+    if (value.length > 80) return { valid: false, error: isRTL ? "80 حرف كحد أقصى" : "Maximum 80 characters" };
+    if (!SLUG_PATTERN.test(value)) {
+      return {
+        valid: false,
+        error: isRTL
+          ? "حروف وأرقام فقط مفصولة بـ '-' (بدون مسافات أو رموز)"
+          : "Letters & numbers only, separated by '-' (no spaces or symbols)",
+      };
+    }
+    return { valid: true, error: "" };
+  };
+
+  const slugCheck = validateSlug(form.slug);
+
   const isInternship = form.type === "internship";
 
-  // For single-language mode, bind primary input to one field but mirror to the other on save
+  // Auto-fill slug only if user hasn't typed one yet
   const handleTitle = (lang: "en" | "ar", value: string) => {
     if (contentLanguage === "en") {
       setForm({ ...form, title_en: value, title_ar: value, slug: form.slug || buildJobSlug(value) });
@@ -186,9 +205,13 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
       toast({ title: isRTL ? "اختر فصل التدريب" : "Pick training season", variant: "destructive" });
       return;
     }
+    if (!slugCheck.valid) {
+      toast({ title: isRTL ? "السلاج غير صحيح" : "Invalid slug", description: slugCheck.error, variant: "destructive" });
+      return;
+    }
 
     setSaving(true);
-    const slug = form.slug.trim() || buildJobSlug(form.title_en, form.title_ar);
+    const slug = form.slug.trim();
     const payload: any = {
       title_en: form.title_en.trim(),
       title_ar: form.title_ar.trim(),
