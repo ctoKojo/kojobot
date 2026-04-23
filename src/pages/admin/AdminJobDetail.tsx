@@ -241,6 +241,7 @@ export default function AdminJobDetail() {
                   <TableRow>
                     <TableHead>{isRTL ? "المتقدم" : "Applicant"}</TableHead>
                     <TableHead>{isRTL ? "الحالة" : "Status"}</TableHead>
+                    <TableHead>{isRTL ? "رد المتقدم" : "Applicant action"}</TableHead>
                     <TableHead>{isRTL ? "المصدر" : "Source"}</TableHead>
                     <TableHead>{isRTL ? "السيرة الذاتية" : "CV"}</TableHead>
                     <TableHead>{isRTL ? "تاريخ التقديم" : "Submitted"}</TableHead>
@@ -249,13 +250,15 @@ export default function AdminJobDetail() {
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">{isRTL ? "جاري التحميل…" : "Loading…"}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{isRTL ? "جاري التحميل…" : "Loading…"}</TableCell></TableRow>
                   ) : filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                       <Users className="w-12 h-12 mx-auto mb-2 opacity-30" />
                       {isRTL ? "لا يوجد متقدمين" : "No applicants yet"}
                     </TableCell></TableRow>
-                  ) : filtered.map((a) => (
+                  ) : filtered.map((a) => {
+                    const action = interviewActionByApp[a.id];
+                    return (
                     <TableRow key={a.id} className="cursor-pointer" onClick={() => setSelected(a)}>
                       <TableCell>
                         <div className="font-medium">{a.applicant_name}</div>
@@ -266,6 +269,26 @@ export default function AdminJobDetail() {
                         <Badge variant="outline" className={STATUS_META[a.status].color}>
                           {isRTL ? STATUS_META[a.status].ar : STATUS_META[a.status].en}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {action === "reschedule" ? (
+                          <Badge variant="outline" className="text-amber-700 dark:text-amber-300 border-amber-500/40 bg-amber-500/5">
+                            <CalendarClock className="w-3 h-3 me-1" />
+                            {isRTL ? "طلب إعادة جدولة" : "Reschedule"}
+                          </Badge>
+                        ) : action === "cancelled" ? (
+                          <Badge variant="outline" className="text-destructive border-destructive/40 bg-destructive/5">
+                            <XCircle className="w-3 h-3 me-1" />
+                            {isRTL ? "ألغى" : "Cancelled"}
+                          </Badge>
+                        ) : action === "confirmed" ? (
+                          <Badge variant="outline" className="text-green-700 dark:text-green-300 border-green-500/40 bg-green-500/5">
+                            <CheckCircle2 className="w-3 h-3 me-1" />
+                            {isRTL ? "أكّد" : "Confirmed"}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
