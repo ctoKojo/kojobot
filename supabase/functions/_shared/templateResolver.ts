@@ -79,9 +79,32 @@ export function renderTemplate(tpl: string | null | undefined, data: Record<stri
     })
     if (out === before) break
   }
-  return out.replace(VAR_REGEX, (_m, key) => {
+  return out.replace(VAR_REGEX, (_m, key, offset: number, full: string) => {
     const v = (data as Record<string, unknown>)[key]
-    return v === undefined || v === null ? '' : String(v)
+    if (v === undefined || v === null) return ''
+    const s = String(v)
+    // If the value is a multi-line string AND we're rendering inside an HTML
+    // template (heuristic: template contains any `<` tag), preserve the line
+    // breaks by collapsing blank lines into paragraph separators and single
+    // newlines into `<br/>`. Without this, raw `\n` characters from DB text
+    // (e.g. job descriptions, requirements) collapse into a single visual
+    // paragraph because HTML ignores whitespace.
+    if (s.includes('\n') && /<[a-zA-Z][^>]*>/.test(full)) {
+      // Split on blank lines into paragraphs; within each paragraph,
+      // single line breaks become <br/>. Trim each segment and skip empties.
+      const paragraphs = s
+        .replace(/\r\n/g, '\n')
+        .split(/\n{2,}/)
+        .map(p => p.trim())
+        .filter(p => p.length > 0)
+        .map(p => p.split('\n').map(line => line.trim()).join('<br/>'))
+      // Wrap in <p> only if there is more than one paragraph; otherwise
+      // a single segment with <br/> is enough and won't disturb inline contexts.
+      return paragraphs.length > 1
+        ? paragraphs.map(p => `<p style="margin:0 0 12px">${p}</p>`).join('')
+        : paragraphs[0] ?? ''
+    }
+    return s
   })
 }
 
