@@ -15,6 +15,8 @@ interface FormField {
   accept?: string;
   placeholder_en?: string;
   placeholder_ar?: string;
+  min?: number;
+  max?: number;
 }
 
 interface Job {
@@ -229,20 +231,69 @@ export default function CareersJobDetail() {
     setSubmitting(true);
 
     try {
-      // Required check
+      // Validators per field type
+      const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) && v.length <= 255;
+      const isPhone = (v: string) => /^(\+?\d{8,15})$/.test(v.replace(/[\s\-()]/g, ""));
+      const isUrl = (v: string) => {
+        try { const u = new URL(v); return u.protocol === "http:" || u.protocol === "https:"; } catch { return false; }
+      };
+      const isDate = (v: string) => !Number.isNaN(new Date(v).getTime());
+
+      // Per-field validation (required + format for typed fields)
       for (const f of fields) {
-        if (f.required && !["full_name", "email", "phone", "cv"].includes(f.key)) {
-          const v = formValues[f.key];
-          if (v === undefined || v === null || (typeof v === "string" && v.trim() === "")) {
-            throw new Error(isRTL ? `الحقل "${f.label_ar}" مطلوب` : `Field "${f.label_en}" is required`);
+        if (["full_name", "email", "phone", "cv"].includes(f.key)) continue;
+        const raw = formValues[f.key];
+        const v = typeof raw === "string" ? raw.trim() : raw;
+        const isEmpty = v === undefined || v === null || (typeof v === "string" && v === "") || (Array.isArray(v) && v.length === 0);
+
+        if (f.required && isEmpty) {
+          throw new Error(isRTL ? `الحقل "${f.label_ar}" مطلوب` : `Field "${f.label_en}" is required`);
+        }
+        if (isEmpty) continue; // skip format check for empty optional fields
+
+        const label = isRTL ? f.label_ar : f.label_en;
+        if (f.type === "email" && !isEmail(String(v))) {
+          throw new Error(isRTL ? `"${label}" يجب أن يكون بريد إلكتروني صحيح` : `"${label}" must be a valid email`);
+        }
+        if (f.type === "phone" && !isPhone(String(v))) {
+          throw new Error(isRTL ? `"${label}" يجب أن يكون رقم هاتف صحيح (8-15 رقم)` : `"${label}" must be a valid phone (8-15 digits)`);
+        }
+        if (f.type === "url" && !isUrl(String(v))) {
+          throw new Error(isRTL ? `"${label}" يجب أن يكون رابط صحيح يبدأ بـ http(s)` : `"${label}" must be a valid http(s) URL`);
+        }
+        if (f.type === "number") {
+          const n = Number(v);
+          if (Number.isNaN(n)) {
+            throw new Error(isRTL ? `"${label}" يجب أن يكون رقم` : `"${label}" must be a number`);
+          }
+          if (typeof f.min === "number" && n < f.min) {
+            throw new Error(isRTL ? `"${label}" يجب ألا يقل عن ${f.min}` : `"${label}" must be ≥ ${f.min}`);
+          }
+          if (typeof f.max === "number" && n > f.max) {
+            throw new Error(isRTL ? `"${label}" يجب ألا يزيد عن ${f.max}` : `"${label}" must be ≤ ${f.max}`);
+          }
+        }
+        if (f.type === "date" && !isDate(String(v))) {
+          throw new Error(isRTL ? `"${label}" تاريخ غير صحيح` : `"${label}" is not a valid date`);
+        }
+        if ((f.type === "short_text" || f.type === "long_text") && typeof v === "string") {
+          const max = f.type === "short_text" ? 200 : 2000;
+          if (v.length > max) {
+            throw new Error(isRTL ? `"${label}" يجب ألا يزيد عن ${max} حرف` : `"${label}" must be ≤ ${max} characters`);
           }
         }
       }
+
       const fullName = String(formValues.full_name || "").trim();
       const email = String(formValues.email || "").trim();
       const phone = String(formValues.phone || "").trim();
-      if (!fullName || fullName.length < 2) throw new Error(isRTL ? "الاسم مطلوب" : "Name required");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error(isRTL ? "بريد غير صحيح" : "Invalid email");
+      if (!fullName || fullName.length < 2 || fullName.length > 100) {
+        throw new Error(isRTL ? "الاسم يجب أن يكون من 2 إلى 100 حرف" : "Name must be 2-100 characters");
+      }
+      if (!isEmail(email)) throw new Error(isRTL ? "بريد إلكتروني غير صحيح" : "Invalid email");
+      if (phone && !isPhone(phone)) {
+        throw new Error(isRTL ? "رقم الهاتف غير صحيح (8-15 رقم)" : "Invalid phone (8-15 digits)");
+      }
 
       // Upload CV if provided
       let cvUrl: string | null = null;

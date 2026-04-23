@@ -13,7 +13,16 @@ interface FormField {
   label_en?: string;
   label_ar?: string;
   required?: boolean;
+  min?: number;
+  max?: number;
 }
+
+const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) && v.length <= 255;
+const isPhone = (v: string) => /^(\+?\d{8,15})$/.test(v.replace(/[\s\-()]/g, ""));
+const isUrl = (v: string) => {
+  try { const u = new URL(v); return u.protocol === "http:" || u.protocol === "https:"; } catch { return false; }
+};
+const isDate = (v: string) => !Number.isNaN(new Date(v).getTime());
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -96,18 +105,45 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Validate required dynamic fields
+    // Validate dynamic fields (required + format checks)
     const fields: FormField[] = Array.isArray(job.form_fields) ? job.form_fields : [];
     const safeAnswers: Record<string, unknown> = (answers && typeof answers === "object") ? answers : {};
     for (const f of fields) {
-      if (f.required && f.key !== "full_name" && f.key !== "email" && f.key !== "phone" && f.key !== "cv") {
-        const v = safeAnswers[f.key];
-        if (v === undefined || v === null || (typeof v === "string" && v.trim() === "")) {
-          return new Response(
-            JSON.stringify({ error: `Field "${f.label_en || f.key}" is required` }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+      if (["full_name", "email", "phone", "cv"].includes(f.key)) continue;
+      const raw = safeAnswers[f.key];
+      const v = typeof raw === "string" ? raw.trim() : raw;
+      const isEmpty = v === undefined || v === null || (typeof v === "string" && v === "") || (Array.isArray(v) && v.length === 0);
+      const label = f.label_en || f.key;
+
+      if (f.required && isEmpty) {
+        return new Response(
+          JSON.stringify({ error: `Field "${label}" is required` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (isEmpty) continue;
+
+      const sv = String(v);
+      let formatErr: string | null = null;
+      if (f.type === "email" && !isEmail(sv)) formatErr = `"${label}" must be a valid email`;
+      else if (f.type === "phone" && !isPhone(sv)) formatErr = `"${label}" must be a valid phone (8-15 digits)`;
+      else if (f.type === "url" && !isUrl(sv)) formatErr = `"${label}" must be a valid http(s) URL`;
+      else if (f.type === "date" && !isDate(sv)) formatErr = `"${label}" is not a valid date`;
+      else if (f.type === "number") {
+        const n = Number(v);
+        if (Number.isNaN(n)) formatErr = `"${label}" must be a number`;
+        else if (typeof f.min === "number" && n < f.min) formatErr = `"${label}" must be ≥ ${f.min}`;
+        else if (typeof f.max === "number" && n > f.max) formatErr = `"${label}" must be ≤ ${f.max}`;
+      } else if ((f.type === "short_text" || f.type === "long_text") && typeof v === "string") {
+        const max = f.type === "short_text" ? 200 : 2000;
+        if (v.length > max) formatErr = `"${label}" must be ≤ ${max} characters`;
+      }
+
+      if (formatErr) {
+        return new Response(
+          JSON.stringify({ error: formatErr }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
 
