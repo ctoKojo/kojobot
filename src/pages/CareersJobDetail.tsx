@@ -231,6 +231,7 @@ export default function CareersJobDetail() {
     e.preventDefault();
     if (!job) return;
     setError(null);
+    setDuplicateInfo(null);
     setSubmitting(true);
 
     try {
@@ -286,11 +287,28 @@ export default function CareersJobDetail() {
         },
       });
 
-      if (fnError) throw new Error(fnError.message);
+      if (fnError) {
+        // FunctionsHttpError doesn't include body on non-2xx; try to extract
+        const ctx = (fnError as any)?.context;
+        if (ctx?.status === 409) {
+          try {
+            const body = await ctx.json();
+            setDuplicateInfo({ tracking_code: body?.tracking_code });
+            throw new Error(isRTL ? (body?.message_ar || "لقد قدمت بالفعل") : (body?.message || "Already applied"));
+          } catch (parseErr) {
+            // fall through
+          }
+        }
+        throw new Error(fnError.message);
+      }
+      if (result?.error === "duplicate_application") {
+        setDuplicateInfo({ tracking_code: result?.tracking_code });
+        throw new Error(isRTL ? (result?.message_ar || "لقد قدمت بالفعل") : (result?.message || "Already applied"));
+      }
       if (result?.error) throw new Error(Array.isArray(result.details) ? result.details.join(", ") : result.error);
 
+      setTrackingCode(result?.tracking_code || null);
       setSubmitted(true);
-      // Scroll to top so success message is visible on mobile
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
       setError(err.message || (isRTL ? "حدث خطأ" : "An error occurred"));
@@ -322,17 +340,44 @@ export default function CareersJobDetail() {
     return (
       <div className="kojo-root" dir={isRTL ? "rtl" : "ltr"} style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
         <LandingStyles isRTL={isRTL} />
-        <div style={{ maxWidth: 500, textAlign: "center", background: "var(--kojo-surface)", padding: 48, borderRadius: 24, border: "1px solid var(--kojo-border)" }}>
+        <div style={{ maxWidth: 520, textAlign: "center", background: "var(--kojo-surface)", padding: 48, borderRadius: 24, border: "1px solid var(--kojo-border)" }}>
           <CheckCircle2 className="w-16 h-16" style={{ color: "#10b981", margin: "0 auto 24px" }} />
           <h2 className="font-display" style={{ fontSize: 28, margin: "0 0 12px" }}>
             {isRTL ? "تم استلام طلبك بنجاح!" : "Application submitted!"}
           </h2>
-          <p style={{ color: "var(--kojo-muted)", lineHeight: 1.6, margin: "0 0 24px" }}>
+          <p style={{ color: "var(--kojo-muted)", lineHeight: 1.6, margin: "0 0 20px" }}>
             {isRTL ? "هنراجع طلبك ونتواصل معاك قريباً على الإيميل." : "We'll review your application and reach out via email soon."}
           </p>
-          <Link to="/careers" className="grad-btn" style={{ padding: "12px 24px", borderRadius: 12, textDecoration: "none", display: "inline-block", fontWeight: 600 }}>
-            {isRTL ? "تصفح وظائف أخرى" : "Browse more jobs"}
-          </Link>
+          {trackingCode && (
+            <div style={{ background: "rgba(100,85,240,.1)", border: "1px solid rgba(100,85,240,.3)", padding: 16, borderRadius: 12, marginBottom: 24 }}>
+              <div style={{ fontSize: 12, color: "var(--kojo-muted)", marginBottom: 6 }}>
+                {isRTL ? "كود التتبع بتاعك" : "Your tracking code"}
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "monospace", letterSpacing: 1, color: "var(--kojo-text)" }}>
+                {trackingCode}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--kojo-muted)", marginTop: 8 }}>
+                {isRTL ? "احتفظ بالكود ده — هنبعتهولك في الإيميل برضه" : "Save this — we also sent it to your email"}
+              </div>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            {trackingCode && (
+              <Link
+                to={`/application-status?code=${trackingCode}`}
+                className="grad-btn"
+                style={{ padding: "12px 20px", borderRadius: 12, textDecoration: "none", display: "inline-block", fontWeight: 600 }}
+              >
+                {isRTL ? "تابع طلبك" : "Track application"}
+              </Link>
+            )}
+            <Link
+              to="/careers"
+              style={{ padding: "12px 20px", borderRadius: 12, textDecoration: "none", display: "inline-block", fontWeight: 600, border: "1px solid var(--kojo-border)", color: "var(--kojo-text)" }}
+            >
+              {isRTL ? "تصفح وظائف أخرى" : "Browse more jobs"}
+            </Link>
+          </div>
         </div>
       </div>
     );
