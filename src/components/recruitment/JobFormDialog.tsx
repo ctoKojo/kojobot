@@ -73,7 +73,16 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
 
   useEffect(() => {
     if (job) {
-      setContentLanguage((job.content_language as ContentLanguage) || "both");
+      // Detect actual content state — if BOTH languages exist with different text,
+      // force "both" mode so the admin doesn't accidentally overwrite one side.
+      const hasEn = !!(job.title_en && job.title_en.trim());
+      const hasAr = !!(job.title_ar && job.title_ar.trim());
+      const enArDiffer =
+        hasEn && hasAr &&
+        ((job.title_en || "").trim() !== (job.title_ar || "").trim() ||
+         (job.description_en || "").trim() !== (job.description_ar || "").trim());
+      const detectedLang: ContentLanguage = enArDiffer ? "both" : (job.content_language as ContentLanguage) || (hasAr && !hasEn ? "ar" : "en");
+      setContentLanguage(detectedLang);
       setForm({
         title_en: job.title_en || "",
         title_ar: job.title_ar || "",
