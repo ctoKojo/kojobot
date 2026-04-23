@@ -70,7 +70,7 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
     if (!application?.id) return;
     const { data } = await supabase
       .from("job_interviews")
-      .select("id,scheduled_at,duration_minutes,mode,meeting_link,location,status,outcome,notes")
+      .select("id,scheduled_at,duration_minutes,mode,meeting_link,location,status,outcome,notes,applicant_confirmed_at,reschedule_requested_at,reschedule_reason,cancelled_by_applicant_at")
       .eq("application_id", application.id)
       .order("scheduled_at", { ascending: false });
     setInterviews((data || []) as Interview[]);
