@@ -489,9 +489,19 @@ export default function CareersJobDetail() {
             ))}
 
             {error && (
-              <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: 12, borderRadius: 10, background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.3)", color: "#fca5a5", fontSize: 13 }}>
-                <AlertCircle className="w-4 h-4" style={{ flexShrink: 0, marginTop: 2 }} />
-                {error}
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: 12, borderRadius: 10, background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.3)", color: "#fca5a5", fontSize: 13, flexDirection: "column" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                  <AlertCircle className="w-4 h-4" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span>{error}</span>
+                </div>
+                {duplicateInfo?.tracking_code && (
+                  <Link
+                    to={`/application-status?code=${duplicateInfo.tracking_code}`}
+                    style={{ color: "#6455F0", textDecoration: "underline", fontWeight: 600, fontSize: 13, marginInlineStart: 24 }}
+                  >
+                    {isRTL ? `تابع طلبك السابق (${duplicateInfo.tracking_code}) ←` : `Track your previous application (${duplicateInfo.tracking_code}) →`}
+                  </Link>
+                )}
               </div>
             )}
 
