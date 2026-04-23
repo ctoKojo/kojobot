@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Upload, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Upload, CheckCircle2, AlertCircle, Loader2, Share2, Check } from "lucide-react";
 import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LandingStyles } from "@/components/landing/LandingStyles";
@@ -480,12 +480,45 @@ function FieldRenderer({ field, isRTL, value, onChange, onFileChange, fileName }
     return (
       <div>
         <Label text={label} required={field.required} />
-        <select required={field.required} value={value || ""} onChange={(e) => onChange(e.target.value)} style={inputStyle}>
-          <option value="">{isRTL ? "اختر…" : "Select…"}</option>
-          {field.options.map((opt) => (
-            <option key={opt.value} value={opt.value}>{isRTL ? opt.label_ar : opt.label_en}</option>
-          ))}
-        </select>
+        <div style={{ position: "relative" }}>
+          <select
+            required={field.required}
+            value={value || ""}
+            onChange={(e) => onChange(e.target.value)}
+            style={{
+              ...inputStyle,
+              appearance: "none",
+              WebkitAppearance: "none",
+              MozAppearance: "none",
+              paddingInlineEnd: 36,
+              cursor: "pointer",
+              colorScheme: "dark",
+            }}
+          >
+            <option value="" style={{ background: "#0d1027", color: "rgba(240,240,255,.55)" }}>
+              {isRTL ? "اختر…" : "Select…"}
+            </option>
+            {field.options.map((opt) => (
+              <option key={opt.value} value={opt.value} style={{ background: "#0d1027", color: "#f0f0ff", padding: 8 }}>
+                {isRTL ? opt.label_ar : opt.label_en}
+              </option>
+            ))}
+          </select>
+          <span
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: "50%",
+              transform: "translateY(-50%)",
+              ...(isRTL ? { left: 14 } : { right: 14 }),
+              pointerEvents: "none",
+              color: "var(--kojo-muted)",
+              fontSize: 12,
+            }}
+          >
+            ▾
+          </span>
+        </div>
       </div>
     );
   }
