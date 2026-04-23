@@ -18,6 +18,7 @@ interface FormField {
   placeholder_ar?: string;
   min?: number;
   max?: number;
+  depends_on?: string;
 }
 
 interface Job {
