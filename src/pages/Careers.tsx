@@ -88,11 +88,11 @@ export default function Careers() {
       setLoading(true);
       const { data } = await publicSupabase
         .from("jobs")
-        .select("id,slug,title_en,title_ar,type,location_en,location_ar,posted_at,deadline_at,is_featured")
+        .select("id,slug,title_en,title_ar,type,training_season,is_paid,location_en,location_ar,posted_at,deadline_at,is_featured")
         .eq("status", "published")
         .order("is_featured", { ascending: false })
         .order("posted_at", { ascending: false });
-      setJobs(data || []);
+      setJobs((data as Job[]) || []);
       setLoading(false);
     })();
   }, []);
