@@ -74,7 +74,7 @@ export default function CareersJobDetail() {
         .eq("slug", slug)
         .eq("status", "published")
         .maybeSingle();
-      setJob(data as Job | null);
+      setJob(data as unknown as Job | null);
       setLoading(false);
       if (data) {
         document.title = isRTL ? `${data.title_ar} — Kojobot` : `${data.title_en} — Kojobot`;
