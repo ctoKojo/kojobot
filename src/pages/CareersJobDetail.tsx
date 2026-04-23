@@ -352,9 +352,36 @@ export default function CareersJobDetail() {
       <div className="job-detail-grid" style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
         {/* Job details */}
         <div>
-          <h1 className="font-display" style={{ fontSize: "clamp(28px, 4vw, 44px)", margin: "0 0 16px", lineHeight: 1.2 }}>
-            <span className="grad-text">{isRTL ? job.title_ar : job.title_en}</span>
-          </h1>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 16, flexWrap: "wrap", marginBottom: 16 }}>
+            <h1 className="font-display" style={{ fontSize: "clamp(28px, 4vw, 44px)", margin: 0, lineHeight: 1.2, flex: "1 1 auto", minWidth: 0 }}>
+              <span className="grad-text">{isRTL ? job.title_ar : job.title_en}</span>
+            </h1>
+            <button
+              type="button"
+              onClick={handleShare}
+              aria-label={isRTL ? "مشاركة الوظيفة" : "Share job"}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 16px",
+                borderRadius: 12,
+                background: shareCopied ? "rgba(16,185,129,.15)" : "rgba(255,255,255,.06)",
+                border: `1px solid ${shareCopied ? "rgba(16,185,129,.4)" : "var(--kojo-border)"}`,
+                color: shareCopied ? "#10b981" : "var(--kojo-text)",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "all 0.2s ease",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              {shareCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+              {shareCopied ? (isRTL ? "تم النسخ" : "Copied") : (isRTL ? "مشاركة" : "Share")}
+            </button>
+          </div>
 
           {/* Type / Season / Paid badges */}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
