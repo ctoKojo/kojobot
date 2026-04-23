@@ -72,31 +72,25 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
     setSaving(true);
     try {
       const isTransfer = paymentMethodValue.payment_method === 'transfer';
-      // 1) Insert expense (pending_receipt if transfer)
-      const { data: inserted, error } = await supabase
-        .from('expenses')
-        .insert({
-          category: form.category,
-          description: form.description,
-          description_ar: form.description_ar || null,
-          amount: Number(form.amount),
-          expense_date: form.expense_date,
-          is_recurring: form.is_recurring,
-          notes: form.notes || null,
-          recorded_by: user?.id,
-          payment_method: paymentMethodValue.payment_method,
-          transfer_type: paymentMethodValue.transfer_type,
-          receipt_status: isTransfer ? 'pending_receipt' : 'completed',
-        } as any)
-        .select('id')
-        .single();
+      // 1) Record expense via approved RPC (direct DML is forbidden)
+      const { data: newExpenseId, error } = await (supabase.rpc as any)('record_expense_atomic', {
+        p_amount: Number(form.amount),
+        p_description: form.description,
+        p_description_ar: form.description_ar || null,
+        p_category: form.category,
+        p_expense_date: form.expense_date,
+        p_payment_method: paymentMethodValue.payment_method,
+        p_transfer_type: paymentMethodValue.transfer_type,
+        p_is_recurring: form.is_recurring,
+        p_notes: form.notes || null,
+      });
       if (error) throw error;
 
       // 2) Transfer flow → upload + attach
-      if (isTransfer && inserted?.id) {
-        const path = await paymentMethodRef.current!.uploadReceipt('expenses', inserted.id);
+      if (isTransfer && newExpenseId) {
+        const path = await paymentMethodRef.current!.uploadReceipt('expenses', newExpenseId);
         const { error: attachErr } = await (supabase.rpc as any)('attach_expense_receipt', {
-          p_expense_id: inserted.id,
+          p_expense_id: newExpenseId,
           p_receipt_path: path,
         });
         if (attachErr) throw attachErr;
@@ -112,7 +106,7 @@ export function ExpensesTab({ selectedMonth }: ExpensesTabProps = {}) {
           description: form.description,
           recordedBy: user?.email || '—',
         },
-        idempotencyKey: `expense-${inserted?.id || Date.now()}`,
+        idempotencyKey: `expense-${newExpenseId || Date.now()}`,
       }).catch(() => {});
 
       toast({ title: isRTL ? 'تم إضافة المصروف' : 'Expense added' });
