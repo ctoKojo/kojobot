@@ -65,6 +65,3 @@ verify_jwt = false
 
 [functions.telegram-bot-info]
 verify_jwt = false
-
-[functions.job-share]
-verify_jwt = false
