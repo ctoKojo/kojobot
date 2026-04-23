@@ -45,6 +45,19 @@ const mapMinAgeToGroup = (minAge: number): string | null => {
   return null; // fallback to manual select
 };
 
+// Persistence key namespaced per session
+const storageKey = (sessionId: string) => `ai_gen_dialog_v1:${sessionId}`;
+
+interface PersistedState {
+  questions: GeneratedQuestion[];
+  warnings: Record<string, string[]>;
+  rejected: RejectedItem[];
+  generatedAt: number;
+}
+
+// Expire persisted results after 2 hours
+const PERSIST_TTL_MS = 2 * 60 * 60 * 1000;
+
 export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, hasPdfText, onQuestionsGenerated, ageGroupId }: Props) {
   const { isRTL } = useLanguage();
   const [questionsCount, setQuestionsCount] = useState(10);
@@ -58,6 +71,39 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
   const [rejectedItems, setRejectedItems] = useState<RejectedItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showWarningsOnly, setShowWarningsOnly] = useState(false);
+  const [restoredFromCache, setRestoredFromCache] = useState(false);
+
+  // Restore previously generated questions for this session (survives refresh / tab change)
+  useEffect(() => {
+    if (!sessionId) return;
+    try {
+      const raw = sessionStorage.getItem(storageKey(sessionId));
+      if (!raw) return;
+      const parsed: PersistedState = JSON.parse(raw);
+      if (!parsed?.questions?.length) return;
+      if (Date.now() - (parsed.generatedAt || 0) > PERSIST_TTL_MS) {
+        sessionStorage.removeItem(storageKey(sessionId));
+        return;
+      }
+      setGeneratedQuestions(parsed.questions);
+      setWarnings(parsed.warnings || {});
+      setRejectedItems(parsed.rejected || []);
+      setRestoredFromCache(true);
+    } catch {
+      /* ignore corrupted cache */
+    }
+  }, [sessionId]);
+
+  const persistResults = (qs: GeneratedQuestion[], w: Record<string, string[]>, r: RejectedItem[]) => {
+    try {
+      const payload: PersistedState = { questions: qs, warnings: w, rejected: r, generatedAt: Date.now() };
+      sessionStorage.setItem(storageKey(sessionId), JSON.stringify(payload));
+    } catch { /* storage full / disabled */ }
+  };
+
+  const clearPersisted = () => {
+    try { sessionStorage.removeItem(storageKey(sessionId)); } catch { /* noop */ }
+  };
 
   // Auto-detect age group from ageGroupId
   useEffect(() => {
