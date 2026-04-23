@@ -165,12 +165,25 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
 
   const isInternship = form.type === "internship";
 
-  // Auto-fill slug only if user hasn't typed one yet
+  // When editing an existing job, only mirror EN→AR (or AR→EN) if the OTHER side is empty.
+  // This prevents the "saved" content from being silently overwritten when the admin edits one field.
+  const mirror = (existing: string, incoming: string) => (existing && existing.trim() ? existing : incoming);
+
   const handleTitle = (lang: "en" | "ar", value: string) => {
     if (contentLanguage === "en") {
-      setForm({ ...form, title_en: value, title_ar: value, slug: form.slug || buildJobSlug(value) });
+      setForm({
+        ...form,
+        title_en: value,
+        title_ar: mirror(form.title_ar, value),
+        slug: form.slug || buildJobSlug(value),
+      });
     } else if (contentLanguage === "ar") {
-      setForm({ ...form, title_ar: value, title_en: value, slug: form.slug || buildJobSlug(value) });
+      setForm({
+        ...form,
+        title_ar: value,
+        title_en: mirror(form.title_en, value),
+        slug: form.slug || buildJobSlug(value),
+      });
     } else {
       if (lang === "en") setForm({ ...form, title_en: value, slug: form.slug || buildJobSlug(value, form.title_ar) });
       else setForm({ ...form, title_ar: value, slug: form.slug || buildJobSlug(form.title_en, value) });
@@ -181,9 +194,17 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     const enKey = `${field}_en` as keyof typeof form;
     const arKey = `${field}_ar` as keyof typeof form;
     if (contentLanguage === "en") {
-      setForm({ ...form, [enKey]: value, [arKey]: value } as typeof form);
+      setForm({
+        ...form,
+        [enKey]: value,
+        [arKey]: mirror(form[arKey] as string, value),
+      } as typeof form);
     } else if (contentLanguage === "ar") {
-      setForm({ ...form, [arKey]: value, [enKey]: value } as typeof form);
+      setForm({
+        ...form,
+        [arKey]: value,
+        [enKey]: mirror(form[enKey] as string, value),
+      } as typeof form);
     } else {
       setForm({ ...form, [lang === "en" ? enKey : arKey]: value } as typeof form);
     }

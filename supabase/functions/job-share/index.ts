@@ -7,7 +7,8 @@ const corsHeaders = {
 };
 
 const SITE_URL = "https://kojobot.com";
-const DEFAULT_IMAGE = `${SITE_URL}/kojobot-logo-white.png`;
+// 1216x640 social share card (designed for OG / Twitter previews)
+const DEFAULT_IMAGE = `${SITE_URL}/og-careers.jpg`;
 
 function escapeHtml(s: string): string {
   return String(s ?? "")
@@ -101,25 +102,32 @@ Deno.serve(async (req) => {
   <meta property="og:title" content="${escapeHtml(title)}" />
   <meta property="og:description" content="${escapeHtml(description)}" />
   <meta property="og:image" content="${DEFAULT_IMAGE}" />
+  <meta property="og:image:secure_url" content="${DEFAULT_IMAGE}" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1216" />
+  <meta property="og:image:height" content="640" />
   <meta property="og:image:alt" content="${escapeHtml(title)}" />
   <meta property="og:locale" content="${isAr ? "ar_EG" : "en_US"}" />
   <meta property="og:locale:alternate" content="${isAr ? "en_US" : "ar_EG"}" />
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@kojobot" />
   <meta name="twitter:title" content="${escapeHtml(title)}" />
   <meta name="twitter:description" content="${escapeHtml(description)}" />
   <meta name="twitter:image" content="${DEFAULT_IMAGE}" />
+  <meta name="twitter:image:alt" content="${escapeHtml(title)}" />
 
   <!-- Localized alternates -->
   <link rel="alternate" hreflang="${isAr ? "en" : "ar"}" href="${canonical}" />
 
-  <!-- Send real users straight to the SPA -->
+  <!-- Send real users straight to the SPA (crawlers ignore JS + meta refresh) -->
   <meta http-equiv="refresh" content="0; url=${canonical}" />
   <script>window.location.replace(${JSON.stringify(canonical)});</script>
-  <style>body{font-family:system-ui,sans-serif;background:#0a0a14;color:#f0f0ff;margin:0;padding:48px 24px;text-align:center}a{color:#6455F0}</style>
+  <style>body{font-family:system-ui,sans-serif;background:#0a0a14;color:#f0f0ff;margin:0;padding:48px 24px;text-align:center}a{color:#6455F0}img{max-width:100%;height:auto;border-radius:12px;margin:24px 0}</style>
 </head>
 <body>
+  <img src="${DEFAULT_IMAGE}" alt="Kojobot Academy" />
   <h1>${escapeHtml(title)}</h1>
   <p>${escapeHtml(description)}</p>
   <p><a href="${canonical}">${isAr ? "افتح الوظيفة" : "Open job page"}</a></p>
@@ -129,9 +137,10 @@ Deno.serve(async (req) => {
     return new Response(html, {
       status: 200,
       headers: {
-        ...corsHeaders,
         "Content-Type": "text/html; charset=utf-8",
         "Cache-Control": "public, max-age=300, s-maxage=600",
+        "X-Robots-Tag": "all",
+        ...corsHeaders,
       },
     });
   } catch (err) {
