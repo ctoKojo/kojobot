@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Search, Phone, Mail, CheckCircle, XCircle, Clock, ShieldCheck, UserPlus, Trash2 } from 'lucide-react';
+import { Users, Search, Phone, Mail, CheckCircle, XCircle, Clock, ShieldCheck, UserPlus, Trash2, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -123,6 +123,26 @@ export default function Parents() {
 
   useEffect(() => {
     fetchParents();
+
+    // Auto-refresh when a new parent role is added or a profile approval flag changes
+    const channel = supabase
+      .channel('parents-page-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_roles', filter: 'role=eq.parent' }, () => {
+        fetchParents();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, (payload: any) => {
+        // Only refetch if the changed profile belongs to a parent we already track
+        const changedId = payload?.new?.user_id || payload?.old?.user_id;
+        if (changedId && allParents.some(p => p.parent_id === changedId)) {
+          fetchParents();
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleApprove = async (parentId: string) => {
@@ -375,6 +395,17 @@ export default function Parents() {
               className="pl-9"
             />
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchParents()}
+            disabled={loading}
+            className="gap-2"
+            title={isRTL ? 'تحديث القائمة' : 'Refresh list'}
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            {isRTL ? 'تحديث' : 'Refresh'}
+          </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
