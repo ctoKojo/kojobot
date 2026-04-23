@@ -43,11 +43,43 @@ export interface ResolveResult {
 }
 
 const VAR_REGEX = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g
+// Mustache-style sections: {{#var}}...{{/var}} (shown when truthy)
+// and inverted: {{^var}}...{{/var}} (shown when falsy/empty).
+// `[\s\S]` so blocks can span newlines. `*?` is non-greedy.
+const SECTION_REGEX = /\{\{\s*([#^])\s*([a-zA-Z0-9_]+)\s*\}\}([\s\S]*?)\{\{\s*\/\s*\2\s*\}\}/g
 
-/** Replace `{{var}}` placeholders. Missing keys render as empty string (matches existing behavior). */
+function isTruthyForSection(v: unknown): boolean {
+  if (v === undefined || v === null) return false
+  if (typeof v === 'string') return v.trim().length > 0
+  if (typeof v === 'number') return v !== 0
+  if (typeof v === 'boolean') return v
+  if (Array.isArray(v)) return v.length > 0
+  return true
+}
+
+/**
+ * Replace `{{var}}` placeholders and Mustache-style `{{#var}}…{{/var}}` /
+ * `{{^var}}…{{/var}}` sections. Missing keys render as empty string and
+ * empty/missing sections are stripped entirely (no leftover tags).
+ *
+ * Sections are resolved iteratively to support nesting. Variable substitution
+ * runs after section resolution so `{{var}}` inside a kept section still works.
+ */
 export function renderTemplate(tpl: string | null | undefined, data: Record<string, unknown>): string {
   if (!tpl) return ''
-  return tpl.replace(VAR_REGEX, (_m, key) => {
+  let out = tpl
+  // Resolve sections, looping until stable to handle nesting.
+  for (let i = 0; i < 5; i++) {
+    const before = out
+    out = out.replace(SECTION_REGEX, (_m, sigil: string, key: string, inner: string) => {
+      const v = (data as Record<string, unknown>)[key]
+      const truthy = isTruthyForSection(v)
+      const keep = sigil === '#' ? truthy : !truthy
+      return keep ? inner : ''
+    })
+    if (out === before) break
+  }
+  return out.replace(VAR_REGEX, (_m, key) => {
     const v = (data as Record<string, unknown>)[key]
     return v === undefined || v === null ? '' : String(v)
   })
