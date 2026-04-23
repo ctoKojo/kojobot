@@ -2755,7 +2755,12 @@ export type Database = {
       }
       job_interviews: {
         Row: {
+          applicant_confirmed_at: string | null
+          applicant_decision_at: string | null
           application_id: string
+          cancelled_by_applicant_at: string | null
+          cancelled_reason: string | null
+          confirm_token: string | null
           created_at: string
           created_by: string | null
           duration_minutes: number
@@ -2767,12 +2772,19 @@ export type Database = {
           outcome: string | null
           reminder_1h_sent_at: string | null
           reminder_24h_sent_at: string | null
+          reschedule_reason: string | null
+          reschedule_requested_at: string | null
           scheduled_at: string
           status: string
           updated_at: string
         }
         Insert: {
+          applicant_confirmed_at?: string | null
+          applicant_decision_at?: string | null
           application_id: string
+          cancelled_by_applicant_at?: string | null
+          cancelled_reason?: string | null
+          confirm_token?: string | null
           created_at?: string
           created_by?: string | null
           duration_minutes?: number
@@ -2784,12 +2796,19 @@ export type Database = {
           outcome?: string | null
           reminder_1h_sent_at?: string | null
           reminder_24h_sent_at?: string | null
+          reschedule_reason?: string | null
+          reschedule_requested_at?: string | null
           scheduled_at: string
           status?: string
           updated_at?: string
         }
         Update: {
+          applicant_confirmed_at?: string | null
+          applicant_decision_at?: string | null
           application_id?: string
+          cancelled_by_applicant_at?: string | null
+          cancelled_reason?: string | null
+          confirm_token?: string | null
           created_at?: string
           created_by?: string | null
           duration_minutes?: number
@@ -2801,6 +2820,8 @@ export type Database = {
           outcome?: string | null
           reminder_1h_sent_at?: string | null
           reminder_24h_sent_at?: string | null
+          reschedule_reason?: string | null
+          reschedule_requested_at?: string | null
           scheduled_at?: string
           status?: string
           updated_at?: string
@@ -8014,6 +8035,7 @@ export type Database = {
         Args: { _instructor_id: string }
         Returns: string[]
       }
+      get_interview_by_token: { Args: { p_token: string }; Returns: Json[] }
       get_landing_content: { Args: never; Returns: Json }
       get_leaderboard: {
         Args: {

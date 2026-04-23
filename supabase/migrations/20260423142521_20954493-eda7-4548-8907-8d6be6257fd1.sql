@@ -1,0 +1,1 @@
+-- Auto-generate confirm_token on ins

@@ -207,22 +207,28 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
 
                 {!isFinalStatus && (
                   <>
-                    {status !== "under_review" && status !== "shortlisted" && (
+                    {/* Pre-interview actions: only for new/under_review/shortlisted */}
+                    {status === "new" && (
                       <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => updateStatus("under_review")} disabled={saving}>
                         <ClipboardCheck className="w-4 h-4 me-2" />
                         {isRTL ? "بدء المراجعة" : "Start review"}
                       </Button>
                     )}
-                    {status !== "shortlisted" && (
+                    {(status === "new" || status === "under_review") && (
                       <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => updateStatus("shortlisted")} disabled={saving}>
                         <Star className="w-4 h-4 me-2 text-purple-500" />
                         {isRTL ? "ضمن القائمة المختصرة" : "Shortlist"}
                       </Button>
                     )}
-                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => setScheduleOpen(true)}>
-                      <CalendarPlus className="w-4 h-4 me-2 text-indigo-500" />
-                      {isRTL ? "جدولة مقابلة" : "Schedule interview"}
-                    </Button>
+                    {/* Schedule interview: hidden when an active scheduled interview already exists */}
+                    {!interviews.some((iv) => iv.status === "scheduled") && (
+                      <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => setScheduleOpen(true)}>
+                        <CalendarPlus className="w-4 h-4 me-2 text-indigo-500" />
+                        {status === "interviewing"
+                          ? (isRTL ? "إعادة جدولة مقابلة" : "Reschedule interview")
+                          : (isRTL ? "جدولة مقابلة" : "Schedule interview")}
+                      </Button>
+                    )}
                     <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => setHireOpen(true)}>
                       <UserCheck className="w-4 h-4 me-2 text-green-600" />
                       {isRTL ? "توظيف" : "Hire"}
