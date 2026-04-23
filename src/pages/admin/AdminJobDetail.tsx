@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Briefcase, ArrowLeft, ArrowRight, Search, Download, Send, Users, Eye, FileText } from "lucide-react";
+import { Briefcase, ArrowLeft, ArrowRight, Search, Download, Send, Users, Eye, FileText, CalendarClock, CheckCircle2, XCircle } from "lucide-react";
 import { ApplicationDetailDialog } from "@/components/recruitment/ApplicationDetailDialog";
 
 const STATUS_LIST = ["new", "under_review", "shortlisted", "interviewing", "hired", "rejected"] as const;
@@ -28,6 +28,16 @@ const STATUS_META: Record<AppStatus, { en: string; ar: string; color: string }> 
   hired: { en: "Hired", ar: "تم التوظيف", color: "bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/30" },
   rejected: { en: "Rejected", ar: "مرفوض", color: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30" },
 };
+
+interface InterviewLite {
+  id: string;
+  application_id: string;
+  scheduled_at: string;
+  status: string;
+  applicant_confirmed_at: string | null;
+  reschedule_requested_at: string | null;
+  cancelled_by_applicant_at: string | null;
+}
 
 interface Application {
   id: string;
@@ -62,6 +72,7 @@ export default function AdminJobDetail() {
 
   const [job, setJob] = useState<Job | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [interviews, setInterviews] = useState<InterviewLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -79,7 +90,19 @@ export default function AdminJobDetail() {
     } else {
       setJob(jobRes.data as Job | null);
     }
-    if (!appsRes.error) setApplications((appsRes.data || []) as Application[]);
+    const apps = (appsRes.error ? [] : appsRes.data || []) as Application[];
+    if (!appsRes.error) setApplications(apps);
+
+    // Load interviews for these applications to surface applicant actions on the list view
+    if (apps.length > 0) {
+      const { data: ivs } = await supabase
+        .from("job_interviews")
+        .select("id,application_id,scheduled_at,status,applicant_confirmed_at,reschedule_requested_at,cancelled_by_applicant_at")
+        .in("application_id", apps.map((a) => a.id));
+      setInterviews((ivs || []) as InterviewLite[]);
+    } else {
+      setInterviews([]);
+    }
     setLoading(false);
   };
 
@@ -99,6 +122,27 @@ export default function AdminJobDetail() {
     STATUS_LIST.forEach((s) => { c[s] = applications.filter((a) => a.status === s).length; });
     return c;
   }, [applications]);
+
+  const interviewActionByApp = useMemo(() => {
+    const map: Record<string, "reschedule" | "confirmed" | "cancelled" | null> = {};
+    interviews.forEach((iv) => {
+      if (iv.status !== "scheduled") return;
+      // Priority: cancellation > pending reschedule > confirmed
+      if (iv.cancelled_by_applicant_at) {
+        map[iv.application_id] = "cancelled";
+      } else if (iv.reschedule_requested_at && map[iv.application_id] !== "cancelled") {
+        map[iv.application_id] = "reschedule";
+      } else if (iv.applicant_confirmed_at && !map[iv.application_id]) {
+        map[iv.application_id] = "confirmed";
+      }
+    });
+    return map;
+  }, [interviews]);
+
+  const pendingActionCount = useMemo(
+    () => Object.values(interviewActionByApp).filter((v) => v === "reschedule" || v === "cancelled").length,
+    [interviewActionByApp],
+  );
 
   const exportCsv = () => {
     if (!applications.length) return;
@@ -149,6 +193,21 @@ export default function AdminJobDetail() {
         }
       />
 
+      {pendingActionCount > 0 && (
+        <Card className="mt-4 border-amber-500/40 bg-amber-500/5">
+          <CardContent className="p-3 flex items-center gap-3">
+            <CalendarClock className="w-5 h-5 text-amber-600 shrink-0" />
+            <div className="text-sm">
+              <span className="font-medium text-amber-800 dark:text-amber-300">
+                {isRTL
+                  ? `${pendingActionCount} متقدم بانتظار ردك على طلب إعادة جدولة/إلغاء`
+                  : `${pendingActionCount} applicant${pendingActionCount === 1 ? "" : "s"} awaiting your response (reschedule / cancellation)`}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Status tabs */}
       <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mt-6">
         <TabsList className="grid grid-cols-7 w-full">
@@ -182,6 +241,7 @@ export default function AdminJobDetail() {
                   <TableRow>
                     <TableHead>{isRTL ? "المتقدم" : "Applicant"}</TableHead>
                     <TableHead>{isRTL ? "الحالة" : "Status"}</TableHead>
+                    <TableHead>{isRTL ? "رد المتقدم" : "Applicant action"}</TableHead>
                     <TableHead>{isRTL ? "المصدر" : "Source"}</TableHead>
                     <TableHead>{isRTL ? "السيرة الذاتية" : "CV"}</TableHead>
                     <TableHead>{isRTL ? "تاريخ التقديم" : "Submitted"}</TableHead>
@@ -190,13 +250,15 @@ export default function AdminJobDetail() {
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">{isRTL ? "جاري التحميل…" : "Loading…"}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{isRTL ? "جاري التحميل…" : "Loading…"}</TableCell></TableRow>
                   ) : filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                       <Users className="w-12 h-12 mx-auto mb-2 opacity-30" />
                       {isRTL ? "لا يوجد متقدمين" : "No applicants yet"}
                     </TableCell></TableRow>
-                  ) : filtered.map((a) => (
+                  ) : filtered.map((a) => {
+                    const action = interviewActionByApp[a.id];
+                    return (
                     <TableRow key={a.id} className="cursor-pointer" onClick={() => setSelected(a)}>
                       <TableCell>
                         <div className="font-medium">{a.applicant_name}</div>
@@ -207,6 +269,26 @@ export default function AdminJobDetail() {
                         <Badge variant="outline" className={STATUS_META[a.status].color}>
                           {isRTL ? STATUS_META[a.status].ar : STATUS_META[a.status].en}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {action === "reschedule" ? (
+                          <Badge variant="outline" className="text-amber-700 dark:text-amber-300 border-amber-500/40 bg-amber-500/5">
+                            <CalendarClock className="w-3 h-3 me-1" />
+                            {isRTL ? "طلب إعادة جدولة" : "Reschedule"}
+                          </Badge>
+                        ) : action === "cancelled" ? (
+                          <Badge variant="outline" className="text-destructive border-destructive/40 bg-destructive/5">
+                            <XCircle className="w-3 h-3 me-1" />
+                            {isRTL ? "ألغى" : "Cancelled"}
+                          </Badge>
+                        ) : action === "confirmed" ? (
+                          <Badge variant="outline" className="text-green-700 dark:text-green-300 border-green-500/40 bg-green-500/5">
+                            <CheckCircle2 className="w-3 h-3 me-1" />
+                            {isRTL ? "أكّد" : "Confirmed"}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
@@ -225,7 +307,8 @@ export default function AdminJobDetail() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>

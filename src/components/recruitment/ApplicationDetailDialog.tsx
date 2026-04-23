@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mail, Phone, FileText, Download, MessageSquare, Calendar, Loader2, Send, CalendarPlus, UserCheck, XCircle, Star, ClipboardCheck, Video, MapPin, AlertCircle } from "lucide-react";
+import { Mail, Phone, FileText, Download, MessageSquare, Calendar, Loader2, Send, CalendarPlus, UserCheck, XCircle, Star, ClipboardCheck, Video, MapPin, AlertCircle, CalendarClock, CheckCircle2 } from "lucide-react";
 import { InterviewScheduleDialog } from "./InterviewScheduleDialog";
 import { RejectApplicationDialog } from "./RejectApplicationDialog";
 import { HireApplicationDialog } from "./HireApplicationDialog";
@@ -33,6 +33,10 @@ interface Interview {
   status: string;
   outcome: string | null;
   notes: string | null;
+  applicant_confirmed_at: string | null;
+  reschedule_requested_at: string | null;
+  reschedule_reason: string | null;
+  cancelled_by_applicant_at: string | null;
 }
 
 interface Props {
@@ -66,7 +70,7 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
     if (!application?.id) return;
     const { data } = await supabase
       .from("job_interviews")
-      .select("id,scheduled_at,duration_minutes,mode,meeting_link,location,status,outcome,notes")
+      .select("id,scheduled_at,duration_minutes,mode,meeting_link,location,status,outcome,notes,applicant_confirmed_at,reschedule_requested_at,reschedule_reason,cancelled_by_applicant_at")
       .eq("application_id", application.id)
       .order("scheduled_at", { ascending: false });
     setInterviews((data || []) as Interview[]);
@@ -158,6 +162,12 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
   const interviewModeIcon = (mode: string) => mode === "online" ? Video : mode === "onsite" ? MapPin : Phone;
   const cairoDate = (iso: string) => new Date(iso).toLocaleString(isRTL ? "ar-EG" : "en-US", { timeZone: "Africa/Cairo", dateStyle: "medium", timeStyle: "short" });
 
+  // Pending applicant action across all interviews: any reschedule request that is still unresolved
+  const pendingReschedule = interviews.find(
+    (iv) => iv.reschedule_requested_at && iv.status === "scheduled" && !iv.cancelled_by_applicant_at,
+  );
+  const pendingCancellation = interviews.find((iv) => iv.cancelled_by_applicant_at && iv.status === "scheduled");
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -170,6 +180,52 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
               </Badge>
             </DialogTitle>
           </DialogHeader>
+
+          {/* Applicant action alerts */}
+          {pendingReschedule && (
+            <Card className="border-amber-500/40 bg-amber-500/5">
+              <CardContent className="p-3 flex items-start gap-3">
+                <CalendarClock className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                <div className="flex-1 text-sm">
+                  <div className="font-medium text-amber-800 dark:text-amber-300">
+                    {isRTL ? "المتقدم طلب إعادة جدولة المقابلة" : "Applicant requested to reschedule"}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {isRTL ? "للمقابلة المحددة في " : "For interview on "}
+                    <span className="font-medium">{cairoDate(pendingReschedule.scheduled_at)}</span>
+                    {" · "}
+                    {isRTL ? "تم الطلب " : "Requested "}
+                    {cairoDate(pendingReschedule.reschedule_requested_at!)}
+                  </div>
+                  {pendingReschedule.reschedule_reason && (
+                    <div className="mt-2 p-2 rounded bg-background/60 text-xs italic">
+                      "{pendingReschedule.reschedule_reason}"
+                    </div>
+                  )}
+                  <Button size="sm" variant="outline" className="mt-2" onClick={() => setScheduleOpen(true)}>
+                    <CalendarPlus className="w-4 h-4 me-2" />
+                    {isRTL ? "اقتراح موعد جديد" : "Propose new time"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {pendingCancellation && (
+            <Card className="border-destructive/40 bg-destructive/5">
+              <CardContent className="p-3 flex items-start gap-3">
+                <XCircle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
+                <div className="flex-1 text-sm">
+                  <div className="font-medium text-destructive">
+                    {isRTL ? "المتقدم ألغى المقابلة" : "Applicant cancelled the interview"}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {cairoDate(pendingCancellation.cancelled_by_applicant_at!)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Contact + actions */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -323,6 +379,24 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
                                 {isRTL ? "بانتظار النتيجة" : "Awaiting outcome"}
                               </Badge>
                             )}
+                            {iv.applicant_confirmed_at && !iv.cancelled_by_applicant_at && (
+                              <Badge variant="outline" className="text-green-700 dark:text-green-300 border-green-500/30">
+                                <CheckCircle2 className="w-3 h-3 me-1" />
+                                {isRTL ? "أكّد المتقدم" : "Applicant confirmed"}
+                              </Badge>
+                            )}
+                            {iv.reschedule_requested_at && !iv.cancelled_by_applicant_at && (
+                              <Badge variant="outline" className="text-amber-700 dark:text-amber-300 border-amber-500/30">
+                                <CalendarClock className="w-3 h-3 me-1" />
+                                {isRTL ? "طلب إعادة جدولة" : "Reschedule requested"}
+                              </Badge>
+                            )}
+                            {iv.cancelled_by_applicant_at && (
+                              <Badge variant="outline" className="text-destructive border-destructive/30">
+                                <XCircle className="w-3 h-3 me-1" />
+                                {isRTL ? "ألغاها المتقدم" : "Cancelled by applicant"}
+                              </Badge>
+                            )}
                           </div>
                           {iv.meeting_link && (
                             <a href={iv.meeting_link} target="_blank" rel="noopener" className="text-xs text-primary hover:underline truncate block mt-1">
@@ -331,6 +405,14 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
                           )}
                           {iv.location && <div className="text-xs text-muted-foreground mt-1">{iv.location}</div>}
                           {iv.notes && <div className="text-xs text-muted-foreground mt-1 italic">"{iv.notes}"</div>}
+                          {iv.reschedule_reason && (
+                            <div className="mt-2 p-2 rounded bg-amber-500/5 border border-amber-500/30 text-xs">
+                              <span className="font-medium text-amber-700 dark:text-amber-300">
+                                {isRTL ? "سبب إعادة الجدولة: " : "Reschedule reason: "}
+                              </span>
+                              {iv.reschedule_reason}
+                            </div>
+                          )}
                         </div>
                         {iv.status === "scheduled" && (
                           <Button size="sm" variant="ghost" onClick={() => setOutcomeOpen(iv.id)}>
