@@ -731,7 +731,28 @@ export default function BulkReminders() {
                               />
                             </TableCell>
                             <TableCell>
-                              <div className="font-medium text-sm">{r.full_name}</div>
+                              <div className="font-medium text-sm flex items-center gap-1.5">
+                                <span>{r.full_name}</span>
+                                {audience === 'students' && r.studentRow && (
+                                  r.studentRow.has_telegram ? (
+                                    <span
+                                      title={isRTL ? 'حساب الطالب مربوط بتيليجرام' : "Student's Telegram is linked"}
+                                      className="inline-flex items-center text-emerald-600"
+                                      aria-label={isRTL ? 'تيليجرام مربوط' : 'Telegram linked'}
+                                    >
+                                      <Send className="h-3.5 w-3.5" />
+                                    </span>
+                                  ) : (
+                                    <span
+                                      title={isRTL ? 'الطالب غير مربوط بتيليجرام' : 'Student has no Telegram'}
+                                      className="inline-flex items-center text-muted-foreground/40"
+                                      aria-label={isRTL ? 'تيليجرام غير مربوط' : 'No Telegram'}
+                                    >
+                                      <Send className="h-3.5 w-3.5 opacity-40" />
+                                    </span>
+                                  )
+                                )}
+                              </div>
                               {r.phone && (
                                 <div className="text-xs text-muted-foreground">{r.phone}</div>
                               )}
