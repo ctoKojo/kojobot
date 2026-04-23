@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Briefcase, ArrowLeft, ArrowRight, Search, Download, Send, Users, Eye, FileText } from "lucide-react";
+import { Briefcase, ArrowLeft, ArrowRight, Search, Download, Send, Users, Eye, FileText, CalendarClock, CheckCircle2, XCircle } from "lucide-react";
 import { ApplicationDetailDialog } from "@/components/recruitment/ApplicationDetailDialog";
 
 const STATUS_LIST = ["new", "under_review", "shortlisted", "interviewing", "hired", "rejected"] as const;
