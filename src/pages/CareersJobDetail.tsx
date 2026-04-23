@@ -286,6 +286,9 @@ export default function CareersJobDetail() {
             throw new Error(isRTL ? `"${label}" يجب ألا يزيد عن ${max} حرف` : `"${label}" must be ≤ ${max} characters`);
           }
         }
+        if (f.type === "multi_choice" && !Array.isArray(v)) {
+          throw new Error(isRTL ? `"${label}" قيمة غير صحيحة` : `"${label}" has an invalid value`);
+        }
       }
 
       const fullName = String(formValues.full_name || "").trim();
@@ -294,9 +297,14 @@ export default function CareersJobDetail() {
       if (!fullName || fullName.length < 2 || fullName.length > 100) {
         throw new Error(isRTL ? "الاسم يجب أن يكون من 2 إلى 100 حرف" : "Name must be 2-100 characters");
       }
-      if (!isEmail(email)) throw new Error(isRTL ? "بريد إلكتروني غير صحيح" : "Invalid email");
-      if (phone && !isPhone(phone)) {
-        throw new Error(isRTL ? "رقم الهاتف غير صحيح (8-15 رقم)" : "Invalid phone (8-15 digits)");
+      if (!isEmail(email)) {
+        throw new Error(isRTL ? "بريد إلكتروني غير صحيح (مثال: name@example.com)" : "Invalid email (e.g. name@example.com)");
+      }
+      if (!phone) {
+        throw new Error(isRTL ? "رقم الهاتف مطلوب" : "Phone is required");
+      }
+      if (!isPhone(phone)) {
+        throw new Error(isRTL ? "رقم الهاتف غير صحيح (8-15 رقم، يمكن البدء بـ +)" : "Invalid phone (8-15 digits, may start with +)");
       }
 
       // Upload CV if provided
