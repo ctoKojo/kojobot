@@ -1,21 +1,66 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Menu, X, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { useLanguage } from "@/contexts/LanguageContext";
 import kojobotLogo from "@/assets/kojobot-main-logo.png";
-import { navSections, scrollTo, l } from "./types";
+import { navSections, scrollTo } from "./types";
 
 interface LandingNavbarProps {
-  language: string;
-  isRTL: boolean;
-  scrolled: boolean;
-  ctaUrl: string;
-  ctaText: string;
+  language?: string;
+  isRTL?: boolean;
+  scrolled?: boolean;
+  ctaUrl?: string;
+  ctaText?: string;
 }
 
-export const LandingNavbar = ({ language, isRTL, scrolled, ctaUrl, ctaText }: LandingNavbarProps) => {
+export const LandingNavbar = ({
+  language: languageProp,
+  isRTL: isRTLProp,
+  scrolled: scrolledProp,
+  ctaUrl: ctaUrlProp,
+  ctaText: ctaTextProp,
+}: LandingNavbarProps) => {
+  const ctx = useLanguage();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const language = languageProp ?? ctx.language;
+  const isRTL = isRTLProp ?? ctx.isRTL;
+  const ctaUrl = ctaUrlProp ?? "/auth";
+  const ctaText = ctaTextProp ?? (isRTL ? "تسجيل الدخول" : "Sign In");
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [internalScrolled, setInternalScrolled] = useState(false);
+
+  // Track scroll for standalone usage
+  useEffect(() => {
+    if (scrolledProp !== undefined) return;
+    const onScroll = () => setInternalScrolled(window.scrollY > 20);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [scrolledProp]);
+
+  const scrolled = scrolledProp ?? internalScrolled;
+  const isOnLanding = location.pathname === "/" || location.pathname === "/ar" || location.pathname === "/en";
+
+  const handleSectionNav = (id: string) => {
+    if (isOnLanding) {
+      scrollTo(id);
+    } else {
+      navigate(`/${language}#${id}`);
+    }
+  };
+
+  // After navigating with hash, scroll to the section
+  useEffect(() => {
+    if (isOnLanding && location.hash) {
+      const id = location.hash.replace("#", "");
+      // small delay to allow DOM to render
+      setTimeout(() => scrollTo(id), 100);
+    }
+  }, [isOnLanding, location.hash]);
 
   return (
     <>
@@ -31,7 +76,7 @@ export const LandingNavbar = ({ language, isRTL, scrolled, ctaUrl, ctaText }: La
           {navSections.map((sec) => (
             <button
               key={sec.id}
-              onClick={() => scrollTo(sec.id)}
+              onClick={() => handleSectionNav(sec.id)}
               style={{
                 padding: "6px 14px",
                 background: "none",
@@ -99,7 +144,7 @@ export const LandingNavbar = ({ language, isRTL, scrolled, ctaUrl, ctaText }: La
             className="grad-btn hidden sm:inline-flex"
             style={{ borderRadius: 10, padding: "0 18px", height: 36, fontSize: 14 }}
           >
-            <Link to="/auth">{ctaText}</Link>
+            <Link to={ctaUrl}>{ctaText}</Link>
           </Button>
         </div>
       </nav>
@@ -115,7 +160,7 @@ export const LandingNavbar = ({ language, isRTL, scrolled, ctaUrl, ctaText }: La
           {navSections.map((sec) => (
             <button
               key={sec.id}
-              onClick={() => { scrollTo(sec.id); setMobileMenuOpen(false); }}
+              onClick={() => { handleSectionNav(sec.id); setMobileMenuOpen(false); }}
               style={{
                 background: "none", border: "none", cursor: "pointer",
                 color: "var(--kojo-text)", fontSize: 20, fontWeight: 600,
