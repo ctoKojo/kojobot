@@ -43,6 +43,7 @@ export function QuestionBuilder({ fields, onChange, contentLanguage }: QuestionB
   const { isRTL } = useLanguage();
   const [showLibrary, setShowLibrary] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [coreOpen, setCoreOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -104,21 +105,33 @@ export function QuestionBuilder({ fields, onChange, contentLanguage }: QuestionB
 
   return (
     <div className="space-y-4">
-      {/* Reserved fields */}
-      <div className="space-y-2">
-        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-          <Lock className="w-3 h-3" />
-          {isRTL ? "حقول أساسية (دائماً موجودة)" : "Core Fields (always required)"}
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {allReserved.map((f) => (
-            <Card key={f.key} className="p-3 bg-muted/40 flex items-center justify-between">
-              <div className="text-sm font-medium">{isRTL ? f.label_ar : f.label_en}</div>
-              <Badge variant="secondary" className="text-xs">{f.type}</Badge>
-            </Card>
-          ))}
-        </div>
-      </div>
+      {/* Reserved fields - collapsible summary */}
+      <Card className="border-dashed">
+        <button
+          type="button"
+          onClick={() => setCoreOpen(!coreOpen)}
+          className="w-full flex items-center justify-between p-3 hover:bg-muted/40 transition-colors rounded-lg"
+        >
+          <div className="flex items-center gap-2">
+            <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              {isRTL ? "حقول أساسية (دائماً موجودة)" : "Core Fields (always required)"}
+            </span>
+            <Badge variant="secondary" className="text-[10px] h-4">{allReserved.length}</Badge>
+          </div>
+          {coreOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        </button>
+        {coreOpen && (
+          <div className="px-3 pb-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {allReserved.map((f) => (
+              <div key={f.key} className="flex items-center justify-between bg-muted/40 rounded-md px-3 py-2">
+                <div className="text-sm font-medium truncate">{isRTL ? f.label_ar : f.label_en}</div>
+                <Badge variant="secondary" className="text-[10px] shrink-0">{f.type}</Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       {/* Custom fields list */}
       <div className="space-y-2">
