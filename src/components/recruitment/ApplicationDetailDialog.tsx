@@ -37,6 +37,7 @@ interface Interview {
   reschedule_requested_at: string | null;
   reschedule_reason: string | null;
   cancelled_by_applicant_at: string | null;
+  cancelled_reason: string | null;
 }
 
 interface Props {
