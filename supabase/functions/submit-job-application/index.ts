@@ -124,13 +124,35 @@ Deno.serve(async (req) => {
       }
     }
 
+    const normalizedEmail = applicant_email.trim().toLowerCase();
+
+    // Pre-check for duplicate (friendly error message)
+    const { data: existing } = await supabase
+      .from("job_applications")
+      .select("id, tracking_code, status")
+      .eq("job_id", job_id)
+      .ilike("applicant_email", normalizedEmail)
+      .maybeSingle();
+
+    if (existing) {
+      return new Response(
+        JSON.stringify({
+          error: "duplicate_application",
+          message: "You have already applied for this job",
+          message_ar: "لقد قدمت بالفعل على هذه الوظيفة",
+          tracking_code: existing.tracking_code,
+        }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Insert application
     const { data: application, error: insertError } = await supabase
       .from("job_applications")
       .insert({
         job_id,
         applicant_name: applicant_name.trim(),
-        applicant_email: applicant_email.trim().toLowerCase(),
+        applicant_email: normalizedEmail,
         applicant_phone: applicant_phone?.trim() || null,
         cv_url: cv_url || null,
         answers: safeAnswers,
@@ -139,10 +161,28 @@ Deno.serve(async (req) => {
         ip_address: clientIP,
         user_agent: req.headers.get("user-agent")?.substring(0, 500) || null,
       })
-      .select("id")
+      .select("id, tracking_code")
       .single();
 
     if (insertError) {
+      // Race-condition: unique index caught duplicate after pre-check
+      if (insertError.code === "23505") {
+        const { data: dup } = await supabase
+          .from("job_applications")
+          .select("tracking_code")
+          .eq("job_id", job_id)
+          .ilike("applicant_email", normalizedEmail)
+          .maybeSingle();
+        return new Response(
+          JSON.stringify({
+            error: "duplicate_application",
+            message: "You have already applied for this job",
+            message_ar: "لقد قدمت بالفعل على هذه الوظيفة",
+            tracking_code: dup?.tracking_code,
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       console.error("Insert error:", insertError);
       return new Response(JSON.stringify({ error: "Failed to submit application" }), {
         status: 500,
@@ -170,23 +210,33 @@ Deno.serve(async (req) => {
       },
     }).catch((e) => console.error("admin notify failed:", e));
 
-    // Send confirmation email to applicant
+    // Send confirmation email to applicant (with tracking code)
+    const trackingUrl = `${appUrl}/application-status?code=${application.tracking_code}`;
     supabase.functions.invoke("send-email", {
       body: {
-        to: applicant_email.trim().toLowerCase(),
-        template_name: "job-application-received",
-        variables: {
+        to: normalizedEmail,
+        templateName: "job-application-received",
+        audience: "staff",
+        idempotencyKey: `job-app-received-${application.id}`,
+        templateData: {
           applicant_name: applicant_name.trim(),
           job_title: job.title_en,
           job_title_ar: job.title_ar,
           application_id: application.id,
+          tracking_code: application.tracking_code,
+          tracking_url: trackingUrl,
           app_url: appUrl,
         },
       },
     }).catch((e) => console.error("applicant email failed:", e));
 
     return new Response(
-      JSON.stringify({ success: true, application_id: application.id }),
+      JSON.stringify({
+        success: true,
+        application_id: application.id,
+        tracking_code: application.tracking_code,
+        tracking_url: trackingUrl,
+      }),
       { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
