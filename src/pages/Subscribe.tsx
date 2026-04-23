@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { KojobotLogo } from "@/components/KojobotLogo";
+import { LandingStyles } from "@/components/landing/LandingStyles";
+import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 
 interface Plan {
@@ -150,18 +152,23 @@ export default function Subscribe() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center p-4"
+      className="min-h-screen flex flex-col items-center p-4"
       dir={isRTL ? "rtl" : "ltr"}
       style={{
         background: "linear-gradient(180deg, #0a0a14 0%, #12122a 100%)",
         color: "rgba(240,240,255,.85)",
         fontFamily: isRTL ? "'Cairo','Tajawal',sans-serif" : "'Inter','DM Sans',sans-serif",
+        paddingTop: 92,
       }}
     >
+      <LandingStyles isRTL={isRTL} />
+      <LandingNavbar />
+
       {/* Header */}
       <div className="mb-8 text-center">
         <Link to="/" className="inline-block mb-4">
           <KojobotLogo size="md" showText />
+        </Link>
         </Link>
         <h1 className="text-2xl md:text-3xl font-bold" style={{ color: "rgba(240,240,255,.95)" }}>
           {l("Subscribe Now", "اشترك الآن")}
