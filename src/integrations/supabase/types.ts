@@ -2783,6 +2783,7 @@ export type Database = {
           applications_count: number
           benefits_ar: string | null
           benefits_en: string | null
+          content_language: string
           created_at: string
           created_by: string
           deadline_at: string | null
@@ -2791,6 +2792,7 @@ export type Database = {
           form_fields: Json
           id: string
           is_featured: boolean
+          is_paid: boolean
           location_ar: string | null
           location_en: string | null
           posted_at: string | null
@@ -2801,6 +2803,7 @@ export type Database = {
           status: Database["public"]["Enums"]["job_status"]
           title_ar: string
           title_en: string
+          training_season: string | null
           type: Database["public"]["Enums"]["job_type"]
           updated_at: string
         }
@@ -2808,6 +2811,7 @@ export type Database = {
           applications_count?: number
           benefits_ar?: string | null
           benefits_en?: string | null
+          content_language?: string
           created_at?: string
           created_by: string
           deadline_at?: string | null
@@ -2816,6 +2820,7 @@ export type Database = {
           form_fields?: Json
           id?: string
           is_featured?: boolean
+          is_paid?: boolean
           location_ar?: string | null
           location_en?: string | null
           posted_at?: string | null
@@ -2826,6 +2831,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"]
           title_ar: string
           title_en: string
+          training_season?: string | null
           type?: Database["public"]["Enums"]["job_type"]
           updated_at?: string
         }
@@ -2833,6 +2839,7 @@ export type Database = {
           applications_count?: number
           benefits_ar?: string | null
           benefits_en?: string | null
+          content_language?: string
           created_at?: string
           created_by?: string
           deadline_at?: string | null
@@ -2841,6 +2848,7 @@ export type Database = {
           form_fields?: Json
           id?: string
           is_featured?: boolean
+          is_paid?: boolean
           location_ar?: string | null
           location_en?: string | null
           posted_at?: string | null
@@ -2851,6 +2859,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["job_status"]
           title_ar?: string
           title_en?: string
+          training_season?: string | null
           type?: Database["public"]["Enums"]["job_type"]
           updated_at?: string
         }
