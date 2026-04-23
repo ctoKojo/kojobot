@@ -193,6 +193,21 @@ export default function AdminJobDetail() {
         }
       />
 
+      {pendingActionCount > 0 && (
+        <Card className="mt-4 border-amber-500/40 bg-amber-500/5">
+          <CardContent className="p-3 flex items-center gap-3">
+            <CalendarClock className="w-5 h-5 text-amber-600 shrink-0" />
+            <div className="text-sm">
+              <span className="font-medium text-amber-800 dark:text-amber-300">
+                {isRTL
+                  ? `${pendingActionCount} متقدم بانتظار ردك على طلب إعادة جدولة/إلغاء`
+                  : `${pendingActionCount} applicant${pendingActionCount === 1 ? "" : "s"} awaiting your response (reschedule / cancellation)`}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Status tabs */}
       <Tabs value={statusFilter} onValueChange={setStatusFilter} className="mt-6">
         <TabsList className="grid grid-cols-7 w-full">
