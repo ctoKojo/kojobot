@@ -244,7 +244,7 @@ export default function AdminJobInvites() {
           deadline_at: job.deadline_at
             ? new Date(job.deadline_at).toLocaleDateString("en-US")
             : "",
-          apply_url: `${appUrl}/apply/${job.slug}?invite=${inv.token}`,
+          apply_url: `${appUrl}/careers/${job.slug}`,
           personal_message: msg,
           expires_at: new Date(inv.expires_at).toLocaleDateString("en-US"),
         },
