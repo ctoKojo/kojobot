@@ -15,6 +15,8 @@ interface FormField {
   accept?: string;
   placeholder_en?: string;
   placeholder_ar?: string;
+  min?: number;
+  max?: number;
 }
 
 interface Job {
