@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Upload, CheckCircle2, AlertCircle, Loader2, Shar
 import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LandingStyles } from "@/components/landing/LandingStyles";
+import { getCitiesForGovernorate } from "@/lib/egyptCities";
 
 interface FormField {
   key: string;
