@@ -13,7 +13,16 @@ interface FormField {
   label_en?: string;
   label_ar?: string;
   required?: boolean;
+  min?: number;
+  max?: number;
 }
+
+const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) && v.length <= 255;
+const isPhone = (v: string) => /^(\+?\d{8,15})$/.test(v.replace(/[\s\-()]/g, ""));
+const isUrl = (v: string) => {
+  try { const u = new URL(v); return u.protocol === "http:" || u.protocol === "https:"; } catch { return false; }
+};
+const isDate = (v: string) => !Number.isNaN(new Date(v).getTime());
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
