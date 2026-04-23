@@ -157,7 +157,7 @@ export function QuestionBuilder({ fields, onChange, contentLanguage }: QuestionB
 
         {showLibrary && availableLibrary.length > 0 && (
           <Card className="p-3 border-primary/30 bg-primary/5">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <div className="text-sm font-medium">
                 {isRTL ? "أضف من المكتبة بضغطة" : "Add from library with one click"}
               </div>
@@ -165,20 +165,34 @@ export function QuestionBuilder({ fields, onChange, contentLanguage }: QuestionB
                 <X className="w-3 h-3" />
               </Button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {availableLibrary.map((q) => (
-                <Button
-                  key={q.key}
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-8"
-                  onClick={() => addFromLibrary(q)}
-                >
-                  <Plus className="w-3 h-3 me-1" />
-                  {isRTL ? q.label_ar : q.label_en}
-                </Button>
-              ))}
+            <div className="space-y-3">
+              {CATEGORY_ORDER.map((cat: QuestionCategory) => {
+                const items = availableLibrary.filter((q) => (q.category ?? "preferences") === cat);
+                if (items.length === 0) return null;
+                return (
+                  <div key={cat}>
+                    <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                      {isRTL ? CATEGORY_LABELS[cat].ar : CATEGORY_LABELS[cat].en}
+                      <span className="ms-1 opacity-60">({items.length})</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {items.map((q) => (
+                        <Button
+                          key={q.key}
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-8 bg-background"
+                          onClick={() => addFromLibrary(q)}
+                        >
+                          <Plus className="w-3 h-3 me-1" />
+                          {isRTL ? q.label_ar : q.label_en}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </Card>
         )}
