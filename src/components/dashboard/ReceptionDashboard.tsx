@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getCairoToday } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
-import { Users, Calendar, Clock, AlertTriangle, CreditCard, RefreshCw, Target, ChevronRight, ArrowRight, Award, Loader2 } from 'lucide-react';
+import { Users, Calendar, Clock, AlertTriangle, CreditCard, RefreshCw, Target, ChevronRight, ArrowRight, Award, Loader2, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -17,6 +17,7 @@ interface DashboardStats {
   awaitingFinalExam: number;
   unprintedCertificates: number;
   generatingCertificates: number;
+  pendingParentApprovals: number;
 }
 
 export function ReceptionDashboard() {
@@ -32,6 +33,7 @@ export function ReceptionDashboard() {
     awaitingFinalExam: 0,
     unprintedCertificates: 0,
     generatingCertificates: 0,
+    pendingParentApprovals: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -65,6 +67,22 @@ export function ReceptionDashboard() {
       const recordedSessionIds = new Set(attendanceRes.data?.map(a => a.session_id) || []);
       const unrecorded = todaySessionIds.filter(id => !recordedSessionIds.has(id)).length;
 
+      // Pending parent account approvals
+      const { data: parentRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'parent');
+      const parentIds = (parentRoles || []).map(r => r.user_id);
+      let pendingParentApprovals = 0;
+      if (parentIds.length > 0) {
+        const { count } = await supabase
+          .from('profiles')
+          .select('user_id', { count: 'exact', head: true })
+          .in('user_id', parentIds)
+          .eq('is_approved', false);
+        pendingParentApprovals = count || 0;
+      }
+
       setStats({
         activeStudents: studentsRes.count || 0,
         activeGroups: groupsRes.count || 0,
@@ -75,6 +93,7 @@ export function ReceptionDashboard() {
         awaitingFinalExam: awaitingExamRes.count || 0,
         unprintedCertificates: certsRes.count || 0,
         generatingCertificates: generatingCertsRes.count || 0,
+        pendingParentApprovals,
       });
     } catch (error) {
       console.error('Error fetching reception stats:', error);
@@ -108,6 +127,16 @@ export function ReceptionDashboard() {
   ];
 
   const alerts = [
+    stats.pendingParentApprovals > 0 && {
+      icon: UserPlus,
+      title: isRTL ? 'طلبات تأكيد حسابات أولياء الأمور' : 'Parent Account Approval Requests',
+      description: isRTL
+        ? `${stats.pendingParentApprovals} ولي أمر بانتظار الموافقة على حسابه`
+        : `${stats.pendingParentApprovals} parent(s) awaiting account approval`,
+      count: stats.pendingParentApprovals,
+      variant: 'destructive' as const,
+      onClick: () => navigate('/parents'),
+    },
     stats.unrecordedAttendance > 0 && {
       icon: AlertTriangle,
       title: isRTL ? 'حضور غير مسجل' : 'Unrecorded Attendance',

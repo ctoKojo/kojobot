@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, GraduationCap, Calendar, TrendingUp, AlertTriangle, RefreshCw, DollarSign, Snowflake, ClipboardList, ClipboardCheck, Target, ArrowRight, ChevronRight, Plus } from 'lucide-react';
+import { Users, GraduationCap, Calendar, TrendingUp, AlertTriangle, RefreshCw, DollarSign, Snowflake, ClipboardList, ClipboardCheck, Target, ArrowRight, ChevronRight, Plus, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ interface AdminStats {
   pendingSubscriptionRequests: number;
   pendingPlacementTests: number;
   awaitingFinalExam: number;
+  pendingParentApprovals: number;
 }
 
 export function AdminDashboard() {
@@ -45,6 +46,7 @@ export function AdminDashboard() {
     pendingSubscriptionRequests: 0,
     pendingPlacementTests: 0,
     awaitingFinalExam: 0,
+    pendingParentApprovals: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -100,6 +102,22 @@ export function AdminDashboard() {
         activeInstructorCount = count || 0;
       }
 
+      // Pending parent account approvals
+      const { data: parentRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'parent');
+      const parentIds = (parentRoles || []).map(r => r.user_id);
+      let pendingParentApprovals = 0;
+      if (parentIds.length > 0) {
+        const { count } = await supabase
+          .from('profiles')
+          .select('user_id', { count: 'exact', head: true })
+          .in('user_id', parentIds)
+          .eq('is_approved', false);
+        pendingParentApprovals = count || 0;
+      }
+
       setStats({
         totalStudents: studentsRes.count || 0,
         totalInstructors: activeInstructorCount,
@@ -114,6 +132,7 @@ export function AdminDashboard() {
         pendingSubscriptionRequests: subRequestsRes.count || 0,
         pendingPlacementTests: placementRes.count || 0,
         awaitingFinalExam: awaitingExamRes.count || 0,
+        pendingParentApprovals,
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -203,6 +222,16 @@ export function AdminDashboard() {
       count: stats.pendingMakeupSessions,
       variant: 'outline' as const,
       onClick: () => navigate('/makeup-sessions'),
+    },
+    stats.pendingParentApprovals > 0 && {
+      icon: UserPlus,
+      title: isRTL ? 'طلبات تأكيد حسابات أولياء الأمور' : 'Parent Account Approval Requests',
+      description: isRTL
+        ? `${stats.pendingParentApprovals} ولي أمر بانتظار الموافقة على حسابه`
+        : `${stats.pendingParentApprovals} parent(s) awaiting account approval`,
+      count: stats.pendingParentApprovals,
+      variant: 'destructive' as const,
+      onClick: () => navigate('/parents'),
     },
     stats.pendingSubscriptionRequests > 0 && {
       icon: ClipboardList,
