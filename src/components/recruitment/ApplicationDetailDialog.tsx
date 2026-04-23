@@ -49,7 +49,7 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
 
   const updateStatus = async (newStatus: string) => {
     setSaving(true);
-    const { error } = await supabase.from("job_applications").update({ status: newStatus }).eq("id", application.id);
+    const { error } = await supabase.from("job_applications").update({ status: newStatus as any }).eq("id", application.id);
     setSaving(false);
     if (error) {
       toast({ title: isRTL ? "فشل التحديث" : "Update failed", description: error.message, variant: "destructive" });
