@@ -294,6 +294,16 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
           </div>
         ) : (
           <div className="space-y-4">
+            {restoredFromCache && (
+              <div className="flex items-start gap-2 p-3 rounded-md bg-primary/5 border border-primary/20 text-xs text-foreground">
+                <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                <span>
+                  {isRTL
+                    ? 'تم استرجاع آخر أسئلة تم توليدها لهذه السيشن — مش هتحتاج تولّد تاني. لو عايز أسئلة جديدة، اضغط "إعادة التوليد".'
+                    : 'Restored the last generated questions for this session — no need to regenerate. Click "Regenerate" for fresh questions.'}
+                </span>
+              </div>
+            )}
             {/* Summary bar */}
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2 text-sm text-primary">
