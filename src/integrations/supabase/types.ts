@@ -8035,6 +8035,7 @@ export type Database = {
         Args: { _instructor_id: string }
         Returns: string[]
       }
+      get_interview_by_token: { Args: { p_token: string }; Returns: Json[] }
       get_landing_content: { Args: never; Returns: Json }
       get_leaderboard: {
         Args: {
