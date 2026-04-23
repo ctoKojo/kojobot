@@ -372,9 +372,20 @@ const systemPrompt = `أنت مدرس متخصص في تعليم الأطفال 
   "correct_index": 0
 }
 
-الفئة العمرية: ${ageGroupMap[ageGroup] || ageGroupMap["10-13"]}
-مستوى الصعوبة: ${difficultyMap[difficulty] || difficultyMap["medium"]}
-عدد الأسئلة المطلوب: ${count}`;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+الفئة العمرية المستهدفة: ${ageGroupMap[ageGroup] || ageGroupMap["10-13"]}
+
+⚡ مستوى الصعوبة المطلوب (التزم به بصرامة في كل سؤال):
+${difficultyMap[difficulty] || difficultyMap["medium"]}
+
+عدد الأسئلة المطلوب: ${count}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ملاحظة هامة: مستوى الصعوبة المذكور أعلاه ليس اقتراح — هو إلزامي ولازم ينعكس في:
+(أ) عمق التفكير المطلوب للوصول للإجابة
+(ب) تعقيد الكود لو فيه code_snippet
+(ج) صعوبة استبعاد المشتتات (الإجابات الغلط)
+لو طلبت "صعب" وجبت أسئلة بسيطة، السيشن هتتعتبر فاشلة.`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
