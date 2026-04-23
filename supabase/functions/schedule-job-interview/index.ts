@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
       .from('job_interviews')
       .update({
         status: 'cancelled',
-        outcome_notes: 'Superseded by a new scheduled interview',
+        cancelled_reason: 'Superseded by a new scheduled interview',
       })
       .eq('application_id', body.application_id)
       .eq('status', 'scheduled')
