@@ -7781,6 +7781,7 @@ export type Database = {
         }
         Returns: number
       }
+      confirm_interview_by_token: { Args: { p_token: string }; Returns: Json }
       coordinate_expense_transaction: {
         Args: { p_expense_data: Json }
         Returns: Json
@@ -7891,9 +7892,19 @@ export type Database = {
         Args: { p_code: string }
         Returns: {
           applicant_name: string
+          interview_confirm_token: string
+          interview_confirmed_at: string
+          interview_duration_minutes: number
+          interview_location: string
+          interview_meeting_link: string
+          interview_mode: string
+          interview_notes: string
+          interview_reschedule_requested_at: string
+          interview_scheduled_at: string
           job_slug: string
           job_title_ar: string
           job_title_en: string
+          rejection_reason: string
           reviewed_at: string
           status: string
           submitted_at: string
@@ -8494,6 +8505,10 @@ export type Database = {
           p_period_month: string
           p_reason: string
         }
+        Returns: Json
+      }
+      request_reschedule_by_token: {
+        Args: { p_reason: string; p_token: string }
         Returns: Json
       }
       reschedule_failed_final_exam: {
