@@ -147,8 +147,10 @@ export default function CareersJobDetail() {
     if (!slug) return;
     (async () => {
       setLoading(true);
+      // UUID format: 8-4-4-4-12 hex chars (e.g. e27d9880-d777-4a51-b049-1341e81859c0)
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
       const query = publicSupabase.from("jobs").select("*").eq("status", "published");
-      const { data } = slug.includes("-")
+      const { data } = isUuid
         ? await query.eq("id", slug).maybeSingle()
         : await query.eq("slug", slug).maybeSingle();
       setJob(data as unknown as Job | null);
