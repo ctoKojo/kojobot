@@ -99,6 +99,8 @@ const Parents = React.lazy(() => import("./pages/Parents"));
 const ParentLeaveRequests = React.lazy(() => import("./pages/ParentLeaveRequests"));
 const LeaveRequests = React.lazy(() => import("./pages/LeaveRequests"));
 const ParentPending = React.lazy(() => import("./pages/ParentPending"));
+const Careers = React.lazy(() => import("./pages/Careers"));
+const CareersJobDetail = React.lazy(() => import("./pages/CareersJobDetail"));
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
@@ -126,6 +128,9 @@ const App = () => (
                   <Route path="/ar" element={<Index lang="ar" />} />
                   <Route path="/en" element={<Index lang="en" />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/careers" element={<Careers />} />
+                  <Route path="/careers/:slug" element={<CareersJobDetail />} />
+                  <Route path="/apply/:slug" element={<CareersJobDetail />} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/students" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Students /></ProtectedRoute>} />
                   <Route path="/instructors" element={<ProtectedRoute allowedRoles={['admin']}><Instructors /></ProtectedRoute>} />
