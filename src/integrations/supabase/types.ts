@@ -2667,11 +2667,16 @@ export type Database = {
           applicant_email: string
           applicant_name: string
           applicant_phone: string | null
+          converted_employee_id: string | null
           cv_url: string | null
+          hire_role: string | null
+          hire_start_date: string | null
           id: string
           invite_id: string | null
           ip_address: string | null
           job_id: string
+          rejection_notes: string | null
+          rejection_reason_code: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           source: string
@@ -2687,11 +2692,16 @@ export type Database = {
           applicant_email: string
           applicant_name: string
           applicant_phone?: string | null
+          converted_employee_id?: string | null
           cv_url?: string | null
+          hire_role?: string | null
+          hire_start_date?: string | null
           id?: string
           invite_id?: string | null
           ip_address?: string | null
           job_id: string
+          rejection_notes?: string | null
+          rejection_reason_code?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           source?: string
@@ -2707,11 +2717,16 @@ export type Database = {
           applicant_email?: string
           applicant_name?: string
           applicant_phone?: string | null
+          converted_employee_id?: string | null
           cv_url?: string | null
+          hire_role?: string | null
+          hire_start_date?: string | null
           id?: string
           invite_id?: string | null
           ip_address?: string | null
           job_id?: string
+          rejection_notes?: string | null
+          rejection_reason_code?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           source?: string
@@ -2727,6 +2742,75 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_rejection_reason_code_fkey"
+            columns: ["rejection_reason_code"]
+            isOneToOne: false
+            referencedRelation: "job_rejection_reasons"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      job_interviews: {
+        Row: {
+          application_id: string
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          id: string
+          location: string | null
+          meeting_link: string | null
+          mode: string
+          notes: string | null
+          outcome: string | null
+          reminder_1h_sent_at: string | null
+          reminder_24h_sent_at: string | null
+          scheduled_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          created_at?: string
+          created_by?: string | null
+          duration_minutes?: number
+          id?: string
+          location?: string | null
+          meeting_link?: string | null
+          mode: string
+          notes?: string | null
+          outcome?: string | null
+          reminder_1h_sent_at?: string | null
+          reminder_24h_sent_at?: string | null
+          scheduled_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          created_at?: string
+          created_by?: string | null
+          duration_minutes?: number
+          id?: string
+          location?: string | null
+          meeting_link?: string | null
+          mode?: string
+          notes?: string | null
+          outcome?: string | null
+          reminder_1h_sent_at?: string | null
+          reminder_24h_sent_at?: string | null
+          scheduled_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_interviews_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
             referencedColumns: ["id"]
           },
         ]
@@ -2780,6 +2864,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      job_rejection_reasons: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          label_ar: string
+          label_en: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          label_ar: string
+          label_en: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          label_ar?: string
+          label_en?: string
+          sort_order?: number
+        }
+        Relationships: []
       }
       jobs: {
         Row: {
@@ -7965,6 +8079,10 @@ export type Database = {
           notes: string
           status: string
         }[]
+      }
+      get_recruitment_metrics: {
+        Args: { p_date_from?: string; p_date_to?: string }
+        Returns: Json
       }
       get_student_attendance_stats: {
         Args: { p_user_id: string }
