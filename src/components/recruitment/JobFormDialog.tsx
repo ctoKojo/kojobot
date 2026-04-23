@@ -125,24 +125,36 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     }
   }, [job, open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const slugify = (s: string) =>
-    s
+  const slugify = (value: string) =>
+    value
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
+      .trim()
+      .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
+      .replace(/-{2,}/g, "-")
+      .replace(/^-+|-+$/g, "")
       .slice(0, 80);
+
+  const buildJobSlug = (...candidates: Array<string | null | undefined>) => {
+    const firstValidSlug = candidates
+      .map((candidate) => slugify(candidate || ""))
+      .find(Boolean);
+
+    return firstValidSlug || `job-${Date.now()}`;
+  };
 
   const isInternship = form.type === "internship";
 
   // For single-language mode, bind primary input to one field but mirror to the other on save
   const handleTitle = (lang: "en" | "ar", value: string) => {
     if (contentLanguage === "en") {
-      setForm({ ...form, title_en: value, title_ar: value, slug: form.slug || slugify(value) });
+      setForm({ ...form, title_en: value, title_ar: value, slug: form.slug || buildJobSlug(value) });
     } else if (contentLanguage === "ar") {
-      setForm({ ...form, title_ar: value, title_en: value, slug: form.slug || slugify(value) });
+      setForm({ ...form, title_ar: value, title_en: value, slug: form.slug || buildJobSlug(value) });
     } else {
-      if (lang === "en") setForm({ ...form, title_en: value, slug: form.slug || slugify(value) });
-      else setForm({ ...form, title_ar: value });
+      if (lang === "en") setForm({ ...form, title_en: value, slug: form.slug || buildJobSlug(value, form.title_ar) });
+      else setForm({ ...form, title_ar: value, slug: form.slug || buildJobSlug(form.title_en, value) });
     }
   };
 
@@ -176,7 +188,7 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     }
 
     setSaving(true);
-    const slug = form.slug.trim() || slugify(form.title_en || form.title_ar);
+    const slug = form.slug.trim() || buildJobSlug(form.title_en, form.title_ar);
     const payload: any = {
       title_en: form.title_en.trim(),
       title_ar: form.title_ar.trim(),
