@@ -101,6 +101,9 @@ const LeaveRequests = React.lazy(() => import("./pages/LeaveRequests"));
 const ParentPending = React.lazy(() => import("./pages/ParentPending"));
 const Careers = React.lazy(() => import("./pages/Careers"));
 const CareersJobDetail = React.lazy(() => import("./pages/CareersJobDetail"));
+const AdminJobs = React.lazy(() => import("./pages/admin/AdminJobs"));
+const AdminJobDetail = React.lazy(() => import("./pages/admin/AdminJobDetail"));
+const AdminJobInvites = React.lazy(() => import("./pages/admin/AdminJobInvites"));
 
 // Component to handle admin session timeout
 function AdminSessionTimeoutHandler() {
@@ -131,6 +134,9 @@ const App = () => (
                   <Route path="/careers" element={<Careers />} />
                   <Route path="/careers/:slug" element={<CareersJobDetail />} />
                   <Route path="/apply/:slug" element={<CareersJobDetail />} />
+                  <Route path="/admin/jobs" element={<ProtectedRoute allowedRoles={['admin']}><AdminJobs /></ProtectedRoute>} />
+                  <Route path="/admin/jobs/:id" element={<ProtectedRoute allowedRoles={['admin']}><AdminJobDetail /></ProtectedRoute>} />
+                  <Route path="/admin/jobs/:id/invites" element={<ProtectedRoute allowedRoles={['admin']}><AdminJobInvites /></ProtectedRoute>} />
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="/students" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><Students /></ProtectedRoute>} />
                   <Route path="/instructors" element={<ProtectedRoute allowedRoles={['admin']}><Instructors /></ProtectedRoute>} />

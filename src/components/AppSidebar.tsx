@@ -31,6 +31,7 @@ import {
   Mail,
   ChevronDown,
   FileCheck,
+  Briefcase,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -226,6 +227,12 @@ export function AppSidebar() {
               { title: isRTL ? 'إعدادات الإشعارات' : 'Notification Settings', url: '/notification-settings', icon: Bell },
               { title: isRTL ? 'صحة الإشعارات' : 'Notifications Health', url: '/notifications-health', icon: Activity },
               { title: isRTL ? 'اختبار الإشعارات' : 'Smoke Test', url: '/notifications-smoke-test', icon: Activity },
+            ],
+          },
+          {
+            label: 'Recruitment', labelAr: 'التوظيف', icon: Briefcase, color: 'kojo-purple',
+            items: [
+              { title: isRTL ? 'الوظائف' : 'Jobs', url: '/admin/jobs', icon: Briefcase },
             ],
           },
           {
