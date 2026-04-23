@@ -2660,6 +2660,202 @@ export type Database = {
         }
         Relationships: []
       }
+      job_applications: {
+        Row: {
+          admin_notes: Json
+          answers: Json
+          applicant_email: string
+          applicant_name: string
+          applicant_phone: string | null
+          cv_url: string | null
+          id: string
+          invite_id: string | null
+          ip_address: string | null
+          job_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source: string
+          status: Database["public"]["Enums"]["job_application_status"]
+          submitted_at: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          admin_notes?: Json
+          answers?: Json
+          applicant_email: string
+          applicant_name: string
+          applicant_phone?: string | null
+          cv_url?: string | null
+          id?: string
+          invite_id?: string | null
+          ip_address?: string | null
+          job_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["job_application_status"]
+          submitted_at?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          admin_notes?: Json
+          answers?: Json
+          applicant_email?: string
+          applicant_name?: string
+          applicant_phone?: string | null
+          cv_url?: string | null
+          id?: string
+          invite_id?: string | null
+          ip_address?: string | null
+          job_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["job_application_status"]
+          submitted_at?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_invites: {
+        Row: {
+          applied_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          job_id: string
+          opened_at: string | null
+          personal_message: string | null
+          status: Database["public"]["Enums"]["job_invite_status"]
+          token: string
+        }
+        Insert: {
+          applied_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          job_id: string
+          opened_at?: string | null
+          personal_message?: string | null
+          status?: Database["public"]["Enums"]["job_invite_status"]
+          token: string
+        }
+        Update: {
+          applied_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          job_id?: string
+          opened_at?: string | null
+          personal_message?: string | null
+          status?: Database["public"]["Enums"]["job_invite_status"]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_invites_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          applications_count: number
+          benefits_ar: string | null
+          benefits_en: string | null
+          created_at: string
+          created_by: string
+          deadline_at: string | null
+          description_ar: string
+          description_en: string
+          form_fields: Json
+          id: string
+          is_featured: boolean
+          location_ar: string | null
+          location_en: string | null
+          posted_at: string | null
+          requirements_ar: string | null
+          requirements_en: string | null
+          salary_range: string | null
+          slug: string
+          status: Database["public"]["Enums"]["job_status"]
+          title_ar: string
+          title_en: string
+          type: Database["public"]["Enums"]["job_type"]
+          updated_at: string
+        }
+        Insert: {
+          applications_count?: number
+          benefits_ar?: string | null
+          benefits_en?: string | null
+          created_at?: string
+          created_by: string
+          deadline_at?: string | null
+          description_ar: string
+          description_en: string
+          form_fields?: Json
+          id?: string
+          is_featured?: boolean
+          location_ar?: string | null
+          location_en?: string | null
+          posted_at?: string | null
+          requirements_ar?: string | null
+          requirements_en?: string | null
+          salary_range?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["job_status"]
+          title_ar: string
+          title_en: string
+          type?: Database["public"]["Enums"]["job_type"]
+          updated_at?: string
+        }
+        Update: {
+          applications_count?: number
+          benefits_ar?: string | null
+          benefits_en?: string | null
+          created_at?: string
+          created_by?: string
+          deadline_at?: string | null
+          description_ar?: string
+          description_en?: string
+          form_fields?: Json
+          id?: string
+          is_featured?: boolean
+          location_ar?: string | null
+          location_en?: string | null
+          posted_at?: string | null
+          requirements_ar?: string | null
+          requirements_en?: string | null
+          salary_range?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["job_status"]
+          title_ar?: string
+          title_en?: string
+          type?: Database["public"]["Enums"]["job_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       journal_entries: {
         Row: {
           created_at: string
@@ -8316,6 +8512,22 @@ export type Database = {
       financial_period_status: "open" | "review" | "closed" | "reopened"
       group_type: "kojo_squad" | "kojo_core" | "kojo_x"
       installment_status: "pending" | "partial" | "paid" | "cancelled"
+      job_application_status:
+        | "new"
+        | "under_review"
+        | "shortlisted"
+        | "interviewing"
+        | "hired"
+        | "rejected"
+      job_invite_status: "sent" | "opened" | "applied" | "expired"
+      job_status: "draft" | "published" | "closed" | "archived"
+      job_type:
+        | "full_time"
+        | "part_time"
+        | "internship"
+        | "summer_training"
+        | "volunteer"
+        | "freelance"
       journal_entry_status: "draft" | "posted" | "reversed"
       journal_source_type:
         | "payment"
@@ -8504,6 +8716,24 @@ export const Constants = {
       financial_period_status: ["open", "review", "closed", "reopened"],
       group_type: ["kojo_squad", "kojo_core", "kojo_x"],
       installment_status: ["pending", "partial", "paid", "cancelled"],
+      job_application_status: [
+        "new",
+        "under_review",
+        "shortlisted",
+        "interviewing",
+        "hired",
+        "rejected",
+      ],
+      job_invite_status: ["sent", "opened", "applied", "expired"],
+      job_status: ["draft", "published", "closed", "archived"],
+      job_type: [
+        "full_time",
+        "part_time",
+        "internship",
+        "summer_training",
+        "volunteer",
+        "freelance",
+      ],
       journal_entry_status: ["draft", "posted", "reversed"],
       journal_source_type: [
         "payment",
