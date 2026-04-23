@@ -23,6 +23,8 @@ interface Job {
   title_en: string;
   title_ar: string;
   type: string;
+  training_season: string | null;
+  is_paid: boolean;
   location_en: string | null;
   location_ar: string | null;
   salary_range: string | null;
@@ -36,6 +38,21 @@ interface Job {
   deadline_at: string | null;
   posted_at: string | null;
 }
+
+const TYPE_LABEL: Record<string, { en: string; ar: string; color: string }> = {
+  full_time: { en: "Full Time", ar: "دوام كامل", color: "#6455F0" },
+  part_time: { en: "Part Time", ar: "دوام جزئي", color: "#61BAE2" },
+  internship: { en: "Internship", ar: "تدريب", color: "#f59e0b" },
+  volunteer: { en: "Volunteer", ar: "تطوع", color: "#10b981" },
+  freelance: { en: "Freelance", ar: "عمل حر", color: "#8b5cf6" },
+};
+
+const SEASON_LABEL: Record<string, { en: string; ar: string }> = {
+  summer: { en: "Summer", ar: "الصيفي" },
+  fall: { en: "Fall", ar: "الخريفي" },
+  winter: { en: "Winter", ar: "الشتوي" },
+  spring: { en: "Spring", ar: "الربيعي" },
+};
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
@@ -310,9 +327,27 @@ export default function CareersJobDetail() {
           <h1 className="font-display" style={{ fontSize: "clamp(28px, 4vw, 44px)", margin: "0 0 16px", lineHeight: 1.2 }}>
             <span className="grad-text">{isRTL ? job.title_ar : job.title_en}</span>
           </h1>
+
+          {/* Type / Season / Paid badges */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+            {(() => {
+              const typeMeta = TYPE_LABEL[job.type];
+              return (
+                <span style={{ padding: "5px 12px", borderRadius: 999, background: `${typeMeta?.color || "#6455F0"}22`, color: typeMeta?.color || "#6455F0", fontSize: 12, fontWeight: 600 }}>
+                  {job.type === "internship" && job.training_season
+                    ? (isRTL ? `تدريب ${SEASON_LABEL[job.training_season].ar}` : `${SEASON_LABEL[job.training_season].en} Internship`)
+                    : (isRTL ? typeMeta?.ar : typeMeta?.en)}
+                </span>
+              );
+            })()}
+            <span style={{ padding: "5px 12px", borderRadius: 999, background: job.is_paid ? "rgba(16,185,129,.15)" : "rgba(148,163,184,.15)", color: job.is_paid ? "#10b981" : "#94a3b8", fontSize: 12, fontWeight: 600 }}>
+              {job.is_paid ? (isRTL ? "مدفوع" : "Paid") : (isRTL ? "غير مدفوع" : "Unpaid")}
+            </span>
+          </div>
+
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 32, color: "var(--kojo-muted)", fontSize: 14 }}>
             {(job.location_en || job.location_ar) && <span>📍 {isRTL ? (job.location_ar || job.location_en) : (job.location_en || job.location_ar)}</span>}
-            {job.salary_range && <span>💰 {job.salary_range}</span>}
+            {job.is_paid && job.salary_range && <span>💰 {job.salary_range}</span>}
             {job.deadline_at && <span>⏰ {isRTL ? "آخر يوم: " : "Deadline: "}{new Date(job.deadline_at).toLocaleDateString(isRTL ? "ar-EG" : "en-US")}</span>}
           </div>
 
