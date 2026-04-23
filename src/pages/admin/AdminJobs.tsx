@@ -234,7 +234,7 @@ export default function AdminJobs() {
                           <DropdownMenuItem onClick={() => navigate(`/admin/jobs/${job.id}`)}>
                             <Eye className="w-4 h-4 me-2" />{isRTL ? "عرض المتقدمين" : "View applicants"}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => { setEditing(job); setOpenForm(true); }}>
+                          <DropdownMenuItem onClick={() => openEdit(job.id)}>
                             <Pencil className="w-4 h-4 me-2" />{isRTL ? "تعديل" : "Edit"}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate(`/admin/jobs/${job.id}/invites`)}>
