@@ -292,6 +292,10 @@ Deno.serve(async (req) => {
           interview_location_block: locBlock,
           interview_location_block_ar: locBlockAr,
           confirm_url: confirmUrl,
+          is_reschedule: isReschedule ? 'true' : 'false',
+          reschedule_notice: isReschedule
+            ? '<div style="margin:12px 0;padding:10px;background:#fef3c7;border-right:3px solid #f59e0b;border-radius:6px;font-size:14px"><strong>📅 تم اقتراح موعد جديد</strong><br/>بناءً على طلبك، تم تحديد موعد جديد للمقابلة. برجاء تأكيد الموعد.</div>'
+            : '',
         },
       },
     })
