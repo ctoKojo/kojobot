@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Briefcase, Plus, Search, MoreVertical, Eye, Pencil, Trash2, Send, Users, ExternalLink, Copy } from "lucide-react";
 import { JobFormDialog } from "@/components/recruitment/JobFormDialog";
+import { RecruitmentMetricsCard } from "@/components/recruitment/RecruitmentMetricsCard";
 
 type JobStatus = "draft" | "published" | "closed" | "archived";
 
@@ -154,11 +155,19 @@ export default function AdminJobs() {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <StatCard label={isRTL ? "إجمالي" : "Total"} value={stats.total} />
         <StatCard label={isRTL ? "منشور" : "Published"} value={stats.published} accent="text-green-600 dark:text-green-400" />
         <StatCard label={isRTL ? "مسودة" : "Draft"} value={stats.draft} accent="text-amber-600 dark:text-amber-400" />
         <StatCard label={isRTL ? "متقدمين" : "Applicants"} value={stats.totalApps} accent="text-primary" />
+      </div>
+
+      {/* Recruitment KPIs (last 90 days) */}
+      <div className="mb-6">
+        <div className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">
+          {isRTL ? "مؤشرات الأداء (آخر 90 يوم)" : "Performance Indicators (Last 90 days)"}
+        </div>
+        <RecruitmentMetricsCard />
       </div>
 
       {/* Filters */}
