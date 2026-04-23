@@ -395,6 +395,17 @@ export default function Parents() {
               className="pl-9"
             />
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchParents()}
+            disabled={loading}
+            className="gap-2"
+            title={isRTL ? 'تحديث القائمة' : 'Refresh list'}
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            {isRTL ? 'تحديث' : 'Refresh'}
+          </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
