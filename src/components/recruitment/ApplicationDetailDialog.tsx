@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mail, Phone, FileText, Download, MessageSquare, Calendar, Loader2, Send, CalendarPlus, UserCheck, XCircle, Star, ClipboardCheck, Video, MapPin, AlertCircle } from "lucide-react";
+import { Mail, Phone, FileText, Download, MessageSquare, Calendar, Loader2, Send, CalendarPlus, UserCheck, XCircle, Star, ClipboardCheck, Video, MapPin, AlertCircle, CalendarClock, CheckCircle2 } from "lucide-react";
 import { InterviewScheduleDialog } from "./InterviewScheduleDialog";
 import { RejectApplicationDialog } from "./RejectApplicationDialog";
 import { HireApplicationDialog } from "./HireApplicationDialog";
