@@ -37,6 +37,7 @@ interface Interview {
   reschedule_requested_at: string | null;
   reschedule_reason: string | null;
   cancelled_by_applicant_at: string | null;
+  cancelled_reason: string | null;
 }
 
 interface Props {
@@ -70,7 +71,7 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
     if (!application?.id) return;
     const { data } = await supabase
       .from("job_interviews")
-      .select("id,scheduled_at,duration_minutes,mode,meeting_link,location,status,outcome,notes,applicant_confirmed_at,reschedule_requested_at,reschedule_reason,cancelled_by_applicant_at")
+      .select("id,scheduled_at,duration_minutes,mode,meeting_link,location,status,outcome,notes,applicant_confirmed_at,reschedule_requested_at,reschedule_reason,cancelled_by_applicant_at,cancelled_reason")
       .eq("application_id", application.id)
       .order("scheduled_at", { ascending: false });
     setInterviews((data || []) as Interview[]);
@@ -358,11 +359,17 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-sm">{cairoDate(iv.scheduled_at)}</span>
                             <span className="text-xs text-muted-foreground">· {iv.duration_minutes} {isRTL ? "د" : "min"}</span>
-                            <Badge variant="outline" className="text-[10px]">
+                            <Badge variant="outline" className={
+                              iv.status === "cancelled" && iv.cancelled_reason === "Superseded by a new scheduled interview"
+                                ? "text-[10px] text-amber-700 dark:text-amber-300 border-amber-500/40 bg-amber-500/5"
+                                : "text-[10px]"
+                            }>
                               {iv.status === "scheduled" ? (isRTL ? "مجدولة" : "Scheduled")
                                 : iv.status === "completed" ? (isRTL ? "تمت" : "Completed")
                                 : iv.status === "no_show" ? (isRTL ? "لم يحضر" : "No-show")
-                                : (isRTL ? "ملغاة" : "Cancelled")}
+                                : iv.cancelled_reason === "Superseded by a new scheduled interview"
+                                  ? (isRTL ? "تم إعادة جدولتها" : "Rescheduled")
+                                  : (isRTL ? "ملغاة" : "Cancelled")}
                             </Badge>
                             {iv.outcome && (
                               <Badge variant="outline" className={
