@@ -181,6 +181,52 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
             </DialogTitle>
           </DialogHeader>
 
+          {/* Applicant action alerts */}
+          {pendingReschedule && (
+            <Card className="border-amber-500/40 bg-amber-500/5">
+              <CardContent className="p-3 flex items-start gap-3">
+                <CalendarClock className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                <div className="flex-1 text-sm">
+                  <div className="font-medium text-amber-800 dark:text-amber-300">
+                    {isRTL ? "المتقدم طلب إعادة جدولة المقابلة" : "Applicant requested to reschedule"}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {isRTL ? "للمقابلة المحددة في " : "For interview on "}
+                    <span className="font-medium">{cairoDate(pendingReschedule.scheduled_at)}</span>
+                    {" · "}
+                    {isRTL ? "تم الطلب " : "Requested "}
+                    {cairoDate(pendingReschedule.reschedule_requested_at!)}
+                  </div>
+                  {pendingReschedule.reschedule_reason && (
+                    <div className="mt-2 p-2 rounded bg-background/60 text-xs italic">
+                      "{pendingReschedule.reschedule_reason}"
+                    </div>
+                  )}
+                  <Button size="sm" variant="outline" className="mt-2" onClick={() => setScheduleOpen(true)}>
+                    <CalendarPlus className="w-4 h-4 me-2" />
+                    {isRTL ? "اقتراح موعد جديد" : "Propose new time"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {pendingCancellation && (
+            <Card className="border-destructive/40 bg-destructive/5">
+              <CardContent className="p-3 flex items-start gap-3">
+                <XCircle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
+                <div className="flex-1 text-sm">
+                  <div className="font-medium text-destructive">
+                    {isRTL ? "المتقدم ألغى المقابلة" : "Applicant cancelled the interview"}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {cairoDate(pendingCancellation.cancelled_by_applicant_at!)}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Contact + actions */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Card>
