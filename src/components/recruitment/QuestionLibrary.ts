@@ -46,8 +46,8 @@ export const RESERVED_FIELDS: JobFormField[] = [
   {
     key: "location",
     type: "single_choice",
-    label_en: "Location / Governorate",
-    label_ar: "المحافظة / الموقع",
+    label_en: "Governorate",
+    label_ar: "المحافظة",
     required: true,
     reserved: true,
     options: [
@@ -81,6 +81,19 @@ export const RESERVED_FIELDS: JobFormField[] = [
       { value: "outside_egypt", label_en: "Outside Egypt", label_ar: "خارج مصر" },
     ],
   },
+  {
+    key: "city",
+    type: "single_choice",
+    label_en: "City / Markaz",
+    label_ar: "المدينة / المركز",
+    required: true,
+    reserved: true,
+    // Options are populated dynamically by the form based on selected governorate.
+    // The "depends_on" hint is consumed by the public form renderer.
+    options: [],
+    // @ts-ignore — extra hint, ignored by other consumers
+    depends_on: "location",
+  } as JobFormField,
   { key: "cv", type: "file_upload", label_en: "CV / Resume (PDF)", label_ar: "السيرة الذاتية (PDF)", required: true, accept: ".pdf,.doc,.docx", reserved: true },
 ];
 
