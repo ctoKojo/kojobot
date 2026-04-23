@@ -123,6 +123,27 @@ export default function AdminJobDetail() {
     return c;
   }, [applications]);
 
+  const interviewActionByApp = useMemo(() => {
+    const map: Record<string, "reschedule" | "confirmed" | "cancelled" | null> = {};
+    interviews.forEach((iv) => {
+      if (iv.status !== "scheduled") return;
+      // Priority: cancellation > pending reschedule > confirmed
+      if (iv.cancelled_by_applicant_at) {
+        map[iv.application_id] = "cancelled";
+      } else if (iv.reschedule_requested_at && map[iv.application_id] !== "cancelled") {
+        map[iv.application_id] = "reschedule";
+      } else if (iv.applicant_confirmed_at && !map[iv.application_id]) {
+        map[iv.application_id] = "confirmed";
+      }
+    });
+    return map;
+  }, [interviews]);
+
+  const pendingActionCount = useMemo(
+    () => Object.values(interviewActionByApp).filter((v) => v === "reschedule" || v === "cancelled").length,
+    [interviewActionByApp],
+  );
+
   const exportCsv = () => {
     if (!applications.length) return;
     const header = ["Name", "Email", "Phone", "Status", "Source", "Submitted", "Answers"];
