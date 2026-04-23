@@ -72,7 +72,7 @@ export default function InterviewConfirm() {
         if (!data || (Array.isArray(data) && data.length === 0)) {
           setError(isRTL ? "الرابط غير صحيح أو منتهي الصلاحية" : "Link invalid or expired");
         } else {
-          setInterview((Array.isArray(data) ? data[0] : data) as InterviewData);
+          setInterview((Array.isArray(data) ? data[0] : data) as unknown as InterviewData);
         }
       } catch (e: any) {
         setError(e.message || (isRTL ? "حدث خطأ" : "Error loading interview"));
