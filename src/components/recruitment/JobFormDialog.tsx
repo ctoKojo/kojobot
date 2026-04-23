@@ -11,15 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, AlertCircle } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card } from "@/components/ui/card";
+import { Loader2, Globe, Languages } from "lucide-react";
+import { QuestionBuilder } from "./QuestionBuilder";
+import { RESERVED_FIELDS, JobFormField } from "./QuestionLibrary";
 
-const DEFAULT_FORM_FIELDS = [
-  { key: "full_name", type: "short_text", label_en: "Full Name", label_ar: "الاسم الكامل", required: true },
-  { key: "email", type: "email", label_en: "Email", label_ar: "البريد الإلكتروني", required: true },
-  { key: "phone", type: "phone", label_en: "Phone", label_ar: "رقم الهاتف", required: true },
-  { key: "cv", type: "file_upload", label_en: "CV / Resume", label_ar: "السيرة الذاتية", required: true, accept: ".pdf,.doc,.docx" },
-  { key: "motivation", type: "long_text", label_en: "Why do you want to join us?", label_ar: "لماذا ترغب في الانضمام إلينا؟", required: true },
-];
+type ContentLanguage = "en" | "ar" | "both";
 
 interface JobFormDialogProps {
   open: boolean;
@@ -28,89 +26,169 @@ interface JobFormDialogProps {
   onSaved: () => void;
 }
 
+const TYPE_OPTIONS: Array<{ value: string; label_en: string; label_ar: string; isInternship?: boolean }> = [
+  { value: "full_time", label_en: "Full Time", label_ar: "دوام كامل" },
+  { value: "part_time", label_en: "Part Time", label_ar: "دوام جزئي" },
+  { value: "freelance", label_en: "Freelance", label_ar: "عمل حر" },
+  { value: "internship", label_en: "Internship / Training", label_ar: "تدريب", isInternship: true },
+  { value: "volunteer", label_en: "Volunteer", label_ar: "تطوع" },
+];
+
+const SEASON_OPTIONS = [
+  { value: "summer", label_en: "Summer Training", label_ar: "تدريب صيفي" },
+  { value: "fall", label_en: "Fall Training", label_ar: "تدريب خريفي" },
+  { value: "winter", label_en: "Winter Training", label_ar: "تدريب شتوي" },
+  { value: "spring", label_en: "Spring Training", label_ar: "تدريب ربيعي" },
+];
+
 export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialogProps) {
   const { isRTL } = useLanguage();
   const { user } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [formFieldsText, setFormFieldsText] = useState("");
-  const [jsonError, setJsonError] = useState<string | null>(null);
+
+  const [contentLanguage, setContentLanguage] = useState<ContentLanguage>("en");
+  const [formFields, setFormFields] = useState<JobFormField[]>(RESERVED_FIELDS);
+
   const [form, setForm] = useState({
-    title_en: "", title_ar: "", slug: "",
-    type: "full_time", status: "draft",
-    location_en: "", location_ar: "",
+    title_en: "",
+    title_ar: "",
+    slug: "",
+    type: "full_time",
+    training_season: "" as string,
+    is_paid: true,
+    status: "draft",
+    location_en: "",
+    location_ar: "",
     salary_range: "",
-    description_en: "", description_ar: "",
-    requirements_en: "", requirements_ar: "",
-    benefits_en: "", benefits_ar: "",
+    description_en: "",
+    description_ar: "",
+    requirements_en: "",
+    requirements_ar: "",
+    benefits_en: "",
+    benefits_ar: "",
     deadline_at: "",
     is_featured: false,
   });
 
   useEffect(() => {
     if (job) {
+      setContentLanguage((job.content_language as ContentLanguage) || "both");
       setForm({
-        title_en: job.title_en || "", title_ar: job.title_ar || "",
+        title_en: job.title_en || "",
+        title_ar: job.title_ar || "",
         slug: job.slug || "",
         type: job.type || "full_time",
+        training_season: job.training_season || "",
+        is_paid: job.is_paid !== false,
         status: job.status || "draft",
-        location_en: job.location_en || "", location_ar: job.location_ar || "",
+        location_en: job.location_en || "",
+        location_ar: job.location_ar || "",
         salary_range: job.salary_range || "",
-        description_en: job.description_en || "", description_ar: job.description_ar || "",
-        requirements_en: job.requirements_en || "", requirements_ar: job.requirements_ar || "",
-        benefits_en: job.benefits_en || "", benefits_ar: job.benefits_ar || "",
+        description_en: job.description_en || "",
+        description_ar: job.description_ar || "",
+        requirements_en: job.requirements_en || "",
+        requirements_ar: job.requirements_ar || "",
+        benefits_en: job.benefits_en || "",
+        benefits_ar: job.benefits_ar || "",
         deadline_at: job.deadline_at ? job.deadline_at.split("T")[0] : "",
         is_featured: !!job.is_featured,
       });
-      setFormFieldsText(JSON.stringify(job.form_fields || DEFAULT_FORM_FIELDS, null, 2));
+      // Merge reserved + saved custom fields
+      const saved: JobFormField[] = Array.isArray(job.form_fields) ? job.form_fields : [];
+      const reservedKeys = RESERVED_FIELDS.map((f) => f.key);
+      const customSaved = saved.filter((f) => !reservedKeys.includes(f.key));
+      setFormFields([...RESERVED_FIELDS, ...customSaved]);
     } else {
+      setContentLanguage(isRTL ? "ar" : "en");
       setForm({
-        title_en: "", title_ar: "", slug: "",
-        type: "full_time", status: "draft",
-        location_en: "", location_ar: "", salary_range: "",
-        description_en: "", description_ar: "",
-        requirements_en: "", requirements_ar: "",
-        benefits_en: "", benefits_ar: "",
+        title_en: "",
+        title_ar: "",
+        slug: "",
+        type: "full_time",
+        training_season: "",
+        is_paid: true,
+        status: "draft",
+        location_en: "",
+        location_ar: "",
+        salary_range: "",
+        description_en: "",
+        description_ar: "",
+        requirements_en: "",
+        requirements_ar: "",
+        benefits_en: "",
+        benefits_ar: "",
         deadline_at: "",
         is_featured: false,
       });
-      setFormFieldsText(JSON.stringify(DEFAULT_FORM_FIELDS, null, 2));
+      setFormFields(RESERVED_FIELDS);
     }
-    setJsonError(null);
-  }, [job, open]);
+  }, [job, open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
+  const slugify = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 80);
+
+  const isInternship = form.type === "internship";
+
+  // For single-language mode, bind primary input to one field but mirror to the other on save
+  const handleTitle = (lang: "en" | "ar", value: string) => {
+    if (contentLanguage === "en") {
+      setForm({ ...form, title_en: value, title_ar: value, slug: form.slug || slugify(value) });
+    } else if (contentLanguage === "ar") {
+      setForm({ ...form, title_ar: value, title_en: value, slug: form.slug || slugify(value) });
+    } else {
+      if (lang === "en") setForm({ ...form, title_en: value, slug: form.slug || slugify(value) });
+      else setForm({ ...form, title_ar: value });
+    }
+  };
+
+  const handleField = (lang: "en" | "ar", field: "description" | "requirements" | "benefits" | "location", value: string) => {
+    const enKey = `${field}_en` as keyof typeof form;
+    const arKey = `${field}_ar` as keyof typeof form;
+    if (contentLanguage === "en") {
+      setForm({ ...form, [enKey]: value, [arKey]: value } as typeof form);
+    } else if (contentLanguage === "ar") {
+      setForm({ ...form, [arKey]: value, [enKey]: value } as typeof form);
+    } else {
+      setForm({ ...form, [lang === "en" ? enKey : arKey]: value } as typeof form);
+    }
+  };
 
   const handleSave = async () => {
-    if (!form.title_en.trim() || !form.title_ar.trim()) {
+    // Title required (in primary language)
+    const primaryTitle = contentLanguage === "ar" ? form.title_ar : form.title_en;
+    if (!primaryTitle.trim()) {
       toast({ title: isRTL ? "العنوان مطلوب" : "Title required", variant: "destructive" });
       return;
     }
-    if (!form.description_en.trim() || !form.description_ar.trim()) {
+    const primaryDesc = contentLanguage === "ar" ? form.description_ar : form.description_en;
+    if (!primaryDesc.trim()) {
       toast({ title: isRTL ? "الوصف مطلوب" : "Description required", variant: "destructive" });
       return;
     }
-    let parsedFields: any;
-    try {
-      parsedFields = JSON.parse(formFieldsText);
-      if (!Array.isArray(parsedFields)) throw new Error("must be an array");
-      setJsonError(null);
-    } catch (e: any) {
-      setJsonError(e.message);
+    if (isInternship && !form.training_season) {
+      toast({ title: isRTL ? "اختر فصل التدريب" : "Pick training season", variant: "destructive" });
       return;
     }
 
     setSaving(true);
-    const slug = form.slug.trim() || slugify(form.title_en);
+    const slug = form.slug.trim() || slugify(form.title_en || form.title_ar);
     const payload: any = {
       title_en: form.title_en.trim(),
       title_ar: form.title_ar.trim(),
       slug,
       type: form.type,
+      training_season: isInternship ? form.training_season : null,
+      is_paid: form.is_paid,
+      content_language: contentLanguage,
       status: form.status,
       location_en: form.location_en.trim() || null,
       location_ar: form.location_ar.trim() || null,
-      salary_range: form.salary_range.trim() || null,
+      salary_range: form.is_paid ? form.salary_range.trim() || null : null,
       description_en: form.description_en.trim(),
       description_ar: form.description_ar.trim(),
       requirements_en: form.requirements_en.trim() || null,
@@ -119,7 +197,7 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
       benefits_ar: form.benefits_ar.trim() || null,
       deadline_at: form.deadline_at ? new Date(form.deadline_at).toISOString() : null,
       is_featured: form.is_featured,
-      form_fields: parsedFields,
+      form_fields: formFields,
     };
     if (form.status === "published" && !job?.posted_at) {
       payload.posted_at = new Date().toISOString();
@@ -141,72 +219,217 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     }
   };
 
+  // Render single-language inputs vs both
+  const renderBilingualPair = (
+    labelKey: string,
+    field: "description" | "requirements" | "benefits" | "location",
+    rows: number = 4,
+    isInput = false
+  ) => {
+    const Comp = isInput ? Input : Textarea;
+    if (contentLanguage === "en") {
+      return (
+        <div>
+          <Label>{labelKey}</Label>
+          <Comp
+            {...(isInput ? {} : { rows })}
+            value={(form as any)[`${field}_en`]}
+            onChange={(e: any) => handleField("en", field, e.target.value)}
+          />
+        </div>
+      );
+    }
+    if (contentLanguage === "ar") {
+      return (
+        <div>
+          <Label>{labelKey}</Label>
+          <Comp
+            {...(isInput ? {} : { rows })}
+            dir="rtl"
+            value={(form as any)[`${field}_ar`]}
+            onChange={(e: any) => handleField("ar", field, e.target.value)}
+          />
+        </div>
+      );
+    }
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>{labelKey} (EN)</Label>
+          <Comp
+            {...(isInput ? {} : { rows })}
+            value={(form as any)[`${field}_en`]}
+            onChange={(e: any) => handleField("en", field, e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>{labelKey} (AR)</Label>
+          <Comp
+            {...(isInput ? {} : { rows })}
+            dir="rtl"
+            value={(form as any)[`${field}_ar`]}
+            onChange={(e: any) => handleField("ar", field, e.target.value)}
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{job ? (isRTL ? "تعديل الوظيفة" : "Edit Job") : (isRTL ? "وظيفة جديدة" : "New Job")}</DialogTitle>
         </DialogHeader>
+
+        {/* Content language picker */}
+        <Card className="p-3 bg-muted/40">
+          <div className="flex items-start gap-3">
+            <Languages className="w-4 h-4 mt-0.5 text-muted-foreground" />
+            <div className="flex-1">
+              <Label className="text-xs font-medium">
+                {isRTL ? "بأي لغة هتكتب الوظيفة؟" : "What language will you write this job in?"}
+              </Label>
+              <RadioGroup
+                value={contentLanguage}
+                onValueChange={(v) => setContentLanguage(v as ContentLanguage)}
+                className="flex gap-4 mt-2"
+              >
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value="en" />
+                  <span className="text-sm">{isRTL ? "إنجليزي فقط" : "English only"}</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value="ar" />
+                  <span className="text-sm">{isRTL ? "عربي فقط" : "Arabic only"}</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value="both" />
+                  <span className="text-sm flex items-center gap-1">
+                    <Globe className="w-3 h-3" /> {isRTL ? "اللغتين" : "Both"}
+                  </span>
+                </label>
+              </RadioGroup>
+              <p className="text-[11px] text-muted-foreground mt-1.5">
+                {contentLanguage !== "both"
+                  ? isRTL
+                    ? "هتكتب مرة واحدة، وهيظهر للجميع بنفس النص."
+                    : "You write once, the same text will show for all visitors."
+                  : isRTL
+                  ? "هتكتب نسختين منفصلتين."
+                  : "You'll fill both versions separately."}
+              </p>
+            </div>
+          </div>
+        </Card>
 
         <Tabs defaultValue="basic">
           <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="basic">{isRTL ? "أساسي" : "Basic"}</TabsTrigger>
             <TabsTrigger value="content">{isRTL ? "المحتوى" : "Content"}</TabsTrigger>
-            <TabsTrigger value="form">{isRTL ? "نموذج التقديم" : "Application Form"}</TabsTrigger>
+            <TabsTrigger value="form">
+              {isRTL ? "أسئلة التقديم" : "Application Questions"}
+            </TabsTrigger>
           </TabsList>
 
+          {/* BASIC TAB */}
           <TabsContent value="basic" className="space-y-4 mt-4">
+            {contentLanguage === "both" ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>{isRTL ? "العنوان (إنجليزي)" : "Title (English)"}*</Label>
+                  <Input value={form.title_en} onChange={(e) => handleTitle("en", e.target.value)} />
+                </div>
+                <div>
+                  <Label>{isRTL ? "العنوان (عربي)" : "Title (Arabic)"}*</Label>
+                  <Input dir="rtl" value={form.title_ar} onChange={(e) => handleTitle("ar", e.target.value)} />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <Label>{isRTL ? "العنوان" : "Job Title"}*</Label>
+                <Input
+                  dir={contentLanguage === "ar" ? "rtl" : "ltr"}
+                  value={contentLanguage === "ar" ? form.title_ar : form.title_en}
+                  onChange={(e) => handleTitle(contentLanguage as "en" | "ar", e.target.value)}
+                  placeholder={contentLanguage === "ar" ? "مطور Frontend (تدريب صيفي)" : "Frontend Developer (Summer Internship)"}
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>{isRTL ? "العنوان (إنجليزي)" : "Title (English)"}*</Label>
-                <Input value={form.title_en} onChange={(e) => setForm({ ...form, title_en: e.target.value, slug: form.slug || slugify(e.target.value) })} />
-              </div>
-              <div>
-                <Label>{isRTL ? "العنوان (عربي)" : "Title (Arabic)"}*</Label>
-                <Input value={form.title_ar} onChange={(e) => setForm({ ...form, title_ar: e.target.value })} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Slug</Label>
-                <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: slugify(e.target.value) })} placeholder="auto" />
-              </div>
-              <div>
-                <Label>{isRTL ? "النوع" : "Type"}</Label>
-                <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+                <Label>{isRTL ? "نوع الوظيفة" : "Job Type"}</Label>
+                <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v, training_season: v === "internship" ? form.training_season || "summer" : "" })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="full_time">Full Time</SelectItem>
-                    <SelectItem value="part_time">Part Time</SelectItem>
-                    <SelectItem value="internship">Internship</SelectItem>
-                    <SelectItem value="summer_training">Summer Training</SelectItem>
-                    <SelectItem value="volunteer">Volunteer</SelectItem>
-                    <SelectItem value="freelance">Freelance</SelectItem>
+                    {TYPE_OPTIONS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {isRTL ? t.label_ar : t.label_en}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+              {isInternship ? (
+                <div>
+                  <Label>{isRTL ? "فصل التدريب" : "Training Season"}*</Label>
+                  <Select value={form.training_season} onValueChange={(v) => setForm({ ...form, training_season: v })}>
+                    <SelectTrigger><SelectValue placeholder={isRTL ? "اختر..." : "Pick..."} /></SelectTrigger>
+                    <SelectContent>
+                      {SEASON_OPTIONS.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {isRTL ? s.label_ar : s.label_en}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div>
+                  <Label>Slug</Label>
+                  <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: slugify(e.target.value) })} placeholder="auto" />
+                </div>
+              )}
             </div>
+
+            {/* Paid toggle + salary */}
+            <Card className="p-3 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm">
+                    {isInternship
+                      ? isRTL ? "تدريب مدفوع؟" : "Paid Training?"
+                      : isRTL ? "وظيفة مدفوعة؟" : "Paid Position?"}
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {form.is_paid
+                      ? isRTL ? "هتظهر شارة 'مدفوع' للمتقدمين" : "A 'Paid' badge will show to applicants"
+                      : isRTL ? "هتظهر شارة 'غير مدفوع'" : "An 'Unpaid' badge will show"}
+                  </p>
+                </div>
+                <Switch checked={form.is_paid} onCheckedChange={(v) => setForm({ ...form, is_paid: v })} />
+              </div>
+              {form.is_paid && (
+                <div className="mt-3">
+                  <Label className="text-xs">{isRTL ? "نطاق الراتب / المكافأة" : "Salary / Stipend Range"}</Label>
+                  <Input
+                    value={form.salary_range}
+                    onChange={(e) => setForm({ ...form, salary_range: e.target.value })}
+                    placeholder={isRTL ? "5000-8000 ج.م شهرياً" : "5000-8000 EGP / month"}
+                    className="h-9 mt-1"
+                  />
+                </div>
+              )}
+            </Card>
+
+            {renderBilingualPair(isRTL ? "الموقع" : "Location", "location", 1, true)}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>{isRTL ? "الموقع (إنجليزي)" : "Location (English)"}</Label>
-                <Input value={form.location_en} onChange={(e) => setForm({ ...form, location_en: e.target.value })} placeholder="Cairo / Remote" />
-              </div>
-              <div>
-                <Label>{isRTL ? "الموقع (عربي)" : "Location (Arabic)"}</Label>
-                <Input value={form.location_ar} onChange={(e) => setForm({ ...form, location_ar: e.target.value })} placeholder="القاهرة / عن بُعد" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>{isRTL ? "نطاق الراتب" : "Salary Range"}</Label>
-                <Input value={form.salary_range} onChange={(e) => setForm({ ...form, salary_range: e.target.value })} placeholder="5000-8000 EGP" />
-              </div>
-              <div>
-                <Label>{isRTL ? "آخر يوم تقديم" : "Deadline"}</Label>
+                <Label>{isRTL ? "آخر يوم تقديم" : "Application Deadline"}</Label>
                 <Input type="date" value={form.deadline_at} onChange={(e) => setForm({ ...form, deadline_at: e.target.value })} />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>{isRTL ? "الحالة" : "Status"}</Label>
                 <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
@@ -219,66 +442,28 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-3 pt-6">
-                <Switch checked={form.is_featured} onCheckedChange={(v) => setForm({ ...form, is_featured: v })} />
-                <Label>{isRTL ? "مميزة (Featured)" : "Featured"}</Label>
-              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Switch checked={form.is_featured} onCheckedChange={(v) => setForm({ ...form, is_featured: v })} />
+              <Label>{isRTL ? "وظيفة مميزة (Featured)" : "Featured Position"}</Label>
             </div>
           </TabsContent>
 
+          {/* CONTENT TAB */}
           <TabsContent value="content" className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>{isRTL ? "الوصف (إنجليزي)" : "Description (English)"}*</Label>
-                <Textarea rows={5} value={form.description_en} onChange={(e) => setForm({ ...form, description_en: e.target.value })} />
-              </div>
-              <div>
-                <Label>{isRTL ? "الوصف (عربي)" : "Description (Arabic)"}*</Label>
-                <Textarea rows={5} value={form.description_ar} onChange={(e) => setForm({ ...form, description_ar: e.target.value })} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>{isRTL ? "المتطلبات (إنجليزي)" : "Requirements (English)"}</Label>
-                <Textarea rows={4} value={form.requirements_en} onChange={(e) => setForm({ ...form, requirements_en: e.target.value })} />
-              </div>
-              <div>
-                <Label>{isRTL ? "المتطلبات (عربي)" : "Requirements (Arabic)"}</Label>
-                <Textarea rows={4} value={form.requirements_ar} onChange={(e) => setForm({ ...form, requirements_ar: e.target.value })} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>{isRTL ? "المميزات (إنجليزي)" : "Benefits (English)"}</Label>
-                <Textarea rows={4} value={form.benefits_en} onChange={(e) => setForm({ ...form, benefits_en: e.target.value })} />
-              </div>
-              <div>
-                <Label>{isRTL ? "المميزات (عربي)" : "Benefits (Arabic)"}</Label>
-                <Textarea rows={4} value={form.benefits_ar} onChange={(e) => setForm({ ...form, benefits_ar: e.target.value })} />
-              </div>
-            </div>
+            {renderBilingualPair(isRTL ? "وصف الوظيفة" : "Job Description", "description", 5)}
+            {renderBilingualPair(isRTL ? "المتطلبات" : "Requirements", "requirements", 4)}
+            {renderBilingualPair(isRTL ? "المميزات / المزايا" : "Benefits", "benefits", 4)}
           </TabsContent>
 
-          <TabsContent value="form" className="space-y-3 mt-4">
-            <div className="text-sm text-muted-foreground">
-              {isRTL
-                ? "حدّد الأسئلة كـ JSON. الحقول المحجوزة: full_name, email, phone, cv. الأنواع المتاحة: short_text, long_text, email, phone, number, date, url, file_upload, single_choice."
-                : "Define questions as JSON. Reserved keys: full_name, email, phone, cv. Available types: short_text, long_text, email, phone, number, date, url, file_upload, single_choice."}
-            </div>
-            <Textarea
-              rows={20}
-              value={formFieldsText}
-              onChange={(e) => setFormFieldsText(e.target.value)}
-              className="font-mono text-xs"
+          {/* FORM TAB */}
+          <TabsContent value="form" className="mt-4">
+            <QuestionBuilder
+              fields={formFields}
+              onChange={setFormFields}
+              contentLanguage={contentLanguage}
             />
-            {jsonError && (
-              <div className="flex items-center gap-2 text-destructive text-sm">
-                <AlertCircle className="w-4 h-4" /> {jsonError}
-              </div>
-            )}
-            <Button variant="outline" size="sm" onClick={() => setFormFieldsText(JSON.stringify(DEFAULT_FORM_FIELDS, null, 2))}>
-              {isRTL ? "إعادة للافتراضي" : "Reset to default"}
-            </Button>
           </TabsContent>
         </Tabs>
 
