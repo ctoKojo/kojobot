@@ -11,6 +11,8 @@ interface Job {
   title_en: string;
   title_ar: string;
   type: string;
+  training_season: string | null;
+  is_paid: boolean;
   location_en: string | null;
   location_ar: string | null;
   posted_at: string | null;
@@ -22,9 +24,15 @@ const jobTypeLabel: Record<string, { en: string; ar: string; color: string }> = 
   full_time: { en: "Full Time", ar: "دوام كامل", color: "#6455F0" },
   part_time: { en: "Part Time", ar: "دوام جزئي", color: "#61BAE2" },
   internship: { en: "Internship", ar: "تدريب", color: "#f59e0b" },
-  summer_training: { en: "Summer Training", ar: "تدريب صيفي", color: "#ec4899" },
   volunteer: { en: "Volunteer", ar: "تطوع", color: "#10b981" },
   freelance: { en: "Freelance", ar: "عمل حر", color: "#8b5cf6" },
+};
+
+const seasonLabel: Record<string, { en: string; ar: string }> = {
+  summer: { en: "Summer", ar: "صيفي" },
+  fall: { en: "Fall", ar: "خريفي" },
+  winter: { en: "Winter", ar: "شتوي" },
+  spring: { en: "Spring", ar: "ربيعي" },
 };
 
 export default function Careers() {
