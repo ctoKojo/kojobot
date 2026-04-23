@@ -98,6 +98,7 @@ export default function Careers() {
   }, []);
 
   const filtered = filter === "all" ? jobs : jobs.filter((j) => j.type === filter);
+  const getJobPath = (job: Job) => `/careers/${job.slug || job.id}`;
 
   const ArrowIcon = isRTL ? ArrowRight : ArrowLeft;
 
@@ -179,7 +180,7 @@ export default function Careers() {
                 return (
                   <Link
                     key={job.id}
-                    to={`/careers/${job.slug}`}
+                    to={getJobPath(job)}
                     style={{
                       background: "var(--kojo-surface)",
                       border: "1px solid var(--kojo-border)",

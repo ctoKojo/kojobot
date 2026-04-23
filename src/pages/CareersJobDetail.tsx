@@ -120,12 +120,10 @@ export default function CareersJobDetail() {
     if (!slug) return;
     (async () => {
       setLoading(true);
-      const { data } = await publicSupabase
-        .from("jobs")
-        .select("*")
-        .eq("slug", slug)
-        .eq("status", "published")
-        .maybeSingle();
+      const query = publicSupabase.from("jobs").select("*").eq("status", "published");
+      const { data } = slug.includes("-")
+        ? await query.eq("id", slug).maybeSingle()
+        : await query.eq("slug", slug).maybeSingle();
       setJob(data as unknown as Job | null);
       setLoading(false);
     })();
@@ -136,7 +134,8 @@ export default function CareersJobDetail() {
     if (!job) return;
     const title = isRTL ? job.title_ar : job.title_en;
     const desc = (isRTL ? job.description_ar : job.description_en).replace(/\s+/g, " ").slice(0, 155);
-    const url = `${SITE_URL}/careers/${job.slug}`;
+    const jobPathSegment = job.slug || job.id;
+    const url = `${SITE_URL}/careers/${jobPathSegment}`;
     const ogImg = `${SITE_URL}/kojobot-logo-white.png`;
 
     document.title = `${title} — Kojobot Careers`;
