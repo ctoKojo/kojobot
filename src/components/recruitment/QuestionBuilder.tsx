@@ -43,6 +43,7 @@ export function QuestionBuilder({ fields, onChange, contentLanguage }: QuestionB
   const { isRTL } = useLanguage();
   const [showLibrary, setShowLibrary] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [coreOpen, setCoreOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
