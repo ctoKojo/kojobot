@@ -29,6 +29,16 @@ const STATUS_META: Record<AppStatus, { en: string; ar: string; color: string }> 
   rejected: { en: "Rejected", ar: "مرفوض", color: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30" },
 };
 
+interface InterviewLite {
+  id: string;
+  application_id: string;
+  scheduled_at: string;
+  status: string;
+  applicant_confirmed_at: string | null;
+  reschedule_requested_at: string | null;
+  cancelled_by_applicant_at: string | null;
+}
+
 interface Application {
   id: string;
   job_id: string;
