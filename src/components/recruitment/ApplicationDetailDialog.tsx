@@ -379,6 +379,24 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
                                 {isRTL ? "بانتظار النتيجة" : "Awaiting outcome"}
                               </Badge>
                             )}
+                            {iv.applicant_confirmed_at && !iv.cancelled_by_applicant_at && (
+                              <Badge variant="outline" className="text-green-700 dark:text-green-300 border-green-500/30">
+                                <CheckCircle2 className="w-3 h-3 me-1" />
+                                {isRTL ? "أكّد المتقدم" : "Applicant confirmed"}
+                              </Badge>
+                            )}
+                            {iv.reschedule_requested_at && !iv.cancelled_by_applicant_at && (
+                              <Badge variant="outline" className="text-amber-700 dark:text-amber-300 border-amber-500/30">
+                                <CalendarClock className="w-3 h-3 me-1" />
+                                {isRTL ? "طلب إعادة جدولة" : "Reschedule requested"}
+                              </Badge>
+                            )}
+                            {iv.cancelled_by_applicant_at && (
+                              <Badge variant="outline" className="text-destructive border-destructive/30">
+                                <XCircle className="w-3 h-3 me-1" />
+                                {isRTL ? "ألغاها المتقدم" : "Cancelled by applicant"}
+                              </Badge>
+                            )}
                           </div>
                           {iv.meeting_link && (
                             <a href={iv.meeting_link} target="_blank" rel="noopener" className="text-xs text-primary hover:underline truncate block mt-1">
@@ -387,6 +405,14 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
                           )}
                           {iv.location && <div className="text-xs text-muted-foreground mt-1">{iv.location}</div>}
                           {iv.notes && <div className="text-xs text-muted-foreground mt-1 italic">"{iv.notes}"</div>}
+                          {iv.reschedule_reason && (
+                            <div className="mt-2 p-2 rounded bg-amber-500/5 border border-amber-500/30 text-xs">
+                              <span className="font-medium text-amber-700 dark:text-amber-300">
+                                {isRTL ? "سبب إعادة الجدولة: " : "Reschedule reason: "}
+                              </span>
+                              {iv.reschedule_reason}
+                            </div>
+                          )}
                         </div>
                         {iv.status === "scheduled" && (
                           <Button size="sm" variant="ghost" onClick={() => setOutcomeOpen(iv.id)}>
