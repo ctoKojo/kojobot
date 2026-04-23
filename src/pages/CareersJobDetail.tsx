@@ -111,9 +111,11 @@ export default function CareersJobDetail() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicateInfo, setDuplicateInfo] = useState<{ tracking_code?: string } | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [trackingCode, setTrackingCode] = useState<string | null>(null);
 
   const handleShare = async () => {
     if (!job) return;

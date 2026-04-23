@@ -101,6 +101,7 @@ const LeaveRequests = React.lazy(() => import("./pages/LeaveRequests"));
 const ParentPending = React.lazy(() => import("./pages/ParentPending"));
 const Careers = React.lazy(() => import("./pages/Careers"));
 const CareersJobDetail = React.lazy(() => import("./pages/CareersJobDetail"));
+const ApplicationStatus = React.lazy(() => import("./pages/ApplicationStatus"));
 const AdminJobs = React.lazy(() => import("./pages/admin/AdminJobs"));
 const AdminJobDetail = React.lazy(() => import("./pages/admin/AdminJobDetail"));
 const AdminJobInvites = React.lazy(() => import("./pages/admin/AdminJobInvites"));
@@ -134,6 +135,7 @@ const App = () => (
                   <Route path="/careers" element={<Careers />} />
                   <Route path="/careers/:slug" element={<CareersJobDetail />} />
                   <Route path="/apply/:slug" element={<CareersJobDetail />} />
+                  <Route path="/application-status" element={<ApplicationStatus />} />
                   <Route path="/admin/jobs" element={<ProtectedRoute allowedRoles={['admin']}><AdminJobs /></ProtectedRoute>} />
                   <Route path="/admin/jobs/:id" element={<ProtectedRoute allowedRoles={['admin']}><AdminJobDetail /></ProtectedRoute>} />
                   <Route path="/admin/jobs/:id/invites" element={<ProtectedRoute allowedRoles={['admin']}><AdminJobInvites /></ProtectedRoute>} />
