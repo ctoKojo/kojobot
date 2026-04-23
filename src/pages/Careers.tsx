@@ -203,10 +203,17 @@ export default function Careers() {
                       e.currentTarget.style.boxShadow = "none";
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: 999, background: `${typeMeta.color}22`, color: typeMeta.color, fontSize: 11, fontWeight: 600 }}>
-                        {isRTL ? typeMeta.ar : typeMeta.en}
-                      </span>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: 999, background: `${typeMeta?.color || "#6455F0"}22`, color: typeMeta?.color || "#6455F0", fontSize: 11, fontWeight: 600 }}>
+                          {job.type === "internship" && job.training_season
+                            ? (isRTL ? `تدريب ${seasonLabel[job.training_season].ar}` : `${seasonLabel[job.training_season].en} Internship`)
+                            : (isRTL ? typeMeta?.ar : typeMeta?.en)}
+                        </span>
+                        <span style={{ padding: "4px 10px", borderRadius: 999, background: job.is_paid ? "rgba(16,185,129,.15)" : "rgba(148,163,184,.15)", color: job.is_paid ? "#10b981" : "#94a3b8", fontSize: 11, fontWeight: 600 }}>
+                          {job.is_paid ? (isRTL ? "مدفوع" : "Paid") : (isRTL ? "غير مدفوع" : "Unpaid")}
+                        </span>
+                      </div>
                       {job.is_featured && (
                         <span style={{ padding: "4px 10px", borderRadius: 999, background: "rgba(245,158,11,.15)", color: "var(--kojo-gold)", fontSize: 11, fontWeight: 600 }}>
                           {isRTL ? "مميزة" : "Featured"}
