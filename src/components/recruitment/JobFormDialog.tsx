@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card } from "@/components/ui/card";
-import { Loader2, Globe, Languages } from "lucide-react";
+import { Loader2, Globe, Languages, Link2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { QuestionBuilder } from "./QuestionBuilder";
 import { RESERVED_FIELDS, JobFormField } from "./QuestionLibrary";
 
@@ -144,9 +144,28 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     return firstValidSlug || `job-${Date.now()}`;
   };
 
+  // Slug validation: 3-80 chars, lowercase letters/numbers/Arabic, hyphen-separated, no leading/trailing hyphens
+  const SLUG_PATTERN = /^[\p{Letter}\p{Number}]+(-[\p{Letter}\p{Number}]+)*$/u;
+  const validateSlug = (value: string): { valid: boolean; error: string } => {
+    if (!value) return { valid: false, error: isRTL ? "السلاج مطلوب" : "Slug is required" };
+    if (value.length < 3) return { valid: false, error: isRTL ? "3 أحرف على الأقل" : "Minimum 3 characters" };
+    if (value.length > 80) return { valid: false, error: isRTL ? "80 حرف كحد أقصى" : "Maximum 80 characters" };
+    if (!SLUG_PATTERN.test(value)) {
+      return {
+        valid: false,
+        error: isRTL
+          ? "حروف وأرقام فقط مفصولة بـ '-' (بدون مسافات أو رموز)"
+          : "Letters & numbers only, separated by '-' (no spaces or symbols)",
+      };
+    }
+    return { valid: true, error: "" };
+  };
+
+  const slugCheck = validateSlug(form.slug);
+
   const isInternship = form.type === "internship";
 
-  // For single-language mode, bind primary input to one field but mirror to the other on save
+  // Auto-fill slug only if user hasn't typed one yet
   const handleTitle = (lang: "en" | "ar", value: string) => {
     if (contentLanguage === "en") {
       setForm({ ...form, title_en: value, title_ar: value, slug: form.slug || buildJobSlug(value) });
@@ -186,9 +205,13 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
       toast({ title: isRTL ? "اختر فصل التدريب" : "Pick training season", variant: "destructive" });
       return;
     }
+    if (!slugCheck.valid) {
+      toast({ title: isRTL ? "السلاج غير صحيح" : "Invalid slug", description: slugCheck.error, variant: "destructive" });
+      return;
+    }
 
     setSaving(true);
-    const slug = form.slug.trim() || buildJobSlug(form.title_en, form.title_ar);
+    const slug = form.slug.trim();
     const payload: any = {
       title_en: form.title_en.trim(),
       title_ar: form.title_ar.trim(),
@@ -383,7 +406,7 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
                   </SelectContent>
                 </Select>
               </div>
-              {isInternship ? (
+              {isInternship && (
                 <div>
                   <Label>{isRTL ? "فصل التدريب" : "Training Season"}*</Label>
                   <Select value={form.training_season} onValueChange={(v) => setForm({ ...form, training_season: v })}>
@@ -397,13 +420,56 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
                     </SelectContent>
                   </Select>
                 </div>
-              ) : (
-                <div>
-                  <Label>Slug</Label>
-                  <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: slugify(e.target.value) })} placeholder="auto" />
-                </div>
               )}
             </div>
+
+            {/* Slug — permanent, editable, validated */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="flex items-center gap-1.5">
+                  <Link2 className="w-3.5 h-3.5" />
+                  {isRTL ? "رابط الوظيفة (Slug)" : "Job URL Slug"}*
+                </Label>
+                {form.slug && (
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, slug: buildJobSlug(form.title_en, form.title_ar) })}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    {isRTL ? "توليد من العنوان" : "Generate from title"}
+                  </button>
+                )}
+              </div>
+              <Input
+                value={form.slug}
+                onChange={(e) => setForm({ ...form, slug: slugify(e.target.value) })}
+                placeholder={isRTL ? "frontend-trainer-summer" : "frontend-trainer-summer"}
+                dir="ltr"
+                className={!slugCheck.valid && form.slug ? "border-destructive" : ""}
+              />
+              <div className="flex items-start gap-1.5 mt-1.5">
+                {form.slug && slugCheck.valid ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                    <p className="text-[11px] text-muted-foreground" dir="ltr">
+                      kojobot.com/careers/<span className="font-mono text-foreground">{form.slug}</span>
+                    </p>
+                  </>
+                ) : form.slug ? (
+                  <>
+                    <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 flex-shrink-0" />
+                    <p className="text-[11px] text-destructive">{slugCheck.error}</p>
+                  </>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    {isRTL
+                      ? "حروف وأرقام فقط (إنجليزي أو عربي) مفصولة بـ '-' — مثال: junior-developer"
+                      : "Letters & numbers only, separated by '-' — e.g. junior-developer"}
+                  </p>
+                )}
+              </div>
+            </div>
+
 
             {/* Paid toggle + salary */}
             <Card className="p-3 bg-muted/30">
