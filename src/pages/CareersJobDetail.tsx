@@ -531,7 +531,14 @@ export default function CareersJobDetail() {
                 field={f}
                 isRTL={isRTL}
                 value={formValues[f.key]}
-                onChange={(v) => setFormValues((p) => ({ ...p, [f.key]: v }))}
+                allValues={formValues}
+                onChange={(v) => setFormValues((p) => {
+                  // If governorate (location) changes, reset dependent city
+                  if (f.key === "location" && p.city) {
+                    return { ...p, [f.key]: v, city: "" };
+                  }
+                  return { ...p, [f.key]: v };
+                })}
                 onFileChange={f.key === "cv" ? setCvFile : undefined}
                 fileName={f.key === "cv" ? cvFile?.name : undefined}
               />
