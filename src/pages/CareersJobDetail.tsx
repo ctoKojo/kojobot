@@ -119,22 +119,12 @@ export default function CareersJobDetail() {
 
   const handleShare = async () => {
     if (!job) return;
-    const title = isRTL ? job.title_ar : job.title_en;
-    const desc = (isRTL ? job.description_ar : job.description_en).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 140);
-    // Use the edge function URL — it serves OG meta tags for crawlers (WhatsApp, Facebook, Twitter)
-    // and instantly redirects real users to the SPA route.
-    const supabaseRef = (import.meta.env.VITE_SUPABASE_PROJECT_ID as string) || "lrouvlmandrjughswbyw";
     const slug = job.slug || job.id;
-    const shareUrl = `https://${supabaseRef}.supabase.co/functions/v1/job-share/${slug}?lang=${isRTL ? "ar" : "en"}`;
-    const shareData = {
-      title: `${title} — Kojobot Careers`,
-      text: desc,
-      url: shareUrl,
-    };
+    const shareUrl = `${window.location.origin}/careers/${slug}`;
     // Try native share first (mobile + modern browsers)
     if (typeof navigator !== "undefined" && (navigator as any).share) {
       try {
-        await (navigator as any).share(shareData);
+        await (navigator as any).share({ url: shareUrl });
         return;
       } catch {
         // user cancelled — fall through to copy
