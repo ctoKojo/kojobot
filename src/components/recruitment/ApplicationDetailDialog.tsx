@@ -162,6 +162,12 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
   const interviewModeIcon = (mode: string) => mode === "online" ? Video : mode === "onsite" ? MapPin : Phone;
   const cairoDate = (iso: string) => new Date(iso).toLocaleString(isRTL ? "ar-EG" : "en-US", { timeZone: "Africa/Cairo", dateStyle: "medium", timeStyle: "short" });
 
+  // Pending applicant action across all interviews: any reschedule request that is still unresolved
+  const pendingReschedule = interviews.find(
+    (iv) => iv.reschedule_requested_at && iv.status === "scheduled" && !iv.cancelled_by_applicant_at,
+  );
+  const pendingCancellation = interviews.find((iv) => iv.cancelled_by_applicant_at && iv.status === "scheduled");
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
