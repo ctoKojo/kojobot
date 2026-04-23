@@ -137,6 +137,10 @@ Deno.serve(async (req) => {
       } else if ((f.type === "short_text" || f.type === "long_text") && typeof v === "string") {
         const max = f.type === "short_text" ? 200 : 2000;
         if (v.length > max) formatErr = `"${label}" must be ≤ ${max} characters`;
+      } else if (f.type === "multi_choice") {
+        if (!Array.isArray(v)) formatErr = `"${label}" must be a list of choices`;
+        else if (v.length > 50) formatErr = `"${label}" has too many selections`;
+        else if (!v.every((x) => typeof x === "string" && x.length <= 100)) formatErr = `"${label}" contains invalid choices`;
       }
 
       if (formatErr) {
