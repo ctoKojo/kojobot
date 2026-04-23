@@ -24,7 +24,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Plus, Lock, ChevronDown, ChevronUp, X } from "lucide-react";
+import { GripVertical, Trash2, Plus, Lock, ChevronDown, ChevronUp, Library, X } from "lucide-react";
 import {
   JobFormField,
   RESERVED_FIELDS,
@@ -41,8 +41,8 @@ interface QuestionBuilderProps {
 
 export function QuestionBuilder({ fields, onChange, contentLanguage }: QuestionBuilderProps) {
   const { isRTL } = useLanguage();
+  const [showLibrary, setShowLibrary] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [librarySelect, setLibrarySelect] = useState<string>("");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -120,59 +120,52 @@ export function QuestionBuilder({ fields, onChange, contentLanguage }: QuestionB
         </div>
       </div>
 
-      {/* Add question controls */}
-      <Card className="p-3 border-primary/20 bg-primary/5">
-        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-          {isRTL ? "إضافة سؤال جديد" : "Add a New Question"}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-2 items-stretch">
-          <Select
-            value={librarySelect}
-            onValueChange={(v) => {
-              setLibrarySelect(v);
-              const tpl = QUESTION_LIBRARY.find((q) => q.key === v);
-              if (tpl) {
-                addFromLibrary(tpl);
-                setLibrarySelect("");
-              }
-            }}
-          >
-            <SelectTrigger className="h-9">
-              <SelectValue placeholder={isRTL ? "اختر سؤال جاهز من المكتبة..." : "Pick a ready-made question..."} />
-            </SelectTrigger>
-            <SelectContent className="max-h-72 bg-popover z-50">
-              {availableLibrary.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-muted-foreground">
-                  {isRTL ? "كل أسئلة المكتبة مضافة بالفعل" : "All library questions are already added"}
-                </div>
-              ) : (
-                availableLibrary.map((q) => (
-                  <SelectItem key={q.key} value={q.key}>
-                    <div className="flex items-center gap-2">
-                      <span>{isRTL ? q.label_ar : q.label_en}</span>
-                      <Badge variant="outline" className="text-[9px] h-4 px-1">{q.type}</Badge>
-                    </div>
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-          <div className="hidden md:flex items-center text-xs text-muted-foreground px-2">
-            {isRTL ? "أو" : "or"}
-          </div>
-          <Button type="button" size="sm" variant="outline" onClick={addBlank} className="h-9">
-            <Plus className="w-4 h-4 me-1" />
-            {isRTL ? "سؤال مخصص" : "Custom Question"}
-          </Button>
-        </div>
-      </Card>
-
       {/* Custom fields list */}
       <div className="space-y-2">
-        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          {isRTL ? "أسئلة مخصصة" : "Custom Questions"}
-          <span className="ms-2 text-foreground">({customFields.length})</span>
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            {isRTL ? "أسئلة مخصصة" : "Custom Questions"}
+            <span className="ms-2 text-foreground">({customFields.length})</span>
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => setShowLibrary(!showLibrary)}>
+              <Library className="w-4 h-4 me-1" />
+              {isRTL ? "مكتبة الأسئلة" : "Question Library"}
+            </Button>
+            <Button type="button" size="sm" onClick={addBlank}>
+              <Plus className="w-4 h-4 me-1" />
+              {isRTL ? "سؤال مخصص" : "Custom"}
+            </Button>
+          </div>
         </div>
+
+        {showLibrary && availableLibrary.length > 0 && (
+          <Card className="p-3 border-primary/30 bg-primary/5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium">
+                {isRTL ? "أضف من المكتبة بضغطة" : "Add from library with one click"}
+              </div>
+              <Button type="button" size="icon" variant="ghost" className="h-6 w-6" onClick={() => setShowLibrary(false)}>
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {availableLibrary.map((q) => (
+                <Button
+                  key={q.key}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8"
+                  onClick={() => addFromLibrary(q)}
+                >
+                  <Plus className="w-3 h-3 me-1" />
+                  {isRTL ? q.label_ar : q.label_en}
+                </Button>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {customFields.length === 0 ? (
           <Card className="p-6 text-center text-sm text-muted-foreground border-dashed">
