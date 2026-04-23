@@ -72,6 +72,7 @@ export default function AdminJobDetail() {
 
   const [job, setJob] = useState<Job | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [interviews, setInterviews] = useState<InterviewLite[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -89,7 +90,19 @@ export default function AdminJobDetail() {
     } else {
       setJob(jobRes.data as Job | null);
     }
-    if (!appsRes.error) setApplications((appsRes.data || []) as Application[]);
+    const apps = (appsRes.error ? [] : appsRes.data || []) as Application[];
+    if (!appsRes.error) setApplications(apps);
+
+    // Load interviews for these applications to surface applicant actions on the list view
+    if (apps.length > 0) {
+      const { data: ivs } = await supabase
+        .from("job_interviews")
+        .select("id,application_id,scheduled_at,status,applicant_confirmed_at,reschedule_requested_at,cancelled_by_applicant_at")
+        .in("application_id", apps.map((a) => a.id));
+      setInterviews((ivs || []) as InterviewLite[]);
+    } else {
+      setInterviews([]);
+    }
     setLoading(false);
   };
 
