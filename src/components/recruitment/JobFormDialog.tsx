@@ -406,7 +406,7 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
                   </SelectContent>
                 </Select>
               </div>
-              {isInternship ? (
+              {isInternship && (
                 <div>
                   <Label>{isRTL ? "فصل التدريب" : "Training Season"}*</Label>
                   <Select value={form.training_season} onValueChange={(v) => setForm({ ...form, training_season: v })}>
@@ -420,13 +420,56 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
                     </SelectContent>
                   </Select>
                 </div>
-              ) : (
-                <div>
-                  <Label>Slug</Label>
-                  <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: slugify(e.target.value) })} placeholder="auto" />
-                </div>
               )}
             </div>
+
+            {/* Slug — permanent, editable, validated */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="flex items-center gap-1.5">
+                  <Link2 className="w-3.5 h-3.5" />
+                  {isRTL ? "رابط الوظيفة (Slug)" : "Job URL Slug"}*
+                </Label>
+                {form.slug && (
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, slug: buildJobSlug(form.title_en, form.title_ar) })}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    {isRTL ? "توليد من العنوان" : "Generate from title"}
+                  </button>
+                )}
+              </div>
+              <Input
+                value={form.slug}
+                onChange={(e) => setForm({ ...form, slug: slugify(e.target.value) })}
+                placeholder={isRTL ? "frontend-trainer-summer" : "frontend-trainer-summer"}
+                dir="ltr"
+                className={!slugCheck.valid && form.slug ? "border-destructive" : ""}
+              />
+              <div className="flex items-start gap-1.5 mt-1.5">
+                {form.slug && slugCheck.valid ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-[11px] text-muted-foreground" dir="ltr">
+                      kojobot.com/careers/<span className="font-mono text-foreground">{form.slug}</span>
+                    </p>
+                  </>
+                ) : form.slug ? (
+                  <>
+                    <AlertCircle className="w-3.5 h-3.5 text-destructive mt-0.5 flex-shrink-0" />
+                    <p className="text-[11px] text-destructive">{slugCheck.error}</p>
+                  </>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    {isRTL
+                      ? "حروف وأرقام فقط (إنجليزي أو عربي) مفصولة بـ '-' — مثال: junior-developer"
+                      : "Letters & numbers only, separated by '-' — e.g. junior-developer"}
+                  </p>
+                )}
+              </div>
+            </div>
+
 
             {/* Paid toggle + salary */}
             <Card className="p-3 bg-muted/30">
