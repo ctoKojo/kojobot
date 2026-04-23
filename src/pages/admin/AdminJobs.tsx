@@ -61,8 +61,23 @@ export default function AdminJobs() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [editing, setEditing] = useState<JobRow | null>(null);
+  const [editing, setEditing] = useState<any | null>(null);
   const [openForm, setOpenForm] = useState(false);
+
+  const openEdit = async (jobId: string) => {
+    // Fetch the FULL job row (the list query only selects a subset of columns)
+    const { data, error } = await supabase
+      .from("jobs")
+      .select("*")
+      .eq("id", jobId)
+      .maybeSingle();
+    if (error || !data) {
+      toast({ title: isRTL ? "فشل تحميل بيانات الوظيفة" : "Failed to load job", description: error?.message, variant: "destructive" });
+      return;
+    }
+    setEditing(data);
+    setOpenForm(true);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -219,7 +234,7 @@ export default function AdminJobs() {
                           <DropdownMenuItem onClick={() => navigate(`/admin/jobs/${job.id}`)}>
                             <Eye className="w-4 h-4 me-2" />{isRTL ? "عرض المتقدمين" : "View applicants"}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => { setEditing(job); setOpenForm(true); }}>
+                          <DropdownMenuItem onClick={() => openEdit(job.id)}>
                             <Pencil className="w-4 h-4 me-2" />{isRTL ? "تعديل" : "Edit"}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => navigate(`/admin/jobs/${job.id}/invites`)}>
