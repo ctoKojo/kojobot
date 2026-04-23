@@ -7,6 +7,12 @@ import { z } from 'npm:zod@3.23.8'
 import { template as sessionReminderTpl } from '../_shared/email-templates/session-reminder.ts'
 import { template as paymentDueTpl } from '../_shared/email-templates/payment-due.ts'
 import { template as passwordResetTpl } from '../_shared/email-templates/password-reset.ts'
+import {
+  pickHtmlEnFirst,
+  pickSubjectEnFirst,
+  renderTemplate,
+  resolveTemplate as resolveDbTemplate,
+} from '../_shared/templateResolver.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,105 +59,33 @@ const RequestSchema = z.object({
   smokeTest: z.boolean().optional(),
 })
 
-// Simple {{variable}} interpolation. Missing keys render as empty string.
-function renderTemplate(tpl: string, data: Record<string, any>): string {
-  return tpl.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key) => {
-    const v = data[key]
-    return v === undefined || v === null ? '' : String(v)
-  })
-}
-
-// Resolve subject + html for a given templateName, preferring a DB override
-// when use_db_template = true on the event mapping.
-async function resolveTemplate(
+// Resolve subject + html for a given templateName, using the shared template
+// resolver so send-email, send-telegram, and template tests all follow the
+// exact same lookup order and Mustache section behavior.
+async function resolveEmailTemplate(
   supabase: ReturnType<typeof createClient>,
   templateName: string,
   audience: string,
   data: Record<string, any>,
 ): Promise<{ subject: string; html: string; mapping: any } | null> {
-  // 1. Look up mapping by (event_key, audience). Fall back to any audience if not found.
-  let { data: mapping } = await supabase
-    .from('email_event_mappings')
-    .select('use_db_template, is_enabled, template_id, admin_channel_override, audience')
-    .eq('event_key', templateName)
-    .eq('audience', audience)
-    .maybeSingle()
+  const resolved = await resolveDbTemplate(supabase, templateName, audience)
+  if (resolved.disabled) return null
 
-  if (!mapping) {
-    const { data: fallbackMapping } = await supabase
-      .from('email_event_mappings')
-      .select('use_db_template, is_enabled, template_id, admin_channel_override, audience')
-      .eq('event_key', templateName)
-      .order('audience', { ascending: true })
-      .limit(1)
-      .maybeSingle()
-    mapping = fallbackMapping
-  }
-
-  if (mapping && mapping.is_enabled === false) return null
-
-  // Helper: pick EN body, fall back to AR if EN is empty.
-  const pickSubject = (tpl: any) =>
-    (tpl?.subject_en && tpl.subject_en.trim()) ? tpl.subject_en : (tpl?.subject_ar ?? '')
-  const pickHtml = (tpl: any) =>
-    (tpl?.body_html_en && tpl.body_html_en.trim()) ? tpl.body_html_en : (tpl?.body_html_ar ?? '')
-
-  // 2. DB override path — use the mapping's template_id
-  if (mapping?.use_db_template && mapping.template_id) {
-    const { data: tpl } = await supabase
-      .from('email_templates')
-      .select('subject_en, subject_ar, body_html_en, body_html_ar, is_active')
-      .eq('id', mapping.template_id)
-      .maybeSingle()
-    if (tpl?.is_active) {
-      return {
-        subject: renderTemplate(pickSubject(tpl), data),
-        html: renderTemplate(pickHtml(tpl), data),
-        mapping,
-      }
-    }
-  }
-
-  // 3. Direct template lookup by name (used for "Send Test" from the templates UI,
-  //    where templateName is the template's `name` rather than an event_key).
-  const { data: directTpl } = await supabase
-    .from('email_templates')
-    .select('subject_en, subject_ar, body_html_en, body_html_ar, is_active')
-    .eq('name', templateName)
-    .eq('is_active', true)
-    .maybeSingle()
-  if (directTpl) {
+  if (resolved.template) {
     return {
-      subject: renderTemplate(pickSubject(directTpl), data),
-      html: renderTemplate(pickHtml(directTpl), data),
-      mapping,
+      subject: renderTemplate(pickSubjectEnFirst(resolved.template), data),
+      html: renderTemplate(pickHtmlEnFirst(resolved.template), data),
+      mapping: resolved.mapping,
     }
   }
 
-  // 4. Convention-based fallback: try `default-{eventKey}` template
-  // This prevents orphan events when an admin forgets to create a mapping.
-  if (!templateName.startsWith('default-')) {
-    const conventionName = `default-${templateName}`
-    const { data: conventionTpl } = await supabase
-      .from('email_templates')
-      .select('subject_en, subject_ar, body_html_en, body_html_ar, is_active')
-      .eq('name', conventionName)
-      .eq('is_active', true)
-      .maybeSingle()
-    if (conventionTpl) {
-      console.log(`[send-email] Using convention fallback: ${conventionName}`)
-      return {
-        subject: renderTemplate(pickSubject(conventionTpl), data),
-        html: renderTemplate(pickHtml(conventionTpl), data),
-        mapping,
-      }
-    }
-  }
-
-  // 5. Code template fallback
   const codeTpl = CODE_TEMPLATES[templateName]
   if (codeTpl) {
-    return { subject: codeTpl.subject(data), html: codeTpl.render(data), mapping }
+    return {
+      subject: codeTpl.subject(data),
+      html: codeTpl.render(data),
+      mapping: resolved.mapping,
+    }
   }
 
   return null
@@ -208,7 +142,7 @@ Deno.serve(async (req) => {
       html: renderTemplate(customBody, data),
     }
   } else {
-    const baseTpl = await resolveTemplate(supabase, templateName, audience, data)
+    const baseTpl = await resolveEmailTemplate(supabase, templateName, audience, data)
     if (baseTpl) {
       resolved = {
         subject: customSubject ? renderTemplate(customSubject, data) : baseTpl.subject,
