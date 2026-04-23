@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Upload, CheckCircle2, AlertCircle, Loader2, Shar
 import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LandingStyles } from "@/components/landing/LandingStyles";
+import { getCitiesForGovernorate } from "@/lib/egyptCities";
 
 interface FormField {
   key: string;
@@ -17,6 +18,7 @@ interface FormField {
   placeholder_ar?: string;
   min?: number;
   max?: number;
+  depends_on?: string;
 }
 
 interface Job {
@@ -284,6 +286,9 @@ export default function CareersJobDetail() {
             throw new Error(isRTL ? `"${label}" يجب ألا يزيد عن ${max} حرف` : `"${label}" must be ≤ ${max} characters`);
           }
         }
+        if (f.type === "multi_choice" && !Array.isArray(v)) {
+          throw new Error(isRTL ? `"${label}" قيمة غير صحيحة` : `"${label}" has an invalid value`);
+        }
       }
 
       const fullName = String(formValues.full_name || "").trim();
@@ -292,9 +297,14 @@ export default function CareersJobDetail() {
       if (!fullName || fullName.length < 2 || fullName.length > 100) {
         throw new Error(isRTL ? "الاسم يجب أن يكون من 2 إلى 100 حرف" : "Name must be 2-100 characters");
       }
-      if (!isEmail(email)) throw new Error(isRTL ? "بريد إلكتروني غير صحيح" : "Invalid email");
-      if (phone && !isPhone(phone)) {
-        throw new Error(isRTL ? "رقم الهاتف غير صحيح (8-15 رقم)" : "Invalid phone (8-15 digits)");
+      if (!isEmail(email)) {
+        throw new Error(isRTL ? "بريد إلكتروني غير صحيح (مثال: name@example.com)" : "Invalid email (e.g. name@example.com)");
+      }
+      if (!phone) {
+        throw new Error(isRTL ? "رقم الهاتف مطلوب" : "Phone is required");
+      }
+      if (!isPhone(phone)) {
+        throw new Error(isRTL ? "رقم الهاتف غير صحيح (8-15 رقم، يمكن البدء بـ +)" : "Invalid phone (8-15 digits, may start with +)");
       }
 
       // Upload CV if provided
@@ -529,7 +539,14 @@ export default function CareersJobDetail() {
                 field={f}
                 isRTL={isRTL}
                 value={formValues[f.key]}
-                onChange={(v) => setFormValues((p) => ({ ...p, [f.key]: v }))}
+                allValues={formValues}
+                onChange={(v) => setFormValues((p) => {
+                  // If governorate (location) changes, reset dependent city
+                  if (f.key === "location" && p.city) {
+                    return { ...p, [f.key]: v, city: "" };
+                  }
+                  return { ...p, [f.key]: v };
+                })}
                 onFileChange={f.key === "cv" ? setCvFile : undefined}
                 fileName={f.key === "cv" ? cvFile?.name : undefined}
               />
@@ -597,8 +614,9 @@ function Section({ title, content }: { title: string; content: string }) {
   );
 }
 
-function FieldRenderer({ field, isRTL, value, onChange, onFileChange, fileName }: {
-  field: FormField; isRTL: boolean; value: any; onChange: (v: any) => void;
+function FieldRenderer({ field, isRTL, value, allValues, onChange, onFileChange, fileName }: {
+  field: FormField; isRTL: boolean; value: any; allValues?: Record<string, any>;
+  onChange: (v: any) => void;
   onFileChange?: (f: File | null) => void; fileName?: string;
 }) {
   const label = isRTL ? field.label_ar : field.label_en;
@@ -636,7 +654,84 @@ function FieldRenderer({ field, isRTL, value, onChange, onFileChange, fileName }
     );
   }
 
-  if (field.type === "single_choice" && field.options) {
+  // Multi-choice: render as checkboxes; value is an array of strings
+  if (field.type === "multi_choice" && field.options) {
+    const selected: string[] = Array.isArray(value) ? value : [];
+    const toggle = (v: string) => {
+      const next = selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v];
+      onChange(next);
+    };
+    return (
+      <div>
+        <Label text={label} required={field.required} />
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+            gap: 8,
+            padding: 10,
+            borderRadius: 12,
+            background: "rgba(255,255,255,.04)",
+            border: "1px solid var(--kojo-border)",
+          }}
+        >
+          {field.options.map((opt) => {
+            const checked = selected.includes(opt.value);
+            return (
+              <label
+                key={opt.value}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 10px",
+                  borderRadius: 10,
+                  cursor: "pointer",
+                  background: checked ? "rgba(100,85,240,.15)" : "rgba(255,255,255,.03)",
+                  border: `1px solid ${checked ? "rgba(100,85,240,.5)" : "transparent"}`,
+                  transition: "all 0.15s ease",
+                  fontSize: 13,
+                  color: "var(--kojo-text)",
+                  userSelect: "none",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggle(opt.value)}
+                  style={{ accentColor: "#6455F0", cursor: "pointer" }}
+                />
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {isRTL ? opt.label_ar : opt.label_en}
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (field.type === "single_choice" && (field.options || field.depends_on)) {
+    // Resolve options: if this field depends on another (e.g. city depends on location),
+    // pull the city list dynamically based on the chosen governorate.
+    let options = field.options || [];
+    let disabled = false;
+    let dynamicPlaceholder: string | null = null;
+    if (field.depends_on === "location" || (field.key === "city" && !field.options?.length)) {
+      const govValue: string | undefined = allValues?.location;
+      if (!govValue) {
+        options = [];
+        disabled = true;
+        dynamicPlaceholder = isRTL ? "اختر المحافظة أولاً" : "Select governorate first";
+      } else {
+        options = getCitiesForGovernorate(govValue);
+        if (options.length === 0) {
+          dynamicPlaceholder = isRTL ? "لا توجد مدن متاحة" : "No cities available";
+        }
+      }
+    }
+
     return (
       <div>
         <Label text={label} required={field.required} />
@@ -644,6 +739,7 @@ function FieldRenderer({ field, isRTL, value, onChange, onFileChange, fileName }
           <select
             required={field.required}
             value={value || ""}
+            disabled={disabled}
             onChange={(e) => onChange(e.target.value)}
             style={{
               ...inputStyle,
@@ -651,14 +747,15 @@ function FieldRenderer({ field, isRTL, value, onChange, onFileChange, fileName }
               WebkitAppearance: "none",
               MozAppearance: "none",
               paddingInlineEnd: 36,
-              cursor: "pointer",
+              cursor: disabled ? "not-allowed" : "pointer",
+              opacity: disabled ? 0.6 : 1,
               colorScheme: "dark",
             }}
           >
             <option value="" style={{ background: "#0d1027", color: "rgba(240,240,255,.55)" }}>
-              {isRTL ? "اختر…" : "Select…"}
+              {dynamicPlaceholder || (isRTL ? "اختر…" : "Select…")}
             </option>
-            {field.options.map((opt) => (
+            {options.map((opt) => (
               <option key={opt.value} value={opt.value} style={{ background: "#0d1027", color: "#f0f0ff", padding: 8 }}>
                 {isRTL ? opt.label_ar : opt.label_en}
               </option>
