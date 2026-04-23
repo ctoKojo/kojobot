@@ -93,17 +93,20 @@ export default function AdminJobInvites() {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
+    const trimmedMessage = personalMsg.trim();
+    const appUrl = window.location.origin;
     const records = validEmails.map((email) => ({
+      id: crypto.randomUUID(),
       job_id: job.id,
       email,
       token: crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8),
-      personal_message: personalMsg.trim() || null,
+      personal_message: trimmedMessage || null,
       invited_by: user.id,
       status: "sent" as const,
       expires_at: expiresAt.toISOString(),
     }));
 
-    const { data: inserted, error } = await supabase.from("job_invites").insert(records).select();
+    const { error } = await supabase.from("job_invites").insert(records);
 
     if (error) {
       toast({ title: isRTL ? "فشل الإرسال" : "Failed to send", description: error.message, variant: "destructive" });
@@ -111,11 +114,9 @@ export default function AdminJobInvites() {
       return;
     }
 
-    // Fire emails (non-blocking)
-    const appUrl = window.location.origin;
-    await Promise.allSettled(
-      (inserted || []).map((inv: any) =>
-        supabase.functions.invoke("send-email", {
+    const sendResults = await Promise.allSettled(
+      records.map(async (inv) => {
+        const { error: emailError } = await supabase.functions.invoke("send-email", {
           body: {
             to: inv.email,
             templateName: "job-invite-to-apply",
@@ -125,15 +126,35 @@ export default function AdminJobInvites() {
               job_title: job.title_en,
               job_title_ar: job.title_ar,
               apply_url: `${appUrl}/apply/${job.slug}?invite=${inv.token}`,
-              personal_message: personalMsg.trim() || "",
+              personal_message: trimmedMessage,
               expires_at: new Date(inv.expires_at).toLocaleDateString("en-US"),
             },
           },
-        }),
-      ),
+        });
+
+        if (emailError) {
+          throw new Error(emailError.message || "Email send failed");
+        }
+      }),
     );
 
-    toast({ title: isRTL ? `تم إرسال ${validEmails.length} دعوة` : `Sent ${validEmails.length} invites` });
+    const failedCount = sendResults.filter((result) => result.status === "rejected").length;
+    const successCount = records.length - failedCount;
+
+    if (failedCount > 0) {
+      toast({
+        title: isRTL
+          ? `تم إرسال ${successCount} دعوة وفشل ${failedCount}`
+          : `Sent ${successCount} invites, ${failedCount} failed`,
+        description: isRTL
+          ? "بعض الدعوات اتسجلت لكن الإيميل نفسه فشل، جرّب تاني للعنوان اللي ماوصلوش."
+          : "Some invites were saved, but their email delivery failed. Please retry the missing addresses.",
+        variant: "destructive",
+      });
+    } else {
+      toast({ title: isRTL ? `تم إرسال ${records.length} دعوة` : `Sent ${records.length} invites` });
+    }
+
     setEmailsText("");
     setPersonalMsg("");
     setSending(false);
