@@ -128,7 +128,7 @@ export default function AdminJobs() {
     <DashboardLayout>
       <PageHeader
         title={isRTL ? "إدارة الوظائف" : "Jobs Management"}
-        description={isRTL ? "إنشاء، تعديل، ومتابعة الوظائف والمتقدمين" : "Create, edit, and track jobs and applicants"}
+        subtitle={isRTL ? "إنشاء، تعديل، ومتابعة الوظائف والمتقدمين" : "Create, edit, and track jobs and applicants"}
         icon={Briefcase}
         actions={
           <Button onClick={() => { setEditing(null); setOpenForm(true); }}>
