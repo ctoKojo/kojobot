@@ -7781,6 +7781,7 @@ export type Database = {
         }
         Returns: number
       }
+      confirm_interview_by_token: { Args: { p_token: string }; Returns: Json }
       coordinate_expense_transaction: {
         Args: { p_expense_data: Json }
         Returns: Json
@@ -8494,6 +8495,10 @@ export type Database = {
           p_period_month: string
           p_reason: string
         }
+        Returns: Json
+      }
+      request_reschedule_by_token: {
+        Args: { p_reason: string; p_token: string }
         Returns: Json
       }
       reschedule_failed_final_exam: {
