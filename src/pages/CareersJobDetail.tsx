@@ -712,13 +712,18 @@ function FieldRenderer({ field, isRTL, value, allValues, onChange, onFileChange,
     );
   }
 
-  if (field.type === "single_choice" && (field.options || field.depends_on)) {
+  // City field is ALWAYS rendered as a dependent dropdown based on selected governorate (location),
+  // regardless of how it was configured in the form builder (e.g. short_text legacy fields).
+  const isCityDependent = field.key === "city";
+  const isSingleChoice = field.type === "single_choice" && (field.options || field.depends_on);
+
+  if (isSingleChoice || isCityDependent) {
     // Resolve options: if this field depends on another (e.g. city depends on location),
     // pull the city list dynamically based on the chosen governorate.
     let options = field.options || [];
     let disabled = false;
     let dynamicPlaceholder: string | null = null;
-    if (field.depends_on === "location" || (field.key === "city" && !field.options?.length)) {
+    if (isCityDependent || field.depends_on === "location") {
       const govValue: string | undefined = allValues?.location;
       if (!govValue) {
         options = [];
