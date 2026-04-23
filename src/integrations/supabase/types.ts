@@ -2677,6 +2677,7 @@ export type Database = {
           source: string
           status: Database["public"]["Enums"]["job_application_status"]
           submitted_at: string
+          tracking_code: string
           updated_at: string
           user_agent: string | null
         }
@@ -2696,6 +2697,7 @@ export type Database = {
           source?: string
           status?: Database["public"]["Enums"]["job_application_status"]
           submitted_at?: string
+          tracking_code: string
           updated_at?: string
           user_agent?: string | null
         }
@@ -2715,6 +2717,7 @@ export type Database = {
           source?: string
           status?: Database["public"]["Enums"]["job_application_status"]
           submitted_at?: string
+          tracking_code?: string
           updated_at?: string
           user_agent?: string | null
         }
@@ -7749,6 +7752,19 @@ export type Database = {
         }[]
       }
       get_aging_summary: { Args: { p_as_of_date?: string }; Returns: Json }
+      get_application_status_by_code: {
+        Args: { p_code: string }
+        Returns: {
+          applicant_name: string
+          job_slug: string
+          job_title_ar: string
+          job_title_en: string
+          reviewed_at: string
+          status: string
+          submitted_at: string
+          tracking_code: string
+        }[]
+      }
       get_audit_log_for_period: {
         Args: { p_period_month: string }
         Returns: Json
