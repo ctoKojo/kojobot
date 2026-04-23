@@ -141,6 +141,8 @@ export default function AdminJobInvites() {
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [detailsInvite, setDetailsInvite] = useState<Invite | null>(null);
 
+  const normalizeMultilineText = (value: string) => value.replace(/\r\n/g, "\n").trim();
+
   const load = async () => {
     if (!id) return;
     setLoading(true);
@@ -260,7 +262,7 @@ export default function AdminJobInvites() {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30);
 
-    const trimmedMessage = personalMsg.trim();
+    const trimmedMessage = normalizeMultilineText(personalMsg);
     const records = validEmails.map((email) => ({
       id: crypto.randomUUID(),
       job_id: job.id,

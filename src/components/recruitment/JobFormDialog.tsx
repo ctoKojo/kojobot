@@ -71,6 +71,11 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
     is_featured: false,
   });
 
+  const normalizeMultilineText = (value: string, { nullable = false }: { nullable?: boolean } = {}) => {
+    const normalized = value.replace(/\r\n/g, "\n").trim();
+    return nullable && !normalized ? null : normalized;
+  };
+
   useEffect(() => {
     if (job) {
       // Detect actual content state — if BOTH languages exist with different text,
@@ -254,12 +259,12 @@ export function JobFormDialog({ open, onOpenChange, job, onSaved }: JobFormDialo
       location_en: form.location_en.trim() || null,
       location_ar: form.location_ar.trim() || null,
       salary_range: form.is_paid ? form.salary_range.trim() || null : null,
-      description_en: form.description_en.trim(),
-      description_ar: form.description_ar.trim(),
-      requirements_en: form.requirements_en.trim() || null,
-      requirements_ar: form.requirements_ar.trim() || null,
-      benefits_en: form.benefits_en.trim() || null,
-      benefits_ar: form.benefits_ar.trim() || null,
+      description_en: normalizeMultilineText(form.description_en),
+      description_ar: normalizeMultilineText(form.description_ar),
+      requirements_en: normalizeMultilineText(form.requirements_en, { nullable: true }),
+      requirements_ar: normalizeMultilineText(form.requirements_ar, { nullable: true }),
+      benefits_en: normalizeMultilineText(form.benefits_en, { nullable: true }),
+      benefits_ar: normalizeMultilineText(form.benefits_ar, { nullable: true }),
       deadline_at: form.deadline_at ? new Date(form.deadline_at).toISOString() : null,
       is_featured: form.is_featured,
       form_fields: formFields,
