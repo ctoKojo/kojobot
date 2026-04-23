@@ -143,6 +143,8 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
     setWarnings({});
     setRejectedItems([]);
     setShowWarningsOnly(false);
+    setRestoredFromCache(false);
+    clearPersisted();
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('generate-quiz-questions', {
@@ -153,9 +155,13 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
       if (data?.error) throw new Error(data.error);
       if (!data?.questions?.length) throw new Error(isRTL ? 'لم يتم توليد أسئلة' : 'No questions generated');
 
-      setGeneratedQuestions(data.questions);
-      setWarnings(data.warnings || {});
-      setRejectedItems(data.rejected || []);
+      const qs = data.questions as GeneratedQuestion[];
+      const w = data.warnings || {};
+      const r = data.rejected || [];
+      setGeneratedQuestions(qs);
+      setWarnings(w);
+      setRejectedItems(r);
+      persistResults(qs, w, r);
     } catch (err: any) {
       setError(err.message || (isRTL ? 'فشل في توليد الأسئلة' : 'Failed to generate questions'));
     } finally {
@@ -166,6 +172,7 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
   const handleAddAll = () => {
     if (generatedQuestions) {
       onQuestionsGenerated(generatedQuestions);
+      clearPersisted();
       handleReset();
       onClose();
     }
@@ -177,6 +184,8 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
     setRejectedItems([]);
     setError(null);
     setShowWarningsOnly(false);
+    setRestoredFromCache(false);
+    clearPersisted();
   };
 
   const getQuestionWarnings = (q: GeneratedQuestion): string[] => {
@@ -190,7 +199,7 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
     : [];
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { handleReset(); onClose(); } }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { onClose(); } }}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
