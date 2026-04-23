@@ -233,7 +233,12 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
                       <UserCheck className="w-4 h-4 me-2 text-green-600" />
                       {isRTL ? "توظيف" : "Hire"}
                     </Button>
-                    <Button variant="outline" size="sm" className="w-full justify-start text-destructive hover:text-destructive" onClick={() => set
+                    <Button variant="outline" size="sm" className="w-full justify-start text-destructive hover:text-destructive" onClick={() => setRejectOpen(true)}>
+                      <XCircle className="w-4 h-4 me-2" />
+                      {isRTL ? "رفض" : "Reject"}
+                    </Button>
+                  </>
+                )}
 
                 {isFinalStatus && (
                   <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
