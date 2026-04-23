@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import kojobotLogo from "@/assets/kojobot-main-logo.png";
@@ -55,6 +55,33 @@ export const LandingNavbar = ({ language, isRTL, scrolled, ctaUrl, ctaText }: La
               {language === "ar" ? sec.ar : sec.en}
             </button>
           ))}
+          <Link
+            to="/careers"
+            style={{
+              padding: "6px 14px",
+              cursor: "pointer",
+              color: "rgba(240,240,255,.5)",
+              fontSize: 14,
+              borderRadius: 8,
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              transition: "color .2s, background .2s",
+              fontFamily: isRTL ? "Cairo" : "Poppins",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#f0f0ff";
+              e.currentTarget.style.background = "rgba(100,85,240,.08)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "rgba(240,240,255,.5)";
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <Briefcase size={14} />
+            {language === "ar" ? "الوظائف" : "Careers"}
+          </Link>
         </div>
 
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -98,6 +125,18 @@ export const LandingNavbar = ({ language, isRTL, scrolled, ctaUrl, ctaText }: La
               {language === "ar" ? sec.ar : sec.en}
             </button>
           ))}
+          <Link
+            to="/careers"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{
+              color: "var(--kojo-text)", fontSize: 20, fontWeight: 600,
+              fontFamily: isRTL ? "Cairo" : "Poppins", padding: "8px 0",
+              textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8,
+            }}
+          >
+            <Briefcase size={20} />
+            {language === "ar" ? "الوظائف" : "Careers"}
+          </Link>
           <Button
             asChild
             className="grad-btn"

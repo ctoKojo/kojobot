@@ -34,14 +34,45 @@ export default function Careers() {
   const [filter, setFilter] = useState<string>("all");
 
   useEffect(() => {
-    document.title = isRTL ? "الوظائف — Kojobot" : "Careers — Kojobot";
-    const meta = document.querySelector('meta[name="description"]') || (() => {
-      const m = document.createElement("meta");
-      m.setAttribute("name", "description");
-      document.head.appendChild(m);
-      return m;
-    })();
-    meta.setAttribute("content", isRTL ? "انضم لفريق Kojobot — استكشف الوظائف وفرص التدريب المتاحة" : "Join the Kojobot team — explore open jobs and training opportunities");
+    const title = isRTL ? "الوظائف — Kojobot Academy" : "Careers — Kojobot Academy";
+    const desc = isRTL
+      ? "انضم لفريق Kojobot Academy — استكشف الوظائف، التدريب الصيفي، وفرص التطوع المتاحة."
+      : "Join the Kojobot Academy team — explore open jobs, summer training, and volunteer opportunities.";
+    const url = "https://kojobot.com/careers";
+    const ogImg = "https://kojobot.com/kojobot-logo-white.png";
+
+    document.title = title;
+
+    const setMeta = (attr: "name" | "property", key: string, content: string) => {
+      let el = document.head.querySelector(`meta[${attr}="${key}"]`);
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+    const setLink = (rel: string, href: string) => {
+      let el = document.head.querySelector(`link[rel="${rel}"]`);
+      if (!el) {
+        el = document.createElement("link");
+        el.setAttribute("rel", rel);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("href", href);
+    };
+
+    setMeta("name", "description", desc);
+    setLink("canonical", url);
+    setMeta("property", "og:type", "website");
+    setMeta("property", "og:title", title);
+    setMeta("property", "og:description", desc);
+    setMeta("property", "og:url", url);
+    setMeta("property", "og:image", ogImg);
+    setMeta("name", "twitter:card", "summary_large_image");
+    setMeta("name", "twitter:title", title);
+    setMeta("name", "twitter:description", desc);
+    setMeta("name", "twitter:image", ogImg);
   }, [isRTL]);
 
   useEffect(() => {

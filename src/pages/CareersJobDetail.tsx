@@ -34,6 +34,7 @@ interface Job {
   benefits_ar: string | null;
   form_fields: FormField[];
   deadline_at: string | null;
+  posted_at: string | null;
 }
 
 const inputStyle: React.CSSProperties = {
@@ -47,6 +48,40 @@ const inputStyle: React.CSSProperties = {
   fontFamily: "inherit",
   outline: "none",
 };
+
+const SITE_URL = "https://kojobot.com";
+
+/** Set or replace a meta tag */
+function setMeta(attr: "name" | "property", key: string, content: string) {
+  let el = document.head.querySelector(`meta[${attr}="${key}"]`);
+  if (!el) {
+    el = document.createElement("meta");
+    el.setAttribute(attr, key);
+    document.head.appendChild(el);
+  }
+  el.setAttribute("content", content);
+}
+
+function setLink(rel: string, href: string) {
+  let el = document.head.querySelector(`link[rel="${rel}"]`);
+  if (!el) {
+    el = document.createElement("link");
+    el.setAttribute("rel", rel);
+    document.head.appendChild(el);
+  }
+  el.setAttribute("href", href);
+}
+
+function setJsonLd(id: string, data: Record<string, unknown>) {
+  let el = document.head.querySelector(`script[data-jsonld="${id}"]`) as HTMLScriptElement | null;
+  if (!el) {
+    el = document.createElement("script");
+    el.type = "application/ld+json";
+    el.setAttribute("data-jsonld", id);
+    document.head.appendChild(el);
+  }
+  el.textContent = JSON.stringify(data);
+}
 
 export default function CareersJobDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -76,11 +111,72 @@ export default function CareersJobDetail() {
         .maybeSingle();
       setJob(data as unknown as Job | null);
       setLoading(false);
-      if (data) {
-        document.title = isRTL ? `${data.title_ar} — Kojobot` : `${data.title_en} — Kojobot`;
-      }
     })();
-  }, [slug, isRTL]);
+  }, [slug]);
+
+  // SEO: title, meta, OG, canonical, JSON-LD
+  useEffect(() => {
+    if (!job) return;
+    const title = isRTL ? job.title_ar : job.title_en;
+    const desc = (isRTL ? job.description_ar : job.description_en).replace(/\s+/g, " ").slice(0, 155);
+    const url = `${SITE_URL}/careers/${job.slug}`;
+    const ogImg = `${SITE_URL}/kojobot-logo-white.png`;
+
+    document.title = `${title} — Kojobot Careers`;
+    setMeta("name", "description", desc);
+    setLink("canonical", url);
+
+    setMeta("property", "og:type", "website");
+    setMeta("property", "og:title", `${title} — Kojobot Careers`);
+    setMeta("property", "og:description", desc);
+    setMeta("property", "og:url", url);
+    setMeta("property", "og:image", ogImg);
+    setMeta("name", "twitter:card", "summary_large_image");
+    setMeta("name", "twitter:title", `${title} — Kojobot Careers`);
+    setMeta("name", "twitter:description", desc);
+    setMeta("name", "twitter:image", ogImg);
+
+    // JobPosting structured data
+    const employmentTypeMap: Record<string, string> = {
+      full_time: "FULL_TIME",
+      part_time: "PART_TIME",
+      internship: "INTERN",
+      summer_training: "INTERN",
+      volunteer: "VOLUNTEER",
+      freelance: "CONTRACTOR",
+    };
+    setJsonLd("job-posting", {
+      "@context": "https://schema.org",
+      "@type": "JobPosting",
+      title,
+      description: isRTL ? job.description_ar : job.description_en,
+      datePosted: job.posted_at || new Date().toISOString(),
+      validThrough: job.deadline_at || undefined,
+      employmentType: employmentTypeMap[job.type] || "OTHER",
+      hiringOrganization: {
+        "@type": "Organization",
+        name: "Kojobot Academy",
+        sameAs: SITE_URL,
+        logo: ogImg,
+      },
+      jobLocation: (job.location_en || job.location_ar)
+        ? {
+            "@type": "Place",
+            address: {
+              "@type": "PostalAddress",
+              addressLocality: isRTL ? job.location_ar : job.location_en,
+              addressCountry: "EG",
+            },
+          }
+        : undefined,
+      directApply: true,
+    });
+
+    return () => {
+      const el = document.head.querySelector('script[data-jsonld="job-posting"]');
+      el?.remove();
+    };
+  }, [job, isRTL]);
 
   const fields = useMemo<FormField[]>(() => (Array.isArray(job?.form_fields) ? job!.form_fields : []), [job]);
 
@@ -118,7 +214,6 @@ export default function CareersJobDetail() {
         if (upErr) throw new Error(isRTL ? "فشل رفع السيرة الذاتية" : "Failed to upload CV");
         cvUrl = path;
       } else {
-        // CV required check
         const cvField = fields.find((f) => f.key === "cv");
         if (cvField?.required) throw new Error(isRTL ? "السيرة الذاتية مطلوبة" : "CV is required");
       }
@@ -148,6 +243,8 @@ export default function CareersJobDetail() {
       if (result?.error) throw new Error(Array.isArray(result.details) ? result.details.join(", ") : result.error);
 
       setSubmitted(true);
+      // Scroll to top so success message is visible on mobile
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
       setError(err.message || (isRTL ? "حدث خطأ" : "An error occurred"));
     } finally {
@@ -207,7 +304,7 @@ export default function CareersJobDetail() {
         </div>
       </header>
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px", display: "grid", gridTemplateColumns: "minmax(0, 1.3fr) minmax(0, 1fr)", gap: 40 }}>
+      <div className="job-detail-grid" style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 24px" }}>
         {/* Job details */}
         <div>
           <h1 className="font-display" style={{ fontSize: "clamp(28px, 4vw, 44px)", margin: "0 0 16px", lineHeight: 1.2 }}>
@@ -229,7 +326,7 @@ export default function CareersJobDetail() {
         </div>
 
         {/* Application form */}
-        <div style={{ position: "sticky", top: 24, alignSelf: "start" }}>
+        <aside className="job-apply-aside">
           <form onSubmit={handleSubmit} style={{ background: "var(--kojo-surface)", padding: 28, borderRadius: 20, border: "1px solid var(--kojo-border)", display: "flex", flexDirection: "column", gap: 16 }}>
             <h2 className="font-display" style={{ fontSize: 22, margin: 0 }}>
               {isRTL ? "قدّم على هذه الوظيفة" : "Apply for this job"}
@@ -266,13 +363,28 @@ export default function CareersJobDetail() {
               {submitting ? (isRTL ? "جاري الإرسال…" : "Submitting…") : (isRTL ? "تقديم الطلب" : "Submit Application")}
             </button>
           </form>
-        </div>
+        </aside>
       </div>
 
       <style>{`
+        .job-detail-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+          gap: 40px;
+        }
+        .job-apply-aside {
+          position: sticky;
+          top: 24px;
+          align-self: start;
+        }
         @media (max-width: 900px) {
-          .kojo-root > div[style*="grid-template-columns"] {
-            grid-template-columns: 1fr !important;
+          .job-detail-grid {
+            grid-template-columns: 1fr;
+            gap: 24px;
+            padding: 24px 16px !important;
+          }
+          .job-apply-aside {
+            position: static;
           }
         }
       `}</style>
@@ -304,7 +416,9 @@ function FieldRenderer({ field, isRTL, value, onChange, onFileChange, fileName }
         <Label text={label} required={field.required} />
         <label style={{ ...inputStyle, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, color: fileName ? "var(--kojo-text)" : "var(--kojo-muted)" }}>
           <Upload className="w-4 h-4" />
-          {fileName || (isRTL ? "اختر ملف (PDF/DOC) — حتى 5MB" : "Choose file (PDF/DOC) — up to 5MB")}
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {fileName || (isRTL ? "اختر ملف (PDF/DOC) — حتى 5MB" : "Choose file (PDF/DOC) — up to 5MB")}
+          </span>
           <input type="file" accept={field.accept || ".pdf,.doc,.docx"} hidden
             onChange={(e) => onFileChange?.(e.target.files?.[0] || null)} />
         </label>
@@ -342,13 +456,31 @@ function FieldRenderer({ field, isRTL, value, onChange, onFileChange, fileName }
     );
   }
 
-  const inputType = field.type === "email" ? "email" : field.type === "phone" ? "tel" : field.type === "url" ? "url" : field.type === "number" ? "number" : field.type === "date" ? "date" : "text";
+  const inputType =
+    field.type === "email" ? "email" :
+    field.type === "phone" ? "tel" :
+    field.type === "url" ? "url" :
+    field.type === "number" ? "number" :
+    field.type === "date" ? "date" : "text";
+
+  // Mobile keyboard hints
+  const inputMode =
+    field.type === "phone" ? "tel" :
+    field.type === "email" ? "email" :
+    field.type === "number" ? "numeric" :
+    field.type === "url" ? "url" : undefined;
 
   return (
     <div>
       <Label text={label} required={field.required} />
       <input
         type={inputType}
+        inputMode={inputMode as any}
+        autoComplete={
+          field.key === "full_name" ? "name" :
+          field.type === "email" ? "email" :
+          field.type === "phone" ? "tel" : "off"
+        }
         required={field.required}
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
