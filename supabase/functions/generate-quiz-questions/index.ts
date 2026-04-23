@@ -300,8 +300,12 @@ serve(async (req) => {
     contextParts.push(`رقم الدرس: ${session.session_number}`);
     if (session.description_ar) contextParts.push(`وصف الدرس: ${session.description_ar}`);
     if (studentPdfText) contextParts.push(`محتوى الدرس:\n${studentPdfText}`);
-    if (additionalContext && additionalContext.length <= 500) {
-      contextParts.push(`سياق إضافي: ${additionalContext}`);
+    if (additionalContext && additionalContext.trim().length > 0 && additionalContext.length <= 500) {
+      contextParts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 تعليمات إضافية إلزامية من المدرس (لازم تتنفذ في الأسئلة):
+${additionalContext.trim()}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ملاحظة: التعليمات اللي فوق دي أولوية قصوى — لازم تظهر بوضوح في الأسئلة المُولّدة. لو طلب المدرس تركيز على موضوع معين، خلي الأسئلة كلها حواليه. لو طلب نوع معين من الأسئلة، التزم بيه.`);
     }
 
     const difficultyMap: Record<string, string> = {
