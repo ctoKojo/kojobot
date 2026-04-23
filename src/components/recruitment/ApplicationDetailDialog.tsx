@@ -335,10 +335,12 @@ export function ApplicationDetailDialog({ application, formFields, open, onOpenC
                   {isRTL ? "المقابلات" : "Interviews"}
                   <Badge variant="outline">{interviews.length}</Badge>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => setScheduleOpen(true)}>
-                  <CalendarPlus className="w-4 h-4 me-2" />
-                  {isRTL ? "جدولة" : "Schedule"}
-                </Button>
+                {!interviews.some((iv) => iv.status === "scheduled") && (
+                  <Button size="sm" variant="outline" onClick={() => setScheduleOpen(true)}>
+                    <CalendarPlus className="w-4 h-4 me-2" />
+                    {isRTL ? "جدولة" : "Schedule"}
+                  </Button>
+                )}
               </div>
 
               {interviews.length === 0 ? (
