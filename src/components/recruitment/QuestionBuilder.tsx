@@ -30,6 +30,9 @@ import {
   RESERVED_FIELDS,
   QUESTION_LIBRARY,
   FIELD_TYPES,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  QuestionCategory,
   generateFieldKey,
 } from "./QuestionLibrary";
 
