@@ -113,6 +113,35 @@ export default function CareersJobDetail() {
   const [error, setError] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [cvFile, setCvFile] = useState<File | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const handleShare = async () => {
+    if (!job) return;
+    const title = isRTL ? job.title_ar : job.title_en;
+    const desc = (isRTL ? job.description_ar : job.description_en).replace(/\s+/g, " ").slice(0, 140);
+    const shareUrl = `${SITE_URL}/careers/${job.slug || job.id}`;
+    const shareData = {
+      title: `${title} — Kojobot Careers`,
+      text: desc,
+      url: shareUrl,
+    };
+    // Try native share first (mobile + modern browsers)
+    if (typeof navigator !== "undefined" && (navigator as any).share) {
+      try {
+        await (navigator as any).share(shareData);
+        return;
+      } catch {
+        // user cancelled — fall through to copy
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
 
   const ArrowIcon = isRTL ? ArrowRight : ArrowLeft;
 
