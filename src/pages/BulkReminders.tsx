@@ -745,10 +745,10 @@ export default function BulkReminders() {
                                   ) : (
                                     <span
                                       title={isRTL ? 'الطالب غير مربوط بتيليجرام' : 'Student has no Telegram'}
-                                      className="inline-flex items-center text-muted-foreground/50"
+                                      className="inline-flex items-center text-muted-foreground/40"
                                       aria-label={isRTL ? 'تيليجرام غير مربوط' : 'No Telegram'}
                                     >
-                                      <SendHorizontal className="h-3.5 w-3.5 opacity-40" />
+                                      <Send className="h-3.5 w-3.5 opacity-40" />
                                     </span>
                                   )
                                 )}
