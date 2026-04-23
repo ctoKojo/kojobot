@@ -36,6 +36,19 @@ interface Job {
   slug: string;
   title_en: string;
   title_ar: string;
+  type: string | null;
+  location_en: string | null;
+  location_ar: string | null;
+  salary_range: string | null;
+  description_en: string | null;
+  description_ar: string | null;
+  requirements_en: string | null;
+  requirements_ar: string | null;
+  benefits_en: string | null;
+  benefits_ar: string | null;
+  training_season: string | null;
+  is_paid: boolean | null;
+  deadline_at: string | null;
 }
 
 interface EmailLogRow {
@@ -132,7 +145,13 @@ export default function AdminJobInvites() {
     if (!id) return;
     setLoading(true);
     const [jobRes, invRes] = await Promise.all([
-      supabase.from("jobs").select("id,slug,title_en,title_ar").eq("id", id).maybeSingle(),
+      supabase
+        .from("jobs")
+        .select(
+          "id,slug,title_en,title_ar,type,location_en,location_ar,salary_range,description_en,description_ar,requirements_en,requirements_ar,benefits_en,benefits_ar,training_season,is_paid,deadline_at",
+        )
+        .eq("id", id)
+        .maybeSingle(),
       supabase.from("job_invites").select("*").eq("job_id", id).order("created_at", { ascending: false }),
     ]);
     if (jobRes.data) setJob(jobRes.data as Job);
@@ -181,6 +200,24 @@ export default function AdminJobInvites() {
   ) => {
     if (!job) return { ok: false, error: "no-job" } as const;
     const appUrl = window.location.origin;
+
+    const jobTypeLabelEn = (() => {
+      const t = (job.type ?? "").toLowerCase();
+      if (t === "full_time") return "Full-time";
+      if (t === "part_time") return "Part-time";
+      if (t === "contract") return "Contract";
+      if (t === "internship") return "Internship";
+      return job.type ?? "";
+    })();
+    const jobTypeLabelAr = (() => {
+      const t = (job.type ?? "").toLowerCase();
+      if (t === "full_time") return "دوام كامل";
+      if (t === "part_time") return "دوام جزئي";
+      if (t === "contract") return "عقد";
+      if (t === "internship") return "تدريب";
+      return job.type ?? "";
+    })();
+
     const { data, error } = await supabase.functions.invoke("send-email", {
       body: {
         to: inv.email,
@@ -190,6 +227,23 @@ export default function AdminJobInvites() {
         templateData: {
           job_title: job.title_en,
           job_title_ar: job.title_ar,
+          job_type_en: jobTypeLabelEn,
+          job_type_ar: jobTypeLabelAr,
+          location_en: job.location_en ?? "",
+          location_ar: job.location_ar ?? "",
+          salary_range: job.salary_range ?? "",
+          description_en: job.description_en ?? "",
+          description_ar: job.description_ar ?? "",
+          requirements_en: job.requirements_en ?? "",
+          requirements_ar: job.requirements_ar ?? "",
+          benefits_en: job.benefits_en ?? "",
+          benefits_ar: job.benefits_ar ?? "",
+          training_season: job.training_season ?? "",
+          is_paid_label_en: job.is_paid ? "Paid" : "Unpaid",
+          is_paid_label_ar: job.is_paid ? "مدفوع" : "غير مدفوع",
+          deadline_at: job.deadline_at
+            ? new Date(job.deadline_at).toLocaleDateString("en-US")
+            : "",
           apply_url: `${appUrl}/apply/${job.slug}?invite=${inv.token}`,
           personal_message: msg,
           expires_at: new Date(inv.expires_at).toLocaleDateString("en-US"),
