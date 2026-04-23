@@ -14,7 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Send, ArrowLeft, ArrowRight, Copy, Loader2, Mail } from "lucide-react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import { Send, ArrowLeft, ArrowRight, Copy, Loader2, Mail, RefreshCw, Info } from "lucide-react";
 
 interface Invite {
   id: string;
@@ -35,11 +38,76 @@ interface Job {
   title_ar: string;
 }
 
-const STATUS_COLOR: Record<string, string> = {
-  sent: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
-  opened: "bg-purple-500/10 text-purple-700 dark:text-purple-300",
-  applied: "bg-green-500/10 text-green-700 dark:text-green-300",
-  expired: "bg-red-500/10 text-red-700 dark:text-red-300",
+interface EmailLogRow {
+  id: string;
+  message_id: string | null;
+  status: string;
+  delivery_status: string | null;
+  delivery_status_at: string | null;
+  bounce_type: string | null;
+  bounce_reason: string | null;
+  error_message: string | null;
+  created_at: string;
+  metadata: Record<string, unknown> | null;
+}
+
+type DeliveryState =
+  | "delivered"
+  | "opened"
+  | "clicked"
+  | "bounced"
+  | "complained"
+  | "failed"
+  | "deferred"
+  | "accepted"
+  | "pending"
+  | "unknown";
+
+const DELIVERY_BADGE: Record<DeliveryState, string> = {
+  delivered: "bg-green-500/10 text-green-700 dark:text-green-300",
+  opened: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  clicked: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  accepted: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
+  pending: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300",
+  deferred: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300",
+  bounced: "bg-red-500/10 text-red-700 dark:text-red-300",
+  complained: "bg-red-500/10 text-red-700 dark:text-red-300",
+  failed: "bg-red-500/10 text-red-700 dark:text-red-300",
+  unknown: "bg-muted text-muted-foreground",
+};
+
+const labelFor = (state: DeliveryState, isRTL: boolean): string => {
+  const map: Record<DeliveryState, [string, string]> = {
+    delivered: ["تم التسليم", "Delivered"],
+    opened: ["تم الفتح", "Opened"],
+    clicked: ["تم النقر", "Clicked"],
+    accepted: ["تم القبول", "Accepted"],
+    pending: ["قيد الإرسال", "Pending"],
+    deferred: ["مؤجل", "Deferred"],
+    bounced: ["مرتد", "Bounced"],
+    complained: ["شكوى", "Complained"],
+    failed: ["فشل", "Failed"],
+    unknown: ["غير معروف", "Unknown"],
+  };
+  return map[state][isRTL ? 0 : 1];
+};
+
+const computeDelivery = (log?: EmailLogRow | null): DeliveryState => {
+  if (!log) return "unknown";
+  if (log.delivery_status) {
+    const ds = log.delivery_status.toLowerCase();
+    if (ds === "delivered") return "delivered";
+    if (ds === "opened") return "opened";
+    if (ds === "clicked") return "clicked";
+    if (ds === "bounced") return "bounced";
+    if (ds === "complained") return "complained";
+    if (ds === "failed") return "failed";
+    if (ds === "deferred") return "deferred";
+  }
+  if (log.status === "sent") return "accepted";
+  if (log.status === "pending") return "pending";
+  if (log.status === "failed") return "failed";
+  return "unknown";
 };
 
 export default function AdminJobInvites() {
@@ -52,10 +120,13 @@ export default function AdminJobInvites() {
 
   const [job, setJob] = useState<Job | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
+  const [emailLogs, setEmailLogs] = useState<Record<string, EmailLogRow>>({});
   const [loading, setLoading] = useState(true);
   const [emailsText, setEmailsText] = useState("");
   const [personalMsg, setPersonalMsg] = useState("");
   const [sending, setSending] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [detailsInvite, setDetailsInvite] = useState<Invite | null>(null);
 
   const load = async () => {
     if (!id) return;
@@ -65,7 +136,24 @@ export default function AdminJobInvites() {
       supabase.from("job_invites").select("*").eq("job_id", id).order("created_at", { ascending: false }),
     ]);
     if (jobRes.data) setJob(jobRes.data as Job);
-    if (invRes.data) setInvites(invRes.data as Invite[]);
+    const inviteRows = (invRes.data ?? []) as Invite[];
+    setInvites(inviteRows);
+
+    if (inviteRows.length > 0) {
+      const keys = inviteRows.map((i) => `job-invite-${i.id}`);
+      const { data: logs } = await supabase
+        .from("email_send_log")
+        .select("id, message_id, status, delivery_status, delivery_status_at, bounce_type, bounce_reason, error_message, created_at, metadata")
+        .in("message_id", keys)
+        .order("created_at", { ascending: false });
+      const map: Record<string, EmailLogRow> = {};
+      for (const row of (logs ?? []) as EmailLogRow[]) {
+        if (row.message_id && !map[row.message_id]) map[row.message_id] = row;
+      }
+      setEmailLogs(map);
+    } else {
+      setEmailLogs({});
+    }
     setLoading(false);
   };
 
@@ -87,6 +175,31 @@ export default function AdminJobInvites() {
     toast({ title: isRTL ? "تم نسخ الرابط" : "Link copied" });
   };
 
+  const dispatchInviteEmail = async (
+    inv: { id: string; email: string; token: string; expires_at: string },
+    msg: string,
+  ) => {
+    if (!job) return { ok: false, error: "no-job" } as const;
+    const appUrl = window.location.origin;
+    const { data, error } = await supabase.functions.invoke("send-email", {
+      body: {
+        to: inv.email,
+        templateName: "job-invite-to-apply",
+        idempotencyKey: `job-invite-${inv.id}`,
+        audience: "staff",
+        templateData: {
+          job_title: job.title_en,
+          job_title_ar: job.title_ar,
+          apply_url: `${appUrl}/apply/${job.slug}?invite=${inv.token}`,
+          personal_message: msg,
+          expires_at: new Date(inv.expires_at).toLocaleDateString("en-US"),
+        },
+      },
+    });
+    if (error) return { ok: false, error: error.message } as const;
+    return { ok: true, data } as const;
+  };
+
   const sendInvites = async () => {
     if (!job || !user || validEmails.length === 0) return;
     setSending(true);
@@ -94,7 +207,6 @@ export default function AdminJobInvites() {
     expiresAt.setDate(expiresAt.getDate() + 30);
 
     const trimmedMessage = personalMsg.trim();
-    const appUrl = window.location.origin;
     const records = validEmails.map((email) => ({
       id: crypto.randomUUID(),
       job_id: job.id,
@@ -115,49 +227,63 @@ export default function AdminJobInvites() {
     }
 
     const sendResults = await Promise.allSettled(
-      records.map(async (inv) => {
-        const { error: emailError } = await supabase.functions.invoke("send-email", {
-          body: {
-            to: inv.email,
-            templateName: "job-invite-to-apply",
-            idempotencyKey: `job-invite-${inv.id}`,
-            audience: "staff",
-            templateData: {
-              job_title: job.title_en,
-              job_title_ar: job.title_ar,
-              apply_url: `${appUrl}/apply/${job.slug}?invite=${inv.token}`,
-              personal_message: trimmedMessage,
-              expires_at: new Date(inv.expires_at).toLocaleDateString("en-US"),
-            },
-          },
-        });
-
-        if (emailError) {
-          throw new Error(emailError.message || "Email send failed");
-        }
-      }),
+      records.map((inv) => dispatchInviteEmail(inv, trimmedMessage)),
     );
 
-    const failedCount = sendResults.filter((result) => result.status === "rejected").length;
-    const successCount = records.length - failedCount;
+    const failedCount = sendResults.filter(
+      (r) => r.status === "rejected" || (r.status === "fulfilled" && !r.value.ok),
+    ).length;
+    const acceptedCount = records.length - failedCount;
 
     if (failedCount > 0) {
       toast({
         title: isRTL
-          ? `تم إرسال ${successCount} دعوة وفشل ${failedCount}`
-          : `Sent ${successCount} invites, ${failedCount} failed`,
+          ? `قُبل ${acceptedCount} وفشل ${failedCount}`
+          : `Accepted ${acceptedCount}, ${failedCount} failed`,
         description: isRTL
-          ? "بعض الدعوات اتسجلت لكن الإيميل نفسه فشل، جرّب تاني للعنوان اللي ماوصلوش."
-          : "Some invites were saved, but their email delivery failed. Please retry the missing addresses.",
+          ? "الدعوة اتسجلت لكن مزود البريد رفضها لبعض العناوين. اضغط 'إعادة إرسال' من الجدول."
+          : "Some sends were rejected by the email provider. Use 'Resend' in the table.",
         variant: "destructive",
       });
     } else {
-      toast({ title: isRTL ? `تم إرسال ${records.length} دعوة` : `Sent ${records.length} invites` });
+      toast({
+        title: isRTL ? `تم قبول ${records.length} دعوة` : `${records.length} invites accepted`,
+        description: isRTL
+          ? "القبول لا يضمن التسليم. ستظهر حالة التسليم الفعلية في عمود 'حالة البريد'."
+          : "Accepted ≠ delivered. Real delivery status will appear in the table.",
+      });
     }
 
     setEmailsText("");
     setPersonalMsg("");
     setSending(false);
+    void load();
+  };
+
+  const resendInvite = async (inv: Invite) => {
+    setResendingId(inv.id);
+    // Clear the existing log row so the new send isn't blocked by idempotency
+    await supabase
+      .from("email_send_log")
+      .delete()
+      .eq("message_id", `job-invite-${inv.id}`);
+
+    const result = await dispatchInviteEmail(inv, inv.personal_message ?? "");
+    if (!result.ok) {
+      toast({
+        title: isRTL ? "فشل إعادة الإرسال" : "Resend failed",
+        description: result.error,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: isRTL ? "تم قبول الدعوة من جديد" : "Invite re-accepted",
+        description: isRTL
+          ? "في انتظار تأكيد التسليم من مزود البريد."
+          : "Waiting for delivery confirmation.",
+      });
+    }
+    setResendingId(null);
     void load();
   };
 
@@ -216,40 +342,139 @@ export default function AdminJobInvites() {
             <TableHeader>
               <TableRow>
                 <TableHead>{isRTL ? "البريد" : "Email"}</TableHead>
-                <TableHead>{isRTL ? "الحالة" : "Status"}</TableHead>
+                <TableHead>{isRTL ? "حالة الدعوة" : "Invite status"}</TableHead>
+                <TableHead>{isRTL ? "حالة البريد" : "Email status"}</TableHead>
                 <TableHead>{isRTL ? "تم الإرسال" : "Sent"}</TableHead>
                 <TableHead>{isRTL ? "ينتهي في" : "Expires"}</TableHead>
-                <TableHead className="w-12"></TableHead>
+                <TableHead className="w-32 text-end">{isRTL ? "إجراءات" : "Actions"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">{isRTL ? "جاري التحميل…" : "Loading…"}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">{isRTL ? "جاري التحميل…" : "Loading…"}</TableCell></TableRow>
               ) : invites.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">{isRTL ? "لم يتم إرسال دعوات بعد" : "No invites sent yet"}</TableCell></TableRow>
-              ) : invites.map((inv) => (
-                <TableRow key={inv.id}>
-                  <TableCell className="font-medium">{inv.email}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={STATUS_COLOR[inv.status] || ""}>{inv.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(inv.created_at).toLocaleDateString(isRTL ? "ar-EG" : "en-US")}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(inv.expires_at).toLocaleDateString(isRTL ? "ar-EG" : "en-US")}
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => copyLink(inv.token)} title={isRTL ? "نسخ الرابط" : "Copy link"}>
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+                <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">{isRTL ? "لم يتم إرسال دعوات بعد" : "No invites sent yet"}</TableCell></TableRow>
+              ) : invites.map((inv) => {
+                const log = emailLogs[`job-invite-${inv.id}`];
+                const delivery = computeDelivery(log);
+                return (
+                  <TableRow key={inv.id}>
+                    <TableCell className="font-medium">{inv.email}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-muted text-muted-foreground">
+                        {inv.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={DELIVERY_BADGE[delivery]}>
+                        {labelFor(delivery, isRTL)}
+                      </Badge>
+                      {log?.bounce_reason && (
+                        <div className="text-xs text-destructive mt-1 max-w-[220px] truncate" title={log.bounce_reason}>
+                          {log.bounce_reason}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(inv.created_at).toLocaleDateString(isRTL ? "ar-EG" : "en-US")}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(inv.expires_at).toLocaleDateString(isRTL ? "ar-EG" : "en-US")}
+                    </TableCell>
+                    <TableCell className="text-end">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDetailsInvite(inv)}
+                          title={isRTL ? "تفاصيل التسليم" : "Delivery details"}
+                        >
+                          <Info className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => resendInvite(inv)}
+                          disabled={resendingId === inv.id}
+                          title={isRTL ? "إعادة إرسال" : "Resend"}
+                        >
+                          {resendingId === inv.id
+                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                            : <RefreshCw className="w-4 h-4" />}
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => copyLink(inv.token)} title={isRTL ? "نسخ الرابط" : "Copy link"}>
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Details dialog */}
+      <Dialog open={!!detailsInvite} onOpenChange={(open) => !open && setDetailsInvite(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{isRTL ? "تفاصيل تسليم البريد" : "Email delivery details"}</DialogTitle>
+            <DialogDescription>{detailsInvite?.email}</DialogDescription>
+          </DialogHeader>
+          {(() => {
+            if (!detailsInvite) return null;
+            const log = emailLogs[`job-invite-${detailsInvite.id}`];
+            if (!log) {
+              return (
+                <p className="text-sm text-muted-foreground">
+                  {isRTL ? "لا يوجد سجل بريد لهذه الدعوة." : "No email log found for this invite."}
+                </p>
+              );
+            }
+            const meta = (log.metadata ?? {}) as Record<string, unknown>;
+            const resendId = (meta.resend_id as string | undefined) ?? null;
+            return (
+              <div className="space-y-2 text-sm">
+                <Row label={isRTL ? "حالة الإرسال" : "Send status"} value={log.status} />
+                <Row label={isRTL ? "حالة التسليم" : "Delivery"} value={log.delivery_status ?? "—"} />
+                <Row
+                  label={isRTL ? "آخر حدث في" : "Last event at"}
+                  value={log.delivery_status_at
+                    ? new Date(log.delivery_status_at).toLocaleString(isRTL ? "ar-EG" : "en-US")
+                    : "—"}
+                />
+                <Row
+                  label={isRTL ? "وقت الإرسال" : "Sent at"}
+                  value={new Date(log.created_at).toLocaleString(isRTL ? "ar-EG" : "en-US")}
+                />
+                <Row label={isRTL ? "Resend ID" : "Resend ID"} value={resendId ?? "—"} mono />
+                <Row label={isRTL ? "Idempotency Key" : "Idempotency Key"} value={log.message_id ?? "—"} mono />
+                {log.bounce_type && (
+                  <Row label={isRTL ? "نوع الارتداد" : "Bounce type"} value={log.bounce_type} />
+                )}
+                {log.bounce_reason && (
+                  <Row label={isRTL ? "سبب الارتداد" : "Bounce reason"} value={log.bounce_reason} />
+                )}
+                {log.error_message && (
+                  <Row label={isRTL ? "رسالة الخطأ" : "Error"} value={log.error_message} />
+                )}
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
+  );
+}
+
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-border/50 pb-1">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`text-end ${mono ? "font-mono text-xs" : ""} break-all max-w-[60%]`}>
+        {value}
+      </span>
+    </div>
   );
 }
