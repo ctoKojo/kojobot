@@ -118,8 +118,10 @@ export default function AdminJobInvites() {
         supabase.functions.invoke("send-email", {
           body: {
             to: inv.email,
-            template_name: "job-invite-to-apply",
-            variables: {
+            templateName: "job-invite-to-apply",
+            idempotencyKey: `job-invite-${inv.id}`,
+            audience: "staff",
+            templateData: {
               job_title: job.title_en,
               job_title_ar: job.title_ar,
               apply_url: `${appUrl}/apply/${job.slug}?invite=${inv.token}`,
