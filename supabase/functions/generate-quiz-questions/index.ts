@@ -300,14 +300,35 @@ serve(async (req) => {
     contextParts.push(`رقم الدرس: ${session.session_number}`);
     if (session.description_ar) contextParts.push(`وصف الدرس: ${session.description_ar}`);
     if (studentPdfText) contextParts.push(`محتوى الدرس:\n${studentPdfText}`);
-    if (additionalContext && additionalContext.length <= 500) {
-      contextParts.push(`سياق إضافي: ${additionalContext}`);
+    if (additionalContext && additionalContext.trim().length > 0 && additionalContext.length <= 500) {
+      contextParts.push(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 تعليمات إضافية إلزامية من المدرس (لازم تتنفذ في الأسئلة):
+${additionalContext.trim()}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ملاحظة: التعليمات اللي فوق دي أولوية قصوى — لازم تظهر بوضوح في الأسئلة المُولّدة. لو طلب المدرس تركيز على موضوع معين، خلي الأسئلة كلها حواليه. لو طلب نوع معين من الأسئلة، التزم بيه.`);
     }
 
     const difficultyMap: Record<string, string> = {
-      easy: "سهل - أسئلة مباشرة تقيس الفهم الأساسي",
-      medium: "متوسط - أسئلة تحتاج تفكير وتطبيق",
-      hard: "صعب - أسئلة تحليلية تحتاج ربط مفاهيم",
+      easy: `سهل جداً (Easy):
+- أسئلة استرجاع وتذكر مباشر للمفاهيم الأساسية فقط
+- الإجابة موجودة حرفياً في المحتوى
+- بدون تحليل أو ربط بين مفاهيم
+- لو فيه code_snippet يكون قصير جداً (سطر أو سطرين كحد أقصى)
+- المشتتات (الإجابات الغلط) واضحة وسهل استبعادها
+- مثال: "إيه هو الـ variable؟" أو "أنهي حاجة من دي variable؟"`,
+      medium: `متوسط (Medium):
+- أسئلة فهم وتطبيق محدود
+- محتاج المتعلم يفكر شوية ويربط مفهوم بمثال
+- لو فيه code_snippet يكون 3-6 أسطر بسيطة
+- المشتتات معقولة لكن واحدة منهم واضح إنها غلط
+- مثال: "الكود ده هيطبع إيه؟" مع كود بسيط`,
+      hard: `صعب (Hard):
+- أسئلة تحليل، تتبع تنفيذ كود، أو ربط أكتر من مفهوم
+- محتاج تفكير متعدد الخطوات للوصول للإجابة
+- لو فيه code_snippet ممكن يكون 6-15 سطر فيه loops أو conditionals متداخلة
+- المشتتات كلها قريبة ومعقولة — مفيش مشتت واضح إنه غلط
+- ممكن أسئلة "إيه الغلط في الكود؟" أو "إيه أحسن طريقة لـ..."
+- اختر مفاهيم متقدمة من المحتوى لو متاحة`,
     };
 
     const ageGroupMap: Record<string, string> = {
@@ -355,9 +376,20 @@ const systemPrompt = `أنت مدرس متخصص في تعليم الأطفال 
   "correct_index": 0
 }
 
-الفئة العمرية: ${ageGroupMap[ageGroup] || ageGroupMap["10-13"]}
-مستوى الصعوبة: ${difficultyMap[difficulty] || difficultyMap["medium"]}
-عدد الأسئلة المطلوب: ${count}`;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+الفئة العمرية المستهدفة: ${ageGroupMap[ageGroup] || ageGroupMap["10-13"]}
+
+⚡ مستوى الصعوبة المطلوب (التزم به بصرامة في كل سؤال):
+${difficultyMap[difficulty] || difficultyMap["medium"]}
+
+عدد الأسئلة المطلوب: ${count}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ملاحظة هامة: مستوى الصعوبة المذكور أعلاه ليس اقتراح — هو إلزامي ولازم ينعكس في:
+(أ) عمق التفكير المطلوب للوصول للإجابة
+(ب) تعقيد الكود لو فيه code_snippet
+(ج) صعوبة استبعاد المشتتات (الإجابات الغلط)
+لو طلبت "صعب" وجبت أسئلة بسيطة، السيشن هتتعتبر فاشلة.`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {

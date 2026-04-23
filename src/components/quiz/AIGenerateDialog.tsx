@@ -45,6 +45,19 @@ const mapMinAgeToGroup = (minAge: number): string | null => {
   return null; // fallback to manual select
 };
 
+// Persistence key namespaced per session
+const storageKey = (sessionId: string) => `ai_gen_dialog_v1:${sessionId}`;
+
+interface PersistedState {
+  questions: GeneratedQuestion[];
+  warnings: Record<string, string[]>;
+  rejected: RejectedItem[];
+  generatedAt: number;
+}
+
+// Expire persisted results after 2 hours
+const PERSIST_TTL_MS = 2 * 60 * 60 * 1000;
+
 export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, hasPdfText, onQuestionsGenerated, ageGroupId }: Props) {
   const { isRTL } = useLanguage();
   const [questionsCount, setQuestionsCount] = useState(10);
@@ -58,6 +71,39 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
   const [rejectedItems, setRejectedItems] = useState<RejectedItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showWarningsOnly, setShowWarningsOnly] = useState(false);
+  const [restoredFromCache, setRestoredFromCache] = useState(false);
+
+  // Restore previously generated questions for this session (survives refresh / tab change)
+  useEffect(() => {
+    if (!sessionId) return;
+    try {
+      const raw = sessionStorage.getItem(storageKey(sessionId));
+      if (!raw) return;
+      const parsed: PersistedState = JSON.parse(raw);
+      if (!parsed?.questions?.length) return;
+      if (Date.now() - (parsed.generatedAt || 0) > PERSIST_TTL_MS) {
+        sessionStorage.removeItem(storageKey(sessionId));
+        return;
+      }
+      setGeneratedQuestions(parsed.questions);
+      setWarnings(parsed.warnings || {});
+      setRejectedItems(parsed.rejected || []);
+      setRestoredFromCache(true);
+    } catch {
+      /* ignore corrupted cache */
+    }
+  }, [sessionId]);
+
+  const persistResults = (qs: GeneratedQuestion[], w: Record<string, string[]>, r: RejectedItem[]) => {
+    try {
+      const payload: PersistedState = { questions: qs, warnings: w, rejected: r, generatedAt: Date.now() };
+      sessionStorage.setItem(storageKey(sessionId), JSON.stringify(payload));
+    } catch { /* storage full / disabled */ }
+  };
+
+  const clearPersisted = () => {
+    try { sessionStorage.removeItem(storageKey(sessionId)); } catch { /* noop */ }
+  };
 
   // Auto-detect age group from ageGroupId
   useEffect(() => {
@@ -97,6 +143,8 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
     setWarnings({});
     setRejectedItems([]);
     setShowWarningsOnly(false);
+    setRestoredFromCache(false);
+    clearPersisted();
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('generate-quiz-questions', {
@@ -107,9 +155,13 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
       if (data?.error) throw new Error(data.error);
       if (!data?.questions?.length) throw new Error(isRTL ? 'لم يتم توليد أسئلة' : 'No questions generated');
 
-      setGeneratedQuestions(data.questions);
-      setWarnings(data.warnings || {});
-      setRejectedItems(data.rejected || []);
+      const qs = data.questions as GeneratedQuestion[];
+      const w = data.warnings || {};
+      const r = data.rejected || [];
+      setGeneratedQuestions(qs);
+      setWarnings(w);
+      setRejectedItems(r);
+      persistResults(qs, w, r);
     } catch (err: any) {
       setError(err.message || (isRTL ? 'فشل في توليد الأسئلة' : 'Failed to generate questions'));
     } finally {
@@ -120,6 +172,7 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
   const handleAddAll = () => {
     if (generatedQuestions) {
       onQuestionsGenerated(generatedQuestions);
+      clearPersisted();
       handleReset();
       onClose();
     }
@@ -131,6 +184,8 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
     setRejectedItems([]);
     setError(null);
     setShowWarningsOnly(false);
+    setRestoredFromCache(false);
+    clearPersisted();
   };
 
   const getQuestionWarnings = (q: GeneratedQuestion): string[] => {
@@ -144,7 +199,7 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
     : [];
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { handleReset(); onClose(); } }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { onClose(); } }}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -239,6 +294,16 @@ export function AIGenerateDialog({ open, onClose, sessionId, hasDescription, has
           </div>
         ) : (
           <div className="space-y-4">
+            {restoredFromCache && (
+              <div className="flex items-start gap-2 p-3 rounded-md bg-primary/5 border border-primary/20 text-xs text-foreground">
+                <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
+                <span>
+                  {isRTL
+                    ? 'تم استرجاع آخر أسئلة تم توليدها لهذه السيشن — مش هتحتاج تولّد تاني. لو عايز أسئلة جديدة، اضغط "إعادة التوليد".'
+                    : 'Restored the last generated questions for this session — no need to regenerate. Click "Regenerate" for fresh questions.'}
+                </span>
+              </div>
+            )}
             {/* Summary bar */}
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2 text-sm text-primary">
