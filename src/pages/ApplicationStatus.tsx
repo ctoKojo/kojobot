@@ -4,6 +4,7 @@ import { Search, Loader2, CheckCircle2, Clock, XCircle, Briefcase, ArrowRight, A
 import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LandingStyles } from "@/components/landing/LandingStyles";
+import { LandingNavbar } from "@/components/landing/LandingNavbar";
 
 interface StatusResult {
   applicant_name: string;
@@ -115,8 +116,9 @@ export default function ApplicationStatus() {
   return (
     <div className="kojo-root" dir={isRTL ? "rtl" : "ltr"} style={{ minHeight: "100vh" }}>
       <LandingStyles isRTL={isRTL} />
+      <LandingNavbar />
 
-      <header style={{ padding: "24px 0", borderBottom: "1px solid var(--kojo-border)" }}>
+      <header style={{ padding: "24px 0", borderBottom: "1px solid var(--kojo-border)", marginTop: 68 }}>
         <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 24px" }}>
           <Link to="/careers" style={{ color: "var(--kojo-muted)", display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none", fontSize: 14 }}>
             <ArrowIcon className="w-4 h-4" />

@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Briefcase, Calendar, MapPin, Clock } from "lucid
 import { publicSupabase } from "@/integrations/supabase/publicClient";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LandingStyles } from "@/components/landing/LandingStyles";
+import { LandingNavbar } from "@/components/landing/LandingNavbar";
 
 interface Job {
   id: string;
@@ -105,9 +106,10 @@ export default function Careers() {
   return (
     <div className="kojo-root" dir={isRTL ? "rtl" : "ltr"}>
       <LandingStyles isRTL={isRTL} />
+      <LandingNavbar />
 
       {/* Header */}
-      <header style={{ padding: "24px 0", borderBottom: "1px solid var(--kojo-border)" }}>
+      <header style={{ padding: "24px 0", borderBottom: "1px solid var(--kojo-border)", marginTop: 68 }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <Link to={`/${language}`} style={{ color: "var(--kojo-muted)", display: "flex", alignItems: "center", gap: 8, textDecoration: "none", fontSize: 14 }}>
             <ArrowIcon className="w-4 h-4" />
