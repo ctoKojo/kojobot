@@ -33,6 +33,10 @@ interface Interview {
   status: string;
   outcome: string | null;
   notes: string | null;
+  applicant_confirmed_at: string | null;
+  reschedule_requested_at: string | null;
+  reschedule_reason: string | null;
+  cancelled_by_applicant_at: string | null;
 }
 
 interface Props {
