@@ -181,16 +181,24 @@ Deno.serve(async (req) => {
     // Cancel any existing active (scheduled) interviews for this application.
     // This guarantees only one active interview per applicant — solves the
     // "ghost reschedule request still showing" issue after a new time is proposed.
-    const { error: cancelErr } = await admin
+    const { data: previousActive } = await admin
       .from('job_interviews')
-      .update({
-        status: 'cancelled',
-        cancelled_reason: 'Superseded by a new scheduled interview',
-      })
+      .select('id')
       .eq('application_id', body.application_id)
       .eq('status', 'scheduled')
-    if (cancelErr) {
-      console.warn('Failed to cancel previous interviews (non-blocking):', cancelErr)
+    const isReschedule = !!(previousActive && previousActive.length > 0)
+    if (isReschedule) {
+      const { error: cancelErr } = await admin
+        .from('job_interviews')
+        .update({
+          status: 'cancelled',
+          cancelled_reason: 'Superseded by a new scheduled interview',
+        })
+        .eq('application_id', body.application_id)
+        .eq('status', 'scheduled')
+      if (cancelErr) {
+        console.warn('Failed to cancel previous interviews (non-blocking):', cancelErr)
+      }
     }
 
     // Insert interview
