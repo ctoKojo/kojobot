@@ -399,6 +399,25 @@ Deno.serve(async (req) => {
   let lastStatus = 0
   const attemptHistory: Array<Record<string, any>> = []
 
+  // Generate a plain-text fallback from HTML to improve deliverability
+  // (Gmail/Outlook spam filters down-rank HTML-only messages).
+  const htmlToText = (input: string): string =>
+    input
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<\/(p|div|h[1-6]|li|tr|br)>/gi, '\n')
+      .replace(/<br\s*\/?>(?!\n)/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+
+  const plainText = htmlToText(html)
+
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const response = await fetch(RESEND_API_URL, {
@@ -412,6 +431,7 @@ Deno.serve(async (req) => {
           to: [to],
           subject,
           html,
+          text: plainText,
         }),
       })
 
@@ -423,9 +443,11 @@ Deno.serve(async (req) => {
           resend_id: result?.id,
           attempt,
           attempt_history: attemptHistory,
+          template_name: templateName,
+          audience,
         })
         return new Response(
-          JSON.stringify({ success: true, id: result?.id, attempt }),
+          JSON.stringify({ success: true, id: result?.id, attempt, accepted: true }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }

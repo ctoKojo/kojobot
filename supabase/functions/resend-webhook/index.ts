@@ -173,6 +173,9 @@ Deno.serve(async (req) => {
   }
 
   // 2. Update latest delivery status on email_send_log (best-effort)
+  // IMPORTANT: email_send_log.message_id stores our internal idempotencyKey,
+  // NOT the Resend email id. The Resend id is stored inside metadata.resend_id.
+  // So we look up the row by metadata->>'resend_id' = messageId.
   if (messageId) {
     const statusMap: Record<string, string> = {
       "email.sent": "sent",
@@ -199,13 +202,38 @@ Deno.serve(async (req) => {
         null;
     }
 
-    const { error: updateError } = await supabase
+    // Find the matching row by Resend's email_id (stored in metadata.resend_id)
+    const { data: matchRows, error: matchError } = await supabase
       .from("email_send_log")
-      .update(updates)
-      .eq("message_id", messageId);
+      .select("id")
+      .eq("metadata->>resend_id", messageId)
+      .limit(5);
 
-    if (updateError) {
-      console.warn("[resend-webhook] Update send_log warning:", updateError.message);
+    if (matchError) {
+      console.warn("[resend-webhook] Match query warning:", matchError.message);
+    }
+
+    if (matchRows && matchRows.length > 0) {
+      const ids = matchRows.map((r: { id: string }) => r.id);
+      const { error: updateError } = await supabase
+        .from("email_send_log")
+        .update(updates)
+        .in("id", ids);
+      if (updateError) {
+        console.warn("[resend-webhook] Update send_log warning:", updateError.message);
+      }
+    } else {
+      // Fallback: try the legacy path in case message_id was stored directly
+      const { error: legacyError } = await supabase
+        .from("email_send_log")
+        .update(updates)
+        .eq("message_id", messageId);
+      if (legacyError) {
+        console.warn(
+          "[resend-webhook] Legacy update warning (no row matched resend_id):",
+          legacyError.message,
+        );
+      }
     }
   }
 
