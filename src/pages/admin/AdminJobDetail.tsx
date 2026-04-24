@@ -287,7 +287,12 @@ export default function AdminJobDetail() {
                         ) : action === "confirmed" ? (
                           <Badge variant="outline" className="text-green-700 dark:text-green-300 border-green-500/40 bg-green-500/5">
                             <CheckCircle2 className="w-3 h-3 me-1" />
-                            {isRTL ? "أكّد" : "Confirmed"}
+                            {isRTL ? "أكّد المقابلة" : "Confirmed"}
+                          </Badge>
+                        ) : action === "pending" ? (
+                          <Badge variant="outline" className="text-blue-700 dark:text-blue-300 border-blue-500/40 bg-blue-500/5">
+                            <Clock className="w-3 h-3 me-1" />
+                            {isRTL ? "في انتظار التأكيد" : "Awaiting confirmation"}
                           </Badge>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
