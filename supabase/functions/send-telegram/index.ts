@@ -63,7 +63,8 @@ function htmlToTelegramHtml(html: string): string {
 
 // Build a Telegram message body for a given template/event
 async function buildMessage(
-  supabase: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
   templateName: string,
   audience: string,
   data: Record<string, any>,
