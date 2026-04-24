@@ -124,16 +124,19 @@ export default function AdminJobDetail() {
   }, [applications]);
 
   const interviewActionByApp = useMemo(() => {
-    const map: Record<string, "reschedule" | "confirmed" | "cancelled" | null> = {};
+    const map: Record<string, "reschedule" | "confirmed" | "cancelled" | "pending" | null> = {};
     interviews.forEach((iv) => {
       if (iv.status !== "scheduled") return;
-      // Priority: cancellation > pending reschedule > confirmed
+      // Priority: cancellation > pending reschedule > confirmed > pending (awaiting applicant)
       if (iv.cancelled_by_applicant_at) {
         map[iv.application_id] = "cancelled";
       } else if (iv.reschedule_requested_at && map[iv.application_id] !== "cancelled") {
         map[iv.application_id] = "reschedule";
       } else if (iv.applicant_confirmed_at && !map[iv.application_id]) {
         map[iv.application_id] = "confirmed";
+      } else if (!map[iv.application_id]) {
+        // Interview is scheduled but applicant hasn't confirmed/rescheduled/cancelled yet
+        map[iv.application_id] = "pending";
       }
     });
     return map;
