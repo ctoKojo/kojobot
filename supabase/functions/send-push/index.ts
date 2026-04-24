@@ -228,7 +228,7 @@ async function encryptPayload(
   // Import client's public key
   const clientKey = await crypto.subtle.importKey(
     "raw",
-    clientPublicKey,
+    clientPublicKey as BufferSource,
     { name: "ECDH", namedCurve: "P-256" },
     false,
     []
@@ -266,9 +266,9 @@ async function encryptPayload(
   const paddedPlaintext = concat(plaintext, new Uint8Array([2]));
 
   // Encrypt with AES-128-GCM
-  const key = await crypto.subtle.importKey("raw", cek, "AES-GCM", false, ["encrypt"]);
+  const key = await crypto.subtle.importKey("raw", cek as BufferSource, "AES-GCM", false, ["encrypt"]);
   const encrypted = new Uint8Array(
-    await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce }, key, paddedPlaintext)
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce as BufferSource }, key, paddedPlaintext as BufferSource)
   );
 
   // Build aes128gcm header: salt(16) + rs(4) + keyIdLen(1) + keyId(65) + ciphertext
@@ -284,9 +284,9 @@ async function encryptPayload(
 
 async function hkdfDerive(salt: Uint8Array, ikm: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
   // Import IKM as the base key for HKDF
-  const baseKey = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveBits"]);
+  const baseKey = await crypto.subtle.importKey("raw", ikm as BufferSource, "HKDF", false, ["deriveBits"]);
   const derived = await crypto.subtle.deriveBits(
-    { name: "HKDF", hash: "SHA-256", salt, info },
+    { name: "HKDF", hash: "SHA-256", salt: salt as BufferSource, info: info as BufferSource },
     baseKey,
     length * 8
   );

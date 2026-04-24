@@ -16,12 +16,14 @@ const WEBHOOK_SECRET = Deno.env.get("RESEND_WEBHOOK_SECRET");
 interface ResendEventPayload {
   type: string;
   created_at?: string;
+  id?: string;
   data?: {
     email_id?: string;
     to?: string[] | string;
     bounce?: { type?: string; subType?: string; message?: string };
     [k: string]: unknown;
   };
+  [k: string]: unknown;
 }
 
 /**
@@ -57,7 +59,7 @@ async function verifySvixSignature(
 
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
-    keyBytes,
+    keyBytes.buffer.slice(keyBytes.byteOffset, keyBytes.byteOffset + keyBytes.byteLength) as ArrayBuffer,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],

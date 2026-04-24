@@ -4,7 +4,7 @@
 // Honors notification_channel_preferences (telegram_enabled).
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { z } from 'npm:zod@3.23.8'
+import { z } from 'https://deno.land/x/zod@v3.23.8/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -63,7 +63,8 @@ function htmlToTelegramHtml(html: string): string {
 
 // Build a Telegram message body for a given template/event
 async function buildMessage(
-  supabase: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
   templateName: string,
   audience: string,
   data: Record<string, any>,

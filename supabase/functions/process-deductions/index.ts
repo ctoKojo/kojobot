@@ -151,7 +151,8 @@ serve(async (req) => {
 
         results.processed++;
       } catch (e) {
-        results.errors.push(`Event ${event.id}: ${e.message}`);
+        const msg = e instanceof Error ? e.message : String(e);
+        results.errors.push(`Event ${event.id}: ${msg}`);
       }
     }
 

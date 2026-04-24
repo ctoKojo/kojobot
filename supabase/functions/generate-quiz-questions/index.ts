@@ -18,6 +18,7 @@ interface GeneratedQuestion {
   rationale?: string;
   tags?: string[];
   code_snippet?: string;
+  points?: number;
   _qid?: string; // internal tracking id
 }
 
