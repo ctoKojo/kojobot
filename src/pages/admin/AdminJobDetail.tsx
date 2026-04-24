@@ -14,7 +14,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Briefcase, ArrowLeft, ArrowRight, Search, Download, Send, Users, Eye, FileText, CalendarClock, CheckCircle2, XCircle } from "lucide-react";
+import { Briefcase, ArrowLeft, ArrowRight, Search, Download, Send, Users, Eye, FileText, CalendarClock, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { ApplicationDetailDialog } from "@/components/recruitment/ApplicationDetailDialog";
 
 const STATUS_LIST = ["new", "under_review", "shortlisted", "interviewing", "hired", "rejected"] as const;
@@ -124,16 +124,19 @@ export default function AdminJobDetail() {
   }, [applications]);
 
   const interviewActionByApp = useMemo(() => {
-    const map: Record<string, "reschedule" | "confirmed" | "cancelled" | null> = {};
+    const map: Record<string, "reschedule" | "confirmed" | "cancelled" | "pending" | null> = {};
     interviews.forEach((iv) => {
       if (iv.status !== "scheduled") return;
-      // Priority: cancellation > pending reschedule > confirmed
+      // Priority: cancellation > pending reschedule > confirmed > pending (awaiting applicant)
       if (iv.cancelled_by_applicant_at) {
         map[iv.application_id] = "cancelled";
       } else if (iv.reschedule_requested_at && map[iv.application_id] !== "cancelled") {
         map[iv.application_id] = "reschedule";
       } else if (iv.applicant_confirmed_at && !map[iv.application_id]) {
         map[iv.application_id] = "confirmed";
+      } else if (!map[iv.application_id]) {
+        // Interview is scheduled but applicant hasn't confirmed/rescheduled/cancelled yet
+        map[iv.application_id] = "pending";
       }
     });
     return map;
@@ -284,7 +287,12 @@ export default function AdminJobDetail() {
                         ) : action === "confirmed" ? (
                           <Badge variant="outline" className="text-green-700 dark:text-green-300 border-green-500/40 bg-green-500/5">
                             <CheckCircle2 className="w-3 h-3 me-1" />
-                            {isRTL ? "أكّد" : "Confirmed"}
+                            {isRTL ? "أكّد المقابلة" : "Confirmed"}
+                          </Badge>
+                        ) : action === "pending" ? (
+                          <Badge variant="outline" className="text-blue-700 dark:text-blue-300 border-blue-500/40 bg-blue-500/5">
+                            <Clock className="w-3 h-3 me-1" />
+                            {isRTL ? "في انتظار التأكيد" : "Awaiting confirmation"}
                           </Badge>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
