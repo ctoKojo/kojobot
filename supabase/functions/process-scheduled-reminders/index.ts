@@ -83,7 +83,8 @@ async function buildRecipientsForStudent(
 }
 
 async function processOne(
-  supabase: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
   row: ScheduledRow,
 ): Promise<{ ok: number; fail: number; skipped: number; errors: string[] }> {
   const summary = { ok: 0, fail: 0, skipped: 0, errors: [] as string[] };
