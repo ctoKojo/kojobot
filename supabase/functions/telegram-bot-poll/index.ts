@@ -32,7 +32,8 @@ async function sendTelegramMessage(botToken: string, chatId: number, text: strin
 }
 
 async function handleCommand(
-  supabase: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
   botToken: string,
   update: any,
 ): Promise<void> {
