@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { formatDate, formatDateTime } from '@/lib/timeUtils';
+import { formatDate, formatFixedCairoDateTime } from '@/lib/timeUtils';
 import { useNavigate } from 'react-router-dom';
 import { FileQuestion, Play, CheckCircle, Clock, Calendar, Snowflake } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -176,7 +176,7 @@ export default function MyQuizzes() {
   };
 
   const getRemainingTime = (quiz: QuizAssignment) => {
-    const now = new Date().getTime();
+    const now = serverNow();
     const startTime = quiz.start_time ? new Date(quiz.start_time).getTime() : now;
     const dueDate = quiz.due_date ? new Date(quiz.due_date).getTime() : null;
     const duration = quiz.quizzes?.duration_minutes || 30;
@@ -298,13 +298,13 @@ export default function MyQuizzes() {
                         {quiz.start_time && (
                           <span className="flex items-center gap-1">
                             <Play className="w-4 h-4" />
-                            {isRTL ? 'يبدأ: ' : 'Starts: '}{formatDateTime(quiz.start_time)}
+                            {isRTL ? 'يبدأ: ' : 'Starts: '}{formatFixedCairoDateTime(quiz.start_time, language)}
                           </span>
                         )}
                         {quiz.due_date && (
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            {isRTL ? 'ينتهي: ' : 'Due: '}{formatDateTime(quiz.due_date)}
+                            {isRTL ? 'ينتهي: ' : 'Due: '}{formatFixedCairoDateTime(quiz.due_date, language)}
                           </span>
                         )}
                       </div>
@@ -315,7 +315,7 @@ export default function MyQuizzes() {
                             {isRTL ? 'الكويز يبدأ في:' : 'Quiz starts at:'}
                           </p>
                           <p className="text-lg font-bold text-primary">
-                            {formatDateTime(quiz.start_time)}
+                            {formatFixedCairoDateTime(quiz.start_time, language)}
                           </p>
                         </div>
                       )}

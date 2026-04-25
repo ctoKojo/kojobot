@@ -29,9 +29,7 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { QuizResultsDialog } from '@/components/session/QuizResultsDialog';
 import { ExamLiveMonitor } from '@/components/exam/ExamLiveMonitor';
-import { fromZonedTime } from 'date-fns-tz';
-import { APP_TIMEZONE } from '@/lib/constants';
-import { getCairoToday } from '@/lib/timeUtils';
+import { buildFixedCairoDateTime, formatFixedCairoDateTime, getFixedCairoDateTimeParts, getFixedCairoToday } from '@/lib/timeUtils';
 
 interface ExamCandidate {
   progress_id: string;
@@ -180,20 +178,13 @@ export default function FinalExams() {
   const handleOpenReschedule = (candidate: ExamCandidate) => {
     if (!candidate.final_exam_quiz_id) return;
     setRescheduleCandidate(candidate);
-    // Pre-fill with existing schedule — read in Cairo timezone (NOT browser local)
+    // Pre-fill with existing schedule using Kojo fixed Cairo time (UTC+2, no DST shift)
     if (candidate.exam_scheduled_at) {
-      const d = new Date(candidate.exam_scheduled_at);
-      const parts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: APP_TIMEZONE,
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', hour12: false,
-      }).formatToParts(d);
-      const get = (t: string) => parts.find(p => p.type === t)!.value;
-      setScheduleDate(`${get('year')}-${get('month')}-${get('day')}`);
-      // 'en-CA' returns 24h with hour in '00'..'23'
-      let hour = get('hour');
-      if (hour === '24') hour = '00';
-      setScheduleTime(`${hour}:${get('minute')}`);
+      const parts = getFixedCairoDateTimeParts(candidate.exam_scheduled_at);
+      if (parts) {
+        setScheduleDate(parts.date);
+        setScheduleTime(parts.time);
+      }
     }
     setSelectedIds(new Set([candidate.progress_id]));
     setShowScheduleDialog(true);
@@ -205,12 +196,13 @@ export default function FinalExams() {
       return;
     }
 
-    // Build the timestamp by interpreting (date + time) AS Cairo local time.
-    // fromZonedTime correctly handles DST transitions (no hardcoded +02:00 / +03:00).
-    const [yy, mm, dd] = scheduleDate.split('-').map(Number);
-    const [hh, mi] = scheduleTime.split(':').map(Number);
-    const fakeLocal = new Date(yy, mm - 1, dd, hh, mi, 0);
-    const selectedDateTime = fromZonedTime(fakeLocal, APP_TIMEZONE);
+    // Build the timestamp using Kojo fixed Cairo time (UTC+2). Do not apply DST.
+    const selectedDateTime = buildFixedCairoDateTime(scheduleDate, scheduleTime);
+
+    if (!selectedDateTime) {
+      toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'صيغة التاريخ أو الوقت غير صحيحة' : 'Invalid date or time' });
+      return;
+    }
 
     if (selectedDateTime < new Date()) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'لا يمكن جدولة امتحان في وقت ماضي' : 'Cannot schedule an exam in the past' });
@@ -221,7 +213,7 @@ export default function FinalExams() {
     try {
       const groupId = Array.from(selectedGroupIds)[0];
       const studentIds = selectedCandidates.map(c => c.student_id);
-      // Use the DST-aware Cairo timestamp built above (handles +02 / +03 automatically)
+      // Use fixed Cairo timestamp (UTC+2) so entered time stays exactly as-is
       const dateTime = selectedDateTime.toISOString();
 
       // Fetch quiz duration to use as submission window
@@ -244,8 +236,8 @@ export default function FinalExams() {
         if (error) throw error;
 
         // Notifications fan-out (student + parents + reception/admin)
-        const examLabelEn = new Date(dateTime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: APP_TIMEZONE });
-        const examLabelAr = new Date(dateTime).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short', timeZone: APP_TIMEZONE });
+        const examLabelEn = formatFixedCairoDateTime(dateTime, 'en', { dateStyle: 'medium', timeStyle: 'short' });
+        const examLabelAr = formatFixedCairoDateTime(dateTime, 'ar', { dateStyle: 'medium', timeStyle: 'short' });
         await notificationService.notifyFinalExamRescheduled({
           studentId: rescheduleCandidate.student_id,
           studentName: rescheduleCandidate.full_name,
@@ -325,10 +317,9 @@ export default function FinalExams() {
   };
 
   const formatExamDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+    return formatFixedCairoDateTime(dateStr, language, {
       month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
-      timeZone: APP_TIMEZONE,
     });
   };
 
@@ -336,15 +327,12 @@ export default function FinalExams() {
   const schedulePreview = useMemo(() => {
     if (!scheduleDate || !scheduleTime) return null;
     try {
-      const [yy, mm, dd] = scheduleDate.split('-').map(Number);
-      const [hh, mi] = scheduleTime.split(':').map(Number);
-      const fakeLocal = new Date(yy, mm - 1, dd, hh, mi, 0);
-      const cairoInstant = fromZonedTime(fakeLocal, APP_TIMEZONE);
+      const cairoInstant = buildFixedCairoDateTime(scheduleDate, scheduleTime);
+      if (!cairoInstant) return null;
       const isPast = cairoInstant < new Date();
-      const label = cairoInstant.toLocaleString(isRTL ? 'ar-EG' : 'en-US', {
+      const label = formatFixedCairoDateTime(cairoInstant.toISOString(), language, {
         weekday: 'short', month: 'short', day: 'numeric',
         hour: 'numeric', minute: '2-digit', hour12: true,
-        timeZone: APP_TIMEZONE,
       });
       return { label, isPast };
     } catch {
@@ -890,7 +878,7 @@ export default function FinalExams() {
                     type="date"
                     value={scheduleDate}
                     onChange={e => setScheduleDate(e.target.value)}
-                    min={getCairoToday()}
+                    min={getFixedCairoToday()}
                     className="bg-card"
                   />
                 </div>
