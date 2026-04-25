@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { formatDateTime } from '@/lib/timeUtils';
+import { formatFixedCairoDateTime } from '@/lib/timeUtils';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Clock, CheckCircle, XCircle, AlertTriangle, FileText, WifiOff } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -669,7 +669,7 @@ export default function TakeQuiz() {
                 {isRTL ? 'الكويز يبدأ في:' : 'Quiz starts at:'}
               </p>
               <p className="text-2xl font-bold text-primary">
-                {formatDateTime(assignment.start_time, language)}
+                {formatFixedCairoDateTime(assignment.start_time, language)}
               </p>
             </div>
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
