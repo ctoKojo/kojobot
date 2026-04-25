@@ -1,6 +1,60 @@
 import { APP_TIMEZONE } from './constants';
 import { fromZonedTime } from 'date-fns-tz';
 
+// Kojo scheduling policy: keep displayed/scheduled operational times fixed at UTC+2.
+// This avoids Egypt DST shifting entered times forward by one hour for reception/students.
+const FIXED_CAIRO_OFFSET_MS = 2 * 60 * 60 * 1000;
+
+const pad2 = (value: number): string => String(value).padStart(2, '0');
+
+export function buildFixedCairoDateTime(date: string, time: string): Date | null {
+  const [year, month, day] = date.split('-').map(Number);
+  const [hour, minute] = time.split(':').map(Number);
+  if ([year, month, day, hour, minute].some(Number.isNaN)) return null;
+
+  return new Date(Date.UTC(year, month - 1, day, hour, minute, 0) - FIXED_CAIRO_OFFSET_MS);
+}
+
+export function getFixedCairoToday(reference: Date = new Date()): string {
+  const shifted = new Date(reference.getTime() + FIXED_CAIRO_OFFSET_MS);
+  return `${shifted.getUTCFullYear()}-${pad2(shifted.getUTCMonth() + 1)}-${pad2(shifted.getUTCDate())}`;
+}
+
+export function getFixedCairoDateTimeParts(dateString: string): { date: string; time: string } | null {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return null;
+  const shifted = new Date(date.getTime() + FIXED_CAIRO_OFFSET_MS);
+  return {
+    date: `${shifted.getUTCFullYear()}-${pad2(shifted.getUTCMonth() + 1)}-${pad2(shifted.getUTCDate())}`,
+    time: `${pad2(shifted.getUTCHours())}:${pad2(shifted.getUTCMinutes())}`,
+  };
+}
+
+export function formatFixedCairoDateTime(
+  date: string,
+  language: string = 'en',
+  options?: Intl.DateTimeFormatOptions
+): string {
+  if (!date) return '-';
+  const parsed = safeParseDateString(date);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  const shifted = new Date(parsed.getTime() + FIXED_CAIRO_OFFSET_MS);
+  const defaultOptions: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  };
+
+  return shifted.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
+    ...defaultOptions,
+    ...options,
+    timeZone: 'UTC',
+  });
+}
+
 // ============================================================
 // Timezone Detection Helpers
 // ============================================================
