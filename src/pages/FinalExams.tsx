@@ -29,6 +29,9 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { QuizResultsDialog } from '@/components/session/QuizResultsDialog';
 import { ExamLiveMonitor } from '@/components/exam/ExamLiveMonitor';
+import { fromZonedTime } from 'date-fns-tz';
+import { APP_TIMEZONE } from '@/lib/constants';
+import { getCairoToday } from '@/lib/timeUtils';
 
 interface ExamCandidate {
   progress_id: string;
