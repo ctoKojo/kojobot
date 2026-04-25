@@ -328,8 +328,29 @@ export default function FinalExams() {
     return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
       month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
+      timeZone: APP_TIMEZONE,
     });
   };
+
+  // Live preview of the chosen schedule (in Cairo time) so reception can verify before saving
+  const schedulePreview = useMemo(() => {
+    if (!scheduleDate || !scheduleTime) return null;
+    try {
+      const [yy, mm, dd] = scheduleDate.split('-').map(Number);
+      const [hh, mi] = scheduleTime.split(':').map(Number);
+      const fakeLocal = new Date(yy, mm - 1, dd, hh, mi, 0);
+      const cairoInstant = fromZonedTime(fakeLocal, APP_TIMEZONE);
+      const isPast = cairoInstant < new Date();
+      const label = cairoInstant.toLocaleString(isRTL ? 'ar-EG' : 'en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit', hour12: true,
+        timeZone: APP_TIMEZONE,
+      });
+      return { label, isPast };
+    } catch {
+      return null;
+    }
+  }, [scheduleDate, scheduleTime, isRTL]);
 
   // Group candidates by group for better visual grouping
   const groupedCandidates = useMemo(() => {
