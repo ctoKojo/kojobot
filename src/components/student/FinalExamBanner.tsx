@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { formatDateTime } from '@/lib/timeUtils';
+import { formatFixedCairoDateTime } from '@/lib/timeUtils';
+import { serverNow, syncServerTime } from '@/lib/serverTime';
 import { BookOpen, CalendarClock, Sparkles, Play, Clock } from 'lucide-react';
 import type { ExamInfo } from '@/hooks/useStudentLifecycle';
 
@@ -14,16 +15,17 @@ interface FinalExamBannerProps {
 export function FinalExamBanner({ examInfo }: FinalExamBannerProps) {
   const { isRTL, language } = useLanguage();
   const navigate = useNavigate();
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState(() => serverNow());
 
   useEffect(() => {
-    const interval = setInterval(() => setNow(new Date()), 30_000);
+    syncServerTime().finally(() => setNow(serverNow()));
+    const interval = setInterval(() => setNow(serverNow()), 30_000);
     return () => clearInterval(interval);
   }, []);
 
   const levelName = language === 'ar' ? examInfo.level_name_ar : examInfo.level_name;
-  const examTime = examInfo.start_time ? new Date(examInfo.start_time) : new Date(examInfo.exam_scheduled_at);
-  const examEnd = examInfo.due_date ? new Date(examInfo.due_date) : null;
+  const examTime = examInfo.start_time ? new Date(examInfo.start_time).getTime() : new Date(examInfo.exam_scheduled_at).getTime();
+  const examEnd = examInfo.due_date ? new Date(examInfo.due_date).getTime() : null;
   const canStart = now >= examTime && (!examEnd || now <= examEnd);
   const isUpcoming = now < examTime;
 
@@ -67,7 +69,7 @@ export function FinalExamBanner({ examInfo }: FinalExamBannerProps) {
             <div className="flex items-center gap-2 px-5 py-3 rounded-xl bg-white/70 dark:bg-black/20 border border-amber-200 dark:border-amber-700">
               <CalendarClock className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
               <span className="text-base sm:text-lg font-bold text-amber-800 dark:text-amber-300">
-                {formatDateTime(examInfo.start_time || examInfo.exam_scheduled_at)}
+                {formatFixedCairoDateTime(examInfo.start_time || examInfo.exam_scheduled_at, language)}
               </span>
             </div>
             {examInfo.duration_minutes && (
