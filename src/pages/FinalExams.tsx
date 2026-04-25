@@ -180,11 +180,20 @@ export default function FinalExams() {
   const handleOpenReschedule = (candidate: ExamCandidate) => {
     if (!candidate.final_exam_quiz_id) return;
     setRescheduleCandidate(candidate);
-    // Pre-fill with existing schedule
+    // Pre-fill with existing schedule — read in Cairo timezone (NOT browser local)
     if (candidate.exam_scheduled_at) {
       const d = new Date(candidate.exam_scheduled_at);
-      setScheduleDate(d.toISOString().split('T')[0]);
-      setScheduleTime(d.toTimeString().slice(0, 5));
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: APP_TIMEZONE,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      }).formatToParts(d);
+      const get = (t: string) => parts.find(p => p.type === t)!.value;
+      setScheduleDate(`${get('year')}-${get('month')}-${get('day')}`);
+      // 'en-CA' returns 24h with hour in '00'..'23'
+      let hour = get('hour');
+      if (hour === '24') hour = '00';
+      setScheduleTime(`${hour}:${get('minute')}`);
     }
     setSelectedIds(new Set([candidate.progress_id]));
     setShowScheduleDialog(true);
@@ -196,8 +205,13 @@ export default function FinalExams() {
       return;
     }
 
-    // Prevent scheduling in the past
-    const selectedDateTime = new Date(`${scheduleDate}T${scheduleTime}:00`);
+    // Build the timestamp by interpreting (date + time) AS Cairo local time.
+    // fromZonedTime correctly handles DST transitions (no hardcoded +02:00 / +03:00).
+    const [yy, mm, dd] = scheduleDate.split('-').map(Number);
+    const [hh, mi] = scheduleTime.split(':').map(Number);
+    const fakeLocal = new Date(yy, mm - 1, dd, hh, mi, 0);
+    const selectedDateTime = fromZonedTime(fakeLocal, APP_TIMEZONE);
+
     if (selectedDateTime < new Date()) {
       toast({ variant: 'destructive', title: isRTL ? 'خطأ' : 'Error', description: isRTL ? 'لا يمكن جدولة امتحان في وقت ماضي' : 'Cannot schedule an exam in the past' });
       return;
