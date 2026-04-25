@@ -221,7 +221,8 @@ export default function FinalExams() {
     try {
       const groupId = Array.from(selectedGroupIds)[0];
       const studentIds = selectedCandidates.map(c => c.student_id);
-      const dateTime = `${scheduleDate}T${scheduleTime}:00+02:00`;
+      // Use the DST-aware Cairo timestamp built above (handles +02 / +03 automatically)
+      const dateTime = selectedDateTime.toISOString();
 
       // Fetch quiz duration to use as submission window
       const quizId = selectedCandidates[0]?.final_exam_quiz_id;
