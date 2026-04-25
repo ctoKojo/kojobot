@@ -29,8 +29,6 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { QuizResultsDialog } from '@/components/session/QuizResultsDialog';
 import { ExamLiveMonitor } from '@/components/exam/ExamLiveMonitor';
-import { fromZonedTime } from 'date-fns-tz';
-import { APP_TIMEZONE } from '@/lib/constants';
 import { buildFixedCairoDateTime, formatFixedCairoDateTime, getFixedCairoDateTimeParts, getFixedCairoToday } from '@/lib/timeUtils';
 
 interface ExamCandidate {
@@ -319,10 +317,9 @@ export default function FinalExams() {
   };
 
   const formatExamDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+    return formatFixedCairoDateTime(dateStr, language, {
       month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit',
-      timeZone: APP_TIMEZONE,
     });
   };
 
@@ -330,15 +327,12 @@ export default function FinalExams() {
   const schedulePreview = useMemo(() => {
     if (!scheduleDate || !scheduleTime) return null;
     try {
-      const [yy, mm, dd] = scheduleDate.split('-').map(Number);
-      const [hh, mi] = scheduleTime.split(':').map(Number);
-      const fakeLocal = new Date(yy, mm - 1, dd, hh, mi, 0);
-      const cairoInstant = fromZonedTime(fakeLocal, APP_TIMEZONE);
+      const cairoInstant = buildFixedCairoDateTime(scheduleDate, scheduleTime);
+      if (!cairoInstant) return null;
       const isPast = cairoInstant < new Date();
-      const label = cairoInstant.toLocaleString(isRTL ? 'ar-EG' : 'en-US', {
+      const label = formatFixedCairoDateTime(cairoInstant.toISOString(), language, {
         weekday: 'short', month: 'short', day: 'numeric',
         hour: 'numeric', minute: '2-digit', hour12: true,
-        timeZone: APP_TIMEZONE,
       });
       return { label, isPast };
     } catch {
@@ -884,7 +878,7 @@ export default function FinalExams() {
                     type="date"
                     value={scheduleDate}
                     onChange={e => setScheduleDate(e.target.value)}
-                    min={getCairoToday()}
+                    min={getFixedCairoToday()}
                     className="bg-card"
                   />
                 </div>
