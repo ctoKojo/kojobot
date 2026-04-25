@@ -236,8 +236,8 @@ export default function FinalExams() {
         if (error) throw error;
 
         // Notifications fan-out (student + parents + reception/admin)
-        const examLabelEn = new Date(dateTime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: APP_TIMEZONE });
-        const examLabelAr = new Date(dateTime).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short', timeZone: APP_TIMEZONE });
+        const examLabelEn = formatFixedCairoDateTime(dateTime, 'en', { dateStyle: 'medium', timeStyle: 'short' });
+        const examLabelAr = formatFixedCairoDateTime(dateTime, 'ar', { dateStyle: 'medium', timeStyle: 'short' });
         await notificationService.notifyFinalExamRescheduled({
           studentId: rescheduleCandidate.student_id,
           studentName: rescheduleCandidate.full_name,
