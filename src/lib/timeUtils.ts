@@ -48,8 +48,9 @@ export function formatFixedCairoDateTime(
     minute: '2-digit',
   };
 
+  const usesStyleShortcut = !!options?.dateStyle || !!options?.timeStyle;
   return shifted.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
-    ...defaultOptions,
+    ...(usesStyleShortcut ? {} : defaultOptions),
     ...options,
     timeZone: 'UTC',
   });
