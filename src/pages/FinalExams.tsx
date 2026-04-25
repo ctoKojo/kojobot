@@ -890,14 +890,14 @@ export default function FinalExams() {
                     type="date"
                     value={scheduleDate}
                     onChange={e => setScheduleDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
+                    min={getCairoToday()}
                     className="bg-card"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-1.5">
-                    <Label htmlFor="exam-time" className="text-sm">{isRTL ? 'الوقت' : 'Time'}</Label>
+                    <Label htmlFor="exam-time" className="text-sm">{isRTL ? 'الوقت (بتوقيت القاهرة)' : 'Time (Cairo)'}</Label>
                     <Input
                       id="exam-time"
                       type="time"
@@ -907,6 +907,22 @@ export default function FinalExams() {
                     />
                   </div>
                 </div>
+
+                {schedulePreview && (
+                  <Alert variant={schedulePreview.isPast ? 'destructive' : 'default'} className="py-2">
+                    <Clock className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      <span className="font-medium">{isRTL ? 'سيُحفظ الامتحان في:' : 'Exam will be saved at:'}</span>{' '}
+                      <span className="font-bold">{schedulePreview.label}</span>
+                      <span className="text-muted-foreground ms-1">{isRTL ? '(توقيت القاهرة)' : '(Cairo time)'}</span>
+                      {schedulePreview.isPast && (
+                        <div className="text-destructive mt-1 text-xs">
+                          {isRTL ? '⚠️ هذا الوقت في الماضي' : '⚠️ This time is in the past'}
+                        </div>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             </div>
             <DialogFooter className="gap-2 sm:gap-0">
