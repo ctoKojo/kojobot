@@ -164,26 +164,46 @@ export default function StudentProfile() {
         .eq('is_active', true)
         .maybeSingle();
 
-      const { data: attendance } = await supabase
+      // Determine the "current level" we should scope the profile data to.
+      // Priority: profile.level_id (kept in sync via trigger) -> active group's level.
+      const currentLevelId: string | null =
+        (profile as any)?.level_id || (groupStudent as any)?.groups?.level_id || null;
+
+      // Attendance scoped to current level (uses sessions.level_id).
+      let attendanceQuery = supabase
         .from('attendance')
-        .select('*, sessions(session_date, session_time, session_number, topic, topic_ar)')
+        .select('*, sessions!inner(session_date, session_time, session_number, topic, topic_ar, level_id)')
         .eq('student_id', studentId)
         .order('recorded_at', { ascending: false })
         .limit(50);
+      if (currentLevelId) {
+        attendanceQuery = attendanceQuery.eq('sessions.level_id', currentLevelId);
+      }
+      const { data: attendance } = await attendanceQuery;
 
-      const { data: quizSubmissions } = await supabase
+      // Quiz submissions scoped to current level via the quiz's level_id.
+      let quizQuery = supabase
         .from('quiz_submissions')
-        .select('*, quiz_assignments(quizzes(title, title_ar))')
+        .select('*, quiz_assignments!inner(quizzes!inner(title, title_ar, level_id))')
         .eq('student_id', studentId)
         .eq('is_auto_generated', false)
         .order('submitted_at', { ascending: false });
+      if (currentLevelId) {
+        quizQuery = quizQuery.eq('quiz_assignments.quizzes.level_id', currentLevelId);
+      }
+      const { data: quizSubmissions } = await quizQuery;
 
-      const { data: assignmentSubmissions } = await supabase
+      // Assignment submissions scoped to current level via the assignment's session.level_id.
+      let assignmentQuery = supabase
         .from('assignment_submissions')
-        .select('*, assignments(title, title_ar, max_score)')
+        .select('*, assignments!inner(title, title_ar, max_score, sessions!inner(level_id))')
         .eq('student_id', studentId)
         .eq('is_auto_generated', false)
         .order('submitted_at', { ascending: false });
+      if (currentLevelId) {
+        assignmentQuery = assignmentQuery.eq('assignments.sessions.level_id', currentLevelId);
+      }
+      const { data: assignmentSubmissions } = await assignmentQuery;
 
       // Skip fetching data instructor doesn't need
       let warnings: any[] = [];
