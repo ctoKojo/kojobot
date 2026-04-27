@@ -271,6 +271,21 @@ export default function StudentProfile() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [studentId, fetchStudentData]);
 
+  // Realtime: keep the profile in sync when the student is moved between groups
+  // or when their level/profile/progress changes from another tab/admin.
+  useEffect(() => {
+    if (!studentId) return;
+    const channel = supabase
+      .channel(`student-profile-${studentId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_students', filter: `student_id=eq.${studentId}` }, () => fetchStudentData(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_student_progress', filter: `student_id=eq.${studentId}` }, () => fetchStudentData(true))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `user_id=eq.${studentId}` }, () => fetchStudentData(true))
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [studentId, fetchStudentData]);
+
   const getAttendanceStats = () => {
     const total = data?.attendance.length || 0;
     const present = data?.attendance.filter(a => a.status === 'present').length || 0;
