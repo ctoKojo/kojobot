@@ -8126,6 +8126,10 @@ export type Database = {
         Args: { _student_id: string }
         Returns: string[]
       }
+      get_student_level_report: {
+        Args: { p_group_id?: string; p_level_id: string; p_student_id: string }
+        Returns: Json
+      }
       get_student_level_xp: {
         Args: { p_student_id: string }
         Returns: {
