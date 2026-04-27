@@ -16,6 +16,8 @@ interface LevelHistorySectionProps {
 
 export function LevelHistorySection({ studentId }: LevelHistorySectionProps) {
   const { isRTL, language } = useLanguage();
+  const { role } = useAuth();
+  const canViewReport = role === 'admin' || role === 'reception';
   const [grades, setGrades] = useState<any[]>([]);
   const [transitions, setTransitions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +82,7 @@ export function LevelHistorySection({ studentId }: LevelHistorySectionProps) {
                 <TableHead className="text-center">{isRTL ? 'امتحان' : 'Exam'}</TableHead>
                 <TableHead className="text-center">%</TableHead>
                 <TableHead className="text-center">{isRTL ? 'النتيجة' : 'Outcome'}</TableHead>
+                {canViewReport && <TableHead className="text-center">{isRTL ? 'تقرير' : 'Report'}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -100,6 +103,18 @@ export function LevelHistorySection({ studentId }: LevelHistorySectionProps) {
                       </Badge>
                     ) : '-'}
                   </TableCell>
+                  {canViewReport && (
+                    <TableCell className="text-center">
+                      <Button asChild variant="outline" size="sm" className="h-7 gap-1">
+                        <Link
+                          to={`/student/${studentId}/level-report/${g.level_id}${g.group_id ? `?group=${g.group_id}` : ''}`}
+                        >
+                          <FileSearch className="h-3.5 w-3.5" />
+                          <span className="text-xs">{isRTL ? 'تفصيل' : 'View'}</span>
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
