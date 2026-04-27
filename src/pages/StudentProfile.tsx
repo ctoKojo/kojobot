@@ -193,15 +193,15 @@ export default function StudentProfile() {
       }
       const { data: quizSubmissions } = await quizQuery;
 
-      // Assignment submissions scoped to current level via the assignment's level_id.
+      // Assignment submissions scoped to current level via the assignment's session.level_id.
       let assignmentQuery = supabase
         .from('assignment_submissions')
-        .select('*, assignments!inner(title, title_ar, max_score, level_id)')
+        .select('*, assignments!inner(title, title_ar, max_score, sessions!inner(level_id))')
         .eq('student_id', studentId)
         .eq('is_auto_generated', false)
         .order('submitted_at', { ascending: false });
       if (currentLevelId) {
-        assignmentQuery = assignmentQuery.eq('assignments.level_id', currentLevelId);
+        assignmentQuery = assignmentQuery.eq('assignments.sessions.level_id', currentLevelId);
       }
       const { data: assignmentSubmissions } = await assignmentQuery;
 
