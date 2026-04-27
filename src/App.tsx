@@ -34,6 +34,7 @@ const QuizEditor = React.lazy(() => import("./pages/QuizEditor"));
 const GradeAssignment = React.lazy(() => import("./pages/GradeAssignment"));
 const AssignmentSubmissions = React.lazy(() => import("./pages/AssignmentSubmissions"));
 const StudentProfile = React.lazy(() => import("./pages/StudentProfile"));
+const StudentLevelReport = React.lazy(() => import("./pages/StudentLevelReport"));
 const InstructorProfile = React.lazy(() => import("./pages/InstructorProfile"));
 const GroupDetails = React.lazy(() => import("./pages/GroupDetails"));
 const Profile = React.lazy(() => import("./pages/Profile"));
@@ -162,6 +163,7 @@ const App = () => (
                   <Route path="/grade-assignment/:submissionId" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><GradeAssignment /></ProtectedRoute>} />
                   <Route path="/assignment-submissions/:assignmentId" element={<ProtectedRoute allowedRoles={['admin', 'instructor']}><AssignmentSubmissions /></ProtectedRoute>} />
                   <Route path="/student/:studentId" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'reception']}><StudentProfile /></ProtectedRoute>} />
+                  <Route path="/student/:studentId/level-report/:levelId" element={<ProtectedRoute allowedRoles={['admin', 'reception']}><StudentLevelReport /></ProtectedRoute>} />
                   <Route path="/instructor/:instructorId" element={<ProtectedRoute allowedRoles={['admin']}><InstructorProfile /></ProtectedRoute>} />
                   <Route path="/group/:groupId" element={<ProtectedRoute allowedRoles={['admin', 'instructor', 'reception']}><GroupDetails /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
